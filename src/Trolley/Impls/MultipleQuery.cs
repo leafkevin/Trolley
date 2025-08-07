@@ -32,6 +32,11 @@ public class MultipleQuery : IMultipleQuery
 
     #region GetShardingTableNames
     public virtual IMultipleQuery GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null) => this;
+    public virtual IMultipleQuery GetShardingTableNameBy<TEntity>(params object[] fieldValues)
+    {
+        this.DbContext.GetShardingTableBy(typeof(TEntity), fieldValues);
+        return this;
+    }
     #endregion
 
     #region From

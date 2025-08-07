@@ -335,6 +335,7 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
                     command.Parameters.Clear();
                 }
             }
+
             connection.Open();
             if (tabledInsertObjs != null)
             {
@@ -360,6 +361,7 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
     {
         var result = new List<TResult>();
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+
         var dialectVisitor = this.Visitor as MySqlCreateVisitor;
         if (!string.IsNullOrEmpty(dialectVisitor.FromSql))
         {

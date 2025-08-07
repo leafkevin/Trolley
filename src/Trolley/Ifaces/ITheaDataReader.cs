@@ -11,8 +11,17 @@ public interface ITheaDataReader : IDisposable, IAsyncDisposable
     int FieldCount { get; }
 
     string GetName(int index);
-    object GetValue(int index);
     Type GetFieldType(int ordinal);
+
+    object GetValue(int index);
+    T GetFieldValue<T>(int ordinal);
+    Task<T> GetFieldValueAsync<T>(int ordinal);
+    Task<T> GetFieldValueAsync<T>(int ordinal, CancellationToken cancellationToken);
+  
+    bool IsDBNull(int ordinal);
+    Task<bool> IsDBNullAsync(int ordinal);
+    Task<bool> IsDBNullAsync(int ordinal, CancellationToken cancellationToken);
+
     bool NextResult();
     Task<bool> NextResultAsync(CancellationToken cancellationToken = default);
     bool Read();

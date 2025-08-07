@@ -3,19 +3,7 @@ using System.Linq.Expressions;
 
 namespace Trolley.SqlServer;
 
-public interface ISqlServerFromCommand : IFromCommand
-{
-    #region Select
-    /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回插入对象</returns>
-    new ISqlServerFromCommand<TTarget> Select<TTarget>(string fields = "*");
-    #endregion
-}
-public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromCommand
+public interface ISqlServerFromCommand<T> : IFromCommand<T>
 {
     #region Sharding
     /// <summary>
@@ -338,7 +326,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
     ISqlServerBulkCreated<T, TResult> Output<TResult>(Expression<Func<T, TResult>> fieldsSelector);
     #endregion
 }
-public interface ISqlServerFromCommand<T1, T2> : IFromCommand<T1, T2>, ISqlServerFromCommand
+public interface ISqlServerFromCommand<T1, T2> : IFromCommand<T1, T2>
 {
     #region Sharding
     /// <summary>
@@ -642,7 +630,7 @@ public interface ISqlServerFromCommand<T1, T2> : IFromCommand<T1, T2>, ISqlServe
     new ISqlServerFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, TTarget>> fieldsExpr);
     #endregion
 }
-public interface ISqlServerFromCommand<T1, T2, T3> : IFromCommand<T1, T2, T3>, ISqlServerFromCommand
+public interface ISqlServerFromCommand<T1, T2, T3> : IFromCommand<T1, T2, T3>
 {
     #region Sharding
     /// <summary>
@@ -946,7 +934,7 @@ public interface ISqlServerFromCommand<T1, T2, T3> : IFromCommand<T1, T2, T3>, I
     new ISqlServerFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, TTarget>> fieldsExpr);
     #endregion
 }
-public interface ISqlServerFromCommand<T1, T2, T3, T4> : IFromCommand<T1, T2, T3, T4>, ISqlServerFromCommand
+public interface ISqlServerFromCommand<T1, T2, T3, T4> : IFromCommand<T1, T2, T3, T4>
 {
     #region Sharding
     /// <summary>
@@ -1250,7 +1238,7 @@ public interface ISqlServerFromCommand<T1, T2, T3, T4> : IFromCommand<T1, T2, T3
     new ISqlServerFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> fieldsExpr);
     #endregion
 }
-public interface ISqlServerFromCommand<T1, T2, T3, T4, T5> : IFromCommand<T1, T2, T3, T4, T5>, ISqlServerFromCommand
+public interface ISqlServerFromCommand<T1, T2, T3, T4, T5> : IFromCommand<T1, T2, T3, T4, T5>
 {
     #region Sharding
     /// <summary>
@@ -1554,7 +1542,7 @@ public interface ISqlServerFromCommand<T1, T2, T3, T4, T5> : IFromCommand<T1, T2
     new ISqlServerFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> fieldsExpr);
     #endregion
 }
-public interface ISqlServerFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand<T1, T2, T3, T4, T5, T6>, ISqlServerFromCommand
+public interface ISqlServerFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand<T1, T2, T3, T4, T5, T6>
 {
     #region Sharding
     /// <summary>

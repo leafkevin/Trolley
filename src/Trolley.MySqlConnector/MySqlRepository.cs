@@ -40,7 +40,7 @@ public class MySqlRepository : Repository, IMySqlRepository
         => this.dialectProvider.GetShardingTableNames<TEntity>(this.DbContext, tableNameSelector, tableSchema);
     public override async Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector = null, string tableSchema = null, CancellationToken cancellationToken = default)
         => await this.dialectProvider.GetShardingTableNamesAsync<TEntity>(this.DbContext, tableNameSelector, tableSchema, cancellationToken);
-    public override void CreateShardingTable<TEntity>(string tableName, string tableSchema = null, string fromTableSchema = null)
+    public override void CreateShardingTable<TEntity>(string tableName, string fromTableSchema = null)
     {
         var entityType = typeof(TEntity);
         if (!this.MapProvider.TryGetEntityMap(entityType, out var entityMapper))
@@ -127,7 +127,7 @@ information_schema.referential_constraints b on a.table_schema=b.constraint_sche
         }
         this.Execute(builder.ToString());
     }
-    public override async Task CreateShardingTableAsync<TEntity>(string tableName, string tableSchema = null, string fromTableSchema = null, CancellationToken cancellationToken = default)
+    public override async Task CreateShardingTableAsync<TEntity>(string tableName, string fromTableSchema = null, CancellationToken cancellationToken = default)
     {
         var entityType = typeof(TEntity);
         if (!this.MapProvider.TryGetEntityMap(entityType, out var entityMapper))

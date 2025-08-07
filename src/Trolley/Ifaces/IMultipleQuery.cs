@@ -23,6 +23,13 @@ public interface IMultipleQuery : IDisposable
     /// <param name="tableSchema">分表所在的TableSchema</param>
     /// <returns>返回满足条件的所有分表</returns>
     IMultipleQuery GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector = null, string tableSchema = null);
+    /// <summary>
+    /// 根据字段值确定TEntity表分表名，最多支持3个字段值，字段值的顺序与分表规则设置的顺序保持一致
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="fieldValues">字段值数组，字段值的顺序与分表规则设置的顺序保持一致，不可为null</param>
+    /// <returns>返回满足条件的分表名</returns>
+    IMultipleQuery GetShardingTableNameBy<TEntity>(params object[] fieldValues);
     #endregion
 
     #region From

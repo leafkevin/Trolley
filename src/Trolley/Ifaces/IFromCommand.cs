@@ -511,14 +511,13 @@ public interface IFromCommand<T> : IFromCommand
     #endregion
 
     #region Select
-    // <summary>
+    /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段，用法：
-    /// Select&lt;TTarget&gt;() 或是 Select&lt;TTarget&gt;("*") 或是 Select("Id, Name ...")
+    /// .Select() 或是 .Select("*") 或是 .Select("Id, Name ...")
     /// </summary>
-    /// <typeparam name="TTarget"></typeparam>
     /// <param name="fields">原始字段字符串，默认值*</param>
     /// <returns>返回查询对象</returns>
-    IFromCommand<TTarget> Select<TTarget>(string fields = "*");
+    IFromCommand<T> Select(string fields = "*");
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
     /// Select((a, b) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b) =&gt; x.CreatedAt.Date)

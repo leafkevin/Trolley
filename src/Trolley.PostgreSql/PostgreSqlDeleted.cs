@@ -64,6 +64,7 @@ public class PostgreSqlDeleted<TEntity, TResult> : Deleted<TEntity>, IPostgreSql
         await connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Delete, CommandBehavior.SequentialAccess, cancellationToken);
         var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
+
         while (await reader.ReadAsync(cancellationToken))
             result.Add((TResult)readerDeserializer.Invoke(reader));
         while (await reader.NextResultAsync(cancellationToken))

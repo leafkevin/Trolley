@@ -498,18 +498,21 @@ public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlCon
         else
         {
             if (this.Visitor.IsNeedFetchShardingTables)
+            {
                 this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
+                builder.Append(this.Visitor.BuildTableShardingsSql());
+                builder.Append(';');
+            }
             (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
             sql = this.Visitor.BuildCommand(this.DbContext, command, out _);
             if (this.Visitor.IsNeedFetchShardingTables)
             {
-                builder.Append(this.Visitor.BuildTableShardingsSql());
-                builder.Append(';');
                 builder.Append(sql);
                 sql = builder.ToString();
             }
             dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
             command.Dispose();
+            if (isNeedClose) connection.Close();
         }
         this.Visitor.Dispose();
         builder.Clear();

@@ -493,11 +493,11 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
-    /// Select() 或是 Select("*") 或是 Select("Id, Name ...")
+    /// .Select() 或是 .Select("*") 或是 .Select("Id, Name ...")
     /// </summary>
     /// <param name="fields">字段</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*");
+    new IMySqlFromCommand<T> Select(string fields = "*");
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
     /// Select((a, b) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b) =&gt; x.CreatedAt.Date)

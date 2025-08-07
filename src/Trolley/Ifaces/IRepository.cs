@@ -39,51 +39,44 @@ public interface IRepository
     /// <returns>返回满足条件的所有分表</returns>
     Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector = null, string tableSchema = null, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 根据字段值确定TEntity表分表名，最多支持2个字段值
+    /// 根据字段值确定TEntity表分表名，最多支持3个字段值，字段值的顺序与分表规则设置的顺序保持一致
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值数组，字段值的顺序与分表规则设置的顺序保持一致，不可为null</param>
     /// <returns>返回分表名</returns>
-    string GetShardingTableNameBy<TEntity>(object field1Value, object field2Value = null);
+    string GetShardingTableNameBy<TEntity>(params object[] fieldValues);
     /// <summary>
-    /// 在当前数据库中创建实体TEntity的tableName分表，表结构与实体TEntity相同并生成所有索引等信息
+    /// 在当前数据库中创建实体TEntity的tableName分表，表结构与实体TEntity相同并生成所有索引等信息，fromTableSchema为TEntity表的Schema，为null时是默认当前Schema
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="tableName">分表名称</param>
-    /// <param name="fromTableSchema">实体表所在的TableSchema，为null时是默认schemea</param>
-    /// <param name="fromTableSchema">实体表所在的TableSchema，为null时是默认schemea</param>
-    void CreateShardingTable<TEntity>(string tableName, string tableSchema = null, string fromTableSchema = null);
+    /// <param name="fromTableSchema">实体表所在的Schema，为null时是默认当前Schema</param>
+    void CreateShardingTable<TEntity>(string tableName, string fromTableSchema = null);
     /// <summary>
-    /// 在当前数据库中创建实体TEntity的tableName分表，表结构与实体TEntity相同并生成所有索引等信息
+    /// 在当前数据库中创建实体TEntity的tableName分表，表结构与实体TEntity相同并生成所有索引等信息，fromTableSchema为TEntity表的Schema，为null时是默认当前Schema
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="tableName">分表名称</param>
-    /// <param name="fromTableSchema">实体表所在的TableSchema，为null时是默认schemea</param>
-    /// <param name="fromTableSchema">实体表所在的TableSchema，为null时是默认schemea</param>
+    /// <param name="fromTableSchema">实体表所在的TableSchema，为null时是默认当前Schema</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns></returns>
-    Task CreateShardingTableAsync<TEntity>(string tableName, string tableSchema = null, string fromTableSchema = null, CancellationToken cancellationToken = default);
+    Task CreateShardingTableAsync<TEntity>(string tableName, string fromTableSchema = null, CancellationToken cancellationToken = default);
     /// <summary>
     /// 在当前数据库中创建实体TEntity的tableName分表，根据字段值确定TEntity表分表名，字段值的顺序与配置的字段顺序保持一致，表结构与实体TEntity相同并生成所有索引等信息
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="fromTableSchema">实体表所在的TableSchema，为null时是默认schemea</param>
-    /// <param name="fromTableSchema">实体表所在的TableSchema，为null时是默认schemea</param>
-    void CreateShardingTableBy<TEntity>(object field1Value, object field2Value = null, string tableSchema = null, string fromTableSchema = null);
+    /// <param name="fieldValues">字段值数组，字段值的顺序与分表规则设置的顺序保持一致，不可为null</param>
+    /// <param name="fromTableSchema">实体表所在的TableSchema，为null时是默认当前Schema</param>
+    void CreateShardingTableBy<TEntity>(object[] fieldValues, string fromTableSchema = null);
     /// <summary>
     /// 在当前数据库中创建实体TEntity的tableName分表，根据字段值确定TEntity表分表名，字段值的顺序与配置的字段顺序保持一致，表结构与实体TEntity相同并生成所有索引等信息
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="fromTableSchema">实体表所在的TableSchema，为null时是默认schemea</param>
-    /// <param name="fromTableSchema">实体表所在的TableSchema，为null时是默认schemea</param>
+    /// <param name="fieldValues">字段值数组，字段值的顺序与分表规则设置的顺序保持一致，不可为null</param>
+    /// <param name="fromTableSchema">实体表所在的TableSchema，为null时是默认当前Schema</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns></returns>
-    Task CreateShardingTableByAsync<TEntity>(object field1Value, object field2Value = null, string tableSchema = null, string fromTableSchema = null, CancellationToken cancellationToken = default);
+    Task CreateShardingTableByAsync<TEntity>(object[] fieldValues, string fromTableSchema = null, CancellationToken cancellationToken = default);
     #endregion
 
     #region ShardingDatabase

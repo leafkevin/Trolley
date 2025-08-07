@@ -19,14 +19,6 @@ public class FromCommand : QueryInternal, IFromCommand
     }
     #endregion
 
-    #region Select
-    public virtual IFromCommand<TTarget> Select<TTarget>(string fields = "*")
-    {
-        this.SelectInternal(fields);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
-    }
-    #endregion
-
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
@@ -331,7 +323,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
     }
-    #endregion   
+    #endregion
 
     #region Distinct
     public virtual IFromCommand<T> Distinct()

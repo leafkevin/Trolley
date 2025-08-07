@@ -26,14 +26,6 @@ public class FromCommand : QueryInternal, IFromCommand
     }
     #endregion
 
-    #region Select
-    public virtual IFromCommand<TTarget> Select<TTarget>(string fields = "*")
-    {
-        this.SelectInternal(fields);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
-    }
-    #endregion
-
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
@@ -338,7 +330,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
     }
-    #endregion   
+    #endregion
 
     #region Distinct
     public virtual IFromCommand<T> Distinct()
@@ -627,7 +619,8 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
     {
         base.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
-    }public virtual IFromCommand<<#=tables#>> OrderByDynamic(Func<OrderByBuilder<<#=tables#>>, Expression> fieldsGetter)
+    }
+    public virtual IFromCommand<<#=tables#>> OrderByDynamic(Func<OrderByBuilder<<#=tables#>>, Expression> fieldsGetter)
     {
         var builder = new OrderByBuilder<<#=tables#>>();
         var fieldsExpr = fieldsGetter.Invoke(builder);

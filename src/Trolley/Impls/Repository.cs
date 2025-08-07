@@ -44,24 +44,19 @@ public class Repository : IRepository
     #region ShardingTable
     public virtual List<string> GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null) => null;
     public virtual Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null, CancellationToken cancellationToken = default) => null;
-    public virtual void CreateShardingTable<TEntity>(string tableName, string tableSchema = null, string fromTableSchema = null) { }
-    public virtual Task CreateShardingTableAsync<TEntity>(string tableName, string tableSchema = null, string fromTableSchema = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
-    public virtual string GetShardingTableNameBy<TEntity>(object field1Value, object field2Value = null)
+    public virtual void CreateShardingTable<TEntity>(string tableName, string fromTableSchema = null) { }
+    public virtual Task CreateShardingTableAsync<TEntity>(string tableName, string fromTableSchema = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public virtual string GetShardingTableNameBy<TEntity>(params object[] fieldValues)
+        => this.DbContext.GetShardingTableBy(typeof(TEntity), fieldValues);
+    public virtual void CreateShardingTableBy<TEntity>(object[] fieldValues, string fromTableSchema = null)
     {
-        var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
-        return this.DbContext.GetShardingTableBy(entityMapper, field1Value, field2Value);
+        var tableName = this.DbContext.GetShardingTableBy(typeof(TEntity), fieldValues);
+        this.CreateShardingTable<TEntity>(tableName, fromTableSchema);
     }
-    public virtual void CreateShardingTableBy<TEntity>(object field1Value, object field2Value = null, string tableSchema = null, string fromTableSchema = null)
+    public virtual async Task CreateShardingTableByAsync<TEntity>(object[] fieldValues, string fromTableSchema = null, CancellationToken cancellationToken = default)
     {
-        var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
-        var tableName = this.DbContext.GetShardingTableBy(entityMapper, field1Value, field2Value);
-        this.CreateShardingTable<TEntity>(tableName, tableSchema, fromTableSchema);
-    }
-    public virtual async Task CreateShardingTableByAsync<TEntity>(object field1Value, object field2Value = null, string tableSchema = null, string fromTableSchema = null, CancellationToken cancellationToken = default)
-    {
-        var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
-        var tableName = this.DbContext.GetShardingTableBy(entityMapper, field1Value, field2Value);
-        await this.CreateShardingTableAsync<TEntity>(tableName, tableSchema, fromTableSchema, cancellationToken);
+        var tableName = this.DbContext.GetShardingTableBy(typeof(TEntity), fieldValues);
+        await this.CreateShardingTableAsync<TEntity>(tableName, fromTableSchema, cancellationToken);
     }
     #endregion     
 

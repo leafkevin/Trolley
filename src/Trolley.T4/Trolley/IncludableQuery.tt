@@ -76,7 +76,7 @@ public class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember
     public virtual IIncludableQuery<T, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
         var isIncludeMany = this.Visitor.ThenInclude(member);
-        return this.OrmProvider.NewIncludableQuery<T, TNavigation>(this.MultipleQuery, this.Visitor, isIncludeMany);
+        return this.OrmProvider.NewIncludableQuery<T, TNavigation>(this.DbContext, this.Visitor, isIncludeMany);
     }
     public virtual IIncludableQuery<T, TElement> ThenIncludeMany<TElement>(Expression<Func<TMember, IEnumerable<TElement>>> member, Expression<Func<TElement, bool>> filter = null)
     {

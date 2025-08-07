@@ -207,7 +207,7 @@ public interface IFromCommand<T> : IFromCommand
     /// <code>.WithTable&lt;Page&gt;()</code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-   /// <returns>返回查询对象</returns>
+    /// <returns>返回查询对象</returns>
     IFromCommand<T, TOther> WithTable<TOther>();
     #endregion
 
@@ -518,9 +518,9 @@ public interface IFromCommand<T> : IFromCommand
     #endregion
 
     #region Select
-    // <summary>
+    /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段，用法：
-    /// Select() 或是 Select("*") 或是 Select("Id, Name ...")
+    /// .Select() 或是 .Select("*") 或是 .Select("Id, Name ...")
     /// </summary>
     /// <param name="fields">原始字段字符串，默认值*</param>
     /// <returns>返回查询对象</returns>
@@ -686,7 +686,7 @@ public interface IFromCommand<<#=tables#>> : IFromCommand
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-   /// <returns>返回查询对象</returns>
+    /// <returns>返回查询对象</returns>
     IFromCommand<<#=tables#>, TOther> WithTable<TOther>();
     #endregion
 
@@ -767,7 +767,7 @@ public interface IFromCommand<<#=tables#>> : IFromCommand
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
- <#      }#>
+<#      }#>
     #endregion
 
     #region LeftJoin

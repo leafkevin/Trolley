@@ -228,6 +228,98 @@ public sealed class DbContext
     }
     #endregion
 
+    #region QueryValue
+    public List<TTarget> QueryValue<TTarget>(string rawSql, Func<ITheaDataReader, List<TTarget>> readerInitializer, CommandType commandType = CommandType.Text)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateRawSqlCommand(rawSql, commandType);
+
+        connection.Open();
+        var behavior = CommandBehavior.SequentialAccess;
+        using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
+        var result = readerInitializer.Invoke(reader);
+        reader.Dispose();
+
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public async Task<List<TTarget>> QueryValueAsync<TTarget>(string rawSql, Func<ITheaDataReader, CancellationToken, Task<List<TTarget>>> readerInitializer,
+        CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateRawSqlCommand(rawSql, commandType);
+
+        await connection.OpenAsync(cancellationToken);
+        var behavior = CommandBehavior.SequentialAccess;
+        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
+        var result = await readerInitializer.Invoke(reader, cancellationToken);
+        await reader.DisposeAsync();
+
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
+    }
+    public List<TTarget> QueryValue<TTarget>(string rawSql, object parameters,
+         Func<ITheaDataReader, List<TTarget>> readerInitializer, CommandType commandType = CommandType.Text)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateRawSqlCommand(rawSql, parameters, commandType);
+
+        connection.Open();
+        var behavior = CommandBehavior.SequentialAccess;
+        using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
+        var result = readerInitializer.Invoke(reader);
+        reader.Dispose();
+
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public async Task<List<TTarget>> QueryValueAsync<TTarget>(string rawSql, object parameters,
+        Func<ITheaDataReader, CancellationToken, Task<List<TTarget>>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateRawSqlCommand(rawSql, parameters, commandType);
+
+        await connection.OpenAsync(cancellationToken);
+        var behavior = CommandBehavior.SequentialAccess;
+        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
+        var result = await readerInitializer.Invoke(reader, cancellationToken);
+        await reader.DisposeAsync();
+
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
+    }
+    public List<TTarget> QueryValue<TTarget>(string rawSql, List<IDbDataParameter> parameters,
+        Func<ITheaDataReader, List<TTarget>> readerInitializer, CommandType commandType = CommandType.Text)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateRawSqlCommand(rawSql, parameters, commandType);
+
+        connection.Open();
+        var behavior = CommandBehavior.SequentialAccess;
+        using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
+        var result = readerInitializer.Invoke(reader);
+        reader.Dispose();
+
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public async Task<List<TTarget>> QueryValueAsync<TTarget>(string rawSql, List<IDbDataParameter> parameters,
+        Func<ITheaDataReader, CancellationToken, Task<List<TTarget>>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateRawSqlCommand(rawSql, parameters, commandType);
+
+        await connection.OpenAsync(cancellationToken);
+        var behavior = CommandBehavior.SequentialAccess;
+        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
+        var result = await readerInitializer.Invoke(reader, cancellationToken);
+        await reader.DisposeAsync();
+
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
+    }
+    #endregion
+
     #region Query
     public TResult Query<TTarget, TResult>(string rawSql, bool isSingle,
         Func<ITheaDataReader, Func<ITheaDataReader, object>, TResult> readerInitializer, CommandType commandType = CommandType.Text)
@@ -1350,32 +1442,13 @@ public sealed class DbContext
         }
         return true;
     }
-    public string GetShardingTableBy(EntityMap entityMappper, object field1Value, object field2Value = null)
+    public string GetShardingTableBy(Type entityType, params object[] fieldValues)
     {
-        var entityType = entityMappper.EntityType;
+        if (fieldValues == null || fieldValues.Length == 0)
+            throw new ArgumentNullException(nameof(fieldValues), "参数fieldValues不能为null或是空元素");
         if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             throw new Exception($"实体表{entityType.FullName}没有配置分表，无需调用此方法");
-        if (shardingTable.DependOnMembers == null || shardingTable.DependOnMembers.Count == 0)
-            throw new Exception($"实体表{entityType.FullName}没有配置分表依赖的字段");
-
-        var origTableName = entityMappper.TableName;
-        string tableName = null;
-        if (field1Value == null)
-            throw new ArgumentNullException($"实体{entityType.FullName}的分表规则依赖字段，字段值field1Value不可为null");
-
-        if (shardingTable.DependOnMembers.Count > 1)
-        {
-            if (field2Value == null)
-                throw new ArgumentNullException($"实体{entityType.FullName}的分表规则依赖2个字段，字段值field2Value不可为null");
-            var shardingRule = shardingTable.Rule as Func<string, object, object, string>;
-            tableName = shardingRule.Invoke(origTableName, field1Value, field2Value);
-        }
-        else
-        {
-            var shardingRule = shardingTable.Rule as Func<string, object, string>;
-            tableName = shardingRule.Invoke(origTableName, field1Value);
-        }
-        return tableName;
+        return shardingTable.Rule.DynamicInvoke(fieldValues) as string;
     }
     #endregion
 }

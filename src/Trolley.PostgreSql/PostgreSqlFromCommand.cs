@@ -139,8 +139,8 @@ public class PostgreSqlFromCommand<T> : FromCommand<T>, IPostgreSqlFromCommand<T
     #endregion
 
     #region Select
-    public new IPostgreSqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IPostgreSqlFromCommand<TTarget>;
+    public new IPostgreSqlFromCommand<T> Select(string fields = "*")
+        => base.Select(fields) as IPostgreSqlFromCommand<T>;
     public new IPostgreSqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlFromCommand<TTarget>;
     public new IPostgreSqlFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
@@ -168,9 +168,8 @@ public class PostgreSqlFromCommand<T> : FromCommand<T>, IPostgreSqlFromCommand<T
     #region Returnning
     public IPostgreSqlBulkCreated<T, TResult> Returning<TResult>(string fieldNames)
     {
-        var sql = this.Visitor.BuildCommandSql(false, out _);
+        var sql = this.Visitor.BuildCommandSql(true, out _);
         var visitor = this.NewCreateVisitor(sql);
-        visitor.FromSql = sql;
         visitor.Returning(fieldNames);
         return new PostgreSqlBulkCreated<T, TResult>(this.DbContext, visitor);
     }

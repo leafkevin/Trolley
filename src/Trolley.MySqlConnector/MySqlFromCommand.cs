@@ -139,8 +139,8 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
     #endregion
 
     #region Select
-    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select(fields) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<T> Select(string fields = "*")
+        => base.Select(fields) as IMySqlFromCommand<T>;
     public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
     public new IMySqlFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
@@ -188,7 +188,7 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
     }
     #endregion
 
-    protected virtual MySqlCreateVisitor NewCreateVisitor(string fromSql)
+    protected virtual MySqlCreateVisitor NewCreateVisitor(string fromSql = null)
     {
         var createVisiter = new MySqlCreateVisitor(this.DbContext, this.Visitor.TableAsStart);
         createVisiter.Tables = this.Visitor.Tables;

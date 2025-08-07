@@ -2555,7 +2555,17 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         var orgTableName = entityMapper.TableName;
         tableSchema ??= dbContext.DefaultTableSchema;
         var sql = $"SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND a.relname LIKE '{orgTableName}_%' AND b.nspname='{tableSchema}'";
-        var tableNames = dbContext.Query<string, List<string>>(sql, false);
+        var tableNames = dbContext.QueryValue<string>(sql, reader =>
+        {
+            var result = new List<string>();
+            while (reader.Read())
+            {
+                var tableName = reader.GetFieldValue<string>(0);
+                if (!string.IsNullOrEmpty(tableName))
+                    result.Add(tableName);
+            }
+            return result;
+        });
         if (tableNameSelector != null)
             return tableNames.FindAll(f => tableNameSelector(f));
         return tableNames;
@@ -2566,7 +2576,17 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         var orgTableName = entityMapper.TableName;
         tableSchema ??= dbContext.DefaultTableSchema;
         var sql = $"SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND a.relname LIKE '{orgTableName}_%' AND b.nspname='{tableSchema}'";
-        var tableNames = await dbContext.QueryAsync<string>(sql);
+        var tableNames = await dbContext.QueryValueAsync<string>(sql, async (reader, cancellationToken) =>
+        {
+            var result = new List<string>();
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                var tableName = await reader.GetFieldValueAsync<string>(0, cancellationToken);
+                if (!string.IsNullOrEmpty(tableName))
+                    result.Add(tableName);
+            }
+            return result;
+        }, CommandType.Text, cancellationToken);
         if (tableNameSelector != null)
             return tableNames.FindAll(f => tableNameSelector(f));
         return tableNames;
