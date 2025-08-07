@@ -14,7 +14,7 @@ public interface IPostgreSqlRepository : IRepository
     /// </code>
     /// </summary>
     /// <typeparam name="T">实体类型</typeparam>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
+    /// <param name="tableAsStart">表别名起始字母，默认从字母'a'开始</param>
     /// </param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> From<T>(char tableAsStart = 'a');

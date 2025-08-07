@@ -21,10 +21,18 @@ public class PostgreSqlContinuedDelete<TEntity> : ContinuedDelete<TEntity>, IPos
     public new IPostgreSqlContinuedDelete<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
     public new IPostgreSqlContinuedDelete<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
-    {
-        base.And(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlContinuedDelete<TEntity>;
+    public new IPostgreSqlContinuedDelete<TEntity> AndPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlContinuedDelete<TEntity>;
+    #endregion
+
+    #region Or
+    public new IPostgreSqlContinuedDelete<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlContinuedDelete<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlContinuedDelete<TEntity>;
+    public new IPostgreSqlContinuedDelete<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlContinuedDelete<TEntity>;
     #endregion
 
     #region Returnning

@@ -265,7 +265,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
                 break;
             default:
                 if (!this.Visitor.HasWhere)
-                    throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+                    throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
                 command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
                 connection.Open();
                 result = command.ExecuteNonQuery(CommandSqlType.Update);
@@ -341,7 +341,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
                 break;
             default:
                 if (!this.Visitor.HasWhere)
-                    throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+                    throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
                 command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
                 await connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);

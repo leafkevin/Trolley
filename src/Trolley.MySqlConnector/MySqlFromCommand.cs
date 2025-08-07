@@ -139,7 +139,7 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
     #endregion
 
     #region Select
-    public new IMySqlFromCommand<TTarget> Select(string fields = "*")
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
         => base.Select(fields) as IMySqlFromCommand<TTarget>;
     public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;

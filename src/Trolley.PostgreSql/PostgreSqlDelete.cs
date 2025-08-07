@@ -43,5 +43,7 @@ public class PostgreSqlDelete<TEntity> : Delete<TEntity>, IPostgreSqlDelete<TEnt
         => this.Where(true, predicate);
     public new IPostgreSqlContinuedDelete<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlContinuedDelete<TEntity>;
+    public new IPostgreSqlContinuedDelete<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlContinuedDelete<TEntity>;
     #endregion
 }

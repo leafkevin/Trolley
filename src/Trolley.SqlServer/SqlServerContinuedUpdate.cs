@@ -234,7 +234,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
             default:
                 {
                     if (!this.Visitor.HasWhere)
-                        throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+                        throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
@@ -397,7 +397,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
             default:
                 {
                     if (!this.Visitor.HasWhere)
-                        throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+                        throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
@@ -729,7 +729,7 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
             default:
                 {
                     if (!this.Visitor.HasWhere)
-                        throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+                        throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
@@ -893,7 +893,7 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
             default:
                 {
                     if (!this.Visitor.HasWhere)
-                        throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+                        throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);

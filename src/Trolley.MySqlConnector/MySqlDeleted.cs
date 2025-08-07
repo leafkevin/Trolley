@@ -25,7 +25,7 @@ public class MySqlDeleted<TEntity, TResult> : Deleted<TEntity>, IMySqlDeleted<TE
     public new List<TResult> Execute()
     {
         if (!this.Visitor.HasWhere)
-            throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+            throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
         if (this.Visitor.IsNeedFetchShardingTables)
             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
 
@@ -54,7 +54,7 @@ public class MySqlDeleted<TEntity, TResult> : Deleted<TEntity>, IMySqlDeleted<TE
     public new async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         if (!this.Visitor.HasWhere)
-            throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+            throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
         if (this.Visitor.IsNeedFetchShardingTables)
             await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
 

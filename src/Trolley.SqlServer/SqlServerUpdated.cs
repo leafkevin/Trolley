@@ -171,7 +171,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>
             default:
                 {
                     if (!this.Visitor.HasWhere)
-                        throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+                        throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
@@ -333,7 +333,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>
             default:
                 {
                     if (!this.Visitor.HasWhere)
-                        throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+                        throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
@@ -540,7 +540,7 @@ public class SqlServerUpdated<TEntity, TResult> : Updated<TEntity>, ISqlServerUp
         else
         {
             if (!this.Visitor.HasWhere)
-                throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+                throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
             connection.Open();
             var sql = this.Visitor.BuildCommand(this.DbContext, command, out var readerFields);
@@ -627,7 +627,7 @@ public class SqlServerUpdated<TEntity, TResult> : Updated<TEntity>, ISqlServerUp
         else
         {
             if (!this.Visitor.HasWhere)
-                throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+                throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
             await connection.OpenAsync(cancellationToken);
             var sql = this.Visitor.BuildCommand(this.DbContext, command, out var readerFields);

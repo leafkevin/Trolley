@@ -63,28 +63,31 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
         => base.OnlyFields(fieldsSelector) as PostgreSqlContinuedUpdate<TEntity>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IPostgreSqlContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
-         => this.Where(true, predicate);
+        => this.Where(true, predicate);
     public new IPostgreSqlContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlContinuedUpdate<TEntity>;
+    public new IPostgreSqlContinuedUpdate<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlContinuedUpdate<TEntity>;
+    #endregion
+
+    #region And
     public new IPostgreSqlContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
     public new IPostgreSqlContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlContinuedUpdate<TEntity>;
+    public new IPostgreSqlContinuedUpdate<TEntity> AndPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlContinuedUpdate<TEntity>;
     #endregion
 
-    #region Returnning
-    public IPostgreSqlUpdated<TEntity, TResult> Returning<TResult>(string fieldNames)
-    {
-        this.DialectVisitor.Returning(fieldNames);
-        return new PostgreSqlUpdated<TEntity, TResult>(this.DbContext, this.Visitor);
-    }
-    public IPostgreSqlUpdated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
-    {
-        this.DialectVisitor.Returning(fieldsSelector);
-        return new PostgreSqlUpdated<TEntity, TResult>(this.DbContext, this.Visitor);
-    }
+    #region Or
+    public new IPostgreSqlContinuedUpdate<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlContinuedUpdate<TEntity>;
+    public new IPostgreSqlContinuedUpdate<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlContinuedUpdate<TEntity>;
     #endregion
 
     #region Execute
@@ -235,7 +238,7 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
             default:
                 {
                     if (!this.Visitor.HasWhere)
-                        throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+                        throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
@@ -399,7 +402,7 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
             default:
                 {
                     if (!this.Visitor.HasWhere)
-                        throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+                        throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
@@ -560,27 +563,43 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
         => base.OnlyFields(fieldsSelector) as IPostgreSqlBulkContinuedUpdate<TEntity>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IPostgreSqlBulkContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.Where(true, predicate);
     public new IPostgreSqlBulkContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlBulkContinuedUpdate<TEntity>;
+    public new IPostgreSqlBulkContinuedUpdate<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlBulkContinuedUpdate<TEntity>;
+    #endregion
+
+    #region And
     public new IPostgreSqlBulkContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
     public new IPostgreSqlBulkContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlBulkContinuedUpdate<TEntity>;
+    public new IPostgreSqlBulkContinuedUpdate<TEntity> AndPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlBulkContinuedUpdate<TEntity>;
+    #endregion
+
+    #region Or
+    public new IPostgreSqlBulkContinuedUpdate<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlBulkContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlBulkContinuedUpdate<TEntity>;
+    public new IPostgreSqlBulkContinuedUpdate<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlBulkContinuedUpdate<TEntity>;
     #endregion
 
     #region Returnning
-    public IPostgreSqlUpdated<TEntity, TResult> Returning<TResult>(string fieldNames)
+    public IPostgreSqlBulkContinuedUpdate<TEntity, TResult> Returning<TResult>(string fieldNames)
     {
         this.DialectVisitor.Returning(fieldNames);
-        return new PostgreSqlUpdated<TEntity, TResult>(this.DbContext, this.Visitor);
+        return new PostgreSqlBulkContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
-    public IPostgreSqlUpdated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
+    public IPostgreSqlBulkContinuedUpdate<TEntity> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
     {
         this.DialectVisitor.Returning(fieldsSelector);
-        return new PostgreSqlUpdated<TEntity, TResult>(this.DbContext, this.Visitor);
+        return new PostgreSqlBulkContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -732,7 +751,7 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
             default:
                 {
                     if (!this.Visitor.HasWhere)
-                        throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+                        throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
@@ -896,7 +915,7 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
             default:
                 {
                     if (!this.Visitor.HasWhere)
-                        throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+                        throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);

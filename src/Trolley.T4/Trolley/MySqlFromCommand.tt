@@ -146,8 +146,8 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
     #endregion
 
     #region Select
-    public new IMySqlFromCommand<T> Select(string fields = "*")
-        => base.Select(fields) as IMySqlFromCommand<T>;
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
+        => base.Select(fields) as IMySqlFromCommand<TTarget>;
     public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
     public new IMySqlFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)

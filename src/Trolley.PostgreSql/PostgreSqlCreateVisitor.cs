@@ -433,22 +433,6 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         }
         return this.Evaluate(sqlSegment);
     }
-    public override IQueryVisitor CreateQueryVisitor(char? tableAsStart)
-    {
-        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAsStart, this.DbParameters);
-        queryVisitor.IsMultiple = this.IsMultiple;
-        queryVisitor.CommandIndex = this.CommandIndex;
-        queryVisitor.RefQueries = this.RefQueries;
-        queryVisitor.ShardingTables = this.ShardingTables;
-        queryVisitor.RefTableAliases = this.RefTableAliases;
-        queryVisitor.IncludeTables = this.IncludeTables;
-        queryVisitor.NextDbParameters = this.NextDbParameters;
-        queryVisitor.IsRecursive = this.IsRecursive;
-        queryVisitor.CteQueryObj = this.CteQueryObj;
-        queryVisitor.RefFrom = this;
-        queryVisitor.Tables = this.Tables;
-        return queryVisitor;
-    }
     public void InitTableAlias(LambdaExpression lambdaExpr)
     {
         this.TableAliases.Clear();

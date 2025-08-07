@@ -171,7 +171,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>
             default:
                 {
                     if (!this.Visitor.HasWhere)
-                        throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+                        throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
@@ -333,7 +333,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>
             default:
                 {
                     if (!this.Visitor.HasWhere)
-                        throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+                        throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
