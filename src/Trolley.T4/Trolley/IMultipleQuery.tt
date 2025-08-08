@@ -34,7 +34,7 @@ public interface IMultipleQuery : IDisposable
 
     #region From
     /// <summary>
-    /// 从表T中查询数据，用法：
+    /// 从表T中查询数据，如：
     /// <code>
     /// f.From&lt;Menu&gt;()
     /// SQL: FROM `sys_menu`
@@ -71,7 +71,7 @@ public interface IMultipleQuery : IDisposable
 
     #region FromQuery
     /// <summary>
-    /// 从SQL子查询中查询数据，用法：
+    /// 从SQL子查询中查询数据，如：
     /// <code>
     /// var subQuery = f.From&lt;Page, Menu&gt;('o')
     ///     .Where((a, b) =&gt; a.Id == b.PageId)
@@ -86,7 +86,7 @@ public interface IMultipleQuery : IDisposable
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> FromQuery<T>(IQuery<T> subQuery);
     /// <summary>
-    /// 从SQL子查询中查询数据，用法：
+    /// 从SQL子查询中查询数据，如：
     /// <code>
     ///  t.From(f =&gt; f.From&lt;Page, Menu&gt;('o') ...
     ///       .Select((x, y) =&gt; new { ... }))
@@ -95,7 +95,7 @@ public interface IMultipleQuery : IDisposable
     /// </code>
     /// </summary>
     /// <typeparam name="T">表T实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     #endregion
@@ -128,7 +128,7 @@ public interface IMultipleQuery : IDisposable
 
     #region GetById
     /// <summary>
-    /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，不支持分表，用法：
+    /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，不支持分表，如：
     /// <code>
     /// f.GetById&lt;User&gt;(1) //或是
     /// f.GetById&lt;User&gt;(new { Id = 1 }) //或是
@@ -145,7 +145,7 @@ public interface IMultipleQuery : IDisposable
 
     #region GetByIds
     /// <summary>
-    /// 根据多个主键信息查询表TEntity中数据，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，用法：
+    /// 根据多个主键信息查询表TEntity中数据，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，如：
     /// <code>
     /// f.GetByIds&lt;User&gt;(new []{1 ,2, 3}) //或是
     /// f.GetByIds&lt;User&gt;(new []{{ Id = 1 }, { Id = 2 }, { Id = 3 }}) //或是
@@ -184,7 +184,7 @@ public interface IMultipleQuery : IDisposable
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     IMultipleQuery QueryFirst<TEntity>(string rawSql, List<IDbDataParameter> parameters);
     /// <summary>
-    /// 从表TEntity中，查询与whereObj对象各属性值都相等的第一条记录，记录不存在时返回TEntity类型的默认值，不支持分表，用法：
+    /// 从表TEntity中，查询与whereObj对象各属性值都相等的第一条记录，记录不存在时返回TEntity类型的默认值，不支持分表，如：
     /// <code>
     /// f.QueryFirst&lt;User&gt;(new { Id = 1, IsEnabled = true })
     /// SQL: SELECT a.`Id`,a.`Name`, ... FROM `sys_user` a WHERE a.`Id`=@Id AND a.`IsEnabled`=@IsEnabled
@@ -220,7 +220,7 @@ public interface IMultipleQuery : IDisposable
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     IMultipleQuery Query<TEntity>(string rawSql, List<IDbDataParameter> parameters);
     /// <summary>
-    /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，用法：
+    /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，如：
     /// <code>
     /// f.Query&lt;User&gt;(new { Id = 1, IsEnabled = true })
     /// SQL: SELECT a.`Id`,a.`Name`, ... FROM `sys_user` a WHERE a.`Id`=@Id AND a.`IsEnabled`=@IsEnabled

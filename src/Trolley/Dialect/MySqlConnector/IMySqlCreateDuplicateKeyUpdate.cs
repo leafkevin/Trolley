@@ -29,7 +29,7 @@ public interface IMySqlCreateDuplicateKeyUpdate<TEntity>
 
     #region Set
     /// <summary>
-    /// 使用更新对象updateObj部分字段更新，updateObj对象中除OnlyFields、IgnoreFields、Where方法筛选外的所有字段都将参与更新，单对象更新，需要配合where条件使用，用法：
+    /// 使用更新对象updateObj部分字段更新，updateObj对象中除OnlyFields、IgnoreFields、Where方法筛选外的所有字段都将参与更新，单对象更新，需要配合where条件使用，如：
     /// <code>.Set(new { Id = 1, Name = "kevin", SourceType = DBNull.Value }).Where(f =&gt; f.Id); .Set(new User { Id = 2, Name = "kevin", SourceType = null }).Where(f =&gt; f.Id);  
     /// SQL: SET `Name`=@Name,`SourceType`=@SourceType WHERE `Id`=@kId </code>
     /// </summary>
@@ -38,7 +38,7 @@ public interface IMySqlCreateDuplicateKeyUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     IMySqlCreateDuplicateKeyUpdate<TEntity> Set<TUpdateObj>(TUpdateObj updateObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中除OnlyFields、IgnoreFields、Where方法筛选外的所有字段都将参与更新，单对象更新，需要配合where条件使用，为false不做更新，用法：
+    /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中除OnlyFields、IgnoreFields、Where方法筛选外的所有字段都将参与更新，单对象更新，需要配合where条件使用，为false不做更新，如：
     /// <code>.Set(true, new { Id = 1, Name = "kevin", SourceType = DBNull.Value }).Where(f =&gt; f.Id);  SQL: SET `Name`=@Name,`SourceType`=@SourceType WHERE `Id`=@kId
     /// .Set(true, new User { Id = 1, ... })  SQL: SET ... //只更新部分字段，可以使用OnlyFields方法，忽略部分字段，可以使用IgnoreFields方法</code>
     /// </summary>
@@ -48,7 +48,7 @@ public interface IMySqlCreateDuplicateKeyUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     IMySqlCreateDuplicateKeyUpdate<TEntity> Set<TUpdateObj>(bool condition, TUpdateObj updateObj);
     /// <summary>
-    // VALUES多个字段更新，用法：
+    // VALUES多个字段更新，如：
     /// <code>
     /// 不使用别名 .WithBy( ... ).OnDuplicateKeyUpdate(x =>x.Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
     /// SQL: INSERT INTO ... VALUES ( ... ) ON DUPLICATE KEY UPDATE `TotalAmount`=VALUES(`TotalAmount`)
@@ -69,7 +69,7 @@ public interface IMySqlCreateDuplicateKeyUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     IMySqlCreateDuplicateKeyUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// VALUES单个字段更新，可多次使用，用法：.WithBy( ... ).OnDuplicateKeyUpdate(x =>.Set(f => f.TotalAmount, f=> x.Values(f.TotalAmount)))
+    /// VALUES单个字段更新，可多次使用，如：.WithBy( ... ).OnDuplicateKeyUpdate(x =>.Set(f => f.TotalAmount, f=> x.Values(f.TotalAmount)))
     /// SQL: INSERT INTO ... VALUES ( ... ) ON DUPLICATE KEY UPDATE `TotalAmount`=VALUES(`TotalAmount`)
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -78,7 +78,7 @@ public interface IMySqlCreateDuplicateKeyUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     IMySqlCreateDuplicateKeyUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector);
     /// <summary>
-    /// VALUES单个字段更新，用法：
+    /// VALUES单个字段更新，如：
     /// </summary>
     /// <typeparam name="TFields">多个字段实体类型</typeparam>
     /// <param name="condition"></param>

@@ -15,7 +15,7 @@ public interface ISqlServerGroupingCommandBase<TGrouping> : IGroupingCommandBase
     /// <returns>返回分组后对象</returns>
     new ISqlServerFromCommand<TGrouping> Select();
     /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
+    /// 使用原始字段返回查询结果，如：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fields">原始字段字符串，默认值*</param>
@@ -43,7 +43,7 @@ public interface ISqlServerGroupingCommand<T, TGrouping> : IGroupingCommand<T, T
     /// <returns>返回分组查询对象</returns>
     new ISqlServerGroupingCommand<T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate);
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy(x =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy(x =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -51,7 +51,7 @@ public interface ISqlServerGroupingCommand<T, TGrouping> : IGroupingCommand<T, T
     /// <returns>返回分组查询对象</returns>
     new ISqlServerGroupingCommand<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, f =&gt; new { f.Id, f.OtherId }) 或是 OrderBy(true, x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -60,7 +60,7 @@ public interface ISqlServerGroupingCommand<T, TGrouping> : IGroupingCommand<T, T
     /// <returns>返回查询对象</returns>
     new ISqlServerGroupingCommand<T, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
+    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending(x =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending(x =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -68,7 +68,7 @@ public interface ISqlServerGroupingCommand<T, TGrouping> : IGroupingCommand<T, T
     /// <returns>返回分组查询对象</returns>
     new ISqlServerGroupingCommand<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, f =&gt; new { f.Id, f.OtherId }) 或是 OrderByDescending(true, x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -77,7 +77,7 @@ public interface ISqlServerGroupingCommand<T, TGrouping> : IGroupingCommand<T, T
     /// <returns>返回查询对象</returns>
     new ISqlServerGroupingCommand<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
+    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
     /// <code> ...Select(x =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select(x =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -107,7 +107,7 @@ public interface ISqlServerGroupingCommand<T1, T2, TGrouping> : IGroupingCommand
     /// <returns>返回分组查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, bool>> predicate);
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -115,7 +115,7 @@ public interface ISqlServerGroupingCommand<T1, T2, TGrouping> : IGroupingCommand
     /// <returns>返回分组查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -124,7 +124,7 @@ public interface ISqlServerGroupingCommand<T1, T2, TGrouping> : IGroupingCommand
     /// <returns>返回查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
+    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -132,7 +132,7 @@ public interface ISqlServerGroupingCommand<T1, T2, TGrouping> : IGroupingCommand
     /// <returns>返回分组查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -141,7 +141,7 @@ public interface ISqlServerGroupingCommand<T1, T2, TGrouping> : IGroupingCommand
     /// <returns>返回查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
+    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -172,7 +172,7 @@ public interface ISqlServerGroupingCommand<T1, T2, T3, TGrouping> : IGroupingCom
     /// <returns>返回分组查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, T3, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, bool>> predicate);
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -180,7 +180,7 @@ public interface ISqlServerGroupingCommand<T1, T2, T3, TGrouping> : IGroupingCom
     /// <returns>返回分组查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, T3, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -189,7 +189,7 @@ public interface ISqlServerGroupingCommand<T1, T2, T3, TGrouping> : IGroupingCom
     /// <returns>返回查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, T3, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
+    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -197,7 +197,7 @@ public interface ISqlServerGroupingCommand<T1, T2, T3, TGrouping> : IGroupingCom
     /// <returns>返回分组查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, T3, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -206,7 +206,7 @@ public interface ISqlServerGroupingCommand<T1, T2, T3, TGrouping> : IGroupingCom
     /// <returns>返回查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, T3, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
+    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -238,7 +238,7 @@ public interface ISqlServerGroupingCommand<T1, T2, T3, T4, TGrouping> : IGroupin
     /// <returns>返回分组查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, T3, T4, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, bool>> predicate);
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -246,7 +246,7 @@ public interface ISqlServerGroupingCommand<T1, T2, T3, T4, TGrouping> : IGroupin
     /// <returns>返回分组查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, T3, T4, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -255,7 +255,7 @@ public interface ISqlServerGroupingCommand<T1, T2, T3, T4, TGrouping> : IGroupin
     /// <returns>返回查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, T3, T4, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
+    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -263,7 +263,7 @@ public interface ISqlServerGroupingCommand<T1, T2, T3, T4, TGrouping> : IGroupin
     /// <returns>返回分组查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, T3, T4, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -272,7 +272,7 @@ public interface ISqlServerGroupingCommand<T1, T2, T3, T4, TGrouping> : IGroupin
     /// <returns>返回查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, T3, T4, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
+    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -305,7 +305,7 @@ public interface ISqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping> : IGro
     /// <returns>返回分组查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, bool>> predicate);
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -313,7 +313,7 @@ public interface ISqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping> : IGro
     /// <returns>返回分组查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -322,7 +322,7 @@ public interface ISqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping> : IGro
     /// <returns>返回查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
+    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -330,7 +330,7 @@ public interface ISqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping> : IGro
     /// <returns>返回分组查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -339,7 +339,7 @@ public interface ISqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping> : IGro
     /// <returns>返回查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
+    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -373,7 +373,7 @@ public interface ISqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> : 
     /// <returns>返回分组查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, bool>> predicate);
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -381,7 +381,7 @@ public interface ISqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> : 
     /// <returns>返回分组查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -390,7 +390,7 @@ public interface ISqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> : 
     /// <returns>返回查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
+    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -398,7 +398,7 @@ public interface ISqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> : 
     /// <returns>返回分组查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -407,7 +407,7 @@ public interface ISqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> : 
     /// <returns>返回查询对象</returns>
     new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
+    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>

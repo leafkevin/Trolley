@@ -70,7 +70,7 @@ public interface IQueryBase : IQuery
     /// <summary>
     /// 返回数据条数
     /// </summary>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回数据条数</returns>
     Task<int> CountAsync(CancellationToken cancellationToken = default);
     /// <summary>
@@ -81,7 +81,7 @@ public interface IQueryBase : IQuery
     /// <summary>
     /// 返回数据条数
     /// </summary>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回数据条数</returns>
     Task<long> LongCountAsync(CancellationToken cancellationToken = default);
     #endregion
@@ -95,7 +95,7 @@ public interface IQueryBase : IQuery
     /// <summary>
     /// 判断数据是否存在，存在为true，否则为false
     /// </summary>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回布尔值，存在为true，否则为false</returns>
     Task<bool> ExistsAsync(CancellationToken cancellationToken = default);
     #endregion
@@ -108,13 +108,13 @@ public interface IQuery<T> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -144,7 +144,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
@@ -204,7 +204,7 @@ public interface IQuery<T> : IQueryBase
 
     #region Union/UnionAll
     /// <summary>
-    /// Union操作，去掉重复记录，用法：
+    /// Union操作，去掉重复记录，如：
     /// <code>
     /// var subQuery = repository.From&lt;Order&gt;()
     ///     .Where(x =&gt; x.Id &gt; 1)
@@ -222,7 +222,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> Union(IQuery<T> subQuery);
     /// <summary>
-    /// Union操作，去掉重复记录，用法：
+    /// Union操作，去掉重复记录，如：
     /// <code>
     /// await repository.From&lt;Order&gt;()
     ///     ...
@@ -240,7 +240,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     /// <summary>
-    /// Union All操作，所有记录不去掉重复，用法：
+    /// Union All操作，所有记录不去掉重复，如：
     /// <code>
     /// var subQuery = repository.From&lt;Order&gt;() ...
     ///     .Select(x =&gt; new { ... })
@@ -273,7 +273,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     /// <summary>
-    /// 递归CTE子查询中的Union操作，表达式subQueryExpr中的第二参数是自身引用，用法：
+    /// 递归CTE子查询中的Union操作，表达式subQueryExpr中的第二参数是CTE自身引用，如：
     /// <code>
     /// f.FromQuery(f =&gt; f.From&lt;Menu&gt;() ...
     ///         .Select(x =&gt; new { ... })
@@ -294,7 +294,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
     /// <summary>
-    /// 递归CTE子查询中的UnionAll操作，表达式subQueryExpr中的第二参数是自身引用，用法：
+    /// 递归CTE子查询中的UnionAll操作，表达式subQueryExpr中的第二参数是CTE自身引用，如：
     /// <code>
     /// f.FromQuery(f =&gt; f.From&lt;Menu&gt;() ...
     ///         .Select(x =&gt; new { ... })
@@ -317,7 +317,7 @@ public interface IQuery<T> : IQueryBase
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -329,7 +329,7 @@ public interface IQuery<T> : IQueryBase
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -340,14 +340,14 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -384,7 +384,7 @@ public interface IQuery<T> : IQueryBase
 
     #region InnerJoin
     /// <summary>
-    /// 添加TOther表，与现有表T做INNER JOIN关联，用法:
+    /// 添加TOther表，与现有表T做INNER JOIN关联，如：
     /// <code>
     /// repository.From&lt;User&gt;()
     ///     .InnerJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
@@ -395,7 +395,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository
     ///     .FromQuery(f =&gt; f.From&lt;Menu&gt;()
@@ -418,7 +418,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表T做INNER JOIN关联，用法:
+    /// 添加subQuery子查询，并与现有表T做INNER JOIN关联，如：
     /// <code>
     /// await repository.From&lt;User&gt;()
     ///     .InnerJoin&lt;Order&gt;((x, y) =&gt; ...)
@@ -439,7 +439,7 @@ public interface IQuery<T> : IQueryBase
 
     #region LeftJoin
     /// <summary>
-    /// 添加TOther表，与现有表T做LEFT JOIN关联，用法:
+    /// 添加TOther表，与现有表T做LEFT JOIN关联，如：
     /// <code>
     /// repository.From&lt;User&gt;()
     ///     .LeftJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
@@ -450,7 +450,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;()
     ///     .Where(x =&gt; x.Id == 1).Select(x =&gt; new { x.Id, x.Name, x.ParentId });
@@ -464,7 +464,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表T做LEFT JOIN关联，用法:
+    /// 添加subQuery子查询，并与现有表T做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin(f =&gt; f.From&lt;OrderDetail&gt;()
     ///     ...
@@ -481,7 +481,7 @@ public interface IQuery<T> : IQueryBase
 
     #region RightJoin
     /// <summary>
-    /// 添加TOther表，与现有表T做RIGHT JOIN关联，用法:
+    /// 添加TOther表，与现有表T做RIGHT JOIN关联，如：
     /// <code>
     /// .From&lt;User&gt;().RightJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
     /// </code>
@@ -491,7 +491,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;()
     ///     .Where(x =&gt; x.Id == 1).Select(x =&gt; new { x.Id, x.Name, x.ParentId });
@@ -505,7 +505,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表T做RIGHT JOIN关联，用法:
+    /// 添加subQuery子查询，并与现有表T做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin(f =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select( ... ), (a, b, c) =&gt; b.Id == c.OrderId)
@@ -593,7 +593,7 @@ public interface IQuery<T> : IQueryBase
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy(f =&gt; new { f.Id, f.Name, f.CreatedAt.Date })
@@ -609,7 +609,7 @@ public interface IQuery<T> : IQueryBase
 
     #region OrderBy/OrderByDescending
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(f =&gt; new { f.Id, f.OtherId }) 或是 OrderBy(x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -617,7 +617,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, f =&gt; new { f.Id, f.OtherId }) 或是 OrderBy(true, x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -626,7 +626,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(f =&gt; new { f.Id, f.OtherId }) 或是 OrderByDescending(x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -634,7 +634,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, f =&gt; new { f.Id, f.OtherId }) 或是 OrderByDescending(true, x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -643,7 +643,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", f =&lt; f.Name).When("Gender", f =&lt; f.Gender).Build()</code>)
     /// </summary>
@@ -681,7 +681,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> Select();
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
+    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
     /// <code> ...Select(f =&gt; new { f.Id, f.Name }) 或是 ...Select(x =&gt; x.CreatedAt.Date)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -689,7 +689,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -697,7 +697,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null);
     /// <summary>
-    /// 选择指定聚合字段返回，可以是单个聚合字段或多个聚合字段的匿名对象，用法：
+    /// 选择指定聚合字段返回，可以是单个聚合字段或多个聚合字段的匿名对象，如：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///    .SelectAggregate((x, a) =&gt; new
@@ -725,7 +725,7 @@ public interface IQuery<T> : IQueryBase
 
     #region Count
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;Order&gt;().Count(f =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -733,16 +733,16 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     int Count<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;Order&gt;().CountAsync(f =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;Order&gt;().CountDistinct(f =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -750,16 +750,16 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;Order&gt;().CountDistinctAsync(f =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段去重后的数据条数</returns>
     Task<int> CountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;Order&gt;().LongCount(f =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -767,16 +767,16 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     long LongCount<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;Order&gt;().LongCountAsync(f =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;Order&gt;().LongCountDistinct(f =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -784,12 +784,12 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;Order&gt;().LongCountDistinctAsync(f =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -808,7 +808,7 @@ public interface IQuery<T> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> SumAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -823,7 +823,7 @@ public interface IQuery<T> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> AvgAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -838,7 +838,7 @@ public interface IQuery<T> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最大值</returns>
     Task<TField> MaxAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -853,7 +853,7 @@ public interface IQuery<T> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -862,13 +862,13 @@ public interface IQuery<T> : IQueryBase
     /// <summary>
     /// 执行SQL查询，返回T实体所有字段的第一条记录，记录不存在时返回T类型的默认值
     /// </summary>
-    /// <returns>返回T实体或默认值</returns>
+    /// <returns>返回T实体对象或默认值</returns>
     T First();
     /// <summary>
     /// 执行SQL查询，返回T实体所有字段的第一条记录，记录不存在时返回T类型的默认值
     /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回T实体或默认值</returns>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回T实体对象或默认值</returns>
     Task<T> FirstAsync(CancellationToken cancellationToken = default);
     /// <summary>
     /// 执行SQL查询，返回T实体所有字段的记录，记录不存在时返回没有任何元素的空列表
@@ -878,7 +878,7 @@ public interface IQuery<T> : IQueryBase
     /// <summary>
     /// 执行SQL查询，返回T实体所有字段的记录，记录不存在时返回没有任何元素的空列表
     /// </summary>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回T实体列表或没有任何元素的空列表</returns>
     Task<List<T>> ToListAsync(CancellationToken cancellationToken = default);
     /// <summary>
@@ -889,7 +889,7 @@ public interface IQuery<T> : IQueryBase
     /// <summary>
     /// 按照指定的分页设置执行SQL查询，返回T实体所有字段的指定条数IPagedList&lt;T&gt;列表，记录不存在时返回没有任何元素的IPagedList&lt;T&gt;空列表
     /// </summary>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回IPagedList&lt;T&gt;列表或没有任何元素的空IPagedList&lt;T&gt;空列表</returns>
     Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default);
     /// <summary>
@@ -908,7 +908,7 @@ public interface IQuery<T> : IQueryBase
     /// <typeparam name="TValue">字典Value类型</typeparam>
     /// <param name="keySelector">字典Key选择委托</param>
     /// <param name="valueSelector">字典Value选择委托</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回Dictionary&lt;TKey, TValue&gt;字典或没有任何元素的Dictionary&lt;TKey, TValue&gt;空字典</returns>
     Task<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull;
     #endregion
@@ -936,13 +936,13 @@ public interface IQuery<T1, T2> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T2表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T2表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T2表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T2表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -1016,7 +1016,7 @@ public interface IQuery<T1, T2> : IQueryBase
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -1028,7 +1028,7 @@ public interface IQuery<T1, T2> : IQueryBase
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -1039,14 +1039,14 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -1085,14 +1085,14 @@ public interface IQuery<T1, T2> : IQueryBase
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> InnerJoin(Expression<Func<T1, T2, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b) =&gt; ...)
     /// </code>
@@ -1102,7 +1102,7 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -1116,7 +1116,7 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b) =&gt; ...) ...
@@ -1133,14 +1133,14 @@ public interface IQuery<T1, T2> : IQueryBase
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> LeftJoin(Expression<Func<T1, T2, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b) =&gt; ...)
     /// </code>
@@ -1150,7 +1150,7 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -1164,7 +1164,7 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b) =&gt; ...) ...
@@ -1181,14 +1181,14 @@ public interface IQuery<T1, T2> : IQueryBase
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> RightJoin(Expression<Func<T1, T2, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b) =&gt; ...)
     /// </code>
@@ -1198,7 +1198,7 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, TOther> RightJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -1212,7 +1212,7 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b) =&gt; ...) ...
@@ -1301,7 +1301,7 @@ public interface IQuery<T1, T2> : IQueryBase
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -1324,7 +1324,7 @@ public interface IQuery<T1, T2> : IQueryBase
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -1332,7 +1332,7 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> OrderBy<TFields>(Expression<Func<T1, T2, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -1341,7 +1341,7 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -1349,7 +1349,7 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> OrderByDescending<TFields>(Expression<Func<T1, T2, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -1358,7 +1358,7 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -1391,7 +1391,7 @@ public interface IQuery<T1, T2> : IQueryBase
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -1399,7 +1399,7 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -1410,7 +1410,7 @@ public interface IQuery<T1, T2> : IQueryBase
 
     #region Count
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2&gt;().Count((a, b) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -1418,16 +1418,16 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     int Count<TField>(Expression<Func<T1, T2, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2&gt;().CountAsync((a, b) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2&gt;().CountDistinct((a, b) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -1435,16 +1435,16 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2&gt;().CountDistinctAsync((a, b) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段去重后的数据条数</returns>
     Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2&gt;().LongCount((a, b) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -1452,16 +1452,16 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     long LongCount<TField>(Expression<Func<T1, T2, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2&gt;().LongCountAsync((a, b) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2&gt;().LongCountDistinct((a, b) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -1469,12 +1469,12 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2&gt;().LongCountDistinctAsync((a, b) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -1494,7 +1494,7 @@ public interface IQuery<T1, T2> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> SumAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -1511,7 +1511,7 @@ public interface IQuery<T1, T2> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -1528,7 +1528,7 @@ public interface IQuery<T1, T2> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最大值</returns>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -1545,7 +1545,7 @@ public interface IQuery<T1, T2> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -1560,13 +1560,13 @@ public interface IQuery<T1, T2, T3> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T3表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T3表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T3表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T3表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -1640,7 +1640,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -1652,7 +1652,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -1663,14 +1663,14 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -1709,14 +1709,14 @@ public interface IQuery<T1, T2, T3> : IQueryBase
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> InnerJoin(Expression<Func<T1, T2, T3, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c) =&gt; ...)
     /// </code>
@@ -1726,7 +1726,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -1740,7 +1740,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c) =&gt; ...) ...
@@ -1757,14 +1757,14 @@ public interface IQuery<T1, T2, T3> : IQueryBase
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> LeftJoin(Expression<Func<T1, T2, T3, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c) =&gt; ...)
     /// </code>
@@ -1774,7 +1774,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -1788,7 +1788,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c) =&gt; ...) ...
@@ -1805,14 +1805,14 @@ public interface IQuery<T1, T2, T3> : IQueryBase
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> RightJoin(Expression<Func<T1, T2, T3, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c) =&gt; ...)
     /// </code>
@@ -1822,7 +1822,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -1836,7 +1836,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c) =&gt; ...) ...
@@ -1925,7 +1925,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -1948,7 +1948,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -1956,7 +1956,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> OrderBy<TFields>(Expression<Func<T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -1965,7 +1965,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -1973,7 +1973,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -1982,7 +1982,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -2015,7 +2015,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -2023,7 +2023,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -2034,7 +2034,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
 
     #region Count
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3&gt;().Count((a, b, c) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2042,16 +2042,16 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     int Count<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3&gt;().CountAsync((a, b, c) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3&gt;().CountDistinct((a, b, c) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2059,16 +2059,16 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3&gt;().CountDistinctAsync((a, b, c) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段去重后的数据条数</returns>
     Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3&gt;().LongCount((a, b, c) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2076,16 +2076,16 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     long LongCount<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3&gt;().LongCountAsync((a, b, c) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3&gt;().LongCountDistinct((a, b, c) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2093,12 +2093,12 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3&gt;().LongCountDistinctAsync((a, b, c) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -2118,7 +2118,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -2135,7 +2135,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -2152,7 +2152,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最大值</returns>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -2169,7 +2169,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -2185,13 +2185,13 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T4表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T4表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T4表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T4表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -2265,7 +2265,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -2277,7 +2277,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -2288,14 +2288,14 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -2334,14 +2334,14 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> InnerJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d) =&gt; ...)
     /// </code>
@@ -2351,7 +2351,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -2365,7 +2365,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d) =&gt; ...) ...
@@ -2382,14 +2382,14 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> LeftJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d) =&gt; ...)
     /// </code>
@@ -2399,7 +2399,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -2413,7 +2413,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d) =&gt; ...) ...
@@ -2430,14 +2430,14 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> RightJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d) =&gt; ...)
     /// </code>
@@ -2447,7 +2447,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -2461,7 +2461,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d) =&gt; ...) ...
@@ -2550,7 +2550,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -2573,7 +2573,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -2581,7 +2581,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -2590,7 +2590,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -2598,7 +2598,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -2607,7 +2607,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -2640,7 +2640,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -2648,7 +2648,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -2659,7 +2659,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
 
     #region Count
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4&gt;().Count((a, b, c, d) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2667,16 +2667,16 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     int Count<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4&gt;().CountAsync((a, b, c, d) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4&gt;().CountDistinct((a, b, c, d) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2684,16 +2684,16 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4&gt;().CountDistinctAsync((a, b, c, d) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段去重后的数据条数</returns>
     Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4&gt;().LongCount((a, b, c, d) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2701,16 +2701,16 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     long LongCount<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4&gt;().LongCountAsync((a, b, c, d) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4&gt;().LongCountDistinct((a, b, c, d) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2718,12 +2718,12 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4&gt;().LongCountDistinctAsync((a, b, c, d) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -2743,7 +2743,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -2760,7 +2760,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -2777,7 +2777,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最大值</returns>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -2794,7 +2794,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -2811,13 +2811,13 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T5表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T5表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T5表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T5表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -2891,7 +2891,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -2903,7 +2903,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -2914,14 +2914,14 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -2960,14 +2960,14 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e) =&gt; ...)
     /// </code>
@@ -2977,7 +2977,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -2991,7 +2991,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e) =&gt; ...) ...
@@ -3008,14 +3008,14 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e) =&gt; ...)
     /// </code>
@@ -3025,7 +3025,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -3039,7 +3039,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e) =&gt; ...) ...
@@ -3056,14 +3056,14 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> RightJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e) =&gt; ...)
     /// </code>
@@ -3073,7 +3073,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -3087,7 +3087,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e) =&gt; ...) ...
@@ -3176,7 +3176,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -3199,7 +3199,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -3207,7 +3207,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -3216,7 +3216,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -3224,7 +3224,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -3233,7 +3233,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -3266,7 +3266,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -3274,7 +3274,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -3285,7 +3285,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
 
     #region Count
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5&gt;().Count((a, b, c, d, e) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3293,16 +3293,16 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5&gt;().CountAsync((a, b, c, d, e) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5&gt;().CountDistinct((a, b, c, d, e) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3310,16 +3310,16 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5&gt;().CountDistinctAsync((a, b, c, d, e) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段去重后的数据条数</returns>
     Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5&gt;().LongCount((a, b, c, d, e) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3327,16 +3327,16 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5&gt;().LongCountAsync((a, b, c, d, e) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5&gt;().LongCountDistinct((a, b, c, d, e) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3344,12 +3344,12 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5&gt;().LongCountDistinctAsync((a, b, c, d, e) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -3369,7 +3369,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -3386,7 +3386,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -3403,7 +3403,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最大值</returns>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -3420,7 +3420,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -3438,13 +3438,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T6表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T6表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T6表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T6表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -3518,7 +3518,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -3530,7 +3530,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -3541,14 +3541,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -3587,14 +3587,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f) =&gt; ...)
     /// </code>
@@ -3604,7 +3604,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -3618,7 +3618,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f) =&gt; ...) ...
@@ -3635,14 +3635,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f) =&gt; ...)
     /// </code>
@@ -3652,7 +3652,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -3666,7 +3666,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f) =&gt; ...) ...
@@ -3683,14 +3683,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f) =&gt; ...)
     /// </code>
@@ -3700,7 +3700,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -3714,7 +3714,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e, f) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f) =&gt; ...) ...
@@ -3803,7 +3803,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -3826,7 +3826,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -3834,7 +3834,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -3843,7 +3843,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -3851,7 +3851,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -3860,7 +3860,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -3893,7 +3893,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -3901,7 +3901,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -3912,7 +3912,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
 
     #region Count
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6&gt;().Count((a, b, c, d, e, f) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3920,16 +3920,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6&gt;().CountAsync((a, b, c, d, e, f) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6&gt;().CountDistinct((a, b, c, d, e, f) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3937,16 +3937,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6&gt;().CountDistinctAsync((a, b, c, d, e, f) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段去重后的数据条数</returns>
     Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6&gt;().LongCount((a, b, c, d, e, f) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3954,16 +3954,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6&gt;().LongCountAsync((a, b, c, d, e, f) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6&gt;().LongCountDistinct((a, b, c, d, e, f) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3971,12 +3971,12 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6&gt;().LongCountDistinctAsync((a, b, c, d, e, f) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -3996,7 +3996,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -4013,7 +4013,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -4030,7 +4030,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最大值</returns>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -4047,7 +4047,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -4066,13 +4066,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T7表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T7表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T7表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T7表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -4146,7 +4146,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -4158,7 +4158,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -4169,14 +4169,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -4215,14 +4215,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f, g) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g) =&gt; ...)
     /// </code>
@@ -4232,7 +4232,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -4246,7 +4246,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g) =&gt; ...) ...
@@ -4263,14 +4263,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f, g) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g) =&gt; ...)
     /// </code>
@@ -4280,7 +4280,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -4294,7 +4294,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g) =&gt; ...) ...
@@ -4311,14 +4311,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f, g) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g) =&gt; ...)
     /// </code>
@@ -4328,7 +4328,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -4342,7 +4342,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g) =&gt; ...) ...
@@ -4431,7 +4431,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -4454,7 +4454,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -4462,7 +4462,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -4471,7 +4471,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -4479,7 +4479,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -4488,7 +4488,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -4521,7 +4521,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f, g) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f, g) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -4529,7 +4529,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -4540,7 +4540,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
 
     #region Count
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7&gt;().Count((a, b, c, d, e, f, g) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -4548,16 +4548,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7&gt;().CountAsync((a, b, c, d, e, f, g) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7&gt;().CountDistinct((a, b, c, d, e, f, g) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -4565,16 +4565,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7&gt;().CountDistinctAsync((a, b, c, d, e, f, g) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段去重后的数据条数</returns>
     Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7&gt;().LongCount((a, b, c, d, e, f, g) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -4582,16 +4582,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7&gt;().LongCountAsync((a, b, c, d, e, f, g) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7&gt;().LongCountDistinct((a, b, c, d, e, f, g) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -4599,12 +4599,12 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7&gt;().LongCountDistinctAsync((a, b, c, d, e, f, g) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -4624,7 +4624,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -4641,7 +4641,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -4658,7 +4658,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最大值</returns>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -4675,7 +4675,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -4695,13 +4695,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T8表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T8表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T8表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T8表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -4775,7 +4775,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -4787,7 +4787,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -4798,14 +4798,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -4844,14 +4844,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h) =&gt; ...)
     /// </code>
@@ -4861,7 +4861,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -4875,7 +4875,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h) =&gt; ...) ...
@@ -4892,14 +4892,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f, g, h) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h) =&gt; ...)
     /// </code>
@@ -4909,7 +4909,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -4923,7 +4923,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h) =&gt; ...) ...
@@ -4940,14 +4940,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f, g, h) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h) =&gt; ...)
     /// </code>
@@ -4957,7 +4957,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -4971,7 +4971,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h) =&gt; ...) ...
@@ -5060,7 +5060,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -5083,7 +5083,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -5091,7 +5091,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -5100,7 +5100,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -5108,7 +5108,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -5117,7 +5117,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -5150,7 +5150,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f, g, h) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f, g, h) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -5158,7 +5158,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -5169,7 +5169,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
 
     #region Count
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8&gt;().Count((a, b, c, d, e, f, g, h) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5177,16 +5177,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8&gt;().CountAsync((a, b, c, d, e, f, g, h) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8&gt;().CountDistinct((a, b, c, d, e, f, g, h) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5194,16 +5194,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8&gt;().CountDistinctAsync((a, b, c, d, e, f, g, h) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段去重后的数据条数</returns>
     Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8&gt;().LongCount((a, b, c, d, e, f, g, h) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5211,16 +5211,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8&gt;().LongCountAsync((a, b, c, d, e, f, g, h) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8&gt;().LongCountDistinct((a, b, c, d, e, f, g, h) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5228,12 +5228,12 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8&gt;().LongCountDistinctAsync((a, b, c, d, e, f, g, h) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -5253,7 +5253,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -5270,7 +5270,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -5287,7 +5287,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最大值</returns>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -5304,7 +5304,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -5325,13 +5325,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T9表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T9表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T9表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T9表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -5405,7 +5405,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -5417,7 +5417,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -5428,14 +5428,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -5474,14 +5474,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i) =&gt; ...)
     /// </code>
@@ -5491,7 +5491,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -5505,7 +5505,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i) =&gt; ...) ...
@@ -5522,14 +5522,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i) =&gt; ...)
     /// </code>
@@ -5539,7 +5539,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -5553,7 +5553,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i) =&gt; ...) ...
@@ -5570,14 +5570,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f, g, h, i) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i) =&gt; ...)
     /// </code>
@@ -5587,7 +5587,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -5601,7 +5601,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i) =&gt; ...) ...
@@ -5690,7 +5690,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -5713,7 +5713,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -5721,7 +5721,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -5730,7 +5730,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -5738,7 +5738,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -5747,7 +5747,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -5780,7 +5780,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f, g, h, i) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f, g, h, i) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -5788,7 +5788,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -5799,7 +5799,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
 
     #region Count
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9&gt;().Count((a, b, c, d, e, f, g, h, i) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5807,16 +5807,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9&gt;().CountAsync((a, b, c, d, e, f, g, h, i) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9&gt;().CountDistinct((a, b, c, d, e, f, g, h, i) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5824,16 +5824,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9&gt;().CountDistinctAsync((a, b, c, d, e, f, g, h, i) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段去重后的数据条数</returns>
     Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9&gt;().LongCount((a, b, c, d, e, f, g, h, i) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5841,16 +5841,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9&gt;().LongCountAsync((a, b, c, d, e, f, g, h, i) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9&gt;().LongCountDistinct((a, b, c, d, e, f, g, h, i) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5858,12 +5858,12 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9&gt;().LongCountDistinctAsync((a, b, c, d, e, f, g, h, i) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -5883,7 +5883,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -5900,7 +5900,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -5917,7 +5917,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最大值</returns>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -5934,7 +5934,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -5956,13 +5956,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T10表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T10表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T10表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T10表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -6036,7 +6036,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -6048,7 +6048,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -6059,14 +6059,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -6105,14 +6105,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j) =&gt; ...)
     /// </code>
@@ -6122,7 +6122,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -6136,7 +6136,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i, j) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j) =&gt; ...) ...
@@ -6153,14 +6153,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j) =&gt; ...)
     /// </code>
@@ -6170,7 +6170,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -6184,7 +6184,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i, j) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j) =&gt; ...) ...
@@ -6201,14 +6201,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j) =&gt; ...)
     /// </code>
@@ -6218,7 +6218,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -6232,7 +6232,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j) =&gt; ...) ...
@@ -6321,7 +6321,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -6344,7 +6344,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -6352,7 +6352,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -6361,7 +6361,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -6369,7 +6369,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -6378,7 +6378,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -6411,7 +6411,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f, g, h, i, j) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f, g, h, i, j) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -6419,7 +6419,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -6430,7 +6430,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
 
     #region Count
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10&gt;().Count((a, b, c, d, e, f, g, h, i, j) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -6438,16 +6438,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10&gt;().CountAsync((a, b, c, d, e, f, g, h, i, j) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -6455,16 +6455,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10&gt;().CountDistinctAsync((a, b, c, d, e, f, g, h, i, j) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段去重后的数据条数</returns>
     Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10&gt;().LongCount((a, b, c, d, e, f, g, h, i, j) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -6472,16 +6472,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10&gt;().LongCountAsync((a, b, c, d, e, f, g, h, i, j) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10&gt;().LongCountDistinct((a, b, c, d, e, f, g, h, i, j) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -6489,12 +6489,12 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10&gt;().LongCountDistinctAsync((a, b, c, d, e, f, g, h, i, j) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -6514,7 +6514,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -6531,7 +6531,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -6548,7 +6548,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最大值</returns>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -6565,7 +6565,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -6588,13 +6588,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T11表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T11表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T11表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T11表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -6668,7 +6668,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -6680,7 +6680,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -6691,14 +6691,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -6737,14 +6737,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)
     /// </code>
@@ -6754,7 +6754,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -6768,7 +6768,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k) =&gt; ...) ...
@@ -6785,14 +6785,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)
     /// </code>
@@ -6802,7 +6802,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -6816,7 +6816,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k) =&gt; ...) ...
@@ -6833,14 +6833,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)
     /// </code>
@@ -6850,7 +6850,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -6864,7 +6864,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k) =&gt; ...) ...
@@ -6953,7 +6953,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -6976,7 +6976,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -6984,7 +6984,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -6993,7 +6993,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -7001,7 +7001,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -7010,7 +7010,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -7043,7 +7043,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f, g, h, i, j, k) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f, g, h, i, j, k) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -7051,7 +7051,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -7062,7 +7062,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
 
     #region Count
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11&gt;().Count((a, b, c, d, e, f, g, h, i, j, k) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7070,16 +7070,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回该字段的数据条数</returns>
     int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11&gt;().CountAsync((a, b, c, d, e, f, g, h, i, j, k) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j, k) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7087,16 +7087,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11&gt;().CountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段去重后的数据条数</returns>
     Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11&gt;().LongCount((a, b, c, d, e, f, g, h, i, j, k) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7104,16 +7104,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回该字段的数据条数</returns>
     long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11&gt;().LongCountAsync((a, b, c, d, e, f, g, h, i, j, k) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11&gt;().LongCountDistinct((a, b, c, d, e, f, g, h, i, j, k) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7121,12 +7121,12 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11&gt;().LongCountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -7146,7 +7146,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -7163,7 +7163,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -7180,7 +7180,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最大值</returns>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -7197,7 +7197,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -7221,13 +7221,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T12表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T12表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T12表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T12表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -7301,7 +7301,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -7313,7 +7313,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -7324,14 +7324,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -7370,14 +7370,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)
     /// </code>
@@ -7387,7 +7387,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -7401,7 +7401,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...) ...
@@ -7418,14 +7418,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)
     /// </code>
@@ -7435,7 +7435,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -7449,7 +7449,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...) ...
@@ -7466,14 +7466,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)
     /// </code>
@@ -7483,7 +7483,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -7497,7 +7497,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...) ...
@@ -7586,7 +7586,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -7609,7 +7609,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -7617,7 +7617,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -7626,7 +7626,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -7634,7 +7634,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -7643,7 +7643,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -7676,7 +7676,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -7684,7 +7684,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -7695,7 +7695,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
 
     #region Count
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12&gt;().Count((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7703,16 +7703,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回该字段的数据条数</returns>
     int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12&gt;().CountAsync((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7720,16 +7720,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12&gt;().CountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段去重后的数据条数</returns>
     Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12&gt;().LongCount((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7737,16 +7737,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回该字段的数据条数</returns>
     long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12&gt;().LongCountAsync((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12&gt;().LongCountDistinct((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7754,12 +7754,12 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12&gt;().LongCountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -7779,7 +7779,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -7796,7 +7796,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -7813,7 +7813,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最大值</returns>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -7830,7 +7830,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -7855,13 +7855,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T13表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T13表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T13表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T13表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -7935,7 +7935,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -7947,7 +7947,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -7958,14 +7958,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -8004,14 +8004,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)
     /// </code>
@@ -8021,7 +8021,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -8035,7 +8035,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...) ...
@@ -8052,14 +8052,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)
     /// </code>
@@ -8069,7 +8069,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -8083,7 +8083,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...) ...
@@ -8100,14 +8100,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)
     /// </code>
@@ -8117,7 +8117,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -8131,7 +8131,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...) ...
@@ -8220,7 +8220,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -8243,7 +8243,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -8251,7 +8251,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -8260,7 +8260,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -8268,7 +8268,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -8277,7 +8277,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -8310,7 +8310,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -8318,7 +8318,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -8329,7 +8329,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
 
     #region Count
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13&gt;().Count((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -8337,16 +8337,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回该字段的数据条数</returns>
     int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13&gt;().CountAsync((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -8354,16 +8354,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13&gt;().CountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段去重后的数据条数</returns>
     Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13&gt;().LongCount((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -8371,16 +8371,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回该字段的数据条数</returns>
     long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13&gt;().LongCountAsync((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13&gt;().LongCountDistinct((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -8388,12 +8388,12 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13&gt;().LongCountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -8413,7 +8413,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -8430,7 +8430,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -8447,7 +8447,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最大值</returns>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -8464,7 +8464,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -8490,13 +8490,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T14表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T14表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T14表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T14表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -8570,7 +8570,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -8582,7 +8582,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -8593,14 +8593,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -8639,14 +8639,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)
     /// </code>
@@ -8656,7 +8656,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -8670,7 +8670,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...) ...
@@ -8687,14 +8687,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)
     /// </code>
@@ -8704,7 +8704,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -8718,7 +8718,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...) ...
@@ -8735,14 +8735,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)
     /// </code>
@@ -8752,7 +8752,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -8766,7 +8766,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...) ...
@@ -8855,7 +8855,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -8878,7 +8878,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -8886,7 +8886,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -8895,7 +8895,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -8903,7 +8903,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -8912,7 +8912,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -8945,7 +8945,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -8953,7 +8953,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -8964,7 +8964,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region Count
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14&gt;().Count((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -8972,16 +8972,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的数据条数</returns>
     int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14&gt;().CountAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -8989,16 +8989,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14&gt;().CountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段去重后的数据条数</returns>
     Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14&gt;().LongCount((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -9006,16 +9006,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的数据条数</returns>
     long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14&gt;().LongCountAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14&gt;().LongCountDistinct((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -9023,12 +9023,12 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14&gt;().LongCountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -9048,7 +9048,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -9065,7 +9065,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -9082,7 +9082,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最大值</returns>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -9099,7 +9099,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -9126,13 +9126,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T15表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T15表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T15表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T15表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -9206,7 +9206,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -9218,7 +9218,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -9229,14 +9229,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -9275,14 +9275,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)
     /// </code>
@@ -9292,7 +9292,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -9306,7 +9306,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...) ...
@@ -9323,14 +9323,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)
     /// </code>
@@ -9340,7 +9340,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -9354,7 +9354,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...) ...
@@ -9371,14 +9371,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)
     /// </code>
@@ -9388,7 +9388,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -9402,7 +9402,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...) ...
@@ -9491,7 +9491,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -9514,7 +9514,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -9522,7 +9522,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -9531,7 +9531,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -9539,7 +9539,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -9548,7 +9548,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -9581,7 +9581,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -9589,7 +9589,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -9600,7 +9600,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region Count
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().Count((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -9608,16 +9608,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的数据条数</returns>
     int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().CountAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -9625,16 +9625,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().CountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段去重后的数据条数</returns>
     Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().LongCount((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -9642,16 +9642,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的数据条数</returns>
     long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().LongCountAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().LongCountDistinct((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -9659,12 +9659,12 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().LongCountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -9684,7 +9684,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -9701,7 +9701,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -9718,7 +9718,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最大值</returns>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -9735,7 +9735,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -9763,13 +9763,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T16表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T16表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T16表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T16表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -9875,7 +9875,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
@@ -9885,7 +9885,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
@@ -9895,7 +9895,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
@@ -9977,7 +9977,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -10000,7 +10000,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -10008,7 +10008,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -10017,7 +10017,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -10025,7 +10025,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -10034,7 +10034,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -10067,7 +10067,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -10075,7 +10075,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -10086,7 +10086,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region Count
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16&gt;().Count((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -10094,16 +10094,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的数据条数</returns>
     int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16&gt;().CountAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -10111,16 +10111,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16&gt;().CountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段去重后的数据条数</returns>
     Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16&gt;().LongCount((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -10128,16 +10128,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的数据条数</returns>
     long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，用法：
+    /// 返回某个字段的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16&gt;().LongCountAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16&gt;().LongCountDistinct((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -10145,12 +10145,12 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，用法：
+    /// 返回某个字段去重后的数据条数，如：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16&gt;().LongCountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
@@ -10170,7 +10170,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -10187,7 +10187,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
     Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -10204,7 +10204,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最大值</returns>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
@@ -10221,7 +10221,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion

@@ -20,13 +20,13 @@ public interface IPostgreSqlIncludableQuery<T, TMember> : IIncludableQuery<T, TM
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回导航属性查询对象</returns>
     new IPostgreSqlIncludableQuery<T, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回导航属性查询对象</returns>
@@ -158,13 +158,13 @@ public interface IPostgreSqlIncludableQuery<<#=tables#>, TMember> : IIncludableQ
 #>
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回导航属性查询对象</returns>
     new IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回导航属性查询对象</returns>

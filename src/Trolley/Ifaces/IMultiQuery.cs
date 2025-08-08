@@ -39,13 +39,13 @@ public interface IMultiQuery<T> : IMultiQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -75,7 +75,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
@@ -128,7 +128,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
 
     #region Union/UnionAll
     /// <summary>
-    /// Union操作，去掉重复记录，用法：
+    /// Union操作，去掉重复记录，如：
     /// <code>
     /// var subQuery = repository.From&lt;Order&gt;()
     ///     .Where(x =&gt; x.Id &gt; 1)
@@ -146,7 +146,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> Union(IQuery<T> subQuery);
     /// <summary>
-    /// Union操作，去掉重复记录，用法：
+    /// Union操作，去掉重复记录，如：
     /// <code>
     /// await f.From&lt;Order&gt;()
     ///     ...
@@ -164,7 +164,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     /// <summary>
-    /// Union All操作，所有记录不去掉重复，用法：
+    /// Union All操作，所有记录不去掉重复，如：
     /// <code>
     /// var subQuery = repository.From&lt;Order&gt;()
     ///     .Where(x =&gt; x.Id &gt; 1)
@@ -182,7 +182,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> UnionAll(IQuery<T> subQuery);
     /// <summary>
-    /// Union All操作，所有记录不去掉重复，用法：
+    /// Union All操作，所有记录不去掉重复，如：
     /// <code>
     /// await f.From&lt;Order&gt;() ...
     ///     .UnionAll(f =&gt; f.From&lt;Order&gt;()
@@ -199,7 +199,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     /// <summary>
-    /// 递归CTE子查询中的Union操作，表达式subQueryExpr中的第二参数是自身引用，用法：
+    /// 递归CTE子查询中的Union操作，表达式subQueryExpr中的第二参数是CTE自身引用，如：
     /// <code>
     /// f.From&lt;Menu&gt;() ...
     ///         .Select(x =&gt; new { ... })
@@ -220,7 +220,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
     /// <summary>
-    /// 递归CTE子查询中的UnionAll操作，表达式subQueryExpr中的第二参数是自身引用，用法：
+    /// 递归CTE子查询中的UnionAll操作，表达式subQueryExpr中的第二参数是CTE自身引用，如：
     /// <code>
     /// f.From&lt;Menu&gt;() ...
     ///         .Select(x =&gt; new { ... })
@@ -243,7 +243,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// f.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -255,7 +255,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// f.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -266,14 +266,14 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// f.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -312,7 +312,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
 
     #region InnerJoin
     /// <summary>
-    /// 添加TOther表，与现有表T做INNER JOIN关联，用法:
+    /// 添加TOther表，与现有表T做INNER JOIN关联，如：
     /// <code>
     /// f.From&lt;User&gt;()
     ///     .InnerJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
@@ -323,7 +323,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// f.From&lt;Menu&gt;()
     ///         .Where(x =&gt; x.Id == 1)
@@ -345,7 +345,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表T做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表T做INNER JOIN关联，如：
     /// <code>
     /// f.InnerJoin(f =&gt; f.From&lt;OrderDetail&gt;()
     ///     ...
@@ -363,7 +363,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
 
     #region LeftJoin
     /// <summary>
-    /// 添加TOther表，与现有表T做LEFT JOIN关联，用法:
+    /// 添加TOther表，与现有表T做LEFT JOIN关联，如：
     /// <code>
     /// repository.From&lt;User&gt;()
     ///     .LeftJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
@@ -374,7 +374,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;()
     ///     .Where(x =&gt; x.Id == 1).Select(x =&gt; new { x.Id, x.Name, x.ParentId });
@@ -388,7 +388,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表T做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表T做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin(f =&gt; f.From&lt;OrderDetail&gt;()
     ///     ...
@@ -405,7 +405,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
 
     #region RightJoin
     /// <summary>
-    /// 添加TOther表，与现有表T做RIGHT JOIN关联，用法:
+    /// 添加TOther表，与现有表T做RIGHT JOIN关联，如：
     /// <code>
     /// .From&lt;User&gt;().RightJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
     /// </code>
@@ -415,7 +415,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;()
     ///     .Where(x =&gt; x.Id == 1).Select(x =&gt; new { x.Id, x.Name, x.ParentId });
@@ -429,7 +429,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表T做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表T做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin(f =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select( ... ), (a, b, c) =&gt; b.Id == c.OrderId)
@@ -517,7 +517,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// f.From&lt;User&gt;() ...
     ///    .GroupBy(f =&gt; new { f.Id, f.Name, f.CreatedAt.Date })
@@ -533,7 +533,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(f =&gt; new { f.Id, f.OtherId }) 或是 OrderBy(x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -541,7 +541,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, f =&gt; new { f.Id, f.OtherId }) 或是 OrderBy(true, x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -550,7 +550,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(f =&gt; new { f.Id, f.OtherId }) 或是 OrderByDescending(x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -558,7 +558,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, f =&gt; new { f.Id, f.OtherId }) 或是 OrderByDescending(true, x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -567,7 +567,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", f =&lt; f.Name).When("Gender", f =&lt; f.Gender).Build()</code>)
     /// </summary>
@@ -605,7 +605,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> Select();
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
+    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
     /// <code> ...Select(f =&gt; new { f.Id, f.Name }) 或是 ...Select(x =&gt; x.CreatedAt.Date)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -613,7 +613,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -621,7 +621,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null);
     /// <summary>
-    /// 选择指定聚合字段返回，可以是单个聚合字段或多个聚合字段的匿名对象，用法：
+    /// 选择指定聚合字段返回，可以是单个聚合字段或多个聚合字段的匿名对象，如：
     /// <code>
     /// f.From&lt;Order&gt;()
     ///    .SelectAggregate((x, a) =&gt; new
@@ -649,7 +649,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
 
     #region Count
     /// <summary>
-    /// 返回某个字段的int类型数据条数，用法：
+    /// 返回某个字段的int类型数据条数，如：
     /// <code>f.From&lt;Order&gt;().Count(f =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -657,7 +657,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery Count<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的int类型数据条数，用法：
+    /// 返回某个字段去重后的int类型数据条数，如：
     /// <code>f.From&lt;Order&gt;().CountDistinct(f =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -665,7 +665,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery CountDistinct<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的long类型数据条数，用法：
+    /// 返回某个字段的long类型数据条数，如：
     /// <code>f.From&lt;Order&gt;().LongCount(f =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -673,7 +673,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery LongCount<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的long类型数据条数，用法：
+    /// 返回某个字段去重后的long类型数据条数，如：
     /// <code>f.From&lt;Order&gt;().LongCountDistinct(f =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -751,13 +751,13 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -787,7 +787,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
@@ -831,7 +831,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -843,7 +843,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -854,14 +854,14 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -900,14 +900,14 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2> InnerJoin(Expression<Func<T1, T2, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b) =&gt; ...)
     /// </code>
@@ -917,7 +917,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -931,7 +931,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b) =&gt; ...) ...
@@ -948,14 +948,14 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2> LeftJoin(Expression<Func<T1, T2, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b) =&gt; ...)
     /// </code>
@@ -965,7 +965,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -979,7 +979,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b) =&gt; ...) ...
@@ -996,14 +996,14 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2> RightJoin(Expression<Func<T1, T2, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b) =&gt; ...)
     /// </code>
@@ -1013,7 +1013,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, TOther> RightJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -1027,7 +1027,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b) =&gt; ...) ...
@@ -1116,7 +1116,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// f.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -1139,7 +1139,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -1147,7 +1147,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2> OrderBy<TFields>(Expression<Func<T1, T2, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -1156,7 +1156,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -1164,7 +1164,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2> OrderByDescending<TFields>(Expression<Func<T1, T2, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -1173,7 +1173,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -1184,7 +1184,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -1192,7 +1192,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -1203,7 +1203,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
 
     #region Count
     /// <summary>
-    /// 返回某个字段的int类型数据条数，用法：
+    /// 返回某个字段的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2&gt;().Count((a, b) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -1211,7 +1211,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery Count<TField>(Expression<Func<T1, T2, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的int类型数据条数，用法：
+    /// 返回某个字段去重后的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2&gt;().CountDistinct((a, b) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -1219,7 +1219,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery CountDistinct<TField>(Expression<Func<T1, T2, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的long类型数据条数，用法：
+    /// 返回某个字段的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2&gt;().LongCount((a, b) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -1227,7 +1227,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery LongCount<TField>(Expression<Func<T1, T2, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的long类型数据条数，用法：
+    /// 返回某个字段去重后的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2&gt;().LongCountDistinct(f =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -1281,13 +1281,13 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -1317,7 +1317,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
@@ -1361,7 +1361,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -1373,7 +1373,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -1384,14 +1384,14 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -1430,14 +1430,14 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3> InnerJoin(Expression<Func<T1, T2, T3, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c) =&gt; ...)
     /// </code>
@@ -1447,7 +1447,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -1461,7 +1461,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c) =&gt; ...) ...
@@ -1478,14 +1478,14 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3> LeftJoin(Expression<Func<T1, T2, T3, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c) =&gt; ...)
     /// </code>
@@ -1495,7 +1495,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -1509,7 +1509,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c) =&gt; ...) ...
@@ -1526,14 +1526,14 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3> RightJoin(Expression<Func<T1, T2, T3, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c) =&gt; ...)
     /// </code>
@@ -1543,7 +1543,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -1557,7 +1557,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c) =&gt; ...) ...
@@ -1646,7 +1646,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// f.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -1669,7 +1669,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -1677,7 +1677,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3> OrderBy<TFields>(Expression<Func<T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -1686,7 +1686,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -1694,7 +1694,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -1703,7 +1703,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -1714,7 +1714,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -1722,7 +1722,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -1733,7 +1733,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
 
     #region Count
     /// <summary>
-    /// 返回某个字段的int类型数据条数，用法：
+    /// 返回某个字段的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3&gt;().Count((a, b, c) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -1741,7 +1741,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery Count<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的int类型数据条数，用法：
+    /// 返回某个字段去重后的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3&gt;().CountDistinct((a, b, c) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -1749,7 +1749,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery CountDistinct<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的long类型数据条数，用法：
+    /// 返回某个字段的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3&gt;().LongCount((a, b, c) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -1757,7 +1757,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery LongCount<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的long类型数据条数，用法：
+    /// 返回某个字段去重后的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3&gt;().LongCountDistinct(f =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -1812,13 +1812,13 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -1848,7 +1848,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
@@ -1892,7 +1892,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -1904,7 +1904,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -1915,14 +1915,14 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -1961,14 +1961,14 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4> InnerJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d) =&gt; ...)
     /// </code>
@@ -1978,7 +1978,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -1992,7 +1992,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d) =&gt; ...) ...
@@ -2009,14 +2009,14 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4> LeftJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d) =&gt; ...)
     /// </code>
@@ -2026,7 +2026,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -2040,7 +2040,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d) =&gt; ...) ...
@@ -2057,14 +2057,14 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4> RightJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d) =&gt; ...)
     /// </code>
@@ -2074,7 +2074,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -2088,7 +2088,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d) =&gt; ...) ...
@@ -2177,7 +2177,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// f.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -2200,7 +2200,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -2208,7 +2208,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -2217,7 +2217,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -2225,7 +2225,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -2234,7 +2234,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -2245,7 +2245,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -2253,7 +2253,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -2264,7 +2264,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
 
     #region Count
     /// <summary>
-    /// 返回某个字段的int类型数据条数，用法：
+    /// 返回某个字段的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4&gt;().Count((a, b, c, d) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2272,7 +2272,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery Count<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的int类型数据条数，用法：
+    /// 返回某个字段去重后的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4&gt;().CountDistinct((a, b, c, d) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2280,7 +2280,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的long类型数据条数，用法：
+    /// 返回某个字段的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4&gt;().LongCount((a, b, c, d) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2288,7 +2288,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery LongCount<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的long类型数据条数，用法：
+    /// 返回某个字段去重后的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4&gt;().LongCountDistinct(f =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2344,13 +2344,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -2380,7 +2380,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
@@ -2424,7 +2424,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -2436,7 +2436,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -2447,14 +2447,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -2493,14 +2493,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e) =&gt; ...)
     /// </code>
@@ -2510,7 +2510,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -2524,7 +2524,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e) =&gt; ...) ...
@@ -2541,14 +2541,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e) =&gt; ...)
     /// </code>
@@ -2558,7 +2558,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -2572,7 +2572,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e) =&gt; ...) ...
@@ -2589,14 +2589,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5> RightJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e) =&gt; ...)
     /// </code>
@@ -2606,7 +2606,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -2620,7 +2620,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e) =&gt; ...) ...
@@ -2709,7 +2709,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// f.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -2732,7 +2732,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -2740,7 +2740,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -2749,7 +2749,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -2757,7 +2757,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -2766,7 +2766,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -2777,7 +2777,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -2785,7 +2785,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -2796,7 +2796,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
 
     #region Count
     /// <summary>
-    /// 返回某个字段的int类型数据条数，用法：
+    /// 返回某个字段的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5&gt;().Count((a, b, c, d, e) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2804,7 +2804,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery Count<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的int类型数据条数，用法：
+    /// 返回某个字段去重后的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5&gt;().CountDistinct((a, b, c, d, e) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2812,7 +2812,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的long类型数据条数，用法：
+    /// 返回某个字段的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5&gt;().LongCount((a, b, c, d, e) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2820,7 +2820,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的long类型数据条数，用法：
+    /// 返回某个字段去重后的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5&gt;().LongCountDistinct(f =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2877,13 +2877,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -2913,7 +2913,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
@@ -2957,7 +2957,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -2969,7 +2969,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -2980,14 +2980,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -3026,14 +3026,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f) =&gt; ...)
     /// </code>
@@ -3043,7 +3043,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -3057,7 +3057,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f) =&gt; ...) ...
@@ -3074,14 +3074,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f) =&gt; ...)
     /// </code>
@@ -3091,7 +3091,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -3105,7 +3105,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f) =&gt; ...) ...
@@ -3122,14 +3122,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f) =&gt; ...)
     /// </code>
@@ -3139,7 +3139,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -3153,7 +3153,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e, f) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f) =&gt; ...) ...
@@ -3242,7 +3242,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// f.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -3265,7 +3265,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -3273,7 +3273,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -3282,7 +3282,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -3290,7 +3290,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -3299,7 +3299,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -3310,7 +3310,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -3318,7 +3318,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -3329,7 +3329,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
 
     #region Count
     /// <summary>
-    /// 返回某个字段的int类型数据条数，用法：
+    /// 返回某个字段的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6&gt;().Count((a, b, c, d, e, f) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3337,7 +3337,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的int类型数据条数，用法：
+    /// 返回某个字段去重后的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6&gt;().CountDistinct((a, b, c, d, e, f) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3345,7 +3345,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的long类型数据条数，用法：
+    /// 返回某个字段的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6&gt;().LongCount((a, b, c, d, e, f) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3353,7 +3353,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的long类型数据条数，用法：
+    /// 返回某个字段去重后的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6&gt;().LongCountDistinct(f =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3411,13 +3411,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -3447,7 +3447,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
@@ -3491,7 +3491,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -3503,7 +3503,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -3514,14 +3514,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -3560,14 +3560,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f, g) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g) =&gt; ...)
     /// </code>
@@ -3577,7 +3577,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -3591,7 +3591,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g) =&gt; ...) ...
@@ -3608,14 +3608,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f, g) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g) =&gt; ...)
     /// </code>
@@ -3625,7 +3625,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -3639,7 +3639,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g) =&gt; ...) ...
@@ -3656,14 +3656,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f, g) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g) =&gt; ...)
     /// </code>
@@ -3673,7 +3673,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -3687,7 +3687,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g) =&gt; ...) ...
@@ -3776,7 +3776,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// f.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -3799,7 +3799,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -3807,7 +3807,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -3816,7 +3816,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -3824,7 +3824,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -3833,7 +3833,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -3844,7 +3844,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f, g) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f, g) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -3852,7 +3852,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -3863,7 +3863,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
 
     #region Count
     /// <summary>
-    /// 返回某个字段的int类型数据条数，用法：
+    /// 返回某个字段的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7&gt;().Count((a, b, c, d, e, f, g) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3871,7 +3871,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的int类型数据条数，用法：
+    /// 返回某个字段去重后的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7&gt;().CountDistinct((a, b, c, d, e, f, g) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3879,7 +3879,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的long类型数据条数，用法：
+    /// 返回某个字段的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7&gt;().LongCount((a, b, c, d, e, f, g) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3887,7 +3887,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的long类型数据条数，用法：
+    /// 返回某个字段去重后的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7&gt;().LongCountDistinct(f =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3946,13 +3946,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -3982,7 +3982,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
@@ -4026,7 +4026,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -4038,7 +4038,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -4049,14 +4049,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -4095,14 +4095,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h) =&gt; ...)
     /// </code>
@@ -4112,7 +4112,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -4126,7 +4126,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h) =&gt; ...) ...
@@ -4143,14 +4143,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f, g, h) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h) =&gt; ...)
     /// </code>
@@ -4160,7 +4160,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -4174,7 +4174,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h) =&gt; ...) ...
@@ -4191,14 +4191,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f, g, h) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h) =&gt; ...)
     /// </code>
@@ -4208,7 +4208,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -4222,7 +4222,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h) =&gt; ...) ...
@@ -4311,7 +4311,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// f.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -4334,7 +4334,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -4342,7 +4342,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -4351,7 +4351,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -4359,7 +4359,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -4368,7 +4368,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -4379,7 +4379,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f, g, h) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f, g, h) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -4387,7 +4387,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -4398,7 +4398,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
 
     #region Count
     /// <summary>
-    /// 返回某个字段的int类型数据条数，用法：
+    /// 返回某个字段的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8&gt;().Count((a, b, c, d, e, f, g, h) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -4406,7 +4406,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的int类型数据条数，用法：
+    /// 返回某个字段去重后的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8&gt;().CountDistinct((a, b, c, d, e, f, g, h) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -4414,7 +4414,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的long类型数据条数，用法：
+    /// 返回某个字段的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8&gt;().LongCount((a, b, c, d, e, f, g, h) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -4422,7 +4422,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultipleQuery LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的long类型数据条数，用法：
+    /// 返回某个字段去重后的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8&gt;().LongCountDistinct(f =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -4482,13 +4482,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -4518,7 +4518,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
@@ -4562,7 +4562,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -4574,7 +4574,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -4585,14 +4585,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -4631,14 +4631,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i) =&gt; ...)
     /// </code>
@@ -4648,7 +4648,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -4662,7 +4662,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i) =&gt; ...) ...
@@ -4679,14 +4679,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i) =&gt; ...)
     /// </code>
@@ -4696,7 +4696,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -4710,7 +4710,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i) =&gt; ...) ...
@@ -4727,14 +4727,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f, g, h, i) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i) =&gt; ...)
     /// </code>
@@ -4744,7 +4744,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -4758,7 +4758,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i) =&gt; ...) ...
@@ -4847,7 +4847,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// f.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -4870,7 +4870,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -4878,7 +4878,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -4887,7 +4887,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -4895,7 +4895,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -4904,7 +4904,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -4915,7 +4915,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f, g, h, i) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f, g, h, i) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -4923,7 +4923,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -4934,7 +4934,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
 
     #region Count
     /// <summary>
-    /// 返回某个字段的int类型数据条数，用法：
+    /// 返回某个字段的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9&gt;().Count((a, b, c, d, e, f, g, h, i) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -4942,7 +4942,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultipleQuery Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的int类型数据条数，用法：
+    /// 返回某个字段去重后的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9&gt;().CountDistinct((a, b, c, d, e, f, g, h, i) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -4950,7 +4950,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultipleQuery CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的long类型数据条数，用法：
+    /// 返回某个字段的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9&gt;().LongCount((a, b, c, d, e, f, g, h, i) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -4958,7 +4958,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultipleQuery LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的long类型数据条数，用法：
+    /// 返回某个字段去重后的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9&gt;().LongCountDistinct(f =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5019,13 +5019,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -5055,7 +5055,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
@@ -5099,7 +5099,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -5111,7 +5111,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -5122,14 +5122,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -5168,14 +5168,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j) =&gt; ...)
     /// </code>
@@ -5185,7 +5185,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -5199,7 +5199,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i, j) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j) =&gt; ...) ...
@@ -5216,14 +5216,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j) =&gt; ...)
     /// </code>
@@ -5233,7 +5233,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -5247,7 +5247,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i, j) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j) =&gt; ...) ...
@@ -5264,14 +5264,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j) =&gt; ...)
     /// </code>
@@ -5281,7 +5281,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -5295,7 +5295,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j) =&gt; ...) ...
@@ -5384,7 +5384,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// f.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -5407,7 +5407,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -5415,7 +5415,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -5424,7 +5424,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -5432,7 +5432,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -5441,7 +5441,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -5452,7 +5452,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f, g, h, i, j) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f, g, h, i, j) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -5460,7 +5460,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -5471,7 +5471,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
 
     #region Count
     /// <summary>
-    /// 返回某个字段的int类型数据条数，用法：
+    /// 返回某个字段的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10&gt;().Count((a, b, c, d, e, f, g, h, i, j) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5479,7 +5479,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultipleQuery Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的int类型数据条数，用法：
+    /// 返回某个字段去重后的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5487,7 +5487,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultipleQuery CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的long类型数据条数，用法：
+    /// 返回某个字段的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10&gt;().LongCount((a, b, c, d, e, f, g, h, i, j) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5495,7 +5495,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultipleQuery LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的long类型数据条数，用法：
+    /// 返回某个字段去重后的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10&gt;().LongCountDistinct(f =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5557,13 +5557,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -5593,7 +5593,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
@@ -5637,7 +5637,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -5649,7 +5649,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -5660,14 +5660,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -5706,14 +5706,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)
     /// </code>
@@ -5723,7 +5723,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -5737,7 +5737,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k) =&gt; ...) ...
@@ -5754,14 +5754,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)
     /// </code>
@@ -5771,7 +5771,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -5785,7 +5785,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k) =&gt; ...) ...
@@ -5802,14 +5802,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)
     /// </code>
@@ -5819,7 +5819,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -5833,7 +5833,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k) =&gt; ...) ...
@@ -5922,7 +5922,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// f.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -5945,7 +5945,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -5953,7 +5953,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -5962,7 +5962,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -5970,7 +5970,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -5979,7 +5979,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -5990,7 +5990,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f, g, h, i, j, k) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f, g, h, i, j, k) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -5998,7 +5998,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -6009,7 +6009,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
 
     #region Count
     /// <summary>
-    /// 返回某个字段的int类型数据条数，用法：
+    /// 返回某个字段的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11&gt;().Count((a, b, c, d, e, f, g, h, i, j, k) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -6017,7 +6017,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultipleQuery Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的int类型数据条数，用法：
+    /// 返回某个字段去重后的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j, k) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -6025,7 +6025,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultipleQuery CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的long类型数据条数，用法：
+    /// 返回某个字段的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11&gt;().LongCount((a, b, c, d, e, f, g, h, i, j, k) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -6033,7 +6033,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultipleQuery LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的long类型数据条数，用法：
+    /// 返回某个字段去重后的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11&gt;().LongCountDistinct(f =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -6096,13 +6096,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -6132,7 +6132,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
@@ -6176,7 +6176,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -6188,7 +6188,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -6199,14 +6199,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -6245,14 +6245,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)
     /// </code>
@@ -6262,7 +6262,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -6276,7 +6276,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...) ...
@@ -6293,14 +6293,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)
     /// </code>
@@ -6310,7 +6310,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -6324,7 +6324,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...) ...
@@ -6341,14 +6341,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)
     /// </code>
@@ -6358,7 +6358,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -6372,7 +6372,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...) ...
@@ -6461,7 +6461,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// f.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -6484,7 +6484,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -6492,7 +6492,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -6501,7 +6501,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -6509,7 +6509,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -6518,7 +6518,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -6529,7 +6529,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -6537,7 +6537,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -6548,7 +6548,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
 
     #region Count
     /// <summary>
-    /// 返回某个字段的int类型数据条数，用法：
+    /// 返回某个字段的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12&gt;().Count((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -6556,7 +6556,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultipleQuery Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的int类型数据条数，用法：
+    /// 返回某个字段去重后的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -6564,7 +6564,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultipleQuery CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的long类型数据条数，用法：
+    /// 返回某个字段的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12&gt;().LongCount((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -6572,7 +6572,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultipleQuery LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的long类型数据条数，用法：
+    /// 返回某个字段去重后的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12&gt;().LongCountDistinct(f =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -6636,13 +6636,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -6672,7 +6672,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
@@ -6716,7 +6716,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -6728,7 +6728,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -6739,14 +6739,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -6785,14 +6785,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)
     /// </code>
@@ -6802,7 +6802,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -6816,7 +6816,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...) ...
@@ -6833,14 +6833,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)
     /// </code>
@@ -6850,7 +6850,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -6864,7 +6864,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...) ...
@@ -6881,14 +6881,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)
     /// </code>
@@ -6898,7 +6898,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -6912,7 +6912,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...) ...
@@ -7001,7 +7001,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// f.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -7024,7 +7024,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -7032,7 +7032,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -7041,7 +7041,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -7049,7 +7049,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -7058,7 +7058,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -7069,7 +7069,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -7077,7 +7077,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -7088,7 +7088,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region Count
     /// <summary>
-    /// 返回某个字段的int类型数据条数，用法：
+    /// 返回某个字段的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13&gt;().Count((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7096,7 +7096,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultipleQuery Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的int类型数据条数，用法：
+    /// 返回某个字段去重后的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7104,7 +7104,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultipleQuery CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的long类型数据条数，用法：
+    /// 返回某个字段的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13&gt;().LongCount((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7112,7 +7112,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultipleQuery LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的long类型数据条数，用法：
+    /// 返回某个字段去重后的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13&gt;().LongCountDistinct(f =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7177,13 +7177,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -7213,7 +7213,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
@@ -7257,7 +7257,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -7269,7 +7269,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -7280,14 +7280,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -7326,14 +7326,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)
     /// </code>
@@ -7343,7 +7343,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -7357,7 +7357,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...) ...
@@ -7374,14 +7374,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)
     /// </code>
@@ -7391,7 +7391,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -7405,7 +7405,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...) ...
@@ -7422,14 +7422,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)
     /// </code>
@@ -7439,7 +7439,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -7453,7 +7453,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...) ...
@@ -7542,7 +7542,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// f.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -7565,7 +7565,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -7573,7 +7573,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -7582,7 +7582,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -7590,7 +7590,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -7599,7 +7599,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -7610,7 +7610,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -7618,7 +7618,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -7629,7 +7629,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region Count
     /// <summary>
-    /// 返回某个字段的int类型数据条数，用法：
+    /// 返回某个字段的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14&gt;().Count((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7637,7 +7637,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultipleQuery Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的int类型数据条数，用法：
+    /// 返回某个字段去重后的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7645,7 +7645,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultipleQuery CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的long类型数据条数，用法：
+    /// 返回某个字段的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14&gt;().LongCount((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7653,7 +7653,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultipleQuery LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的long类型数据条数，用法：
+    /// 返回某个字段去重后的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14&gt;().LongCountDistinct(f =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7719,13 +7719,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -7755,7 +7755,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
@@ -7799,7 +7799,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
@@ -7811,7 +7811,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region WithQuery
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
@@ -7822,14 +7822,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -7868,14 +7868,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)
     /// </code>
@@ -7885,7 +7885,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -7899,7 +7899,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...) ...
@@ -7916,14 +7916,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)
     /// </code>
@@ -7933,7 +7933,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -7947,7 +7947,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...) ...
@@ -7964,14 +7964,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)
     /// </code>
@@ -7981,7 +7981,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -7995,7 +7995,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...) ...
@@ -8084,7 +8084,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// f.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -8107,7 +8107,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -8115,7 +8115,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -8124,7 +8124,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -8132,7 +8132,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -8141,7 +8141,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -8152,7 +8152,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -8160,7 +8160,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -8171,7 +8171,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region Count
     /// <summary>
-    /// 返回某个字段的int类型数据条数，用法：
+    /// 返回某个字段的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().Count((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -8179,7 +8179,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultipleQuery Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的int类型数据条数，用法：
+    /// 返回某个字段去重后的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -8187,7 +8187,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultipleQuery CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的long类型数据条数，用法：
+    /// 返回某个字段的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().LongCount((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -8195,7 +8195,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultipleQuery LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的long类型数据条数，用法：
+    /// 返回某个字段去重后的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().LongCountDistinct(f =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -8262,13 +8262,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -8298,7 +8298,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
@@ -8374,7 +8374,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region InnerJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
@@ -8384,7 +8384,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region LeftJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
@@ -8394,7 +8394,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region RightJoin
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
@@ -8476,7 +8476,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// f.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -8499,7 +8499,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -8507,7 +8507,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -8516,7 +8516,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -8524,7 +8524,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -8533,7 +8533,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
     /// </summary>
@@ -8544,7 +8544,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -8552,7 +8552,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。如：
     /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -8563,7 +8563,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region Count
     /// <summary>
-    /// 返回某个字段的int类型数据条数，用法：
+    /// 返回某个字段的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16&gt;().Count((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -8571,7 +8571,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultipleQuery Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的int类型数据条数，用法：
+    /// 返回某个字段去重后的int类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -8579,7 +8579,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultipleQuery CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的long类型数据条数，用法：
+    /// 返回某个字段的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16&gt;().LongCount((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -8587,7 +8587,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultipleQuery LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的long类型数据条数，用法：
+    /// 返回某个字段去重后的long类型数据条数，如：
     /// <code>f.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16&gt;().LongCountDistinct(f =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>

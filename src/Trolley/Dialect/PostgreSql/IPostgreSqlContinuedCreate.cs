@@ -7,7 +7,7 @@ public interface IPostgreSqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
 {
     #region WithBy
     /// <summary>
-    /// 使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，命名或匿名对象、字典都可以，用法：
+    /// 使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，命名或匿名对象、字典都可以，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { ... })
@@ -20,7 +20,7 @@ public interface IPostgreSqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// <returns>返回插入对象</returns>
     new IPostgreSqlContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，用法：
+    /// 判断condition布尔值，如果为true，使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { Name = "kevin", Age = 25 })
@@ -35,7 +35,7 @@ public interface IPostgreSqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// <returns>返回插入对象</returns>
     new IPostgreSqlContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
     /// <summary>
-    /// 单个字段插入，可多次调用，用法：
+    /// 单个字段插入，可多次调用，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { Name = "kevin", Age = 25 })
@@ -50,7 +50,7 @@ public interface IPostgreSqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// <returns>返回插入对象</returns>
     new IPostgreSqlContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     /// <summary>
-    /// 判断condition布尔值，如果为true，插入fieldSelector字段，为false则不插入，可多次调用，用法：
+    /// 判断condition布尔值，如果为true，插入fieldSelector字段，为false则不插入，可多次调用，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { Name = "kevin", Age = 25 })
@@ -130,7 +130,7 @@ public interface IPostgreSqlBulkContinuedCreate<TEntity> : IContinuedCreate<TEnt
 {
     #region WithBy
     /// <summary>
-    /// 使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，命名或匿名对象、字典都可以，用法：
+    /// 使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，命名或匿名对象、字典都可以，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { ... })
@@ -143,7 +143,7 @@ public interface IPostgreSqlBulkContinuedCreate<TEntity> : IContinuedCreate<TEnt
     /// <returns>返回插入对象</returns>
     new IPostgreSqlBulkContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，用法：
+    /// 判断condition布尔值，如果为true，使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { Name = "kevin", Age = 25 })
@@ -158,7 +158,7 @@ public interface IPostgreSqlBulkContinuedCreate<TEntity> : IContinuedCreate<TEnt
     /// <returns>返回插入对象</returns>
     new IPostgreSqlBulkContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
     /// <summary>
-    /// 单个字段插入，可多次调用，用法：
+    /// 单个字段插入，可多次调用，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { Name = "kevin", Age = 25 })
@@ -173,7 +173,7 @@ public interface IPostgreSqlBulkContinuedCreate<TEntity> : IContinuedCreate<TEnt
     /// <returns>返回插入对象</returns>
     new IPostgreSqlBulkContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     /// <summary>
-    /// 判断condition布尔值，如果为true，插入fieldSelector字段，为false则不插入，可多次调用，用法：
+    /// 判断condition布尔值，如果为true，插入fieldSelector字段，为false则不插入，可多次调用，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { Name = "kevin", Age = 25 })

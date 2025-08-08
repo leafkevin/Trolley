@@ -28,13 +28,20 @@ public interface ICreate<TEntity>
 
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定TEntity表分表名执行插入操作，完整的表名，如：.UseTable("sys_order_202001")，按月分表
+    /// 手动指定分表名，如：.UseTable("sys_order_202001")
     /// </summary>
     /// <param name="tableName">完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回插入对象</returns>
     ICreate<TEntity> UseTable(string tableName);
     /// <summary>
-    /// 根据字段值，手动指定TEntity表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定TEntity表分表名获取委托，使用委托获取分表名，在批量插入场景，插入对象的值自动插入对应分表中，此方法只适用批量场景
+    /// </summary>
+    /// <typeparam name="TInsertObj">插入的实体类型</typeparam>
+    /// <param name="tableNameGetter">分表名获取委托</param>
+    /// <exception cref="ArgumentNullException"></exception>
+    ICreate<TEntity> UseTable<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter);
+    /// <summary>
+    /// 手动指定分表规则参数值，执行分表规则确定TEntity表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
@@ -53,7 +60,7 @@ public interface ICreate<TEntity>
     #region WithBy
     /// <summary>
     /// 使用插入对象部分字段插入，单个对象插入，命名或匿名对象都可以
-    /// <para>自动增长的栏位，不需要传入，用法：</para>
+    /// <para>自动增长的栏位，不需要传入，如：</para>
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new
@@ -87,7 +94,7 @@ public interface ICreate<TEntity>
 
     #region From
     /// <summary>
-    /// 从表T中查询数据创建子查询对象，用法：
+    /// 从表T中查询数据创建子查询对象，如：
     /// <code>
     /// repository.From&lt;Menu&gt;() SQL:FROM `sys_menu`
     /// </code>
@@ -190,7 +197,7 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
 {
     #region WithBy
     /// <summary>
-    /// 使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，命名或匿名对象、字典都可以，用法：
+    /// 使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，命名或匿名对象、字典都可以，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { ... })
@@ -203,7 +210,7 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，用法：
+    /// 判断condition布尔值，如果为true，使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { Name = "kevin", Age = 25 })
@@ -218,7 +225,7 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用fieldValue单个字段插入，用法：
+    /// 判断condition布尔值，如果为true，使用fieldValue单个字段插入，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { Name = "kevin", Age = 25 })

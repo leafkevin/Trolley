@@ -28,7 +28,7 @@ public interface IPostgreSqlMultipleQuery : IMultipleQuery
 
     #region From
     /// <summary>
-    /// 从表T中查询数据，用法：
+    /// 从表T中查询数据，如：
     /// <code>
     /// f.From&lt;Menu&gt;()
     /// SQL: FROM `sys_menu`
@@ -151,7 +151,7 @@ public interface IPostgreSqlMultipleQuery : IMultipleQuery
 
     #region FromQuery
     /// <summary>
-    /// 从SQL子查询中查询数据，用法：
+    /// 从SQL子查询中查询数据，如：
     /// <code>
     /// var subQuery = f.From&lt;Page, Menu&gt;('o')
     ///     .Where((a, b) =&gt; a.Id == b.PageId)
@@ -166,7 +166,7 @@ public interface IPostgreSqlMultipleQuery : IMultipleQuery
     /// <returns>返回查询对象</returns>
     new IPostgreSqlMultipleQuery<T> FromQuery<T>(IQuery<T> subQuery);
     /// <summary>
-    /// 从SQL子查询中查询数据，用法：
+    /// 从SQL子查询中查询数据，如：
     /// <code>
     ///  t.From(f =&gt; f.From&lt;Page, Menu&gt;('o') ...
     ///       .Select((x, y) =&gt; new { ... }))
@@ -175,7 +175,7 @@ public interface IPostgreSqlMultipleQuery : IMultipleQuery
     /// </code>
     /// </summary>
     /// <typeparam name="T">表T实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlMultipleQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     #endregion

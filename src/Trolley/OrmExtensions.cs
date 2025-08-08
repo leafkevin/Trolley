@@ -115,7 +115,7 @@ public static class OrmExtensions
 
     #region Update
     /// <summary>
-    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，用法：
+    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如：
     /// <code>
     /// var orderInfo = new OrderInfo { ... };
     /// var tmpObj = new { TotalAmount = 450, ... };
@@ -138,7 +138,7 @@ public static class OrmExtensions
     public static int Update<TEntity>(this IRepository repository, Expression<Func<TEntity, object>> fieldsAssignment, Expression<Func<TEntity, bool>> wherePredicate)
         => repository.Update<TEntity>().Set(fieldsAssignment).Where(wherePredicate).Execute();
     /// <summary>
-    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，用法：
+    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如：
     /// <code>
     /// var orderInfo = new OrderInfo { ... };
     /// var tmpObj = new { TotalAmount = 450, ... };

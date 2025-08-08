@@ -7,7 +7,7 @@ public interface ISqlServerContinuedCreate<TEntity> : IContinuedCreate<TEntity>
 {
     #region WithBy
     /// <summary>
-    /// 使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，命名或匿名对象、字典都可以，用法：
+    /// 使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，命名或匿名对象、字典都可以，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { ... })
@@ -20,7 +20,7 @@ public interface ISqlServerContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// <returns>返回插入对象</returns>
     new ISqlServerContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，用法：
+    /// 判断condition布尔值，如果为true，使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { Name = "kevin", Age = 25 })
@@ -35,7 +35,7 @@ public interface ISqlServerContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// <returns>返回插入对象</returns>
     new ISqlServerContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用fieldValue单个字段插入，用法：
+    /// 判断condition布尔值，如果为true，使用fieldValue单个字段插入，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { Name = "kevin", Age = 25 })
@@ -105,7 +105,7 @@ public interface ISqlServerBulkContinuedCreate<TEntity> : IContinuedCreate<TEnti
 {
     #region WithBy
     /// <summary>
-    /// 使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，命名或匿名对象、字典都可以，用法：
+    /// 使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，命名或匿名对象、字典都可以，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { ... })
@@ -118,7 +118,7 @@ public interface ISqlServerBulkContinuedCreate<TEntity> : IContinuedCreate<TEnti
     /// <returns>返回插入对象</returns>
     new ISqlServerBulkContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，用法：
+    /// 判断condition布尔值，如果为true，使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { Name = "kevin", Age = 25 })
@@ -133,7 +133,7 @@ public interface ISqlServerBulkContinuedCreate<TEntity> : IContinuedCreate<TEnti
     /// <returns>返回插入对象</returns>
     new ISqlServerBulkContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用fieldValue单个字段插入，用法：
+    /// 判断condition布尔值，如果为true，使用fieldValue单个字段插入，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { Name = "kevin", Age = 25 })

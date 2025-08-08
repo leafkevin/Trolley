@@ -14,7 +14,7 @@ public interface ISqlServerFromCommand : IFromCommand
 {
     #region Select
     /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
+    /// 使用原始字段返回查询结果，如：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fields">原始字段字符串，默认值*</param>
@@ -26,19 +26,19 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
@@ -89,7 +89,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
 
     #region Join
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((a, b) =&gt; ...)
     /// </code>
@@ -99,7 +99,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((a, b) =&gt; ...)
     /// </code>
@@ -109,7 +109,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((a, b) =&gt; ...)
     /// </code>
@@ -119,7 +119,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -133,7 +133,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -147,7 +147,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -161,7 +161,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQuery子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((a, b) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b) =&gt; ...) ...
@@ -175,7 +175,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((a, b) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b) =&gt; ...) ...
@@ -189,7 +189,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((a, b) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b) =&gt; ...) ...
@@ -239,7 +239,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -262,7 +262,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -270,7 +270,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -279,7 +279,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -287,7 +287,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -299,7 +299,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -307,7 +307,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr);
     /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
+    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，如：
     /// <code>
     /// .SelectAggregate((x, a, b) =&gt; new
     /// {
@@ -360,13 +360,13 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个<#=currentTable#>表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个<#=currentTable#>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<<#=tables#>> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定<#=currentTable#>表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定<#=currentTable#>表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -440,7 +440,7 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
 
     #region Join
     /// <summary>
-    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>
     /// .InnerJoin((<#=tableAlias#>) =&gt; ...)
     /// </code>
@@ -449,14 +449,14 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>.LeftJoin((<#=tableAlias#>) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，如：
     /// <code>
     /// .RightJoin((<#=tableAlias#>) =&gt; ...)
     /// </code>
@@ -469,7 +469,7 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
         {
 #>
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin&lt;TOther&gt;((<#=tableAlias#>) =&gt; ...)
     /// </code>
@@ -479,7 +479,7 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin&lt;TOther&gt;((<#=tableAlias#>) =&gt; ...)
     /// </code>
@@ -489,7 +489,7 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin&lt;TOther&gt;((<#=tableAlias#>) =&gt; ...)
     /// </code>
@@ -499,7 +499,7 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -513,7 +513,7 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -527,7 +527,7 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
     /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -541,7 +541,7 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<<#=tables#>, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQuery子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
     /// .InnerJoin((<#=tableAlias#>) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (<#=tableAlias#>) =&gt; ...) ...
@@ -555,7 +555,7 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
     /// .LeftJoin((<#=tableAlias#>) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (<#=tableAlias#>) =&gt; ...) ...
@@ -569,7 +569,7 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
     /// .RightJoin((<#=tableAlias#>) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (<#=tableAlias#>) =&gt; ...) ...
@@ -620,7 +620,7 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
 
     #region GroupBy
     /// <summary>
-    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，如：
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -643,7 +643,7 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
 
     #region OrderBy
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -651,7 +651,7 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -660,7 +660,7 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<<#=tables#>> OrderBy<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr);
     /// <summary>
-    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -668,7 +668,7 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -680,7 +680,7 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
 
     #region Select
     /// <summary>
-    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>

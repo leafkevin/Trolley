@@ -7,32 +7,32 @@ public interface ISqlServerDelete<TEntity> : IDelete<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TEntity表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个TEntity表分表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回删除对象</returns>
     new ISqlServerDelete<TEntity> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TEntity表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定TEntity表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回删除对象</returns>
     new ISqlServerDelete<TEntity> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据字段值，手动指定TEntity表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定TEntity表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回删除对象</returns>
     new ISqlServerDelete<TEntity> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定TEntity表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)，//时间分表，最近一周的订单
+    /// 根据1个字段范围值，手动指定TEntity表分表名，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)，//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段起始值</param>
     /// <param name="endFieldValue">字段结束值</param>
     /// <returns>返回删除对象</returns>
     new ISqlServerDelete<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段范围值，手动指定TEntity表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段范围值，手动指定TEntity表分表名，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
@@ -41,7 +41,7 @@ public interface ISqlServerDelete<TEntity> : IDelete<TEntity>
     /// <returns>返回删除对象</returns>
     new ISqlServerDelete<TEntity> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定TEntity表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定TEntity表分表名，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, 6, DateTime.Now.AddDays(-7), DateTime.Now)//商户+产品+时间分表，商户1，产品6，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
@@ -63,7 +63,7 @@ public interface ISqlServerDelete<TEntity> : IDelete<TEntity>
 
     #region Where
     /// <summary>
-    /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，用法：
+    /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，如：
     /// <code>
     /// 单个删除,下面两个方法等效
     /// repository.Delete&lt;User&gt;(1);

@@ -11,7 +11,7 @@ public interface ISqlServerContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
 {
     #region Set
     /// <summary>
-    /// 使用更新对象updateObj部分字段更新，updateObj对象中除OnlyFields、IgnoreFields、Where方法筛选外的所有字段都将参与更新，单对象更新，需要配合where条件使用，用法：
+    /// 使用更新对象updateObj部分字段更新，updateObj对象中除OnlyFields、IgnoreFields、Where方法筛选外的所有字段都将参与更新，单对象更新，需要配合where条件使用，如：
     /// <code>.Set(new { Id = 1, Name = "kevin", SourceType = DBNull.Value }).Where(f =&gt; f.Id); .Set(new User { Id = 2, Name = "kevin", SourceType = null }).Where(f =&gt; f.Id);  
     /// SQL: SET [Name]=@Name,[SourceType]=@SourceType WHERE [Id]=@kId </code>
     /// </summary>
@@ -20,7 +20,7 @@ public interface ISqlServerContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new ISqlServerContinuedUpdate<TEntity> Set<TUpdateObj>(TUpdateObj updateObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中除OnlyFields、IgnoreFields、Where方法筛选外的所有字段都将参与更新，单对象更新，需要配合where条件使用，为false不做更新，用法：
+    /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中除OnlyFields、IgnoreFields、Where方法筛选外的所有字段都将参与更新，单对象更新，需要配合where条件使用，为false不做更新，如：
     /// <code>.Set(true, new { Id = 1, Name = "kevin", SourceType = DBNull.Value }).Where(f =&gt; f.Id);  SQL: SET [Name]=@Name,[SourceType]=@SourceType WHERE [Id]=@kId
     /// .Set(true, new User { Id = 1, ... })  SQL: SET ... //只更新部分字段，可以使用OnlyFields方法，忽略部分字段，可以使用IgnoreFields方法</code>
     /// </summary>
@@ -30,7 +30,7 @@ public interface ISqlServerContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new ISqlServerContinuedUpdate<TEntity> Set<TUpdateObj>(bool condition, TUpdateObj updateObj);
     /// <summary>
-    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个字段，用法：
+    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个字段，如：
     /// <code>
     /// var parameter = new OrderInfo { ... };
     /// repository.Update&lt;Order&gt;()
@@ -50,7 +50,7 @@ public interface ISqlServerContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new ISqlServerContinuedUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如果为false，则不生成更新语句，如：
     /// <code>
     /// var parameter = new OrderInfo { ... };
     /// repository.Update&lt;Order&gt;()
@@ -71,7 +71,7 @@ public interface ISqlServerContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new ISqlServerContinuedUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，用法：
+    /// 使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，如：
     /// <code>.Set(x =&gt; x.OrderNo, "ON_111")</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>
@@ -80,7 +80,7 @@ public interface ISqlServerContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new ISqlServerContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，否则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，否则不生成更新语句，如：
     /// <code>.Set(true, x =&gt; x.OrderNo, "ON_111")</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>
@@ -93,7 +93,7 @@ public interface ISqlServerContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
 
     #region SetFrom
     /// <summary>
-    /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，用法：
+    /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，如：
     /// <code>
     /// var orderInfo = new { ... };
     /// .SetFrom((x, y) =&gt; new
@@ -113,7 +113,7 @@ public interface ISqlServerContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new ISqlServerContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，如：
     /// <code>
     /// var orderInfo = new { ... };
     /// .SetFrom(true, (x, y) =&gt; new
@@ -134,7 +134,7 @@ public interface ISqlServerContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new ISqlServerContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，表达式fieldSelector只能筛选一个栏位，用法：
+    /// 使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，表达式fieldSelector只能筛选一个栏位，如：
     /// <code>
     /// .SetFrom(f =&gt; f.TotalAmount, (x, y) =&gt; x
     ///     .From&lt;OrderDetail&gt;('c')
@@ -149,7 +149,7 @@ public interface ISqlServerContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new ISqlServerContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，如：
     /// <code>
     /// .SetFrom(true, f =&gt; f.TotalAmount, (x, y) =&gt; x
     ///     .From&lt;OrderDetail&gt;('c')
@@ -263,7 +263,7 @@ public interface ISqlServerBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<T
 {
     #region Set
     /// <summary>
-    /// 使用更新对象updateObj部分字段更新，updateObj对象中除OnlyFields、IgnoreFields、Where方法筛选外的所有字段都将参与更新，单对象更新，需要配合where条件使用，用法：
+    /// 使用更新对象updateObj部分字段更新，updateObj对象中除OnlyFields、IgnoreFields、Where方法筛选外的所有字段都将参与更新，单对象更新，需要配合where条件使用，如：
     /// <code>.Set(new { Id = 1, Name = "kevin", SourceType = DBNull.Value }).Where(f =&gt; f.Id); .Set(new User { Id = 2, Name = "kevin", SourceType = null }).Where(f =&gt; f.Id);  
     /// SQL: SET [Name]=@Name,[SourceType]=@SourceType WHERE [Id]=@kId </code>
     /// </summary>
@@ -272,7 +272,7 @@ public interface ISqlServerBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<T
     /// <returns>返回更新对象</returns>
     new ISqlServerBulkContinuedUpdate<TEntity> Set<TUpdateObj>(TUpdateObj updateObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中除OnlyFields、IgnoreFields、Where方法筛选外的所有字段都将参与更新，单对象更新，需要配合where条件使用，为false不做更新，用法：
+    /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中除OnlyFields、IgnoreFields、Where方法筛选外的所有字段都将参与更新，单对象更新，需要配合where条件使用，为false不做更新，如：
     /// <code>.Set(true, new { Id = 1, Name = "kevin", SourceType = DBNull.Value }).Where(f =&gt; f.Id);  SQL: SET [Name]=@Name,[SourceType]=@SourceType WHERE [Id]=@kId
     /// .Set(true, new User { Id = 1, ... })  SQL: SET ... //只更新部分字段，可以使用OnlyFields方法，忽略部分字段，可以使用IgnoreFields方法</code>
     /// </summary>
@@ -282,7 +282,7 @@ public interface ISqlServerBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<T
     /// <returns>返回更新对象</returns>
     new ISqlServerBulkContinuedUpdate<TEntity> Set<TUpdateObj>(bool condition, TUpdateObj updateObj);
     /// <summary>
-    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个字段，用法：
+    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个字段，如：
     /// <code>
     /// var parameter = new OrderInfo { ... };
     /// repository.Update&lt;Order&gt;()
@@ -302,7 +302,7 @@ public interface ISqlServerBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<T
     /// <returns>返回更新对象</returns>
     new ISqlServerBulkContinuedUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如果为false，则不生成更新语句，如：
     /// <code>
     /// var parameter = new OrderInfo { ... };
     /// repository.Update&lt;Order&gt;()
@@ -323,7 +323,7 @@ public interface ISqlServerBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<T
     /// <returns>返回更新对象</returns>
     new ISqlServerBulkContinuedUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，用法：
+    /// 使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，如：
     /// <code>.Set(x =&gt; x.OrderNo, "ON_111")</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>
@@ -332,7 +332,7 @@ public interface ISqlServerBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<T
     /// <returns>返回更新对象</returns>
     new ISqlServerBulkContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，否则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，否则不生成更新语句，如：
     /// <code>.Set(true, x =&gt; x.OrderNo, "ON_111")</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>

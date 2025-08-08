@@ -12,13 +12,13 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T1表分表名执行更新，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T1表分表名执行更新，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T1表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T1表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回更新对象</returns>
@@ -114,7 +114,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
 
     #region Set
     /// <summary>
-    /// 使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，用法：
+    /// 使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，如：
     /// <code>.Set(new { Id = 1, Name = "kevin", SourceType = DBNull.Value }) SQL: SET `Name`=@Name,SourceType=@SourceType</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
@@ -122,7 +122,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1> Set<TUpdateObj>(TUpdateObj updateObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，为false不做更新，用法：
+    /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，为false不做更新，如：
     /// <code>.Set(true, new { Id = 1, Name = "kevin", SourceType = DBNull.Value }) SQL: SET `Name`=@Name,SourceType=@SourceType</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
@@ -131,7 +131,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1> Set<TUpdateObj>(bool condition, TUpdateObj updateObj);
     /// <summary>
-    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个字段，用法：
+    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个字段，如：
     /// <code>
     /// var parameter = new OrderInfo { ... };
     ///     .Set((a, b ...) => new
@@ -151,7 +151,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1> Set<TFields>(Expression<Func<TEntity, T1, TFields>> fieldsAssignment);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如果为false，则不生成更新语句，如：
     /// <code>
     /// var parameter = new OrderInfo { ... };
     ///     .Set(true, (a, b ...) => new
@@ -172,7 +172,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1> Set<TFields>(bool condition, Expression<Func<TEntity, T1, TFields>> fieldsAssignment);
     /// <summary>
-    /// 使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，用法：
+    /// 使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，如：
     /// <code>.Set(x =&gt; x.TotalAmount, 200.56)</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>
@@ -181,7 +181,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，否则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，否则不生成更新语句，如：
     /// <code>.Set(true, x =&gt; x.TotalAmount, 200.56)</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>
@@ -194,7 +194,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
 
     #region SetFrom
     /// <summary>
-    /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，用法：
+    /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，如：
     /// <code>
     /// var orderInfo = new { ... };
     /// .SetFrom((a, b) =&gt; new
@@ -217,7 +217,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，如：
     /// <code>
     /// var orderInfo = new { ... };
     /// .SetFrom(true, (a, b) =&gt; new
@@ -241,7 +241,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，表达式fieldSelector只能筛选一个栏位，用法：
+    /// 使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，表达式fieldSelector只能筛选一个栏位，如：
     /// <code>
     /// .SetFrom(f =&gt; f.TotalAmount, (x, y) =&gt; x
     ///     .From&lt;OrderDetail&gt;('c')
@@ -256,7 +256,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，如：
     /// <code>
     /// .SetFrom(true, f =&gt; f.TotalAmount, (x, y) =&gt; x
     ///     .From&lt;OrderDetail&gt;('c')
@@ -355,13 +355,13 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T2表分表名执行更新，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T2表分表名执行更新，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T2表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T2表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回更新对象</returns>
@@ -457,7 +457,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
 
     #region Set
     /// <summary>
-    /// 使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，用法：
+    /// 使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，如：
     /// <code>.Set(new { Id = 1, Name = "kevin", SourceType = DBNull.Value }) SQL: SET `Name`=@Name,SourceType=@SourceType</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
@@ -465,7 +465,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2> Set<TUpdateObj>(TUpdateObj updateObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，为false不做更新，用法：
+    /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，为false不做更新，如：
     /// <code>.Set(true, new { Id = 1, Name = "kevin", SourceType = DBNull.Value }) SQL: SET `Name`=@Name,SourceType=@SourceType</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
@@ -474,7 +474,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2> Set<TUpdateObj>(bool condition, TUpdateObj updateObj);
     /// <summary>
-    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个字段，用法：
+    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个字段，如：
     /// <code>
     /// var parameter = new OrderInfo { ... };
     ///     .Set((a, b ...) => new
@@ -494,7 +494,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2> Set<TFields>(Expression<Func<TEntity, T1, T2, TFields>> fieldsAssignment);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如果为false，则不生成更新语句，如：
     /// <code>
     /// var parameter = new OrderInfo { ... };
     ///     .Set(true, (a, b ...) => new
@@ -515,7 +515,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, TFields>> fieldsAssignment);
     /// <summary>
-    /// 使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，用法：
+    /// 使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，如：
     /// <code>.Set(x =&gt; x.TotalAmount, 200.56)</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>
@@ -524,7 +524,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，否则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，否则不生成更新语句，如：
     /// <code>.Set(true, x =&gt; x.TotalAmount, 200.56)</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>
@@ -537,7 +537,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
 
     #region SetFrom
     /// <summary>
-    /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，用法：
+    /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，如：
     /// <code>
     /// var orderInfo = new { ... };
     /// .SetFrom((a, b) =&gt; new
@@ -560,7 +560,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，如：
     /// <code>
     /// var orderInfo = new { ... };
     /// .SetFrom(true, (a, b) =&gt; new
@@ -584,7 +584,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，表达式fieldSelector只能筛选一个栏位，用法：
+    /// 使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，表达式fieldSelector只能筛选一个栏位，如：
     /// <code>
     /// .SetFrom(f =&gt; f.TotalAmount, (x, y) =&gt; x
     ///     .From&lt;OrderDetail&gt;('c')
@@ -599,7 +599,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，如：
     /// <code>
     /// .SetFrom(true, f =&gt; f.TotalAmount, (x, y) =&gt; x
     ///     .From&lt;OrderDetail&gt;('c')
@@ -699,13 +699,13 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T3表分表名执行更新，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T3表分表名执行更新，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T3表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T3表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回更新对象</returns>
@@ -801,7 +801,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
 
     #region Set
     /// <summary>
-    /// 使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，用法：
+    /// 使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，如：
     /// <code>.Set(new { Id = 1, Name = "kevin", SourceType = DBNull.Value }) SQL: SET `Name`=@Name,SourceType=@SourceType</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
@@ -809,7 +809,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3> Set<TUpdateObj>(TUpdateObj updateObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，为false不做更新，用法：
+    /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，为false不做更新，如：
     /// <code>.Set(true, new { Id = 1, Name = "kevin", SourceType = DBNull.Value }) SQL: SET `Name`=@Name,SourceType=@SourceType</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
@@ -818,7 +818,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3> Set<TUpdateObj>(bool condition, TUpdateObj updateObj);
     /// <summary>
-    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个字段，用法：
+    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个字段，如：
     /// <code>
     /// var parameter = new OrderInfo { ... };
     ///     .Set((a, b ...) => new
@@ -838,7 +838,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsAssignment);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如果为false，则不生成更新语句，如：
     /// <code>
     /// var parameter = new OrderInfo { ... };
     ///     .Set(true, (a, b ...) => new
@@ -859,7 +859,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsAssignment);
     /// <summary>
-    /// 使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，用法：
+    /// 使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，如：
     /// <code>.Set(x =&gt; x.TotalAmount, 200.56)</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>
@@ -868,7 +868,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，否则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，否则不生成更新语句，如：
     /// <code>.Set(true, x =&gt; x.TotalAmount, 200.56)</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>
@@ -881,7 +881,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
 
     #region SetFrom
     /// <summary>
-    /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，用法：
+    /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，如：
     /// <code>
     /// var orderInfo = new { ... };
     /// .SetFrom((a, b) =&gt; new
@@ -904,7 +904,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，如：
     /// <code>
     /// var orderInfo = new { ... };
     /// .SetFrom(true, (a, b) =&gt; new
@@ -928,7 +928,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，表达式fieldSelector只能筛选一个栏位，用法：
+    /// 使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，表达式fieldSelector只能筛选一个栏位，如：
     /// <code>
     /// .SetFrom(f =&gt; f.TotalAmount, (x, y) =&gt; x
     ///     .From&lt;OrderDetail&gt;('c')
@@ -943,7 +943,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，如：
     /// <code>
     /// .SetFrom(true, f =&gt; f.TotalAmount, (x, y) =&gt; x
     ///     .From&lt;OrderDetail&gt;('c')
@@ -1044,13 +1044,13 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T4表分表名执行更新，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T4表分表名执行更新，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T4表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T4表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回更新对象</returns>
@@ -1146,7 +1146,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
 
     #region Set
     /// <summary>
-    /// 使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，用法：
+    /// 使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，如：
     /// <code>.Set(new { Id = 1, Name = "kevin", SourceType = DBNull.Value }) SQL: SET `Name`=@Name,SourceType=@SourceType</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
@@ -1154,7 +1154,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TUpdateObj>(TUpdateObj updateObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，为false不做更新，用法：
+    /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，为false不做更新，如：
     /// <code>.Set(true, new { Id = 1, Name = "kevin", SourceType = DBNull.Value }) SQL: SET `Name`=@Name,SourceType=@SourceType</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
@@ -1163,7 +1163,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TUpdateObj>(bool condition, TUpdateObj updateObj);
     /// <summary>
-    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个字段，用法：
+    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个字段，如：
     /// <code>
     /// var parameter = new OrderInfo { ... };
     ///     .Set((a, b ...) => new
@@ -1183,7 +1183,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsAssignment);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如果为false，则不生成更新语句，如：
     /// <code>
     /// var parameter = new OrderInfo { ... };
     ///     .Set(true, (a, b ...) => new
@@ -1204,7 +1204,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsAssignment);
     /// <summary>
-    /// 使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，用法：
+    /// 使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，如：
     /// <code>.Set(x =&gt; x.TotalAmount, 200.56)</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>
@@ -1213,7 +1213,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，否则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，否则不生成更新语句，如：
     /// <code>.Set(true, x =&gt; x.TotalAmount, 200.56)</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>
@@ -1226,7 +1226,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
 
     #region SetFrom
     /// <summary>
-    /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，用法：
+    /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，如：
     /// <code>
     /// var orderInfo = new { ... };
     /// .SetFrom((a, b) =&gt; new
@@ -1249,7 +1249,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，如：
     /// <code>
     /// var orderInfo = new { ... };
     /// .SetFrom(true, (a, b) =&gt; new
@@ -1273,7 +1273,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，表达式fieldSelector只能筛选一个栏位，用法：
+    /// 使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，表达式fieldSelector只能筛选一个栏位，如：
     /// <code>
     /// .SetFrom(f =&gt; f.TotalAmount, (x, y) =&gt; x
     ///     .From&lt;OrderDetail&gt;('c')
@@ -1288,7 +1288,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，如：
     /// <code>
     /// .SetFrom(true, f =&gt; f.TotalAmount, (x, y) =&gt; x
     ///     .From&lt;OrderDetail&gt;('c')
@@ -1390,13 +1390,13 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T5表分表名执行更新，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T5表分表名执行更新，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T5表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T5表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回更新对象</returns>
@@ -1475,7 +1475,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
 
     #region Set
     /// <summary>
-    /// 使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，用法：
+    /// 使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，如：
     /// <code>.Set(new { Id = 1, Name = "kevin", SourceType = DBNull.Value }) SQL: SET `Name`=@Name,SourceType=@SourceType</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
@@ -1483,7 +1483,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TUpdateObj>(TUpdateObj updateObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，为false不做更新，用法：
+    /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，为false不做更新，如：
     /// <code>.Set(true, new { Id = 1, Name = "kevin", SourceType = DBNull.Value }) SQL: SET `Name`=@Name,SourceType=@SourceType</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
@@ -1492,7 +1492,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TUpdateObj>(bool condition, TUpdateObj updateObj);
     /// <summary>
-    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个字段，用法：
+    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个字段，如：
     /// <code>
     /// var parameter = new OrderInfo { ... };
     ///     .Set((a, b ...) => new
@@ -1512,7 +1512,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsAssignment);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如果为false，则不生成更新语句，如：
     /// <code>
     /// var parameter = new OrderInfo { ... };
     ///     .Set(true, (a, b ...) => new
@@ -1533,7 +1533,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsAssignment);
     /// <summary>
-    /// 使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，用法：
+    /// 使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，如：
     /// <code>.Set(x =&gt; x.TotalAmount, 200.56)</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>
@@ -1542,7 +1542,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，否则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，否则不生成更新语句，如：
     /// <code>.Set(true, x =&gt; x.TotalAmount, 200.56)</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>
@@ -1555,7 +1555,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
 
     #region SetFrom
     /// <summary>
-    /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，用法：
+    /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，如：
     /// <code>
     /// var orderInfo = new { ... };
     /// .SetFrom((a, b) =&gt; new
@@ -1578,7 +1578,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，如：
     /// <code>
     /// var orderInfo = new { ... };
     /// .SetFrom(true, (a, b) =&gt; new
@@ -1602,7 +1602,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，表达式fieldSelector只能筛选一个栏位，用法：
+    /// 使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，表达式fieldSelector只能筛选一个栏位，如：
     /// <code>
     /// .SetFrom(f =&gt; f.TotalAmount, (x, y) =&gt; x
     ///     .From&lt;OrderDetail&gt;('c')
@@ -1617,7 +1617,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，如：
     /// <code>
     /// .SetFrom(true, f =&gt; f.TotalAmount, (x, y) =&gt; x
     ///     .From&lt;OrderDetail&gt;('c')

@@ -30,7 +30,7 @@ public interface IPostgreSqlCreateConflictDoUpdate<TEntity>
 
     #region Set
     /// <summary>
-    /// 多个字段更新，可多次使用，用法：
+    /// 多个字段更新，可多次使用，如：
     /// <code>
     /// 使用Excluded方法 .WithBy( ... ).OnDuplicateKeyUpdate(x =>x.Set(f => new { TotalAmount = f.TotalAmount + x.Excluded(f.TotalAmount) })
     /// SQL: INSERT INTO ... VALUES ( ... ) ON DUPLICATE KEY UPDATE "TotalAmount"=a."TotalAmount"+EXCLUDED."TotalAmount"
@@ -41,7 +41,7 @@ public interface IPostgreSqlCreateConflictDoUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 判断condition的值，为true时多个字段更新，可多次使用，用法：
+    /// 判断condition的值，为true时多个字段更新，可多次使用，如：
     /// <code>
     /// 使用Excluded方法 .WithBy( ... ).OnDuplicateKeyUpdate(x =>x.Set(f => new { TotalAmount = f.TotalAmount + x.Excluded(f.TotalAmount) })
     /// SQL: INSERT INTO ... VALUES ( ... ) ON DUPLICATE KEY UPDATE "TotalAmount"=a."TotalAmount"+EXCLUDED."TotalAmount"
@@ -53,7 +53,7 @@ public interface IPostgreSqlCreateConflictDoUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 单个字段更新，可多次使用，用法：
+    /// 单个字段更新，可多次使用，如：
     /// <code>
     /// .WithBy( ... ).OnConflictDoUpdate(x =>.Set(f => f.TotalAmount, f => x.Excluded(f.TotalAmount)))
     /// SQL: INSERT INTO ... VALUES ( ... ) ON CONFLICT DO UPDATE "TotalAmount"=EXCLUDED."TotalAmount"

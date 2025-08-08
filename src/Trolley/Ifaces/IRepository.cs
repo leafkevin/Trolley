@@ -101,7 +101,7 @@ public interface IRepository
 
     #region From
     /// <summary>
-    /// 从表T中查询数据，用法：
+    /// 从表T中查询数据，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
     /// SQL:FROM `sys_menu`
@@ -224,7 +224,7 @@ public interface IRepository
 
     #region FromQuery
     /// <summary>
-    /// 从SQL子查询中查询数据，用法：
+    /// 从SQL子查询中查询数据，如：
     /// <code>
     /// var subQuery = repository.From&lt;Page, Menu&gt;('o')
     ///     .Where((a, b) =&gt; a.Id == b.PageId)
@@ -239,7 +239,7 @@ public interface IRepository
     /// <returns>返回查询对象</returns>
     IQuery<T> FromQuery<T>(IQuery<T> subQuery);
     /// <summary>
-    /// 从SQL子查询中查询数据，用法：
+    /// 从SQL子查询中查询数据，如：
     /// <code>
     /// repository.FromQuery(f =&gt; f.From&lt;Page, Menu&gt;('o').Where(...)...)
     /// var subQuery = repository.From&lt;Page, Menu&gt;('o').Where(...)...
@@ -248,7 +248,7 @@ public interface IRepository
     /// </code>
     /// </summary>
     /// <typeparam name="T">表T实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     #endregion
@@ -313,7 +313,7 @@ public interface IRepository
 
     #region GetById
     /// <summary>
-    /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，不支持分表，用法：
+    /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，不支持分表，如：
     /// <code>
     /// repository.GetById&lt;User&gt;(1) //或是
     /// repository.GetById&lt;User&gt;(new { Id = 1 }) //或是
@@ -327,7 +327,7 @@ public interface IRepository
     /// <returns>返回实体对象或是TEntity类型默认值</returns>
     TEntity GetById<TEntity>(object whereObj);
     /// <summary>
-    /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，不支持分表，用法：
+    /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，不支持分表，如：
     /// <code>
     /// await repository.GetByIdAsync&lt;User&gt;(1) //或是
     /// await repository.GetByIdAsync&lt;User&gt;(new { Id = 1 }) //或是
@@ -345,7 +345,7 @@ public interface IRepository
 
     #region GetByIds
     /// <summary>
-    /// 根据多个主键信息查询表TEntity中数据，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，用法：
+    /// 根据多个主键信息查询表TEntity中数据，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，如：
     /// <code>
     /// repository.GetByIds&lt;User&gt;(new []{1 ,2, 3}) //或是
     /// repository.GetByIds&lt;User&gt;(new []{{ Id = 1 }, { Id = 2 }, { Id = 3 }}) //或是
@@ -359,7 +359,7 @@ public interface IRepository
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
     List<TEntity> GetByIds<TEntity>(IEnumerable whereKeys);
     /// <summary>
-    /// 根据多个主键信息查询表TEntity中数据，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，用法：
+    /// 根据多个主键信息查询表TEntity中数据，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，如：
     /// <code>
     /// repository.GetByIds&lt;User&gt;(new []{1 ,2, 3}) //或是
     /// repository.GetByIds&lt;User&gt;(new []{{ Id = 1 }, { Id = 2 }, { Id = 3 }}) //或是
@@ -430,7 +430,7 @@ public interface IRepository
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 从表TEntity中，查询与whereObj对象各属性值都相等的第一条记录，记录不存在时返回TEntity类型的默认值，不支持分表，用法：
+    /// 从表TEntity中，查询与whereObj对象各属性值都相等的第一条记录，记录不存在时返回TEntity类型的默认值，不支持分表，如：
     /// <code>
     /// repository.QueryFirst&lt;User&gt;(new { Id = 1, IsEnabled = true })
     /// SQL: SELECT a.`Id`,a.`Name`, ... FROM `sys_user` a WHERE a.`Id`=@Id AND a.`IsEnabled`=@IsEnabled
@@ -441,7 +441,7 @@ public interface IRepository
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     TEntity QueryFirst<TEntity>(object whereObj);
     /// <summary>
-    /// 从表TEntity中，查询与whereObj对象各属性值都相等的第一条记录，记录不存在时返回TEntity类型的默认值，不支持分表，用法：
+    /// 从表TEntity中，查询与whereObj对象各属性值都相等的第一条记录，记录不存在时返回TEntity类型的默认值，不支持分表，如：
     /// <code>
     /// await repository.QueryFirstAsync&lt;User&gt;(new { Id = 1, IsEnabled = true })
     /// SQL: SELECT a.`Id`,a.`Name`, ... FROM `sys_user` a WHERE a.`Id`=@Id AND a.`IsEnabled`=@IsEnabled
@@ -509,7 +509,7 @@ public interface IRepository
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，用法：
+    /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，如：
     /// <code>
     /// repository.Query&lt;User&gt;(new { Id = 1, IsEnabled = true })
     /// SQL: SELECT a.`Id`,a.`Name`, ... FROM `sys_user` a WHERE a.`Id`=@Id AND a.`IsEnabled`=@IsEnabled
@@ -520,7 +520,7 @@ public interface IRepository
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
     List<TEntity> Query<TEntity>(object whereObj);
     /// <summary>
-    /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，用法：
+    /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，如：
     /// <code>
     /// await repository.QueryAsync&lt;User&gt;(new { Id = 1, IsEnabled = true })
     /// SQL: SELECT a.`Id`,a.`Name`, ... FROM `sys_user` a WHERE a.`Id`=@Id AND a.`IsEnabled`=@IsEnabled
@@ -583,7 +583,7 @@ public interface IRepository
     ICreate<TEntity> Create<TEntity>();
     /// <summary>
     /// 使用插入对象部分字段插入，可单条也可多条数据插入，自动增长栏位，不需要传入，多条可分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，
-    /// 支持分表，在分表的情况下，会根据分表依赖的字段把数据自动插入到指定的分表中，如果插入的参数未包含分表的字段则会抛出异常，用法：
+    /// 支持分表，在分表的情况下，会根据分表依赖的字段把数据自动插入到指定的分表中，如果插入的参数未包含分表的字段则会抛出异常，如：
     /// <code>
     /// repository.Create&lt;User&gt;(new
     /// {
@@ -605,7 +605,7 @@ public interface IRepository
     int Create<TEntity>(object insertObjs, int bulkCount = 500);
     /// <summary>
     /// 使用插入对象部分字段插入，可单条也可多条数据插入，自动增长栏位，不需要传入，多条可分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，
-    /// 支持分表，在分表的情况下，会根据分表依赖的字段把数据自动插入到指定的分表中，如果插入的参数未包含分表的字段则会抛出异常，用法：
+    /// 支持分表，在分表的情况下，会根据分表依赖的字段把数据自动插入到指定的分表中，如果插入的参数未包含分表的字段则会抛出异常，如：
     /// <code>
     /// await repository.CreateAsync&lt;User&gt;(new
     /// {
@@ -667,7 +667,7 @@ public interface IRepository
     IUpdate<TEntity> Update<TEntity>();
     /// <summary>
     /// 使用更新对象updateObjs部分字段By主键更新，updateObjs对象内除主键字段外所有与当前实体表TEntity名称相同的栏位都将参与更新，updateObjs对象必须包含主键字段，可单条也可多条数据更新，
-    /// 多条可分批次完成，每次更新bulkCount条数，不支持分表，用法：
+    /// 多条可分批次完成，每次更新bulkCount条数，不支持分表，如：
     /// <code>
     /// repository.Update&lt;User&gt;(new { Id = 1, Name = "kevin"});
     /// repository.Update&lt;User&gt;(new [] { new { Id = 1, Name = "kevin"}, new { Id = 2, Name = "cindy"} }, 200);
@@ -681,7 +681,7 @@ public interface IRepository
     int Update<TEntity>(object updateObjs, int bulkCount = 500);
     /// <summary>
     /// 使用更新对象updateObj部分字段By主键更新，updateObj对象内除主键字段外所有与当前实体表TEntity名称相同的栏位都将参与更新，updateObj对象必须包含主键字段，可单条也可多条数据更新，
-    /// 多条可分批次完成，每次更新bulkCount条数，不支持分表，用法：
+    /// 多条可分批次完成，每次更新bulkCount条数，不支持分表，如：
     /// <code>
     /// repository.UpdateAsync&lt;User&gt;(new { Id = 1, Name = "kevin", SourceType = DBNull.Value});
     /// repository.UpdateAsync&lt;User&gt;(new [] { new { Id = 1, Name = "kevin"}, new { Id = 2, Name = "cindy"} }, 200);
@@ -704,7 +704,7 @@ public interface IRepository
     /// <returns>返回删除对象</returns>
     IDelete<TEntity> Delete<TEntity>();
     /// <summary>
-    /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，不支持分表，用法：
+    /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，不支持分表，如：
     /// <code>
     /// 单个删除,下面两个方法等效
     /// repository.Delete&lt;User&gt;(1);
@@ -719,7 +719,7 @@ public interface IRepository
     /// <returns>返回删除行数</returns>
     int Delete<TEntity>(object whereKeys);
     /// <summary>
-    /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，不支持分表，用法：
+    /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，不支持分表，如：
     /// <code>
     /// 单个删除,下面两个方法等效
     /// await repository.DeleteAsync&lt;User&gt;(1);

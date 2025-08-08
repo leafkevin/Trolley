@@ -13,13 +13,13 @@ public interface IMultiIncludableQuery<T, TMember> : IIncludableQueryBase, IMult
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回导航属性查询对象</returns>
     new IMultiIncludableQuery<T, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回导航属性查询对象</returns>
@@ -133,13 +133,13 @@ public interface IMultiIncludableQuery<T1, T2, TMember> : IIncludableQueryBase, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回导航属性查询对象</returns>
     new IMultiIncludableQuery<T1, T2, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回导航属性查询对象</returns>
@@ -254,13 +254,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, TMember> : IIncludableQueryBa
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回导航属性查询对象</returns>
     new IMultiIncludableQuery<T1, T2, T3, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回导航属性查询对象</returns>
@@ -376,13 +376,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, TMember> : IIncludableQue
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回导航属性查询对象</returns>
     new IMultiIncludableQuery<T1, T2, T3, T4, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回导航属性查询对象</returns>
@@ -499,13 +499,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, TMember> : IIncludabl
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回导航属性查询对象</returns>
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回导航属性查询对象</returns>
@@ -623,13 +623,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IInclu
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回导航属性查询对象</returns>
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回导航属性查询对象</returns>
@@ -748,13 +748,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : II
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回导航属性查询对象</returns>
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回导航属性查询对象</returns>
@@ -874,13 +874,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回导航属性查询对象</returns>
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回导航属性查询对象</returns>
@@ -1001,13 +1001,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMemb
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回导航属性查询对象</returns>
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回导航属性查询对象</returns>
@@ -1129,13 +1129,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回导航属性查询对象</returns>
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回导航属性查询对象</returns>
@@ -1258,13 +1258,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回导航属性查询对象</returns>
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回导航属性查询对象</returns>
@@ -1388,13 +1388,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回导航属性查询对象</returns>
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回导航属性查询对象</returns>
@@ -1519,13 +1519,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回导航属性查询对象</returns>
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回导航属性查询对象</returns>
@@ -1651,13 +1651,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回导航属性查询对象</returns>
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回导航属性查询对象</returns>
@@ -1784,13 +1784,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回导航属性查询对象</returns>
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回导航属性查询对象</returns>

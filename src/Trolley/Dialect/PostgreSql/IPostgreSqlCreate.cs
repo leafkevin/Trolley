@@ -8,20 +8,20 @@ public interface IPostgreSqlCreate<TEntity> : ICreate<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 手动指定TEntity表分表名执行插入操作，完整的表名，如：.UseTable("sys_order_202001")，按月分表
+    /// 手动指定TEntity表分表名，如：.UseTable("sys_order_202001")
     /// </summary>
     /// <param name="tableName">完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回插入对象</returns>
     new IPostgreSqlCreate<TEntity> UseTable(string tableName);
     /// <summary>
-    /// 手动设置TEntity表分表名获取委托，通常是根据某1个或多个字段值来确定分表名，执行时会根据实体字段的值自动插入对应的分表中，单条和批量插入均可使用，常用于批量操作。
+    /// 手动指定TEntity表分表名获取委托，使用委托获取分表名，在批量插入场景，插入对象的值自动插入对应分表中，此方法只适用批量场景
     /// </summary>
     /// <typeparam name="TInsertObj">插入的实体类型</typeparam>
     /// <param name="tableNameGetter">分表名获取委托</param>
     /// <exception cref="ArgumentNullException"></exception>
     new IPostgreSqlCreate<TEntity> UseTable<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定TEntity表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定TEntity表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回插入对象</returns>
@@ -35,7 +35,7 @@ public interface IPostgreSqlCreate<TEntity> : ICreate<TEntity>
     #region WithBy
     /// <summary>
     /// 使用插入对象部分字段插入，单个对象插入，命名或匿名对象都可以
-    /// <para>自动增长的栏位，不需要传入，用法：</para>
+    /// <para>自动增长的栏位，不需要传入，如：</para>
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new
@@ -78,7 +78,7 @@ public interface IPostgreSqlCreate<TEntity> : ICreate<TEntity>
 
     #region From
     /// <summary>
-    /// 从表T中查询数据创建子查询对象，用法：
+    /// 从表T中查询数据创建子查询对象，如：
     /// <code>
     /// repository.From&lt;Menu&gt;() SQL:FROM `sys_menu`
     /// </code>
@@ -136,7 +136,7 @@ public interface IPostgreSqlCreate<TEntity> : ICreate<TEntity>
 
     #region FromQuery
     /// <summary>
-    /// 使用子查询subQuery作为创建子查询对象，子查询subQuery也可以是CTE表，用法：
+    /// 使用子查询subQuery作为创建子查询对象，子查询subQuery也可以是CTE表，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.Create&lt;Menu&gt;().FromQuery(subQuery)
@@ -148,7 +148,7 @@ public interface IPostgreSqlCreate<TEntity> : ICreate<TEntity>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T> FromQuery<T>(IQuery<T> subQuery);
     /// <summary>
-    /// 使用子查询subQuery作为创建子查询对象，子查询subQuery也可以是CTE表，用法：
+    /// 使用子查询subQuery作为创建子查询对象，子查询subQuery也可以是CTE表，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.Create&lt;Menu&gt;(f =&gt; f.UseQuery(subQuery)).Select( ... )
@@ -157,7 +157,7 @@ public interface IPostgreSqlCreate<TEntity> : ICreate<TEntity>
     /// </code>
     /// </summary>
     /// <typeparam name="T">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     #endregion
