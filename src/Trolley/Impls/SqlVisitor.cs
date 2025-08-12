@@ -311,7 +311,7 @@ public class SqlVisitor : ISqlVisitor
     {
         if (tableNameGetter == null)
             throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
-        this.DbContext.CommandShardingTableGetter = tableNameGetter;
+        this.Tables[0].ShardingTableGetter = tableNameGetter;
     }
     public virtual void UseTableSchema(bool isIncludeMany, string tableSchema)
     {
@@ -2057,10 +2057,10 @@ public class SqlVisitor : ISqlVisitor
                     lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
                     queryVisitor.Select(null, lambdaArgsExpr);
                     break;
-                case "SelectFlattenTo":
+                case "SelectTo":
                     if (callExpr.Arguments.Count > 0)
                         lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-                    queryVisitor.SelectFlattenTo(genericArguments[0], lambdaArgsExpr);
+                    queryVisitor.SelectTo(genericArguments[0], lambdaArgsExpr);
                     break;
                 case "Distinct":
                     queryVisitor.Distinct();

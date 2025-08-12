@@ -378,6 +378,8 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     public virtual IQuery<T> WherePredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<T>();
         return this.Where(predicateInitializer.Invoke(builder));
     }
@@ -481,9 +483,9 @@ public class Query<T> : QueryBase, IQuery<T>
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
+    public virtual IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)

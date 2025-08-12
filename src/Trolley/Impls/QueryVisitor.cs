@@ -1428,7 +1428,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         this.IsSelect = false;
     }
-    public virtual void SelectFlattenTo(Type targetType, Expression specialMemberSelector = null)
+    public virtual void SelectTo(Type targetType, Expression specialMemberSelector = null)
     {
         this.IsSelect = true;
         if (specialMemberSelector != null)
@@ -1980,7 +1980,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 this.GetQuotedValue(sqlSegment, true);
                 //DeferredFields场景
                 //函数调用，参数引用多个字段
-                //.SelectFlattenTo<DTO>((a, b ...) => new DTO
+                //.SelectTo<DTO>((a, b ...) => new DTO
                 //{
                 //    ActivityTypeEnum = this.GetEmnuName(f.ActivityType)
                 //})

@@ -273,9 +273,9 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, TTarget>> specialMemberSelector = null)
+    public virtual IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -585,9 +585,9 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, TTarget>> specialMemberSelector = null)
+    public virtual IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -897,9 +897,9 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> specialMemberSelector = null)
+    public virtual IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -1209,9 +1209,9 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> specialMemberSelector = null)
+    public virtual IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -1521,9 +1521,9 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> specialMemberSelector = null)
+    public virtual IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -1833,9 +1833,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TTarget>> specialMemberSelector = null)
+    public virtual IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -2145,9 +2145,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> specialMemberSelector = null)
+    public virtual IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -2457,9 +2457,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> specialMemberSelector = null)
+    public virtual IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -2769,9 +2769,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> specialMemberSelector = null)
+    public virtual IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -3081,9 +3081,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> specialMemberSelector = null)
+    public virtual IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -3393,9 +3393,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> specialMemberSelector = null)
+    public virtual IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -3705,9 +3705,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> specialMemberSelector = null)
+    public virtual IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -4017,9 +4017,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> specialMemberSelector = null)
+    public virtual IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -4329,9 +4329,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> specialMemberSelector = null)
+    public virtual IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -4575,9 +4575,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TTarget>> specialMemberSelector = null)
+    public virtual IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion

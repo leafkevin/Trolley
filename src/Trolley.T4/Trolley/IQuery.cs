@@ -71,18 +71,18 @@ public interface IQueryBase : IQuery
     /// 返回数据条数
     /// </summary>
     /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回int类型数据条数</returns>
+    /// <returns>返回数据条数</returns>
     Task<int> CountAsync(CancellationToken cancellationToken = default);
     /// <summary>
     /// 返回数据条数
     /// </summary>
-    /// <returns>返回long类型数据条数</returns>
+    /// <returns>返回数据条数</returns>
     long LongCount();
     /// <summary>
     /// 返回数据条数
     /// </summary>
     /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回long类型数据条数</returns>
+    /// <returns>返回数据条数</returns>
     Task<long> LongCountAsync(CancellationToken cancellationToken = default);
     #endregion
 
@@ -114,27 +114,26 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表分表名，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T表分表名，参数是分表名称，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> UseTable(Func<string, bool> tableNamePredicate);    
+    IQuery<T> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     IQuery<T> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
@@ -142,8 +141,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -164,13 +162,13 @@ public interface IQuery<T> : IQueryBase
 
     #region GetShardingTableNames
     /// <summary>
-    /// 获取实体TEntity满足条件的所有分表名
+    /// 获取实体TEntity满足断言tableNameSelector条件的所有分表名
     /// </summary>
-    /// <param name="tableNameSelector">分表名选择表达式</param>
+    /// <param name="tableNameSelector">分表名选择委托</param>
     /// <returns>返回满足条件的所有分表</returns>
     List<string> GetShardingTableNames(Func<string, bool> tableNameSelector);
     /// <summary>
-    /// 获取实体TEntity满足条件的所有分表名
+    /// 获取实体TEntity满足断言tableNameSelector条件的所有分表名
     /// </summary>
     /// <param name="tableNameSelector">分表名选择表达式</param>
     /// <param name="cancellationToken">取消Token</param>
@@ -192,16 +190,14 @@ public interface IQuery<T> : IQueryBase
     /// SELECT ... FROM `sys_order` WHERE `Id`&gt;1
     /// </code>
     /// </summary>
-    /// <param name="subQuery">子查询，需要有Select语句，如：
-    /// <code>repository.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
+    /// <param name="subQuery">子查询，需要有Select语句，如：<code>repository.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
     IQuery<T> Union(IQuery<T> subQuery);
     /// <summary>
     /// Union操作，去掉重复记录，如：
     /// <code>
-    /// await repository.From&lt;Order&gt;()
-    ///     ...
+    /// await repository.From&lt;Order&gt;() ...
     ///     .Union(f =&gt; f.From&lt;Order&gt;()
     ///         .Where(x =&gt; x.Id &gt; 1)
     ///         .Select(x =&gt; new { ... }))
@@ -211,8 +207,7 @@ public interface IQuery<T> : IQueryBase
     /// SELECT ... FROM `sys_order` WHERE `Id`&gt;1
     /// </code>
     /// </summary>
-    /// <param name="subQueryExpr">子查询，需要有Select语句，如：
-    /// <code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
+    /// <param name="subQueryExpr">子查询表达式，需要有Select语句，如：<code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// <returns>返回查询对象</returns>
     IQuery<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     /// <summary>
@@ -227,13 +222,12 @@ public interface IQuery<T> : IQueryBase
     /// SELECT ... FROM `sys_order` ...
     /// </code>
     /// </summary>
-    /// <param name="subQuery">子查询，需要有Select语句，如：
-    /// <code>repository.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
+    /// <param name="subQuery">子查询，需要有Select语句，如：<code>repository.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
     IQuery<T> UnionAll(IQuery<T> subQuery);
     /// <summary>
-    /// Union All操作，所有记录不去掉重复
+    /// Union All操作，所有记录不去掉重复，如：
     /// <code>
     /// await repository.From&lt;Order&gt;() ...
     ///     .UnionAll(f =&gt; f.From&lt;Order&gt;() ...
@@ -244,14 +238,13 @@ public interface IQuery<T> : IQueryBase
     /// SELECT ... FROM `sys_order` WHERE `Id`&gt;1
     /// </code>
     /// </summary>
-    /// <param name="subQueryExpr">子查询，需要有Select语句，如：
-    /// <code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
+    /// <param name="subQueryExpr">子查询表达式，需要有Select语句，如：<code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// <returns>返回查询对象</returns>
     IQuery<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     /// <summary>
     /// 递归CTE子查询中的Union操作，表达式subQueryExpr中的第二参数是CTE自身引用，如：
     /// <code>
-    /// f.FromQuery(f =&gt; f.From&lt;Menu&gt;() ...
+    /// ... f.From&lt;Menu&gt;() ...
     ///         .Select(x =&gt; new { ... })
     ///     .UnionRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
@@ -264,15 +257,14 @@ public interface IQuery<T> : IQueryBase
     /// ) ...
     /// </code>
     /// </summary>
-    /// <param name="subQueryExpr">子查询，需要有Select语句，如：
-    /// <code>f.From&lt;Menu&gt;().Where(x =&gt; ... ).Select(x =&gt; new { ... })</code>
+    /// <param name="subQueryExpr">子查询表达式，需要有Select语句，如：<code>f.From&lt;Menu&gt;().Where(x =&gt; ... ).Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
     IQuery<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
     /// <summary>
     /// 递归CTE子查询中的UnionAll操作，表达式subQueryExpr中的第二参数是CTE自身引用，如：
     /// <code>
-    /// f.From&lt;Menu&gt;() ...
+    /// ... f.From&lt;Menu&gt;() ...
     ///         .Select(x =&gt; new { ... })
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
@@ -284,8 +276,7 @@ public interface IQuery<T> : IQueryBase
     /// SELECT ... FROM `sys_menu` a INNER JOIN `myCteTable` b ON a.`ParentId`=b.`Id` ...
     /// ) ...
     /// </summary>
-    /// <param name="subQueryExpr">子查询，需要有Select语句，如：
-    /// <code>f.From&lt;Menu&gt;() .Where(x =&gt; ... ) .Select(x =&gt; new { ... })</code>
+    /// <param name="subQueryExpr">子查询表达式，需要有Select语句，如：<code>f.From&lt;Menu&gt;() .Where(x =&gt; ... ) .Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
     IQuery<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
@@ -293,10 +284,7 @@ public interface IQuery<T> : IQueryBase
 
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做JOIN关联，如：
-    /// <code>
-    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
-    /// </code>
+    /// 添加实体表，方便后面做JOIN关联，如：<code>repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()</code>
     /// </summary>
     /// <typeparam name="TOther">实体表类型</typeparam>
     /// <returns>返回查询对象</returns>
@@ -330,24 +318,23 @@ public interface IQuery<T> : IQueryBase
 
     #region Include
     /// <summary>
-    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级  
+    /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句。
+    /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
-    /// repository.From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
-    /// repository.From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
+    /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
+    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
+    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector);
     /// <summary>
-    /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;User&gt;()
-    ///   .IncludeMany(f =&gt; f.Orders)
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
@@ -359,10 +346,9 @@ public interface IQuery<T> : IQueryBase
 
     #region InnerJoin
     /// <summary>
-    /// 添加TOther表，与现有表T做INNER JOIN关联，如：
+    /// 添加TOther表，与现有表T做INNER JOIN关联，与.WithTable&lt;TOther&gt;().InnerJoin(...)等价，如：
     /// <code>
-    /// repository.From&lt;User&gt;()
-    ///     .InnerJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
+    /// .From&lt;User&gt;().InnerJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">实体类型</typeparam>
@@ -370,15 +356,14 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，也可以用在CTE子句中自我引用，如：
+    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，也可以用在CTE子句中自我引用，与.WithQuery(subQuery).InnerJoin(...)等价，如：
     /// <code>
-    /// repository
-    ///     .FromQuery(f =&gt; f.From&lt;Menu&gt;()
-    ///             .Where(x =&gt; x.Id == 1)
-    ///             .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
-    ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///             .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId }))) ...
+    /// f.From&lt;Menu&gt;()
+    ///         .Where(x =&gt; x.Id == 1)
+    ///         .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+    ///         .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId }))) ...
     /// SQL:
     /// WITH RECURSIVE MyCte1(Id,Name,ParentId) AS
     /// (
@@ -393,17 +378,16 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表T做INNER JOIN关联，如：
+    /// 添加subQueryExpr子查询，并与现有表T做INNER JOIN关联，与.WithQuery(subQueryExpr).InnerJoin(...)等价，如：
     /// <code>
-    /// f.InnerJoin(f =&gt; f.From&lt;OrderDetail&gt;()
-    ///     ...
+    /// ... .InnerJoin(f =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b) =&gt; a.Id == b.OrderId) ...
     /// SQL：
     /// ... a INNER JOIN (SELECT ... FROM `sys_order_detail` ...) b ON a.`Id`=b.`OrderId` ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQueryExpr">子查询对象</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
@@ -411,7 +395,7 @@ public interface IQuery<T> : IQueryBase
 
     #region LeftJoin
     /// <summary>
-    /// 添加TOther表，与现有表T做LEFT JOIN关联，如：
+    /// 添加TOther表，与现有表T做LEFT JOIN关联，与.WithTable&lt;TOther&gt;().LeftJoin(...)等价，如：
     /// <code>
     /// repository.From&lt;User&gt;()
     ///     .LeftJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
@@ -422,10 +406,9 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，与.WithQuery(subQueryExpr).LeftJoin(...)等价，如：
     /// <code>
-    /// var subQuery = repository.From&lt;Menu&gt;()
-    ///     .Where(x =&gt; x.Id == 1).Select(x =&gt; new { x.Id, x.Name, x.ParentId });
+    /// var subQuery = repository.From&lt;Menu&gt;().Where(x =&gt; x.Id == 1).Select(x =&gt; new { x.Id, x.Name, x.ParentId });
     /// ... .LeftJoin(subQuery, (a, b) =&gt; a.ParentId == b.Id)
     /// SQL: ...LEFT JOIN (SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1) b ON a.`ParentId`=b.`Id` ...
     /// </code>
@@ -438,14 +421,13 @@ public interface IQuery<T> : IQueryBase
     /// <summary>
     /// 添加subQueryExpr子查询，并与现有表T做LEFT JOIN关联，如：
     /// <code>
-    /// .LeftJoin(f =&gt; f.From&lt;OrderDetail&gt;()
-    ///     ...
+    /// .LeftJoin(f =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; ...), (a, b, c) =&gt; b.Id == c.OrderId)
     /// SQL：... LEFT JOIN (SELECT ... FROM `sys_order_detail` a ...) c ON b.`Id`=c.`OrderId` ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQueryExpr">子查询对象</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
@@ -453,7 +435,7 @@ public interface IQuery<T> : IQueryBase
 
     #region RightJoin
     /// <summary>
-    /// 添加TOther表，与现有表T做RIGHT JOIN关联，如：
+    /// 添加TOther表，与现有表T做RIGHT JOIN关联，与.WithTable&lt;TOther&gt;().RightJoin(...)等价，如：
     /// <code>
     /// .From&lt;User&gt;().RightJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
     /// </code>
@@ -461,9 +443,9 @@ public interface IQuery<T> : IQueryBase
     /// <typeparam name="TOther">实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
+    IQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);    
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，与.WithQuery(subQuery).RightJoin(...)等价，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;()
     ///     .Where(x =&gt; x.Id == 1).Select(x =&gt; new { x.Id, x.Name, x.ParentId });
@@ -475,9 +457,9 @@ public interface IQuery<T> : IQueryBase
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
+    IQuery<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);    
     /// <summary>
-    /// 添加subQuery子查询，并与现有表T做RIGHT JOIN关联，如：
+    /// 添加subQueryExpr子查询，并与现有表T做RIGHT JOIN关联，，与.WithQuery(subQueryExpr).RightJoin(...)等价，如：
     /// <code>
     /// .RightJoin(f =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select( ... ), (a, b, c) =&gt; b.Id == c.OrderId)
@@ -485,7 +467,7 @@ public interface IQuery<T> : IQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的<paramref name="TOther"/>类型是一个匿名类</typeparam>
-    /// <param name="subQueryExpr">子查询对象</param>
+    /// <param name="subQueryExpr">子查询表达式</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
@@ -499,8 +481,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> Where(Expression<Func<T, bool>> predicate);
     /// <summary>
-    /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+    /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -567,10 +548,8 @@ public interface IQuery<T> : IQueryBase
     /// <summary>
     /// 分组查询，分组表达式groupingExpr可以是单个或多个字段的匿名对象，如：
     /// <code>
-    /// repository.From&lt;User&gt;() ...
-    ///    .GroupBy(f =&gt; new { f.Id, f.Name, f.CreatedAt.Date })
-    ///    ...
-    /// SQL: ... FROM `sys_user` a ... GROUP BY a.`Id`,a.`Name`,CONVERT(a.`CreatedAt`,DATE) ...
+    /// .GroupBy(f =&gt; new { f.Id, f.Name, f.CreatedAt.Date })
+    /// SQL: ... GROUP BY a.`Id`,a.`Name`,CONVERT(a.`CreatedAt`,DATE) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TGrouping">分组后的实体对象类型，New类型表达式，可以一个或是多个字段</typeparam>
@@ -671,14 +650,12 @@ public interface IQuery<T> : IQueryBase
     /// <summary>
     /// 选择指定聚合字段返回，可以是单个或多个聚合字段的匿名对象，如：
     /// <code>
-    /// repository.From&lt;Order&gt;()
-    ///    .SelectAggregate((x, a) =&gt; new
-    ///    {
-    ///        OrderCount = x.Count(a.Id),
-    ///        TotalAmount = x.Sum(a.TotalAmount)
-    ///    })
-    ///    .ToSql(out _);
-    /// SQL: SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` FROM `sys_order`
+    /// .SelectAggregate((x, a) =&gt; new
+    /// {
+    ///     OrderCount = x.Count(a.Id),
+    ///     TotalAmount = x.Sum(a.TotalAmount)
+    /// })
+    /// SQL: COUNT(a.`Id`) AS `OrderCount`,SUM(a.`TotalAmount`) AS `TotalAmount`
     /// </code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -697,29 +674,29 @@ public interface IQuery<T> : IQueryBase
 
     #region Count
     /// <summary>
-    /// 返回某个字段的数据条数，如：
+    /// 返回某个字段的int类型数据条数，如：
     /// <code>.Count(f =&gt; f.BuyerId)</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <returns>返回该字段的数据条数</returns>
+    /// <returns>返回该字段的int类型数据条数</returns>
     int Count<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段的数据条数，如：
+    /// 返回某个字段去重后的int类型数据条数，如：
     /// <code>.CountAsync(f =&gt; f.BuyerId)</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回该字段的数据条数</returns>
+    /// <returns>返回该字段的int类型数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，如：
+    /// 返回某个字段去重后的int类型数据条数，如：
     /// <code>.CountDistinct(f =&gt; f.BuyerId)</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <returns>返回该字段的数据条数</returns>
+    /// <returns>返回该字段去重后的int类型数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
     /// 返回某个字段去重后的数据条数，如：
@@ -728,15 +705,15 @@ public interface IQuery<T> : IQueryBase
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回该字段去重后的数据条数</returns>
+    /// <returns>返回该字段去重后的int类型数据条数</returns>
     Task<int> CountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段的数据条数，如：
+    /// 返回某个字段的long类型数据条数，如：
     /// <code>.LongCount(f =&gt; f.BuyerId)</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <returns>返回该字段的数据条数</returns>
+    /// <returns>返回该字段的long类型数据条数</returns>
     long LongCount<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
     /// 返回某个字段的数据条数，如：
@@ -745,7 +722,7 @@ public interface IQuery<T> : IQueryBase
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回该字段的数据条数</returns>
+    /// <returns>返回该字段的long类型数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
     /// 返回某个字段去重后的数据条数，如：
@@ -753,7 +730,7 @@ public interface IQuery<T> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <returns>返回该字段的数据条数</returns>
+    /// <returns>返回该字段去重后的long类型数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
     /// 返回某个字段去重后的数据条数，如：
@@ -762,7 +739,7 @@ public interface IQuery<T> : IQueryBase
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回该字段的数据条数</returns>
+    /// <returns>返回该字段去重后的long类型数据条数</returns>
     Task<long> LongCountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
 
@@ -772,8 +749,8 @@ public interface IQuery<T> : IQueryBase
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <returns>返回该字段的求和值</returns>
-    TField Sum<TField>(Expression<Func<T, TField>> fieldExpr);
+    /// <returns>返回该字段的求和值，decimal类型</returns>
+    decimal Sum<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
     /// <summary>
     /// 计算指定字段的求和值
@@ -781,14 +758,14 @@ public interface IQuery<T> : IQueryBase
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回该字段的求和值</returns>
-    Task<TField> SumAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    /// <returns>返回该字段的求和值，decimal类型</returns>
+    Task<decimal> SumAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
     /// 计算指定字段的平均值
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
-    /// <returns>返回该字段的求和值</returns>
+    /// <returns>返回该字段的平均值</returns>
     TField Avg<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
     /// 计算指定字段的平均值
@@ -796,7 +773,7 @@ public interface IQuery<T> : IQueryBase
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回该字段的求和值</returns>
+    /// <returns>返回该字段的平均值</returns>
     Task<TField> AvgAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
     /// 计算指定字段的最大值
@@ -864,32 +841,13 @@ public interface IQuery<T> : IQueryBase
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回IPagedList&lt;T&gt;列表或没有任何元素的空IPagedList&lt;T&gt;空列表</returns>
     Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 执行SQL查询，返回T实体所有字段的记录并转化为Dictionary&lt;TKey, TValue&gt;字典，记录不存在时返回没有任何元素的Dictionary&lt;TKey, TValue&gt;空字典
-    /// </summary>
-    /// <typeparam name="TKey">字典Key类型</typeparam>
-    /// <typeparam name="TValue">字典Value类型</typeparam>
-    /// <param name="keySelector">字典Key选择委托</param>
-    /// <param name="valueSelector">字典Value选择委托</param>
-    /// <returns>返回Dictionary&lt;TKey, TValue&gt;字典或没有任何元素的空Dictionary&lt;TKey, TValue&gt;空字典</returns>
-    Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector) where TKey : notnull;
-    /// <summary>
-    /// 执行SQL查询，返回T实体所有字段的记录并转化为Dictionary&lt;TKey, TValue&gt;字典，记录不存在时返回没有任何元素的Dictionary&lt;TKey, TValue&gt;空字典
-    /// </summary>
-    /// <typeparam name="TKey">字典Key类型</typeparam>
-    /// <typeparam name="TValue">字典Value类型</typeparam>
-    /// <param name="keySelector">字典Key选择委托</param>
-    /// <param name="valueSelector">字典Value选择委托</param>
-    /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回Dictionary&lt;TKey, TValue&gt;字典或没有任何元素的Dictionary&lt;TKey, TValue&gt;空字典</returns>
-    Task<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull;
     #endregion
 
     #region AsCteTable
     /// <summary>
     /// 把当前子查询转为CTE表
     /// </summary>
-    /// <param name="tableName"></param>
+    /// <param name="tableName">CTE表名</param>
     /// <returns></returns>
     ICteQuery<T> AsCteTable(string tableName);
     #endregion
@@ -897,7 +855,7 @@ public interface IQuery<T> : IQueryBase
 /// <summary>
 /// CTE表查询对象
 /// </summary>
-/// <typeparam name="T"></typeparam>
+/// <typeparam name="T">实体类型</typeparam>
 public interface ICteQuery<T> : ICteQuery, IQuery<T> { }
 /// <summary>
 /// 多表T1, T2查询
@@ -908,20 +866,19 @@ public interface IQuery<T1, T2> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T2表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定1个或多个T2表分表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T2表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T2表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据TMasterSharding主表分表名与当前T2表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T2表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T2表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding表名与当前T2表名的映射关系，指定当前T2表分表名获取委托，执行委托获取当前T2表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前T2表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T2表分表名称，如：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -931,8 +888,7 @@ public interface IQuery<T1, T2> : IQueryBase
     ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    ///     }) ...
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -944,21 +900,20 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T2表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T2表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定T2表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T2表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定T2表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T2表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
@@ -966,8 +921,7 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T2表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T2表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -993,8 +947,8 @@ public interface IQuery<T1, T2> : IQueryBase
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
     /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <returns>返回查询对象</returns>
+    /// <typeparam name="TOther">实体表类型</typeparam>
+   /// <returns>返回查询对象</returns>
     IQuery<T1, T2, TOther> WithTable<TOther>();
     #endregion
 
@@ -1025,27 +979,22 @@ public interface IQuery<T1, T2> : IQueryBase
 
     #region Include
     /// <summary>
-    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
+    /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;Product&gt;()
-    ///   .Include(f =&gt; f.Brand) ...
-    /// repository.From&lt;Brand&gt;()
-    ///   .Include(f =&gt; f.Products) ...
+    /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
+    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
+    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, TMember> Include<TMember>(Expression<Func<T1, T2, TMember>> memberSelector);
     /// <summary>
-    /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;User&gt;()
-    ///   .IncludeMany(f =&gt; f.Orders)
-    ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
@@ -1064,10 +1013,7 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> InnerJoin(Expression<Func<T1, T2, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
-    /// <code>
-    /// .InnerJoin&lt;TOther&gt;((a, b) =&gt; ...)
-    /// </code>
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：<code>.InnerJoin&lt;TOther&gt;((a, b) =&gt; ...)</code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -1532,20 +1478,19 @@ public interface IQuery<T1, T2, T3> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T3表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定1个或多个T3表分表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T3表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T3表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据TMasterSharding主表分表名与当前T3表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T3表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T3表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding表名与当前T3表名的映射关系，指定当前T3表分表名获取委托，执行委托获取当前T3表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前T3表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T3表分表名称，如：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -1555,8 +1500,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    ///     }) ...
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -1568,21 +1512,20 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T3表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T3表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定T3表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T3表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定T3表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T3表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
@@ -1590,8 +1533,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T3表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T3表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -1617,8 +1559,8 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
     /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <returns>返回查询对象</returns>
+    /// <typeparam name="TOther">实体表类型</typeparam>
+   /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, TOther> WithTable<TOther>();
     #endregion
 
@@ -1649,27 +1591,22 @@ public interface IQuery<T1, T2, T3> : IQueryBase
 
     #region Include
     /// <summary>
-    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
+    /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;Product&gt;()
-    ///   .Include(f =&gt; f.Brand) ...
-    /// repository.From&lt;Brand&gt;()
-    ///   .Include(f =&gt; f.Products) ...
+    /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
+    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
+    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, TMember> Include<TMember>(Expression<Func<T1, T2, T3, TMember>> memberSelector);
     /// <summary>
-    /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;User&gt;()
-    ///   .IncludeMany(f =&gt; f.Orders)
-    ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
@@ -1688,10 +1625,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> InnerJoin(Expression<Func<T1, T2, T3, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
-    /// <code>
-    /// .InnerJoin&lt;TOther&gt;((a, b, c) =&gt; ...)
-    /// </code>
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：<code>.InnerJoin&lt;TOther&gt;((a, b, c) =&gt; ...)</code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -2157,20 +2091,19 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T4表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定1个或多个T4表分表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T4表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T4表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据TMasterSharding主表分表名与当前T4表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T4表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T4表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding表名与当前T4表名的映射关系，指定当前T4表分表名获取委托，执行委托获取当前T4表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前T4表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T4表分表名称，如：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -2180,8 +2113,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    ///     }) ...
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -2193,21 +2125,20 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T4表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T4表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定T4表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T4表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定T4表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T4表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
@@ -2215,8 +2146,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T4表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T4表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -2242,8 +2172,8 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
     /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <returns>返回查询对象</returns>
+    /// <typeparam name="TOther">实体表类型</typeparam>
+   /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, TOther> WithTable<TOther>();
     #endregion
 
@@ -2274,27 +2204,22 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
 
     #region Include
     /// <summary>
-    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
+    /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;Product&gt;()
-    ///   .Include(f =&gt; f.Brand) ...
-    /// repository.From&lt;Brand&gt;()
-    ///   .Include(f =&gt; f.Products) ...
+    /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
+    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
+    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, TMember>> memberSelector);
     /// <summary>
-    /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;User&gt;()
-    ///   .IncludeMany(f =&gt; f.Orders)
-    ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
@@ -2313,10 +2238,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> InnerJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
-    /// <code>
-    /// .InnerJoin&lt;TOther&gt;((a, b, c, d) =&gt; ...)
-    /// </code>
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：<code>.InnerJoin&lt;TOther&gt;((a, b, c, d) =&gt; ...)</code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -2783,20 +2705,19 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T5表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定1个或多个T5表分表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T5表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T5表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据TMasterSharding主表分表名与当前T5表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T5表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T5表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding表名与当前T5表名的映射关系，指定当前T5表分表名获取委托，执行委托获取当前T5表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前T5表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T5表分表名称，如：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -2806,8 +2727,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    ///     }) ...
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -2819,21 +2739,20 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T5表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T5表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定T5表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T5表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定T5表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T5表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
@@ -2841,8 +2760,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T5表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T5表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -2868,8 +2786,8 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
     /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <returns>返回查询对象</returns>
+    /// <typeparam name="TOther">实体表类型</typeparam>
+   /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, TOther> WithTable<TOther>();
     #endregion
 
@@ -2900,27 +2818,22 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
 
     #region Include
     /// <summary>
-    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
+    /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;Product&gt;()
-    ///   .Include(f =&gt; f.Brand) ...
-    /// repository.From&lt;Brand&gt;()
-    ///   .Include(f =&gt; f.Products) ...
+    /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
+    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
+    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, TMember>> memberSelector);
     /// <summary>
-    /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;User&gt;()
-    ///   .IncludeMany(f =&gt; f.Orders)
-    ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
@@ -2939,10 +2852,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
-    /// <code>
-    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e) =&gt; ...)
-    /// </code>
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：<code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e) =&gt; ...)</code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -3410,20 +3320,19 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T6表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定1个或多个T6表分表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T6表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T6表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据TMasterSharding主表分表名与当前T6表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T6表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T6表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding表名与当前T6表名的映射关系，指定当前T6表分表名获取委托，执行委托获取当前T6表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前T6表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T6表分表名称，如：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -3433,8 +3342,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    ///     }) ...
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -3446,21 +3354,20 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T6表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T6表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定T6表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T6表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定T6表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T6表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
@@ -3468,8 +3375,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T6表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T6表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -3495,8 +3401,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
     /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <returns>返回查询对象</returns>
+    /// <typeparam name="TOther">实体表类型</typeparam>
+   /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, TOther> WithTable<TOther>();
     #endregion
 
@@ -3527,27 +3433,22 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
 
     #region Include
     /// <summary>
-    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
+    /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;Product&gt;()
-    ///   .Include(f =&gt; f.Brand) ...
-    /// repository.From&lt;Brand&gt;()
-    ///   .Include(f =&gt; f.Products) ...
+    /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
+    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
+    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, TMember>> memberSelector);
     /// <summary>
-    /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;User&gt;()
-    ///   .IncludeMany(f =&gt; f.Orders)
-    ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
@@ -3566,10 +3467,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
-    /// <code>
-    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f) =&gt; ...)
-    /// </code>
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：<code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e, f) =&gt; ...)</code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -4038,20 +3936,19 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T7表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定1个或多个T7表分表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T7表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T7表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据TMasterSharding主表分表名与当前T7表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T7表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T7表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding表名与当前T7表名的映射关系，指定当前T7表分表名获取委托，执行委托获取当前T7表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前T7表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T7表分表名称，如：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -4061,8 +3958,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    ///     }) ...
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -4074,21 +3970,20 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T7表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T7表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定T7表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T7表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定T7表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T7表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
@@ -4096,8 +3991,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T7表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T7表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -4123,8 +4017,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
     /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <returns>返回查询对象</returns>
+    /// <typeparam name="TOther">实体表类型</typeparam>
+   /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithTable<TOther>();
     #endregion
 
@@ -4155,27 +4049,22 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
 
     #region Include
     /// <summary>
-    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
+    /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;Product&gt;()
-    ///   .Include(f =&gt; f.Brand) ...
-    /// repository.From&lt;Brand&gt;()
-    ///   .Include(f =&gt; f.Products) ...
+    /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
+    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
+    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TMember>> memberSelector);
     /// <summary>
-    /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;User&gt;()
-    ///   .IncludeMany(f =&gt; f.Orders)
-    ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
@@ -4194,10 +4083,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
-    /// <code>
-    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g) =&gt; ...)
-    /// </code>
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：<code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g) =&gt; ...)</code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -4667,20 +4553,19 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T8表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定1个或多个T8表分表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T8表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T8表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据TMasterSharding主表分表名与当前T8表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T8表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T8表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding表名与当前T8表名的映射关系，指定当前T8表分表名获取委托，执行委托获取当前T8表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前T8表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T8表分表名称，如：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -4690,8 +4575,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    ///     }) ...
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -4703,21 +4587,20 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T8表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T8表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定T8表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T8表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定T8表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T8表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
@@ -4725,8 +4608,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T8表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T8表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -4752,8 +4634,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
     /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <returns>返回查询对象</returns>
+    /// <typeparam name="TOther">实体表类型</typeparam>
+   /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>();
     #endregion
 
@@ -4784,27 +4666,22 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
 
     #region Include
     /// <summary>
-    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
+    /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;Product&gt;()
-    ///   .Include(f =&gt; f.Brand) ...
-    /// repository.From&lt;Brand&gt;()
-    ///   .Include(f =&gt; f.Products) ...
+    /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
+    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
+    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TMember>> memberSelector);
     /// <summary>
-    /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;User&gt;()
-    ///   .IncludeMany(f =&gt; f.Orders)
-    ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
@@ -4823,10 +4700,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
-    /// <code>
-    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h) =&gt; ...)
-    /// </code>
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：<code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h) =&gt; ...)</code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -5297,20 +5171,19 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T9表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定1个或多个T9表分表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T9表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T9表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据TMasterSharding主表分表名与当前T9表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T9表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T9表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding表名与当前T9表名的映射关系，指定当前T9表分表名获取委托，执行委托获取当前T9表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前T9表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T9表分表名称，如：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -5320,8 +5193,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    ///     }) ...
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -5333,21 +5205,20 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T9表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T9表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定T9表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T9表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定T9表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T9表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
@@ -5355,8 +5226,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T9表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T9表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -5382,8 +5252,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
     /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <returns>返回查询对象</returns>
+    /// <typeparam name="TOther">实体表类型</typeparam>
+   /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithTable<TOther>();
     #endregion
 
@@ -5414,27 +5284,22 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
 
     #region Include
     /// <summary>
-    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
+    /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;Product&gt;()
-    ///   .Include(f =&gt; f.Brand) ...
-    /// repository.From&lt;Brand&gt;()
-    ///   .Include(f =&gt; f.Products) ...
+    /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
+    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
+    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>> memberSelector);
     /// <summary>
-    /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;User&gt;()
-    ///   .IncludeMany(f =&gt; f.Orders)
-    ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
@@ -5453,10 +5318,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
-    /// <code>
-    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i) =&gt; ...)
-    /// </code>
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：<code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i) =&gt; ...)</code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -5928,20 +5790,19 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T10表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定1个或多个T10表分表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T10表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T10表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据TMasterSharding主表分表名与当前T10表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T10表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T10表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding表名与当前T10表名的映射关系，指定当前T10表分表名获取委托，执行委托获取当前T10表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前T10表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T10表分表名称，如：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -5951,8 +5812,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    ///     }) ...
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -5964,21 +5824,20 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T10表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T10表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定T10表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T10表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定T10表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T10表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
@@ -5986,8 +5845,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T10表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T10表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -6013,8 +5871,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
     /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <returns>返回查询对象</returns>
+    /// <typeparam name="TOther">实体表类型</typeparam>
+   /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithTable<TOther>();
     #endregion
 
@@ -6045,27 +5903,22 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
 
     #region Include
     /// <summary>
-    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
+    /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;Product&gt;()
-    ///   .Include(f =&gt; f.Brand) ...
-    /// repository.From&lt;Brand&gt;()
-    ///   .Include(f =&gt; f.Products) ...
+    /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
+    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
+    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>> memberSelector);
     /// <summary>
-    /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;User&gt;()
-    ///   .IncludeMany(f =&gt; f.Orders)
-    ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
@@ -6084,10 +5937,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
-    /// <code>
-    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j) =&gt; ...)
-    /// </code>
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：<code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j) =&gt; ...)</code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -6560,20 +6410,19 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T11表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定1个或多个T11表分表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T11表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T11表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据TMasterSharding主表分表名与当前T11表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T11表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T11表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding表名与当前T11表名的映射关系，指定当前T11表分表名获取委托，执行委托获取当前T11表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前T11表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T11表分表名称，如：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -6583,8 +6432,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    ///     }) ...
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -6596,21 +6444,20 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T11表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T11表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定T11表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T11表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定T11表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T11表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
@@ -6618,8 +6465,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T11表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T11表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -6645,8 +6491,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
     /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <returns>返回查询对象</returns>
+    /// <typeparam name="TOther">实体表类型</typeparam>
+   /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithTable<TOther>();
     #endregion
 
@@ -6677,27 +6523,22 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
 
     #region Include
     /// <summary>
-    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
+    /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;Product&gt;()
-    ///   .Include(f =&gt; f.Brand) ...
-    /// repository.From&lt;Brand&gt;()
-    ///   .Include(f =&gt; f.Products) ...
+    /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
+    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
+    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>> memberSelector);
     /// <summary>
-    /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;User&gt;()
-    ///   .IncludeMany(f =&gt; f.Orders)
-    ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
@@ -6716,10 +6557,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
-    /// <code>
-    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)
-    /// </code>
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：<code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)</code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -7193,20 +7031,19 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T12表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定1个或多个T12表分表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T12表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T12表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据TMasterSharding主表分表名与当前T12表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T12表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T12表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding表名与当前T12表名的映射关系，指定当前T12表分表名获取委托，执行委托获取当前T12表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前T12表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T12表分表名称，如：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -7216,8 +7053,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    ///     }) ...
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -7229,21 +7065,20 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T12表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T12表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定T12表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T12表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定T12表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T12表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
@@ -7251,8 +7086,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T12表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T12表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -7278,8 +7112,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
     /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <returns>返回查询对象</returns>
+    /// <typeparam name="TOther">实体表类型</typeparam>
+   /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithTable<TOther>();
     #endregion
 
@@ -7310,27 +7144,22 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
 
     #region Include
     /// <summary>
-    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
+    /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;Product&gt;()
-    ///   .Include(f =&gt; f.Brand) ...
-    /// repository.From&lt;Brand&gt;()
-    ///   .Include(f =&gt; f.Products) ...
+    /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
+    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
+    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>> memberSelector);
     /// <summary>
-    /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;User&gt;()
-    ///   .IncludeMany(f =&gt; f.Orders)
-    ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
@@ -7349,10 +7178,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
-    /// <code>
-    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)
-    /// </code>
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：<code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)</code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -7827,20 +7653,19 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T13表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定1个或多个T13表分表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T13表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T13表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据TMasterSharding主表分表名与当前T13表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T13表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T13表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding表名与当前T13表名的映射关系，指定当前T13表分表名获取委托，执行委托获取当前T13表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前T13表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T13表分表名称，如：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -7850,8 +7675,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    ///     }) ...
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -7863,21 +7687,20 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T13表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T13表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定T13表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T13表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定T13表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T13表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
@@ -7885,8 +7708,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T13表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T13表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -7912,8 +7734,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
     /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <returns>返回查询对象</returns>
+    /// <typeparam name="TOther">实体表类型</typeparam>
+   /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithTable<TOther>();
     #endregion
 
@@ -7944,27 +7766,22 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
 
     #region Include
     /// <summary>
-    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
+    /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;Product&gt;()
-    ///   .Include(f =&gt; f.Brand) ...
-    /// repository.From&lt;Brand&gt;()
-    ///   .Include(f =&gt; f.Products) ...
+    /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
+    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
+    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>> memberSelector);
     /// <summary>
-    /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;User&gt;()
-    ///   .IncludeMany(f =&gt; f.Orders)
-    ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
@@ -7983,10 +7800,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
-    /// <code>
-    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)
-    /// </code>
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：<code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)</code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -8462,20 +8276,19 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T14表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定1个或多个T14表分表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T14表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T14表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据TMasterSharding主表分表名与当前T14表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T14表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T14表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding表名与当前T14表名的映射关系，指定当前T14表分表名获取委托，执行委托获取当前T14表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前T14表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T14表分表名称，如：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -8485,8 +8298,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    ///     }) ...
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -8498,21 +8310,20 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T14表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T14表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定T14表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T14表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定T14表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T14表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
@@ -8520,8 +8331,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T14表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T14表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -8547,8 +8357,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
     /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <returns>返回查询对象</returns>
+    /// <typeparam name="TOther">实体表类型</typeparam>
+   /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithTable<TOther>();
     #endregion
 
@@ -8579,27 +8389,22 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region Include
     /// <summary>
-    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
+    /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;Product&gt;()
-    ///   .Include(f =&gt; f.Brand) ...
-    /// repository.From&lt;Brand&gt;()
-    ///   .Include(f =&gt; f.Products) ...
+    /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
+    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
+    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>> memberSelector);
     /// <summary>
-    /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;User&gt;()
-    ///   .IncludeMany(f =&gt; f.Orders)
-    ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
@@ -8618,10 +8423,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
-    /// <code>
-    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)
-    /// </code>
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：<code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)</code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -9098,20 +8900,19 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T15表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定1个或多个T15表分表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T15表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T15表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据TMasterSharding主表分表名与当前T15表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T15表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T15表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding表名与当前T15表名的映射关系，指定当前T15表分表名获取委托，执行委托获取当前T15表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前T15表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T15表分表名称，如：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -9121,8 +8922,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    ///     }) ...
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -9134,21 +8934,20 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T15表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T15表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定T15表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T15表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定T15表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T15表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
@@ -9156,8 +8955,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T15表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T15表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -9183,8 +8981,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
     /// </code>
     /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <returns>返回查询对象</returns>
+    /// <typeparam name="TOther">实体表类型</typeparam>
+   /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithTable<TOther>();
     #endregion
 
@@ -9215,27 +9013,22 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region Include
     /// <summary>
-    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
+    /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;Product&gt;()
-    ///   .Include(f =&gt; f.Brand) ...
-    /// repository.From&lt;Brand&gt;()
-    ///   .Include(f =&gt; f.Products) ...
+    /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
+    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
+    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>> memberSelector);
     /// <summary>
-    /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;User&gt;()
-    ///   .IncludeMany(f =&gt; f.Orders)
-    ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
@@ -9254,10 +9047,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：
-    /// <code>
-    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)
-    /// </code>
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，如：<code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)</code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -9735,20 +9525,19 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T16表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定1个或多个T16表分表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T16表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T16表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据TMasterSharding主表分表名与当前T16表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T16表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T16表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding表名与当前T16表名的映射关系，指定当前T16表分表名获取委托，执行委托获取当前T16表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前T16表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T16表分表名称，如：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -9758,8 +9547,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    ///     }) ...
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -9771,21 +9559,20 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定T16表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定T16表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定T16表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T16表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定T16表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T16表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
@@ -9793,8 +9580,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T16表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定T16表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -9815,27 +9601,22 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region Include
     /// <summary>
-    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
+    /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;Product&gt;()
-    ///   .Include(f =&gt; f.Brand) ...
-    /// repository.From&lt;Brand&gt;()
-    ///   .Include(f =&gt; f.Products) ...
+    /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
+    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
+    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>> memberSelector);
     /// <summary>
-    /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
-    /// repository.From&lt;User&gt;()
-    ///   .IncludeMany(f =&gt; f.Orders)
-    ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
+    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>

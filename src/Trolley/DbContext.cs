@@ -29,7 +29,6 @@ public sealed class DbContext
     public int CommandTimeout { get; set; }
     public Type DefaultEnumMapDbType { get; set; }
     public DateTimeKind DefaultDateTimeKind { get; set; }
-    public Delegate CommandShardingTableGetter { get; set; }
     public ITypeHandler JsonTypeHandler { get; set; }
     public ITypeHandler ToStringTypeHandler { get; set; }
     #endregion

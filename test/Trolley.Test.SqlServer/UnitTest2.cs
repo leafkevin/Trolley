@@ -2487,7 +2487,7 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
         Assert.True(result3.Count > 0);
     }
     [Fact]
-    public void SelectFlattenTo()
+    public void SelectTo()
     {
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
@@ -2511,7 +2511,7 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
 
         var result = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { "8" }))
-            .SelectFlattenTo<OrderInfo>()
+            .SelectTo<OrderInfo>()
             .First();
         Assert.Equal("8", result.Id);
         Assert.Equal(1, result.BuyerId);
@@ -2520,7 +2520,7 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
 
         result = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { "8" }))
-            .SelectFlattenTo(f => new OrderInfo
+            .SelectTo(f => new OrderInfo
             {
                 Description = "TotalAmount:" + f.TotalAmount
             })
@@ -2533,7 +2533,7 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
 
         result = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { "8" }))
-            .SelectFlattenTo(f => new OrderInfo
+            .SelectTo(f => new OrderInfo
             {
                 Description = this.DeferInvoke().Deferred()
             })
@@ -2546,7 +2546,7 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
 
         result = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { "8" }))
-            .SelectFlattenTo(f => new OrderInfo
+            .SelectTo(f => new OrderInfo
             {
                 Description = $"TotalAmount: {f.TotalAmount.ToString("C")}"
             })
@@ -2559,7 +2559,7 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
 
         var sql1 = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { "8" }))
-            .SelectFlattenTo(f => new OrderInfo
+            .SelectTo(f => new OrderInfo
             {
                 Description = f.TotalAmount.ToString("C") + f.OrderNo
             })
@@ -2568,7 +2568,7 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
 
         result = repository.From<Order>()
            .Where(f => Sql.In(f.Id, new[] { "8" }))
-           .SelectFlattenTo(f => new OrderInfo
+           .SelectTo(f => new OrderInfo
            {
                Description = $"{f.OrderNo}: {f.TotalAmount.ToString("C")}"
            })
@@ -2581,7 +2581,7 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
 
         var sql = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { "8" }))
-            .SelectFlattenTo(f => new OrderInfo
+            .SelectTo(f => new OrderInfo
             {
                 Description = f.TotalAmount.ToString("C") + f.OrderNo
             })
@@ -2590,7 +2590,7 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
 
         result = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { "8" }))
-            .SelectFlattenTo(f => new OrderInfo
+            .SelectTo(f => new OrderInfo
             {
                 Description = f.TotalAmount.ToString("C") + f.OrderNo
             })
@@ -2608,7 +2608,7 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
             .Having((x, a, b) => x.CountDistinct(b.ProductId) > 0)
             .Select((x, a, b) => new { x.Grouping.BuyerId, x.Grouping.OrderId, ProductTotal = x.CountDistinct(b.ProductId) }))
         .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-        .SelectFlattenTo((x, y) => new OrderBuyerInfo { BuyerName = y.Name })
+        .SelectTo((x, y) => new OrderBuyerInfo { BuyerName = y.Name })
         .First();
         Assert.NotNull(result1);
         Assert.False(string.IsNullOrEmpty(result1.OrderId));
@@ -2683,7 +2683,7 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
         repository.Commit();
         var sql1 = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { "8" }))
-            .SelectFlattenTo(f => new OrderInfo
+            .SelectTo(f => new OrderInfo
             {
                 Description = f.TotalAmount.ToString("C") + f.OrderNo
             })
@@ -2692,7 +2692,7 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
 
         var result1 = await repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { "8" }))
-            .SelectFlattenTo(f => new OrderInfo
+            .SelectTo(f => new OrderInfo
             {
                 Description = f.TotalAmount.ToString("C") + f.OrderNo
             })
@@ -2705,7 +2705,7 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
 
         var sql2 = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { "8" }))
-            .SelectFlattenTo(f => new OrderInfo
+            .SelectTo(f => new OrderInfo
             {
                 Description = $"{f.OrderNo}: {f.TotalAmount.ToString("C")}"
             })
@@ -2714,7 +2714,7 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
 
         var result2 = await repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { "8" }))
-            .SelectFlattenTo(f => new OrderInfo
+            .SelectTo(f => new OrderInfo
             {
                 Description = $"{f.OrderNo}: {f.TotalAmount.ToString("C")}"
             })
@@ -2848,12 +2848,12 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
         var repository = this.dbFactory.Create();
         var sql = repository.From<Product, Brand>()
             .InnerJoin((x, y) => x.BrandId == y.Id)
-            .SelectFlattenTo((x, y) => new ProductInfo { IsEnabled = x.IsEnabled && y.IsEnabled || x.CompanyId.IsNull() })
+            .SelectTo((x, y) => new ProductInfo { IsEnabled = x.IsEnabled && y.IsEnabled || x.CompanyId.IsNull() })
             .ToSql(out _);
         Assert.Equal("SELECT (CASE WHEN a.[IsEnabled]=1 AND b.[IsEnabled]=1 OR a.[CompanyId] IS NULL THEN 1 ELSE 0 END) AS [IsEnabled] FROM [sys_product] a INNER JOIN [sys_brand] b ON a.[BrandId]=b.[Id]", sql);
         var result = await repository.From<Product, Brand>()
             .InnerJoin((x, y) => x.BrandId == y.Id && x.IsEnabled && y.IsEnabled)
-            .SelectFlattenTo((x, y) => new ProductInfo { IsEnabled = x.IsEnabled && y.IsEnabled })
+            .SelectTo((x, y) => new ProductInfo { IsEnabled = x.IsEnabled && y.IsEnabled })
             .FirstAsync();
         Assert.True(result.IsEnabled);
     }

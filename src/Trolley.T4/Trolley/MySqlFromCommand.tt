@@ -150,8 +150,8 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
         => base.Select(fields) as IMySqlFromCommand<TTarget>;
     public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
-    public new IMySqlFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
-        => base.SelectFlattenTo(specialMemberSelector) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<TTarget> SelectTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
+        => base.SelectTo(specialMemberSelector) as IMySqlFromCommand<TTarget>;
     public new IMySqlFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
         => base.SelectAggregate(fieldsExpr) as IMySqlFromCommand<TTarget>;
     #endregion
@@ -372,8 +372,8 @@ public class MySqlFromCommand<<#=tables#>> : FromCommand<<#=tables#>>, IMySqlFro
     #region Select
     public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
-    public new IMySqlFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<<#=tables#>, TTarget>> specialMemberSelector = null)
-        => base.SelectFlattenTo(specialMemberSelector) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<TTarget> SelectTo<TTarget>(Expression<Func<<#=tables#>, TTarget>> specialMemberSelector = null)
+        => base.SelectTo(specialMemberSelector) as IMySqlFromCommand<TTarget>;
     #endregion
 }
 <#  }#>

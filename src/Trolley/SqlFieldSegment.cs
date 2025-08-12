@@ -21,7 +21,7 @@ public enum SqlFieldType : byte
     /// </summary>
     IncludeRef,
     /// <summary>
-    /// 先从数据库中查询连续的一个或多个字段，再执行函数调用返回一个字段
+    /// 先从数据库中查询连续的单个或多个字段，再执行函数调用返回一个字段
     /// </summary>
     DeferredFields,
     /// <summary>

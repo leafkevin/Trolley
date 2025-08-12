@@ -1727,6 +1727,38 @@ public static class RepositoryHelper
             result.Add((TEntity)deserializer.Invoke(reader));
         return result;
     }
+    public static bool TryGetMemberGetter(Type entityType, string memberName, object targetSample, out Func<object, object> memberGetter)
+    {
+        var isContains = false;
+        memberGetter = null;
+        if (targetSample is IDictionary<string, object> dict)
+        {
+            foreach (var dictKey in dict.Keys)
+            {
+                if (dictKey.ToLower() != memberName)
+                    continue;
+                isContains = true;
+                memberGetter = f =>
+                {
+                    var myDict = f as IDictionary<string, object>;
+                    return myDict[dictKey];
+                };
+                break;
+            }
+        }
+
+        var memberInfos = entityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+            .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
+        foreach (var memberInfo in memberInfos)
+        {
+            if (memberInfo.Name.ToLower() != memberName)
+                continue;
+            isContains = true;
+            memberGetter = f => FasterEvaluator.EvaluateAndCache(f, memberInfo);
+            break;
+        }
+        return isContains;
+    }
 
     public static DateTime ToUtcTime(DateTime dateTime)
     {

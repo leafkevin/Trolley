@@ -28,41 +28,41 @@ public interface IPostgreSqlGroupingQuery<T, TGrouping> : IGroupingQuery<T, TGro
 
     #region OrderBy/OrderByDescending
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// ASC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy(x =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy(x =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
-    /// OrderBy(true, f =&gt; new { f.Id, f.OtherId }) 或是 OrderBy(true, x =&gt; x.CreatedAt.Date)
+    /// ASC排序，condition为true，ASC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
+    /// .OrderBy(true, f =&gt; new { f.Id, f.OtherId }) 或是 .OrderBy(true, x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// DESC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending(x =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending(x =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
-    /// OrderByDescending(true, f =&gt; new { f.Id, f.OtherId }) 或是 OrderByDescending(true, x =&gt; x.CreatedAt.Date)
+    /// DESC排序，condition为true，DESC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
+    /// .OrderByDescending(true, f =&gt; new { f.Id, f.OtherId }) 或是 .OrderByDescending(true, x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个或多个字段的匿名对象，如：
     /// <code>string orderFields = "Amount";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, f) =&lt; f.BuyerId).When("Amount", (x, f) =&lt; x.Sum(f.Amount)).Build()</code>)
     /// </summary>
@@ -78,7 +78,7 @@ public interface IPostgreSqlGroupingQuery<T, TGrouping> : IGroupingQuery<T, TGro
     /// <returns>返回分组后对象</returns>
     new IPostgreSqlQuery<TGrouping> Select();
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
+    /// 选择指定字段返回，可以是单个或多个字段的匿名对象，如：
     /// <code> ...Select(x =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select(x =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -113,41 +113,41 @@ public interface IPostgreSqlGroupingQuery<T1, T2, TGrouping> : IGroupingQuery<T1
 
     #region OrderBy/OrderByDescending
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// ASC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// ASC排序，condition为true，ASC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// DESC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// DESC排序，condition为true，DESC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个或多个字段的匿名对象，如：
     /// <code>string orderFields = "Amount";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
     /// </summary>
@@ -163,7 +163,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, TGrouping> : IGroupingQuery<T1
     /// <returns>返回分组后对象</returns>
     new IPostgreSqlQuery<TGrouping> Select();
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
+    /// 选择指定字段返回，可以是单个或多个字段的匿名对象，如：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -199,41 +199,41 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, TGrouping> : IGroupingQuer
 
     #region OrderBy/OrderByDescending
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// ASC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// ASC排序，condition为true，ASC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// DESC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// DESC排序，condition为true，DESC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个或多个字段的匿名对象，如：
     /// <code>string orderFields = "Amount";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
     /// </summary>
@@ -249,7 +249,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, TGrouping> : IGroupingQuer
     /// <returns>返回分组后对象</returns>
     new IPostgreSqlQuery<TGrouping> Select();
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
+    /// 选择指定字段返回，可以是单个或多个字段的匿名对象，如：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -286,41 +286,41 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, TGrouping> : IGrouping
 
     #region OrderBy/OrderByDescending
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// ASC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// ASC排序，condition为true，ASC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// DESC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// DESC排序，condition为true，DESC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个或多个字段的匿名对象，如：
     /// <code>string orderFields = "Amount";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
     /// </summary>
@@ -336,7 +336,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, TGrouping> : IGrouping
     /// <returns>返回分组后对象</returns>
     new IPostgreSqlQuery<TGrouping> Select();
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
+    /// 选择指定字段返回，可以是单个或多个字段的匿名对象，如：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -374,41 +374,41 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IGrou
 
     #region OrderBy/OrderByDescending
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// ASC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// ASC排序，condition为true，ASC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// DESC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// DESC排序，condition为true，DESC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个或多个字段的匿名对象，如：
     /// <code>string orderFields = "Amount";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
     /// </summary>
@@ -424,7 +424,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IGrou
     /// <returns>返回分组后对象</returns>
     new IPostgreSqlQuery<TGrouping> Select();
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
+    /// 选择指定字段返回，可以是单个或多个字段的匿名对象，如：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -463,41 +463,41 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : I
 
     #region OrderBy/OrderByDescending
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// ASC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// ASC排序，condition为true，ASC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// DESC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// DESC排序，condition为true，DESC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个或多个字段的匿名对象，如：
     /// <code>string orderFields = "Amount";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
     /// </summary>
@@ -513,7 +513,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : I
     /// <returns>返回分组后对象</returns>
     new IPostgreSqlQuery<TGrouping> Select();
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
+    /// 选择指定字段返回，可以是单个或多个字段的匿名对象，如：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -553,41 +553,41 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>
 
     #region OrderBy/OrderByDescending
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// ASC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// ASC排序，condition为true，ASC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// DESC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// DESC排序，condition为true，DESC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个或多个字段的匿名对象，如：
     /// <code>string orderFields = "Amount";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
     /// </summary>
@@ -603,7 +603,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>
     /// <returns>返回分组后对象</returns>
     new IPostgreSqlQuery<TGrouping> Select();
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
+    /// 选择指定字段返回，可以是单个或多个字段的匿名对象，如：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -644,41 +644,41 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGroup
 
     #region OrderBy/OrderByDescending
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// ASC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// ASC排序，condition为true，ASC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// DESC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// DESC排序，condition为true，DESC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个或多个字段的匿名对象，如：
     /// <code>string orderFields = "Amount";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
     /// </summary>
@@ -694,7 +694,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGroup
     /// <returns>返回分组后对象</returns>
     new IPostgreSqlQuery<TGrouping> Select();
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
+    /// 选择指定字段返回，可以是单个或多个字段的匿名对象，如：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -736,41 +736,41 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TG
 
     #region OrderBy/OrderByDescending
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// ASC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// ASC排序，condition为true，ASC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// DESC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// DESC排序，condition为true，DESC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个或多个字段的匿名对象，如：
     /// <code>string orderFields = "Amount";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
     /// </summary>
@@ -786,7 +786,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TG
     /// <returns>返回分组后对象</returns>
     new IPostgreSqlQuery<TGrouping> Select();
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
+    /// 选择指定字段返回，可以是单个或多个字段的匿名对象，如：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -829,41 +829,41 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
 
     #region OrderBy/OrderByDescending
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// ASC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// ASC排序，condition为true，ASC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// DESC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// DESC排序，condition为true，DESC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个或多个字段的匿名对象，如：
     /// <code>string orderFields = "Amount";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
     /// </summary>
@@ -879,7 +879,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <returns>返回分组后对象</returns>
     new IPostgreSqlQuery<TGrouping> Select();
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
+    /// 选择指定字段返回，可以是单个或多个字段的匿名对象，如：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -923,41 +923,41 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
 
     #region OrderBy/OrderByDescending
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// ASC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// ASC排序，condition为true，ASC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// DESC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// DESC排序，condition为true，DESC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个或多个字段的匿名对象，如：
     /// <code>string orderFields = "Amount";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
     /// </summary>
@@ -973,7 +973,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <returns>返回分组后对象</returns>
     new IPostgreSqlQuery<TGrouping> Select();
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
+    /// 选择指定字段返回，可以是单个或多个字段的匿名对象，如：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -1018,41 +1018,41 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
 
     #region OrderBy/OrderByDescending
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// ASC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// ASC排序，condition为true，ASC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// DESC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// DESC排序，condition为true，DESC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个或多个字段的匿名对象，如：
     /// <code>string orderFields = "Amount";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
     /// </summary>
@@ -1068,7 +1068,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <returns>返回分组后对象</returns>
     new IPostgreSqlQuery<TGrouping> Select();
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
+    /// 选择指定字段返回，可以是单个或多个字段的匿名对象，如：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -1114,41 +1114,41 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
 
     #region OrderBy/OrderByDescending
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// ASC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// ASC排序，condition为true，ASC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// DESC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// DESC排序，condition为true，DESC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个或多个字段的匿名对象，如：
     /// <code>string orderFields = "Amount";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
     /// </summary>
@@ -1164,7 +1164,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <returns>返回分组后对象</returns>
     new IPostgreSqlQuery<TGrouping> Select();
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
+    /// 选择指定字段返回，可以是单个或多个字段的匿名对象，如：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -1211,41 +1211,41 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
 
     #region OrderBy/OrderByDescending
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// ASC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// ASC排序，condition为true，ASC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// DESC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// DESC排序，condition为true，DESC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个或多个字段的匿名对象，如：
     /// <code>string orderFields = "Amount";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
     /// </summary>
@@ -1261,7 +1261,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <returns>返回分组后对象</returns>
     new IPostgreSqlQuery<TGrouping> Select();
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
+    /// 选择指定字段返回，可以是单个或多个字段的匿名对象，如：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
@@ -1309,41 +1309,41 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
 
     #region OrderBy/OrderByDescending
     /// <summary>
-    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// ASC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// ASC排序，condition为true，ASC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
     /// <summary>
-    /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
+    /// DESC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.Grouping.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，如：
+    /// DESC排序，condition为true，DESC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
-    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
     /// <summary>
-    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，如：
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个或多个字段的匿名对象，如：
     /// <code>string orderFields = "Amount";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
     /// </summary>
@@ -1359,7 +1359,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <returns>返回分组后对象</returns>
     new IPostgreSqlQuery<TGrouping> Select();
     /// <summary>
-    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，如：
+    /// 选择指定字段返回，可以是单个或多个字段的匿名对象，如：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>

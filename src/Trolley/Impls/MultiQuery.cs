@@ -357,9 +357,9 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         this.Visitor.Select(null, defaultExpr);
         return this;
     }
-    public virtual IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
+    public virtual IMultiQuery<TTarget> SelectTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     public virtual IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)

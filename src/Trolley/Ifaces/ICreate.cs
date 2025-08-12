@@ -312,7 +312,7 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
     /// <summary>
     /// 忽略字段，如：IgnoreFields(f =&gt; f.Name) | IgnoreFields(f =&gt; new {f.Name, f.CreatedAt})
     /// </summary>
-    /// <typeparam name="TFields">一个或多个字段类型</typeparam>
+    /// <typeparam name="TFields">单个或多个字段类型</typeparam>
     /// <param name="fieldsSelector">忽略的字段选择表达式，不可为null</param>
     /// <returns></returns>
     IContinuedCreate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);
@@ -328,7 +328,7 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
     /// <summary>
     /// 只插入字段，如：OnlyFields(f =&gt; f.Name) | OnlyFields(f =&gt; new {f.Name, f.CreatedAt})
     /// </summary>
-    /// <typeparam name="TFields">一个或多个字段类型</typeparam>
+    /// <typeparam name="TFields">单个或多个字段类型</typeparam>
     /// <param name="fieldsSelector">只插入的字段选择表达式，不可为null</param>
     /// <returns></returns>
     IContinuedCreate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);

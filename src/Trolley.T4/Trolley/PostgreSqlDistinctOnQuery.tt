@@ -86,9 +86,9 @@ public class PostgreSqlDistinctOnQuery<T, TDistinctOn> : PostgreSqlDistinctOnQue
         this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
     }
-    public virtual IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, T, TTarget>> specialMemberSelector = null)
+    public virtual IPostgreSqlQuery<TTarget> SelectTo<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, T, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
     }
     #endregion
@@ -147,9 +147,9 @@ public class PostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> : PostgreSqlDis
         this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
     }
-    public virtual IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, <#=tables#>, TTarget>> specialMemberSelector = null)
+    public virtual IPostgreSqlQuery<TTarget> SelectTo<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, <#=tables#>, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
     }
     #endregion

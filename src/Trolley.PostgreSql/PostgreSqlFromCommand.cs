@@ -143,8 +143,8 @@ public class PostgreSqlFromCommand<T> : FromCommand<T>, IPostgreSqlFromCommand<T
         => base.Select(fields) as IPostgreSqlFromCommand<T>;
     public new IPostgreSqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlFromCommand<TTarget>;
-    public new IPostgreSqlFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
-        => base.SelectFlattenTo(specialMemberSelector) as IPostgreSqlFromCommand<TTarget>;
+    public new IPostgreSqlFromCommand<TTarget> SelectTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
+        => base.SelectTo(specialMemberSelector) as IPostgreSqlFromCommand<TTarget>;
     public new IPostgreSqlFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
         => base.SelectAggregate(fieldsExpr) as IPostgreSqlFromCommand<TTarget>;
     #endregion
@@ -330,8 +330,8 @@ public class PostgreSqlFromCommand<T1, T2> : FromCommand<T1, T2>, IPostgreSqlFro
     #region Select
     public new IPostgreSqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlFromCommand<TTarget>;
-    public new IPostgreSqlFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, TTarget>> specialMemberSelector = null)
-        => base.SelectFlattenTo(specialMemberSelector) as IPostgreSqlFromCommand<TTarget>;
+    public new IPostgreSqlFromCommand<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, TTarget>> specialMemberSelector = null)
+        => base.SelectTo(specialMemberSelector) as IPostgreSqlFromCommand<TTarget>;
     #endregion
 }
 public class PostgreSqlFromCommand<T1, T2, T3> : FromCommand<T1, T2, T3>, IPostgreSqlFromCommand<T1, T2, T3>
@@ -465,8 +465,8 @@ public class PostgreSqlFromCommand<T1, T2, T3> : FromCommand<T1, T2, T3>, IPostg
     #region Select
     public new IPostgreSqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlFromCommand<TTarget>;
-    public new IPostgreSqlFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, TTarget>> specialMemberSelector = null)
-        => base.SelectFlattenTo(specialMemberSelector) as IPostgreSqlFromCommand<TTarget>;
+    public new IPostgreSqlFromCommand<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, TTarget>> specialMemberSelector = null)
+        => base.SelectTo(specialMemberSelector) as IPostgreSqlFromCommand<TTarget>;
     #endregion
 }
 public class PostgreSqlFromCommand<T1, T2, T3, T4> : FromCommand<T1, T2, T3, T4>, IPostgreSqlFromCommand<T1, T2, T3, T4>
@@ -600,8 +600,8 @@ public class PostgreSqlFromCommand<T1, T2, T3, T4> : FromCommand<T1, T2, T3, T4>
     #region Select
     public new IPostgreSqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlFromCommand<TTarget>;
-    public new IPostgreSqlFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> specialMemberSelector = null)
-        => base.SelectFlattenTo(specialMemberSelector) as IPostgreSqlFromCommand<TTarget>;
+    public new IPostgreSqlFromCommand<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> specialMemberSelector = null)
+        => base.SelectTo(specialMemberSelector) as IPostgreSqlFromCommand<TTarget>;
     #endregion
 }
 public class PostgreSqlFromCommand<T1, T2, T3, T4, T5> : FromCommand<T1, T2, T3, T4, T5>, IPostgreSqlFromCommand<T1, T2, T3, T4, T5>
@@ -735,8 +735,8 @@ public class PostgreSqlFromCommand<T1, T2, T3, T4, T5> : FromCommand<T1, T2, T3,
     #region Select
     public new IPostgreSqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlFromCommand<TTarget>;
-    public new IPostgreSqlFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> specialMemberSelector = null)
-        => base.SelectFlattenTo(specialMemberSelector) as IPostgreSqlFromCommand<TTarget>;
+    public new IPostgreSqlFromCommand<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> specialMemberSelector = null)
+        => base.SelectTo(specialMemberSelector) as IPostgreSqlFromCommand<TTarget>;
     #endregion
 }
 public class PostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> : FromCommand<T1, T2, T3, T4, T5, T6>, IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6>
@@ -840,7 +840,7 @@ public class PostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> : FromCommand<T1, T2,
     #region Select
     public new IPostgreSqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlFromCommand<TTarget>;
-    public new IPostgreSqlFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> specialMemberSelector = null)
-        => base.SelectFlattenTo(specialMemberSelector) as IPostgreSqlFromCommand<TTarget>;
+    public new IPostgreSqlFromCommand<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> specialMemberSelector = null)
+        => base.SelectTo(specialMemberSelector) as IPostgreSqlFromCommand<TTarget>;
     #endregion
 }

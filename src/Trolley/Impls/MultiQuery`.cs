@@ -271,9 +271,9 @@ public class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, TTarget>> specialMemberSelector = null)
+    public virtual IMultiQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -567,9 +567,9 @@ public class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, TTarget>> specialMemberSelector = null)
+    public virtual IMultiQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -863,9 +863,9 @@ public class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> specialMemberSelector = null)
+    public virtual IMultiQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -1159,9 +1159,9 @@ public class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> specialMemberSelector = null)
+    public virtual IMultiQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -1455,9 +1455,9 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> specialMemberSelector = null)
+    public virtual IMultiQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -1751,9 +1751,9 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuer
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TTarget>> specialMemberSelector = null)
+    public virtual IMultiQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -2047,9 +2047,9 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMulti
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> specialMemberSelector = null)
+    public virtual IMultiQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -2343,9 +2343,9 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IM
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> specialMemberSelector = null)
+    public virtual IMultiQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -2639,9 +2639,9 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBas
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> specialMemberSelector = null)
+    public virtual IMultiQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -2935,9 +2935,9 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQue
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> specialMemberSelector = null)
+    public virtual IMultiQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -3231,9 +3231,9 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : Mul
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> specialMemberSelector = null)
+    public virtual IMultiQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -3527,9 +3527,9 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> specialMemberSelector = null)
+    public virtual IMultiQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -3823,9 +3823,9 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> specialMemberSelector = null)
+    public virtual IMultiQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -4119,9 +4119,9 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> specialMemberSelector = null)
+    public virtual IMultiQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -4349,9 +4349,9 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TTarget>> specialMemberSelector = null)
+    public virtual IMultiQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion

@@ -104,7 +104,7 @@ public interface IQueryVisitor : ICloneable, IDisposable
     void SelectGrouping();
     void SelectDefault(Expression defaultExpr);
     void Select(string sqlFormat, Expression selectExpr = null);
-    void SelectFlattenTo(Type targetType, Expression specialMemberSelector = null);
+    void SelectTo(Type targetType, Expression specialMemberSelector = null);
 
     void Distinct();
     void Page(int pageNumber, int pageSize);

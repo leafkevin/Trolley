@@ -396,36 +396,47 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             return fieldNames;
         return null;
     }
-    public virtual string GetShardingTableName(TableShardingInfo tableShardingInfo, int startIndex = 0)
-    {
-        var tableSegment = this.Tables[0];
-        var origTableName = tableSegment.Mapper.TableName;
-        if (tableShardingInfo.DependOnMembers.Count > 1)
-        {
-            var shardingRule = tableShardingInfo.Rule as Func<string, object, object, string>;
-            var fieldValue1 = this.GetShardingFieldValue(tableShardingInfo.DependOnMembers[0], startIndex);
-            var fieldValue2 = this.GetShardingFieldValue(tableShardingInfo.DependOnMembers[1], startIndex);
-            return shardingRule.Invoke(origTableName, fieldValue1, fieldValue2);
-        }
-        else
-        {
-            var shardingRule = tableShardingInfo.Rule as Func<string, object, string>;
-            var fieldValue = this.GetShardingFieldValue(tableShardingInfo.DependOnMembers[0], startIndex);
-            return shardingRule.Invoke(origTableName, fieldValue);
-        }
-    }
     public virtual string GetTableName()
     {
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
-        string tableName = null;
+        string tableName = tableSegment.Mapper.TableName;
         if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
         {
             if (tableSegment.IsSharding)
                 tableName = tableSegment.Body;
-            else tableName = this.GetShardingTableName(tableShardingInfo);
+            else
+            {
+                if (tableShardingInfo.DependOnMembers == null || tableShardingInfo.DependOnMembers.Count == 0)
+                    throw new InvalidOperationException($"实体表{entityType.FullName}已设置分表，但未指定分表名，也未指定依赖的成员，无法确定分表，原表名：{tableName}");
+
+                var fieldValues = new List<object>();
+                foreach (var dependOnMember in tableShardingInfo.DependOnMembers)
+                {
+                    for (int i = 0; i < this.deferredSegments.Count; i++)
+                    {
+                        var deferredSegment = this.deferredSegments[i];
+                        switch (deferredSegment.Type)
+                        {
+                            case "WithBy":
+                                var insertObj = deferredSegment.Value;
+                                var insertObjType = insertObj.GetType();
+                                if (RepositoryHelper.TryGetMemberGetter(insertObjType, dependOnMember, insertObj, out var memberGetter))
+                                    fieldValues.Add(memberGetter.Invoke(insertObj));
+                                break;
+                            case "WithByField":
+                                (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegment.Value;
+                                var lambdaExpr = fieldSelector as LambdaExpression;
+                                var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;
+                                if (memberExpr.Member.Name == dependOnMember)
+                                    fieldValues.Add(fieldValue);
+                                break;
+                        }
+                    }
+                }
+                tableName = tableShardingInfo.Rule.DynamicInvoke(fieldValues.ToArray()) as string;
+            }
         }
-        else tableName = tableSegment.Mapper.TableName;
 
         var tableSchema = tableSegment.TableSchema;
         if (!string.IsNullOrEmpty(tableSegment.TableSchema))
@@ -437,17 +448,19 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     {
         var result = new Dictionary<string, List<object>>();
         Type insertObjType = null;
+        object firstInsertObj = null;
         foreach (var insertObj in insertObjs)
         {
             insertObjType = insertObj.GetType();
+            firstInsertObj = insertObj;
             break;
         }
         var origTableName = this.Tables[0].Mapper.TableName;
 
         //优先使用本次设置的分表名获取委托来获取分表名
-        if (this.DbContext.CommandShardingTableGetter != null)
+        if (this.Tables[0].ShardingTableGetter != null)
         {
-            var tableNameGetter = this.DbContext.CommandShardingTableGetter;
+            var tableNameGetter = this.Tables[0].ShardingTableGetter;
             foreach (var insertObj in insertObjs)
             {
                 var tableName = tableNameGetter.DynamicInvoke(insertObj) as string;
@@ -462,18 +475,40 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         {
             //使用分表规则获取分表名，根据依赖的字段值执行分表规则委托获取分表名
             if (tableShardingInfo.DependOnMembers == null || tableShardingInfo.DependOnMembers.Count == 0)
-                throw new InvalidOperationException($"分表规则未指定依赖的成员，无法确定分表，原表名：{origTableName}");
+                throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，但未指定分表名，也未指定依赖的成员，无法确定分表，原表名：{origTableName}");
 
-            Func<string, Func<object, object>> fieldValueGetter = fieldName =>
-            {
-                var memberInfos = insertObjType.GetMember(fieldName);
-                if (memberInfos.Length > 0)
-                    return f => FasterEvaluator.EvaluateAndCache(f, memberInfos[0]);
-                return f => this.GetShardingFieldValue(tableShardingInfo.DependOnMembers[0], 1);
-            };
             var fieldValueGetters = new List<Func<object, object>>();
-            foreach (var fieldName in tableShardingInfo.DependOnMembers)
-                fieldValueGetters.Add(fieldValueGetter.Invoke(fieldName));
+            foreach (var memberName in tableShardingInfo.DependOnMembers)
+            {
+                if (RepositoryHelper.TryGetMemberGetter(insertObjType, memberName, firstInsertObj, out var memberGetter))
+                    fieldValueGetters.Add(memberGetter);
+                for (int i = 1; i < this.deferredSegments.Count; i++)
+                {
+                    var deferredSegment = this.deferredSegments[i];
+                    switch (deferredSegment.Type)
+                    {
+                        case "WithBy":
+                            var insertObj = deferredSegment.Value;
+                            var myInsertObjType = insertObj.GetType();
+                            if (RepositoryHelper.TryGetMemberGetter(myInsertObjType, memberName, insertObj, out memberGetter))
+                            {
+                                fieldValueGetters.Add(f => memberGetter.Invoke(insertObj));
+                                break;
+                            }
+                            break;
+                        case "WithByField":
+                            (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegment.Value;
+                            var lambdaExpr = fieldSelector as LambdaExpression;
+                            var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;
+                            if (memberExpr.Member.Name == memberName)
+                            {
+                                fieldValueGetters.Add(f => fieldValue);
+                                break;
+                            }
+                            break;
+                    }
+                }
+            }
             Func<object, string> tableNameGetter = insertObj =>
             {
                 var fieldValus = new List<object> { origTableName };
@@ -515,31 +550,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.OnlyFieldNames = null;
         this.IgnoreFieldNames = null;
     }
-    public object GetShardingFieldValue(string memberName, int startIndex = 0)
-    {
-        for (int i = 0; i < this.deferredSegments.Count; i++)
-        {
-            if (i < startIndex) continue;
-            var deferredSegment = this.deferredSegments[i];
-            switch (deferredSegment.Type)
-            {
-                case "WithBy":
-                    var insertObj = deferredSegment.Value;
-                    var insertObjType = insertObj.GetType();
-                    if (this.TryGetMemberValue(insertObjType, insertObj, memberName, out var memberValue))
-                        return memberValue;
-                    break;
-                case "WithByField":
-                    (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegment.Value;
-                    var lambdaExpr = fieldSelector as LambdaExpression;
-                    var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;
-                    if (memberExpr.Member.Name == memberName)
-                        return fieldValue;
-                    break;
-            }
-        }
-        throw new InvalidOperationException($"缺少分表规则依赖的成员{memberName}，无法确定分表");
-    }
     public override IQueryVisitor CreateQueryVisitor(char? tableAsStart = null)
     {
         var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAsStart, this.DbParameters);
@@ -555,28 +565,5 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
 
         queryVisitor.Tables = this.Tables;
         return queryVisitor;
-    }
-    private bool TryGetMemberValue(Type insertObjType, object insertObj, string memberName, out object memberValue)
-    {
-        if (insertObj is IDictionary<string, object> dict)
-        {
-            (var isContainsKey, memberValue) = dict.ContainsLowerKey(memberName.ToLower());
-            return isContainsKey;
-        }
-        else
-        {
-            var memberNames = insertObjType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field)
-                .Select(f => f.Name).ToList();
-            (var isContains, var myMemberName) = memberNames.ContainsLower(memberName.ToLower());
-            if (!isContains)
-            {
-                memberValue = null;
-                return false;
-            }
-            var memberInfo = insertObjType.GetMember(myMemberName)[0];
-            memberValue = FasterEvaluator.EvaluateAndCache(insertObj, memberInfo);
-            return true;
-        }
     }
 }

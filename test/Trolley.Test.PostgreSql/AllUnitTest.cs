@@ -5395,7 +5395,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         Assert.NotNull(result3);
     }
     [Fact]
-    public void SelectFlattenTo()
+    public void SelectTo()
     {
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
@@ -5419,7 +5419,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
 
         var result = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { "8" }))
-            .SelectFlattenTo<OrderInfo>()
+            .SelectTo<OrderInfo>()
             .ToList();
         Assert.Equal("8", result[0].Id);
         Assert.Equal(1, result[0].BuyerId);
@@ -5428,7 +5428,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
 
         result = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { "8" }))
-            .SelectFlattenTo(f => new OrderInfo
+            .SelectTo(f => new OrderInfo
             {
                 Description = "TotalAmount:" + f.TotalAmount
             })
@@ -5441,7 +5441,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
 
         result = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { "8" }))
-            .SelectFlattenTo(f => new OrderInfo
+            .SelectTo(f => new OrderInfo
             {
                 Description = this.DeferInvoke().Deferred()
             })
@@ -5459,7 +5459,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
                 .Having((x, a, b) => x.CountDistinct(b.ProductId) > 0)
                 .Select((x, a, b) => new { x.Grouping.BuyerId, x.Grouping.OrderId, ProductTotal = x.CountDistinct(b.ProductId) }))
            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-           .SelectFlattenTo((x, y) => new OrderBuyerInfo { BuyerName = y.Name })
+           .SelectTo((x, y) => new OrderBuyerInfo { BuyerName = y.Name })
            .First();
         if (result1 != null)
         {

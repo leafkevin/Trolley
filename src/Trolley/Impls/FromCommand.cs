@@ -313,9 +313,9 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
+    public virtual IFromCommand<TTarget> SelectTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
@@ -617,9 +617,9 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, TTarget>> specialMemberSelector = null)
+    public virtual IFromCommand<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -878,9 +878,9 @@ public class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, TTarget>> specialMemberSelector = null)
+    public virtual IFromCommand<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -1139,9 +1139,9 @@ public class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3,
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> specialMemberSelector = null)
+    public virtual IFromCommand<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -1400,9 +1400,9 @@ public class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2,
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> specialMemberSelector = null)
+    public virtual IFromCommand<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -1595,9 +1595,9 @@ public class FromCommand<T1, T2, T3, T4, T5, T6> : FromCommand, IFromCommand<T1,
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
     }
-    public virtual IFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> specialMemberSelector = null)
+    public virtual IFromCommand<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> specialMemberSelector = null)
     {
-        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
