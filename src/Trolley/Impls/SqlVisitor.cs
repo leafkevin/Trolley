@@ -230,26 +230,25 @@ public class SqlVisitor : ISqlVisitor
                 throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表，无需调用此方法");
             if (shardingTableInfo.RangleRule == null) throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表范围规则，不能调用此方法");
             var origTableName = tableSegment.Mapper.TableName;
-            return shardingRule.Invoke(origTableName, beginFieldValue, endFieldValue);
+            return shardingTableInfo.RangleRule.Invoke(origTableName, [beginFieldValue, endFieldValue]);
         });
     public void UseTableByRange(bool isIncludeMany, object field1Value, object beginField2Value, object endField2Value)
         => this.UseTableByRange(isIncludeMany, tableSegment =>
         {
             if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out var shardingTableInfo))
                 throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表，无需调用此方法");
-            if (shardingRule == null) throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表范围规则，不能调用此方法");
+            if (shardingTableInfo.RangleRule == null) throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表范围规则，不能调用此方法");
             var origTableName = tableSegment.Mapper.TableName;
-            return shardingTableInfo.RangleRule.Invoke(origTableName, field1Value, beginField2Value, endField2Value);
+            return shardingTableInfo.RangleRule.Invoke(origTableName, [field1Value, beginField2Value, endField2Value]);
         });
     public void UseTableByRange(bool isIncludeMany, object field1Value, object field2Value, object beginField3Value, object endField3Value)
         => this.UseTableByRange(isIncludeMany, tableSegment =>
         {
             if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out var shardingTableInfo))
                 throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表，无需调用此方法");
-            var shardingRule = shardingTableInfo.RangleRule as Func<string, object, object, object, object, List<string>>;
-            if (shardingRule == null) throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表范围规则，不能调用此方法");
+            if (shardingTableInfo.RangleRule == null) throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表范围规则，不能调用此方法");
             var origTableName = tableSegment.Mapper.TableName;
-            return shardingRule.Invoke(origTableName, field1Value, field2Value, beginField3Value, endField3Value);
+            return shardingTableInfo.RangleRule.Invoke(origTableName, [field1Value, field2Value, beginField3Value, endField3Value]);
         });
     private void UseTableByRange(bool isIncludeMany, Func<TableSegment, List<string>> shardingTablesFetcher)
     {

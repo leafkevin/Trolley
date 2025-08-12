@@ -1564,8 +1564,7 @@ public static class RepositoryHelper
                         if (!isContainsKey)
                             throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{tableShardingInfo.DependOnMembers[1]}映射的字段，但当前字典中不包含key:{tableShardingInfo.DependOnMembers[1]}的键值");
 
-                        var tableNameRuleGetter = tableShardingInfo.Rule as Func<string, object, object, string>;
-                        return tableNameRuleGetter.Invoke(origName, field1Value, field2Value);
+                        return tableShardingInfo.Rule.Invoke(origName, [field1Value, field2Value]);
                     };
                 }
                 else
