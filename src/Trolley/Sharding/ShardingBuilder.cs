@@ -73,7 +73,7 @@ public class TableShardingBuilder<TEntity>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.Rule = (string origName, object fieldValue) => tableNameGetter(origName, (TParameter)fieldValue);
+        shardingTable.Rule = (string origName, object[] fieldValues) => tableNameGetter(origName, (TParameter)fieldValues[0]);
         shardingTable.ValidateRegex = validateRegex;
         return this;
     }
@@ -96,7 +96,7 @@ public class TableShardingBuilder<TEntity>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.Rule = (string origName, object field1Value, object field2Value) => tableNameGetter(origName, (TParameter1)field1Value, (TParameter2)field2Value);
+        shardingTable.Rule = (string origName, object[] fieldValues) => tableNameGetter(origName, (TParameter1)fieldValues[0], (TParameter2)fieldValues[1]);
         shardingTable.ValidateRegex = validateRegex;
         return this;
     }
@@ -120,7 +120,7 @@ public class TableShardingBuilder<TEntity>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.Rule = (string origName, object field1Value, object field2Value, object field3Value) => tableNameGetter(origName, (TParameter1)field1Value, (TParameter2)field2Value, (TParameter3)field3Value);
+        shardingTable.Rule = (string origName, object[] fieldValues) => tableNameGetter(origName, (TParameter1)fieldValues[0], (TParameter2)fieldValues[1], (TParameter3)fieldValues[2]);
         shardingTable.ValidateRegex = validateRegex;
         return this;
     }
@@ -139,8 +139,8 @@ public class TableShardingBuilder<TEntity>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.RangleRule = (string origName, object beginFieldValue, object endFieldValue)
-            => tableNamesGetter(origName, (TParameter)beginFieldValue, (TParameter)endFieldValue);
+        shardingTable.RangleRule = (string origName, object[] fieldValues)
+            => tableNamesGetter(origName, (TParameter)fieldValues[0], (TParameter)fieldValues[1]);
         return this;
     }
     /// <summary>
@@ -159,8 +159,8 @@ public class TableShardingBuilder<TEntity>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.RangleRule = (string origName, object field1Value, object beginField2Value, object endField2Value)
-            => tableNamesGetter(origName, (TParameter1)field1Value, (TParameter2)beginField2Value, (TParameter2)endField2Value);
+        shardingTable.RangleRule = (string origName, object[] fieldValues)
+            => tableNamesGetter(origName, (TParameter1)fieldValues[0], (TParameter2)fieldValues[1], (TParameter2)fieldValues[2]);
         return this;
     }
     /// <summary>
@@ -180,8 +180,8 @@ public class TableShardingBuilder<TEntity>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.RangleRule = (string origName, object field1Value, object field2Value, object beginField3Value, object endField3Value)
-            => tableNamesGetter(origName, (TParameter1)field1Value, (TParameter2)field2Value, (TParameter3)beginField3Value, (TParameter3)endField3Value);
+        shardingTable.RangleRule = (string origName, object[] fieldValues)
+            => tableNamesGetter(origName, (TParameter1)fieldValues[0], (TParameter2)fieldValues[1], (TParameter3)fieldValues[2], (TParameter3)fieldValues[3]);
         return this;
     }
 }
@@ -228,7 +228,7 @@ public class FieldShardingBuilder<TEntity, TField>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.Rule = (string origName, object fieldValue) => tableNameGetter(origName, (TField)fieldValue);
+        shardingTable.Rule = (string origName, object[] fieldValues) => tableNameGetter(origName, (TField)fieldValues[0]);
         shardingTable.ValidateRegex = validateRegex;
         return this;
     }
@@ -246,8 +246,8 @@ public class FieldShardingBuilder<TEntity, TField>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.RangleRule = (string origName, object beginFieldValue, object endFieldValue)
-            => tableNamesGetter(origName, (TField)beginFieldValue, (TField)endFieldValue);
+        shardingTable.RangleRule = (string origName, object[] fieldValues)
+            => tableNamesGetter(origName, (TField)fieldValues[0], (TField)fieldValues[1]);
         return this;
     }
 }
@@ -272,7 +272,7 @@ public class FieldShardingBuilder<TEntity, TField1, TField2>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.Rule = (string origName, object field1Value, object field2Value) => tableNameGetter(origName, (TField1)field1Value, (TField2)field2Value);
+        shardingTable.Rule = (string origName, object[] fieldValues) => tableNameGetter(origName, (TField1)fieldValues[0], (TField2)fieldValues[1]);
         shardingTable.ValidateRegex = validateRegex;
         return this;
     }
@@ -284,8 +284,8 @@ public class FieldShardingBuilder<TEntity, TField1, TField2>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.RangleRule = (string origName, object field1Value, object beginField2Value, object endField2Value)
-            => tableNamesGetter(origName, (TField1)field1Value, (TField2)beginField2Value, (TField2)endField2Value);
+        shardingTable.RangleRule = (string origName, object[] fieldValues)
+            => tableNamesGetter(origName, (TField1)fieldValues[0], (TField2)fieldValues[1], (TField2)fieldValues[2]);
         return this;
     }
 }
@@ -310,7 +310,7 @@ public class FieldShardingBuilder<TEntity, TField1, TField2, TField3>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.Rule = (string origName, object field1Value, object field2Value, object field3Value) => tableNameGetter(origName, (TField1)field1Value, (TField2)field2Value, (TField3)field3Value);
+        shardingTable.Rule = (string origName, object[] fieldValues) => tableNameGetter(origName, (TField1)fieldValues[0], (TField2)fieldValues[1], (TField3)fieldValues[2]);
         shardingTable.ValidateRegex = validateRegex;
         return this;
     }
@@ -322,8 +322,8 @@ public class FieldShardingBuilder<TEntity, TField1, TField2, TField3>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.RangleRule = (string origName, object field1Value, object field2Value, object beginField3Value, object endField3Value)
-            => tableNamesGetter(origName, (TField1)field1Value, (TField2)field2Value, (TField3)beginField3Value, (TField3)endField3Value);
+        shardingTable.RangleRule = (string origName, object[] fieldValues)
+            => tableNamesGetter(origName, (TField1)fieldValues[0], (TField2)fieldValues[1], (TField3)fieldValues[2], (TField3)fieldValues[3]);
         return this;
     }
 }

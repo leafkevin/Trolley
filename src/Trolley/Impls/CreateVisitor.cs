@@ -434,7 +434,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                         }
                     }
                 }
-                tableName = tableShardingInfo.Rule.DynamicInvoke(fieldValues.ToArray()) as string;
+                tableName = tableShardingInfo.Rule.Invoke(tableName, fieldValues.ToArray()) as string;
             }
         }
 
@@ -511,10 +511,10 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             }
             Func<object, string> tableNameGetter = insertObj =>
             {
-                var fieldValus = new List<object> { origTableName };
+                var fieldValus = new List<object>();
                 foreach (var fieldValueGetter in fieldValueGetters)
                     fieldValus.Add(fieldValueGetter.Invoke(insertObj));
-                return tableShardingInfo.Rule.DynamicInvoke(fieldValus.ToArray()) as string;
+                return tableShardingInfo.Rule.Invoke(origTableName, fieldValus.ToArray()) as string;
             };
 
             foreach (var insertObj in insertObjs)

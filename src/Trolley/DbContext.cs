@@ -1447,7 +1447,9 @@ public sealed class DbContext
             throw new ArgumentNullException(nameof(fieldValues), "参数fieldValues不能为null或是空元素");
         if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             throw new Exception($"实体表{entityType.FullName}没有配置分表，无需调用此方法");
-        return shardingTable.Rule.DynamicInvoke(fieldValues) as string;
+        if (!this.MapProvider.TryGetEntityMap(entityType, out var entityMap))
+            throw new Exception($"实体表{entityType.FullName}没有配置映射关系，无法获取分表信息");
+        return shardingTable.Rule.Invoke(entityMap.TableName, fieldValues) as string;
     }
     #endregion
 }
