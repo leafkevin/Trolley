@@ -300,9 +300,9 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
     #endregion
 
     #region Aggregate
-    public virtual TField Sum<TField>(Expression<Func<T1, T2, TField>> fieldExpr)
+    public virtual decimal Sum<TField>(Expression<Func<T1, T2, TField>> fieldExpr)
         => base.SumInternal<TField>(fieldExpr);
-    public virtual async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<decimal> SumAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => await base.SumInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual TField Avg<TField>(Expression<Func<T1, T2, TField>> fieldExpr)
         => base.AvgInternal<TField>(fieldExpr);
@@ -612,9 +612,9 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
     #endregion
 
     #region Aggregate
-    public virtual TField Sum<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr)
+    public virtual decimal Sum<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr)
         => base.SumInternal<TField>(fieldExpr);
-    public virtual async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<decimal> SumAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => await base.SumInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual TField Avg<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr)
         => base.AvgInternal<TField>(fieldExpr);
@@ -924,9 +924,9 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
     #endregion
 
     #region Aggregate
-    public virtual TField Sum<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr)
+    public virtual decimal Sum<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr)
         => base.SumInternal<TField>(fieldExpr);
-    public virtual async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<decimal> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => await base.SumInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual TField Avg<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr)
         => base.AvgInternal<TField>(fieldExpr);
@@ -1236,9 +1236,9 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
     #endregion
 
     #region Aggregate
-    public virtual TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr)
+    public virtual decimal Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr)
         => base.SumInternal<TField>(fieldExpr);
-    public virtual async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<decimal> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => await base.SumInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr)
         => base.AvgInternal<TField>(fieldExpr);
@@ -1548,9 +1548,9 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
     #endregion
 
     #region Aggregate
-    public virtual TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr)
+    public virtual decimal Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr)
         => base.SumInternal<TField>(fieldExpr);
-    public virtual async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<decimal> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => await base.SumInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr)
         => base.AvgInternal<TField>(fieldExpr);
@@ -1860,9 +1860,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
     #endregion
 
     #region Aggregate
-    public virtual TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr)
+    public virtual decimal Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr)
         => base.SumInternal<TField>(fieldExpr);
-    public virtual async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<decimal> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => await base.SumInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr)
         => base.AvgInternal<TField>(fieldExpr);
@@ -2172,9 +2172,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
     #endregion
 
     #region Aggregate
-    public virtual TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr)
+    public virtual decimal Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr)
         => base.SumInternal<TField>(fieldExpr);
-    public virtual async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<decimal> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => await base.SumInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr)
         => base.AvgInternal<TField>(fieldExpr);
@@ -2484,9 +2484,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
     #endregion
 
     #region Aggregate
-    public virtual TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr)
+    public virtual decimal Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr)
         => base.SumInternal<TField>(fieldExpr);
-    public virtual async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<decimal> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => await base.SumInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr)
         => base.AvgInternal<TField>(fieldExpr);
@@ -2796,9 +2796,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
     #endregion
 
     #region Aggregate
-    public virtual TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr)
+    public virtual decimal Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr)
         => base.SumInternal<TField>(fieldExpr);
-    public virtual async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<decimal> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => await base.SumInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr)
         => base.AvgInternal<TField>(fieldExpr);
@@ -3108,9 +3108,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
     #endregion
 
     #region Aggregate
-    public virtual TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr)
+    public virtual decimal Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr)
         => base.SumInternal<TField>(fieldExpr);
-    public virtual async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<decimal> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => await base.SumInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr)
         => base.AvgInternal<TField>(fieldExpr);
@@ -3420,9 +3420,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
     #endregion
 
     #region Aggregate
-    public virtual TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr)
+    public virtual decimal Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr)
         => base.SumInternal<TField>(fieldExpr);
-    public virtual async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<decimal> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => await base.SumInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr)
         => base.AvgInternal<TField>(fieldExpr);
@@ -3732,9 +3732,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
     #endregion
 
     #region Aggregate
-    public virtual TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr)
+    public virtual decimal Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr)
         => base.SumInternal<TField>(fieldExpr);
-    public virtual async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<decimal> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => await base.SumInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr)
         => base.AvgInternal<TField>(fieldExpr);
@@ -4044,9 +4044,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
     #endregion
 
     #region Aggregate
-    public virtual TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr)
+    public virtual decimal Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr)
         => base.SumInternal<TField>(fieldExpr);
-    public virtual async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<decimal> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => await base.SumInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr)
         => base.AvgInternal<TField>(fieldExpr);
@@ -4356,9 +4356,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     #endregion
 
     #region Aggregate
-    public virtual TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr)
+    public virtual decimal Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr)
         => base.SumInternal<TField>(fieldExpr);
-    public virtual async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<decimal> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => await base.SumInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr)
         => base.AvgInternal<TField>(fieldExpr);
@@ -4602,9 +4602,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     #endregion
 
     #region Aggregate
-    public virtual TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr)
+    public virtual decimal Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr)
         => base.SumInternal<TField>(fieldExpr);
-    public virtual async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<decimal> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => await base.SumInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr)
         => base.AvgInternal<TField>(fieldExpr);

@@ -591,7 +591,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定字段返回，只需要指定需要特殊处理的成员赋值即可，其他成员将从现有表的字段中按名称匹配赋值，多个同名字段时如果未特殊指定赋值，默认选取第一个表中的字段赋值。如：
-    /// <code> .SelectTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二表的Id字段作为Id成员</code>
+    /// <code> .SelectTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二个表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
@@ -1112,7 +1112,7 @@ public interface IPostgreSqlQuery<T1, T2> : IQuery<T1, T2>
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定字段返回，只需要指定需要特殊处理的成员赋值即可，其他成员将从现有表的字段中按名称匹配赋值，多个同名字段时如果未特殊指定赋值，默认选取第一个表中的字段赋值。如：
-    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
+    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二个表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
@@ -1609,7 +1609,7 @@ public interface IPostgreSqlQuery<T1, T2, T3> : IQuery<T1, T2, T3>
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定字段返回，只需要指定需要特殊处理的成员赋值即可，其他成员将从现有表的字段中按名称匹配赋值，多个同名字段时如果未特殊指定赋值，默认选取第一个表中的字段赋值。如：
-    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
+    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二个表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
@@ -2107,7 +2107,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定字段返回，只需要指定需要特殊处理的成员赋值即可，其他成员将从现有表的字段中按名称匹配赋值，多个同名字段时如果未特殊指定赋值，默认选取第一个表中的字段赋值。如：
-    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
+    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二个表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
@@ -2606,7 +2606,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定字段返回，只需要指定需要特殊处理的成员赋值即可，其他成员将从现有表的字段中按名称匹配赋值，多个同名字段时如果未特殊指定赋值，默认选取第一个表中的字段赋值。如：
-    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
+    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二个表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
@@ -3106,7 +3106,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定字段返回，只需要指定需要特殊处理的成员赋值即可，其他成员将从现有表的字段中按名称匹配赋值，多个同名字段时如果未特殊指定赋值，默认选取第一个表中的字段赋值。如：
-    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
+    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二个表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
@@ -3607,7 +3607,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定字段返回，只需要指定需要特殊处理的成员赋值即可，其他成员将从现有表的字段中按名称匹配赋值，多个同名字段时如果未特殊指定赋值，默认选取第一个表中的字段赋值。如：
-    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
+    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二个表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
@@ -4109,7 +4109,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定字段返回，只需要指定需要特殊处理的成员赋值即可，其他成员将从现有表的字段中按名称匹配赋值，多个同名字段时如果未特殊指定赋值，默认选取第一个表中的字段赋值。如：
-    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
+    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二个表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
@@ -4612,7 +4612,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定字段返回，只需要指定需要特殊处理的成员赋值即可，其他成员将从现有表的字段中按名称匹配赋值，多个同名字段时如果未特殊指定赋值，默认选取第一个表中的字段赋值。如：
-    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
+    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二个表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
@@ -5116,7 +5116,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQu
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定字段返回，只需要指定需要特殊处理的成员赋值即可，其他成员将从现有表的字段中按名称匹配赋值，多个同名字段时如果未特殊指定赋值，默认选取第一个表中的字段赋值。如：
-    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
+    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二个表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
@@ -5621,7 +5621,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> 
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定字段返回，只需要指定需要特殊处理的成员赋值即可，其他成员将从现有表的字段中按名称匹配赋值，多个同名字段时如果未特殊指定赋值，默认选取第一个表中的字段赋值。如：
-    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
+    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二个表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
@@ -6127,7 +6127,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定字段返回，只需要指定需要特殊处理的成员赋值即可，其他成员将从现有表的字段中按名称匹配赋值，多个同名字段时如果未特殊指定赋值，默认选取第一个表中的字段赋值。如：
-    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
+    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二个表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
@@ -6634,7 +6634,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定字段返回，只需要指定需要特殊处理的成员赋值即可，其他成员将从现有表的字段中按名称匹配赋值，多个同名字段时如果未特殊指定赋值，默认选取第一个表中的字段赋值。如：
-    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
+    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二个表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
@@ -7142,7 +7142,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定字段返回，只需要指定需要特殊处理的成员赋值即可，其他成员将从现有表的字段中按名称匹配赋值，多个同名字段时如果未特殊指定赋值，默认选取第一个表中的字段赋值。如：
-    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
+    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二个表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
@@ -7651,7 +7651,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定字段返回，只需要指定需要特殊处理的成员赋值即可，其他成员将从现有表的字段中按名称匹配赋值，多个同名字段时如果未特殊指定赋值，默认选取第一个表中的字段赋值。如：
-    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
+    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二个表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
@@ -8010,7 +8010,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定字段返回，只需要指定需要特殊处理的成员赋值即可，其他成员将从现有表的字段中按名称匹配赋值，多个同名字段时如果未特殊指定赋值，默认选取第一个表中的字段赋值。如：
-    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
+    /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二个表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>

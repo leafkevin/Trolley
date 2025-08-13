@@ -364,18 +364,10 @@ public interface IQuery<T> : IQueryBase
     /// <summary>
     /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，也可以用在CTE子句中自我引用，与.WithQuery(subQuery).InnerJoin(...)等价，如：
     /// <code>
-    /// f.From&lt;Menu&gt;()
-    ///         .Where(x =&gt; x.Id == 1)
-    ///         .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId }))) ...
-    /// SQL:
-    /// WITH RECURSIVE MyCte1(Id,Name,ParentId) AS
-    /// (
-    ///     SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1 UNION ALL
-    ///     SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN MyCte1 b ON a.`ParentId`=b.`Id`
-    /// ) ...
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// .InnerJoin(subQuery, (a, b) =&gt; a.ParentId == b.Id)
+    /// .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///     .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id) )) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -414,9 +406,10 @@ public interface IQuery<T> : IQueryBase
     /// <summary>
     /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，与.WithQuery(subQueryExpr).LeftJoin(...)等价，如：
     /// <code>
-    /// var subQuery = repository.From&lt;Menu&gt;().Where(x =&gt; x.Id == 1).Select(x =&gt; new { x.Id, x.Name, x.ParentId });
-    /// ... .LeftJoin(subQuery, (a, b) =&gt; a.ParentId == b.Id)
-    /// SQL: ...LEFT JOIN (SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1) b ON a.`ParentId`=b.`Id` ...
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// .LeftJoin(subQuery, (a, b) =&gt; a.ParentId == b.Id)
+    /// .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///     .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id) )) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -453,10 +446,10 @@ public interface IQuery<T> : IQueryBase
     /// <summary>
     /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，与.WithQuery(subQuery).RightJoin(...)等价，如：
     /// <code>
-    /// var subQuery = repository.From&lt;Menu&gt;()
-    ///     .Where(x =&gt; x.Id == 1).Select(x =&gt; new { x.Id, x.Name, x.ParentId });
-    /// ... .RightJoin(subQuery, (a, b) =&gt; a.ParentId == b.Id)
-    /// SQL: ...RIGHT JOIN (SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1) b ON a.`ParentId`=b.`Id` ...
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// .RightJoin(subQuery, (a, b) =&gt; a.ParentId == b.Id)
+    /// .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///     .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id) )) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -645,7 +638,7 @@ public interface IQuery<T> : IQueryBase
     IQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定字段返回，只需要指定需要特殊处理的成员赋值即可，其他成员将从现有表的字段中按名称匹配赋值，多个同名字段时如果未特殊指定赋值，默认选取第一个表中的字段赋值。如：
-    /// <code> .SelectTo<TDto>() 或是 .SelectTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二表的Id字段作为Id成员</code>
+    /// <code> .SelectTo&lt;TDto&gt;() 或是 .SelectTo((a, b) =&gt; new TDto{ b.Id }) //使用第二个表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
@@ -867,16 +860,11 @@ public interface ICteQuery<T> : ICteQuery, IQuery<T> { }
     var tableAlias = "a";
     var currentAlias = "a";
     var currentTable = "T1";
-    var cteTableAlias = "cte1";
-    var currentCteTableAlias = "cte1";
-    var cteQueryTables = "IQuery<T1>";
     for (int i = 2; i <= count; i++)
     {
         tables += $", T{i}";
         tableAlias += $", {(char)(96 + i)}";
         currentAlias = $"{(char)(97 + i)}";
-        cteTableAlias += $", cte{i}";
-        cteQueryTables += $", IQuery<T{i}>";
 #>
 /// <summary>
 /// 多表<#=tables#>查询
@@ -886,7 +874,6 @@ public interface ICteQuery<T> : ICteQuery, IQuery<T> { }
         for (int j = 2; j <= i; j++)
         {
             currentTable = $"T{j}";
-            currentCteTableAlias = $"cte{j}";
 #>
 /// <typeparam name="<#=currentTable#>">表<#=currentTable#>实体类型</typeparam>
 <#      }#>
@@ -973,10 +960,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
 #>
     #region WithTable
     /// <summary>
-    /// 添加实体表，方便后面做JOIN关联，如：
-    /// <code>
-    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
-    /// </code>
+    /// 添加实体表，方便后面做JOIN关联，如：<code>.From&lt;Menu&gt;().WithTable&lt;Page&gt;()</code>
     /// </summary>
     /// <typeparam name="TOther">实体表类型</typeparam>
     /// <returns>返回查询对象</returns>
@@ -1060,8 +1044,10 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <summary>
     /// 添加子查询subQuery，并选择一个现有表做INNER JOIN关联，也可以用在CTE子句中自我引用，与.WithQuery(subQuery).InnerJoin(...)等价，如：
     /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// .InnerJoin(subQuery, (a, b) =&gt; a.ParentId == b.Id)
     /// .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///     .InnerJoin(self, (a, b, ...) =&gt; a.ParentId == b.Id) ...) ...
+    ///     .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id) )) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -1074,8 +1060,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <code>
     /// .InnerJoin(f =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select(x =&gt; new { ... }), (a, b, ...) =&gt; x.xxx = y.yyy) ...
-    /// SQL:
-    /// ... INNER JOIN (SELECT ... FROM `sys_order_detail` ...) <#=currentAlias#> ON ...
+    /// SQL: ... INNER JOIN (SELECT ... FROM `sys_order_detail` ...) <#=currentAlias#> ON ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -1110,8 +1095,10 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <summary>
     /// 添加子查询subQuery，并选择一个现有表做LEFT JOIN关联，也可以用在CTE子句中自我引用，与.WithQuery(subQuery).LeftJoin(...)等价，如：
     /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// .LeftJoin(subQuery, (a, b) =&gt; a.ParentId == b.Id)
     /// .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///     .LeftJoin(self, (a, b, ...) =&gt; a.ParentId == b.Id) ...) ...
+    ///     .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id) )) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -1123,9 +1110,8 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// 添加subQueryExpr表达式构建子查询，并选择一个现有表做LEFT JOIN关联，与.WithQuery(subQueryExpr).LeftJoin(...)等价，如：
     /// <code>
     /// .LeftJoin(f =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select(t =&gt; new { ... }), (a, ..., x) =&gt; x.xxx = y.yyy) ...
-    /// SQL:
-    /// ... LEFT JOIN (SELECT ... FROM `sys_order_detail` ...) <#=currentAlias#> ON ...
+    ///     .Select(t =&gt; new { ... }), (a, b, ...) =&gt; a.Id = b.OrderId) ...
+    /// SQL: ... LEFT JOIN (SELECT ... FROM `sys_order_detail` ...) <#=currentAlias#> ON ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -1160,8 +1146,10 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <summary>
     /// 添加子查询subQuery，并选择一个现有表做RIGHT JOIN关联，也可以用在CTE子句中自我引用，与.WithQuery(subQuery).RightJoin(...)等价，如：
     /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// .LeftJoin(subQuery, (a, b) =&gt; a.ParentId == b.Id)
     /// .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///     .RightJoin(self, (a, b, ...) =&gt; a.ParentId == b.Id) ...) ...
+    ///     .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id) )) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -1173,9 +1161,8 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// 添加subQueryExpr表达式构建子查询，并选择一个现有表做RIGHT JOIN关联，与.WithQuery(subQueryExpr).RightJoin(...)等价，如：
     /// <code>
     /// .RightJoin(f =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (x, y) =&gt; x.xxx = y.yyy) ...
-    /// SQL:
-    /// ... RIGHT JOIN (SELECT ... FROM `sys_order_detail` ...) <#=currentAlias#> ON ...
+    ///     .Select(t =&gt; new { ... }), (a, b, ...) =&gt; a.Id = b.OrderId) ...
+    /// SQL: ... RIGHT JOIN (SELECT ... FROM `sys_order_detail` ...) <#=currentAlias#> ON ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -1348,7 +1335,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
-    /// Select((<#=tableAlias#>) =&gt; new { a.Id, a.Name, ... }) 或是 Select((<#=tableAlias#>) =&gt; x.CreatedAt.Date)
+    /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式</param>
@@ -1356,7 +1343,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定字段返回，只需要指定需要特殊处理的成员赋值即可，其他成员将从现有表的字段中按名称匹配赋值，多个同名字段时如果未特殊指定赋值，默认选取第一个表中的字段赋值。如：
-    /// <code> .SelectTo<TDto>() 或是 ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
+    /// <code> .SelectTo&lt;TDto&gt;() 或是 .SelectTo((a, b) =&gt; new TDto{ b.Id }) //使用第二个表的Id字段作为Id成员</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
@@ -1443,7 +1430,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <returns>返回该字段的求和值</returns>
-    TField Sum<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    decimal Sum<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
     /// <summary>
     /// 计算指定字段的求和值
     /// <code>repository.From&lt;<#=tables#>&gt;().SumAsync((<#=tableAlias#>) =&gt; a.TotalAmount);</code>
@@ -1452,7 +1439,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <param name="fieldExpr">字段表达式</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的求和值</returns>
-    Task<TField> SumAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    Task<decimal> SumAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
     /// 计算指定字段的平均值
     /// <code>repository.From&lt;<#=tables#>&gt;().Avg((<#=tableAlias#>) =&gt; a.TotalAmount);</code>

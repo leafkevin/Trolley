@@ -338,9 +338,9 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     #endregion
 
     #region Aggregate
-    public virtual TField Sum<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
+    public virtual decimal Sum<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
         => base.SumInternal<TField>(fieldExpr);
-    public virtual async Task<TField> SumAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<decimal> SumAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => await base.SumInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual TField Avg<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
         => base.AvgInternal<TField>(fieldExpr);
