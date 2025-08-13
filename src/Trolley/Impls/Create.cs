@@ -103,7 +103,7 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.IsFromCommand = true;
         queryVisitor.IsFromQuery = true;
-        queryVisitor.UseQuery(typeof(T), subQuery, true);      
+        queryVisitor.UseQuery(typeof(T), subQuery, true);
         return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
     }
     public virtual IFromCommand<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
@@ -111,7 +111,7 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.IsFromCommand = true;
         queryVisitor.IsFromQuery = true;
-        queryVisitor.UseNewQuery(typeof(T), subQueryExpr, true);      
+        queryVisitor.UseNewQuery(typeof(T), subQueryExpr, true);
         return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
     }
     #endregion

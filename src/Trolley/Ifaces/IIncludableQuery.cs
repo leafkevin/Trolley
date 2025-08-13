@@ -56,7 +56,7 @@ public interface IIncludableQuery<T, TMember> : IIncludableQueryBase, IQuery<T>
     /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前TMember表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    IIncludableQuery<T, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值，手动指定TMember表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>

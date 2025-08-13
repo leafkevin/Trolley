@@ -167,6 +167,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             var loopSqlSetter, var tailSql, readerFields) = this.BuildWithBulk(command);
 
         Action<string, IEnumerable> executor = null;
+        Func<int, string> suffixGetter = index => this.IsMultiple ? $"_m{this.CommandIndex}{index}" : $"{index}";
         if (tailSql != null)
         {
             executor = (tableName, insertObjs) =>
@@ -176,7 +177,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 foreach (var insertObj in insertObjs)
                 {
                     if (index > 0) builder.Append(',');
-                    loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                    loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, suffixGetter.Invoke(index));
                     index++;
                 }
                 builder.Append(tailSql);
@@ -191,7 +192,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 foreach (var insertObj in insertObjs)
                 {
                     if (index > 0) builder.Append(',');
-                    loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                    loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, suffixGetter.Invoke(index));
                     index++;
                 }
             };
@@ -223,17 +224,17 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             insertObjType = entity.GetType();
             break;
         }
-        string tableName = null;
+
         Dictionary<string, List<object>> tabledInsertObjs = null;
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
+        string tableName = tableSegment.Mapper.TableName;
         if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
         {
             if (tableSegment.IsSharding)
                 tableName = tableSegment.Body;
-            else tabledInsertObjs = this.SplitShardingParameters(tableShardingInfo, insertObjs);
+            else tabledInsertObjs = this.SplitShardingParameters(insertObjType, tableShardingInfo, insertObjs, firstInsertObj);
         }
-        else tableName = tableSegment.Mapper.TableName;
 
         List<IDbDataParameter> fixedDbParameters = null;
         if (this.deferredSegments.Count > 1)
@@ -444,17 +445,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         tableName = this.OrmProvider.GetTableName(tableName);
         return tableName;
     }
-    public Dictionary<string, List<object>> SplitShardingParameters(TableShardingInfo tableShardingInfo, IEnumerable insertObjs)
+    public Dictionary<string, List<object>> SplitShardingParameters(Type insertObjType, TableShardingInfo tableShardingInfo, IEnumerable insertObjs, object insertObjSample)
     {
         var result = new Dictionary<string, List<object>>();
-        Type insertObjType = null;
-        object firstInsertObj = null;
-        foreach (var insertObj in insertObjs)
-        {
-            insertObjType = insertObj.GetType();
-            firstInsertObj = insertObj;
-            break;
-        }
         var origTableName = this.Tables[0].Mapper.TableName;
 
         //优先使用本次设置的分表名获取委托来获取分表名
@@ -480,7 +473,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             var fieldValueGetters = new List<Func<object, object>>();
             foreach (var memberName in tableShardingInfo.DependOnMembers)
             {
-                if (RepositoryHelper.TryGetMemberGetter(insertObjType, memberName, firstInsertObj, out var memberGetter))
+                if (RepositoryHelper.TryGetMemberGetter(insertObjType, memberName, insertObjSample, out var memberGetter))
                     fieldValueGetters.Add(memberGetter);
                 for (int i = 1; i < this.deferredSegments.Count; i++)
                 {

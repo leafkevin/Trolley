@@ -39,5 +39,5 @@ public interface ICreateVisitor : IDisposable
     void OnlyFields(Expression fieldsSelector);
     DataTable ToDataTable(Type insertObjType, IEnumerable entities, List<(MemberMap, Func<object, object>)> memberMappers, string tableName = null);
     List<(MemberMap, Func<object, object>)> GetRefMemberMappers(Type insertObjType, EntityMap refEntityMapper, bool isUpdate = false);
-    Dictionary<string, List<object>> SplitShardingParameters(TableShardingInfo tableShardingInfo, IEnumerable insertObjs);
+    Dictionary<string, List<object>> SplitShardingParameters(Type insertObjType, TableShardingInfo tableShardingInfo, IEnumerable insertObjs, object insertObjSample);
 }

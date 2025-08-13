@@ -990,55 +990,18 @@ public static class RepositoryHelper
                 var keyField = entityMapper.KeyMembers[0].FieldName;
                 tailSql += ormProvider.GetIdentitySql(ormProvider.GetFieldName(keyField));
             }
-            bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType);
-            if (isDictionary || dbContext.ShardingProvider != null && dbContext.ShardingProvider.TryGetTableSharding(entityType, out _))
+            var fieldsSetter = BuildFieldsSqlParametersPart(dbContext, entityType, insertObjType, 1, 2, 0, true, false, false, null, null, " (", ") VALUES ")
+                   as Func<DbContext, object, string>;
+            var valuesSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, insertObjType, 2, 2, 0, true, false, false, null, null, "(", tailSql)
+                as Func<DbContext, object, string>;
+            var valuesParametersSetter = BuildFieldsSqlParametersPart(dbContext, entityType, insertObjType, 2, 3, 0, false, false, false, null, null)
+                as Action<IDataParameterCollection, DbContext, object>;
+            var sql = $"INSERT INTO {ormProvider.GetTableName(tableName)}" + fieldsSetter.Invoke(dbContext, null) + valuesSqlSetter.Invoke(dbContext, null);
+            return (dbContext, command, insertObjs) =>
             {
-                var fieldsSetter = BuildFieldsSqlParametersPart(dbContext, entityType, insertObjType, 1, 2, 0, false, false, false, null, null, "(", ") VALUES ")
-                    as Action<StringBuilder, DbContext, object>;
-                var valuesSetter = BuildFieldsSqlParametersPart(dbContext, entityType, insertObjType, 2, 1, 0, false, false, false, null, null, "(", tailSql)
-                    as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
-
-                if (dbContext.ShardingProvider != null && dbContext.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
-                {
-                    return (dbContext, command, insertObjs) =>
-                    {
-                        var myTableName = GetShardingTableName(tableShardingInfo, entityMapper, insertObjType, insertObjs);
-                        var builder = new StringBuilder();
-                        builder.Append($"INSERT INTO {ormProvider.GetTableName(myTableName)}");
-                        fieldsSetter.Invoke(builder, dbContext, insertObjs);
-                        valuesSetter.Invoke(command.Parameters, builder, dbContext, insertObjs);
-                        command.CommandText = builder.ToString();
-                        builder.Clear();
-                    };
-                }
-                else
-                {
-                    return (dbContext, command, insertObjs) =>
-                    {
-                        var builder = new StringBuilder();
-                        builder.Append($"INSERT INTO {ormProvider.GetTableName(tableName)}");
-                        fieldsSetter.Invoke(builder, dbContext, insertObjs);
-                        valuesSetter.Invoke(command.Parameters, builder, dbContext, insertObjs);
-                        command.CommandText = builder.ToString();
-                        builder.Clear();
-                    };
-                }
-            }
-            else
-            {
-                var fieldsSetter = BuildFieldsSqlParametersPart(dbContext, entityType, insertObjType, 1, 2, 0, true, false, false, null, null, " (", ") VALUES ")
-                    as Func<DbContext, object, string>;
-                var valuesSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, insertObjType, 2, 2, 0, true, false, false, null, null, "(", tailSql)
-                    as Func<DbContext, object, string>;
-                var valuesParametersSetter = BuildFieldsSqlParametersPart(dbContext, entityType, insertObjType, 2, 3, 0, false, false, false, null, null)
-                    as Action<IDataParameterCollection, DbContext, object>;
-                var sql = $"INSERT INTO {ormProvider.GetTableName(tableName)}" + fieldsSetter.Invoke(dbContext, null) + valuesSqlSetter.Invoke(dbContext, null);
-                return (dbContext, command, insertObjs) =>
-                {
-                    command.CommandText = sql;
-                    valuesParametersSetter.Invoke(command.Parameters, dbContext, insertObjs);
-                };
-            }
+                command.CommandText = sql;
+                valuesParametersSetter.Invoke(command.Parameters, dbContext, insertObjs);
+            };
         });
     }
     public static Func<DbContext, ITheaCommand, IEnumerable, int, int> BuildCreateBulkCommandExecutor(DbContext dbContext, Type entityType, IEnumerable insertObjs)
@@ -1061,10 +1024,12 @@ public static class RepositoryHelper
                 as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
             var fieldsSql = fieldsSetter.Invoke(dbContext, firstInsertObj);
 
-            int Execute(DbContext dbContext, ITheaCommand command, string tableName, IEnumerable insertObjs, int bulkCount)
+            return (DbContext dbContext, ITheaCommand command, IEnumerable insertObjs, int bulkCount) =>
             {
                 int count = 0, index = 0;
-                var builder = new StringBuilder($"INSERT INTO {ormProvider.GetTableName(tableName)}{fieldsSql} ");
+                var entityMapper = dbContext.MapProvider.GetEntityMap(entityType);
+                var tableName = ormProvider.GetTableName(entityMapper.TableName);
+                var builder = new StringBuilder($"INSERT INTO {tableName}{fieldsSql} ");
                 foreach (var insertObj in insertObjs)
                 {
                     if (index > 0) builder.Append(',');
@@ -1077,7 +1042,7 @@ public static class RepositoryHelper
                         count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
                         builder.Clear();
                         command.Parameters.Clear();
-                        builder.Append($"INSERT INTO {ormProvider.GetTableName(tableName)}{fieldsSql}");
+                        builder.Append($"INSERT INTO {tableName}{fieldsSql}");
                         index = 0;
                     }
                 }
@@ -1089,29 +1054,7 @@ public static class RepositoryHelper
                     command.Parameters.Clear();
                 }
                 return count;
-            }
-
-            Func<DbContext, ITheaCommand, IEnumerable, int, int> commandExecutor = null;
-            var entityMapper = dbContext.MapProvider.GetEntityMap(entityType);
-            if (dbContext.ShardingProvider != null && dbContext.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
-            {
-                commandExecutor = (dbContext, command, insertObjs, bulkCount) =>
-                {
-                    int count = 0;
-                    var tabledInsertObjs = SplitShardingParameters(tableShardingInfo, entityMapper, insertObjType, insertObjs);
-                    foreach (var tabledInsertObj in tabledInsertObjs)
-                    {
-                        count += Execute(dbContext, command, tabledInsertObj.Key, tabledInsertObj.Value, bulkCount);
-                    }
-                    return count;
-                };
-            }
-            else
-            {
-                var tableName = entityMapper.TableName;
-                commandExecutor = (dbContext, command, insertObjs, bulkCount) => Execute(dbContext, command, tableName, insertObjs, bulkCount);
-            }
-            return commandExecutor;
+            };
         });
     }
     public static Func<DbContext, ITheaCommand, IEnumerable, int, CancellationToken, Task<int>> BuildCreateBulkAsyncCommandExecutor(DbContext dbContext, Type entityType, IEnumerable insertObjs)
@@ -1134,10 +1077,12 @@ public static class RepositoryHelper
                 as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
             var fieldsSql = fieldsSetter.Invoke(dbContext, firstInsertObj);
 
-            async Task<int> Execute(DbContext dbContext, ITheaCommand command, string tableName, IEnumerable insertObjs, int bulkCount, CancellationToken cancellationToken)
+            return async (DbContext dbContext, ITheaCommand command, IEnumerable insertObjs, int bulkCount, CancellationToken cancellationToken) =>
             {
                 int count = 0, index = 0;
-                var builder = new StringBuilder($"INSERT INTO {ormProvider.GetTableName(tableName)}{fieldsSql} ");
+                var entityMapper = dbContext.MapProvider.GetEntityMap(entityType);
+                var tableName = ormProvider.GetTableName(entityMapper.TableName);
+                var builder = new StringBuilder($"INSERT INTO {tableName}{fieldsSql} ");
                 foreach (var insertObj in insertObjs)
                 {
                     if (index > 0) builder.Append(',');
@@ -1150,7 +1095,7 @@ public static class RepositoryHelper
                         count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
                         builder.Clear();
                         command.Parameters.Clear();
-                        builder.Append($"INSERT INTO {ormProvider.GetTableName(tableName)}{fieldsSql}");
+                        builder.Append($"INSERT INTO {tableName}{fieldsSql}");
                         index = 0;
                     }
                 }
@@ -1162,28 +1107,7 @@ public static class RepositoryHelper
                     command.Parameters.Clear();
                 }
                 return count;
-            }
-            var entityMapper = dbContext.MapProvider.GetEntityMap(entityType);
-            Func<DbContext, ITheaCommand, IEnumerable, int, CancellationToken, Task<int>> commandExecutor = null;
-            if (dbContext.ShardingProvider != null && dbContext.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
-            {
-                commandExecutor = async (dbContext, command, insertObjs, bulkCount, cancellationToken) =>
-                {
-                    int count = 0;
-                    var tabledInsertObjs = SplitShardingParameters(tableShardingInfo, entityMapper, insertObjType, insertObjs);
-                    foreach (var tabledInsertObj in tabledInsertObjs)
-                    {
-                        count += await Execute(dbContext, command, tabledInsertObj.Key, tabledInsertObj.Value, bulkCount, cancellationToken);
-                    }
-                    return count;
-                };
-            }
-            else
-            {
-                var tableName = entityMapper.TableName;
-                commandExecutor = async (dbContext, command, insertObjs, bulkCount, cancellationToken) => await Execute(dbContext, command, tableName, insertObjs, bulkCount, cancellationToken);
-            }
-            return commandExecutor;
+            };
         });
     }
     public static Action<StringBuilder, DbContext, object> BuildCreateFieldsSqlPart(DbContext dbContext, Type entityType, Type insertObjType, bool isUpdateRowVersion, List<string> onlyFieldNames, List<string> ignoreFieldNames)
@@ -1530,114 +1454,13 @@ public static class RepositoryHelper
             return (isMultiKeys, tableName, headSqlSetter, whereSqlParametersSetter);
         });
     }
-
-    public static Dictionary<string, List<object>> SplitShardingParameters(TableShardingInfo tableShardingInfo, EntityMap entityMapper, Type insertObjType, IEnumerable insertObjs)
-    {
-        var result = new Dictionary<string, List<object>>();
-        foreach (var insertObj in insertObjs)
-        {
-            var tableName = GetShardingTableName(tableShardingInfo, entityMapper, insertObjType, insertObj);
-            if (!result.TryGetValue(tableName, out var myParameters))
-                result.Add(tableName, myParameters = new List<object>());
-            myParameters.Add(insertObj);
-        }
-        return result;
-    }
-    public static string GetShardingTableName(TableShardingInfo tableShardingInfo, EntityMap entityMapper, Type parameterType, object parameter)
-    {
-        var entityType = entityMapper.EntityType;
-        var tableName = entityMapper.TableName;
-        var cacheKey = GetCacheKey(entityType, parameterType);
-        var tableNameGetter = shardingTableNameGetters.GetOrAdd(cacheKey, f =>
-        {
-            if (tableShardingInfo.DependOnMembers.Count > 1)
-            {
-                if (typeof(IDictionary<string, object>).IsAssignableFrom(parameterType))
-                {
-                    return (string origName, object parameter) =>
-                    {
-                        var dict = parameter as IDictionary<string, object>;
-                        (var isContainsKey, var field1Value) = dict.ContainsLowerKey(tableShardingInfo.DependOnMembers[0].ToLower());
-                        if (!isContainsKey)
-                            throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{tableShardingInfo.DependOnMembers[0]}映射的字段，但当前字典中并不包含key:{tableShardingInfo.DependOnMembers[0]}的键值");
-                        (isContainsKey, var field2Value) = dict.ContainsLowerKey(tableShardingInfo.DependOnMembers[1].ToLower());
-                        if (!isContainsKey)
-                            throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{tableShardingInfo.DependOnMembers[1]}映射的字段，但当前字典中不包含key:{tableShardingInfo.DependOnMembers[1]}的键值");
-
-                        return tableShardingInfo.Rule.Invoke(origName, [field1Value, field2Value]);
-                    };
-                }
-                else
-                {
-                    var origNameExpr = Expression.Parameter(typeof(string), "origName");
-                    var parameterObjExpr = Expression.Parameter(typeof(object), "parameterObj");
-                    var tableNameRuleGetter = tableShardingInfo.Rule as Func<string, object, object, string>;
-
-                    var memberNames = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                         .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field)
-                         .Select(f => f.Name).ToList();
-                    (var isContains, var memberName1) = memberNames.ContainsLower(tableShardingInfo.DependOnMembers[0].ToLower());
-                    if (!isContains) throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{tableShardingInfo.DependOnMembers[0]}映射的字段，但当前参数中并不包含{tableShardingInfo.DependOnMembers[0]}成员");
-                    (isContains, var memberName2) = memberNames.ContainsLower(tableShardingInfo.DependOnMembers[1].ToLower());
-                    if (!isContains) throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{tableShardingInfo.DependOnMembers[1]}映射的字段，但当前参数中并不包含{tableShardingInfo.DependOnMembers[1]}成员");
-
-                    var typedParameterObjExpr = Expression.Convert(parameterObjExpr, parameterType);
-                    Expression field1Expr = Expression.PropertyOrField(typedParameterObjExpr, memberName1);
-                    if (field1Expr.Type != typeof(object))
-                        field1Expr = Expression.Convert(field1Expr, typeof(object));
-                    Expression field2Expr = Expression.PropertyOrField(typedParameterObjExpr, memberName2);
-                    if (field2Expr.Type != typeof(object))
-                        field2Expr = Expression.Convert(field2Expr, typeof(object));
-                    var getterExpr = Expression.Constant(tableNameRuleGetter, typeof(Func<string, object, object, string>));
-                    var bodyExpr = Expression.Invoke(getterExpr, origNameExpr, field1Expr, field2Expr);
-                    return Expression.Lambda<Func<string, object, string>>(bodyExpr, origNameExpr, parameterObjExpr).Compile();
-                }
-            }
-            else
-            {
-                if (typeof(IDictionary<string, object>).IsAssignableFrom(parameterType))
-                {
-                    return (string origName, object parameter) =>
-                    {
-                        var dict = parameter as IDictionary<string, object>;
-                        (var isContainsKey, var fieldValue) = dict.ContainsLowerKey(tableShardingInfo.DependOnMembers[0].ToLower());
-                        if (!isContainsKey)
-                            throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{tableShardingInfo.DependOnMembers[0]}映射的字段，但当前字典中并不包含key:{tableShardingInfo.DependOnMembers[0]}的键值");
-
-                        var tableNameRuleGetter = tableShardingInfo.Rule as Func<string, object, string>;
-                        return tableNameRuleGetter.Invoke(origName, fieldValue);
-                    };
-                }
-                else
-                {
-                    var origNameExpr = Expression.Parameter(typeof(string), "origName");
-                    var parameterObjExpr = Expression.Parameter(typeof(object), "parameterObj");
-                    var tableNameRuleGetter = tableShardingInfo.Rule as Func<string, object, string>;
-                    var memberNames = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                         .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field)
-                         .Select(f => f.Name).ToList();
-                    (var isContains, var memberName) = memberNames.ContainsLower(tableShardingInfo.DependOnMembers[0].ToLower());
-                    if (!isContains) throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{tableShardingInfo.DependOnMembers[0]}映射的字段，但当前参数中并不包含{tableShardingInfo.DependOnMembers[0]}成员");
-
-                    var typedParameterObjExpr = Expression.Convert(parameterObjExpr, parameterType);
-                    Expression fieldExpr = Expression.PropertyOrField(typedParameterObjExpr, memberName);
-                    if (fieldExpr.Type != typeof(object))
-                        fieldExpr = Expression.Convert(fieldExpr, typeof(object));
-                    var getterExpr = Expression.Constant(tableNameRuleGetter, typeof(Func<string, object, string>));
-                    var bodyExpr = Expression.Invoke(getterExpr, origNameExpr, fieldExpr);
-                    return Expression.Lambda<Func<string, object, string>>(bodyExpr, origNameExpr, parameterObjExpr).Compile();
-                }
-            }
-        });
-        return tableNameGetter.Invoke(tableName, parameter);
-    }
     public static object CreateInstance(Type targetType)
     {
         var creator = creatorCache.GetOrAdd(targetType, f =>
         {
             var constructor = f.GetConstructor(Type.EmptyTypes);
             return Expression.Lambda<Func<object>>(Expression.New(constructor)).Compile();
-        });
+        });        
         return creator.Invoke();
     }
     public static object CreateInstance(Type targetType, Type[] parameterTypes, params object[] parameters)
