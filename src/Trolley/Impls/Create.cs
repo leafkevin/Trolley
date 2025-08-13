@@ -28,14 +28,14 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
         this.Visitor.UseTable(false, tableName);
         return this;
     }
-    public virtual ICreate<TEntity> UseTable<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter)
-    {
-        this.Visitor.UseTable(tableNameGetter);
-        return this;
-    }
     public virtual ICreate<TEntity> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
+        return this;
+    }
+    public virtual ICreate<TEntity> UseTable<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter)
+    {
+        this.Visitor.UseTable(tableNameGetter);
         return this;
     }
     #endregion

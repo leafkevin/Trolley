@@ -84,9 +84,11 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCon
                 {
                     (var insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
                     Type insertObjType = null;
+                    object firstInsertObj = null;
                     foreach (var insertObj in insertObjs)
                     {
                         insertObjType = insertObj.GetType();
+                        firstInsertObj = insertObj;
                         break;
                     }
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
@@ -96,7 +98,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCon
                         var isNeedSplit = this.Visitor.Tables[0].Body == null;
                         if (isNeedSplit)
                         {
-                            var tabledInsertObjs = this.Visitor.SplitShardingParameters(tableShardingInfo, insertObjs);
+                            var tabledInsertObjs = this.Visitor.SplitShardingParameters(insertObjType, tableShardingInfo, insertObjs, firstInsertObj);
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
                                 result += dialectOrmProvider.ExecuteBulkCopy(false, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
@@ -140,7 +142,8 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCon
                             command.Parameters.Clear();
                         }
                         return count;
-                    };
+                    }
+                    ;
                     connection.Open();
 
                     if (tabledInsertObjs != null)
@@ -183,9 +186,11 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCon
                 {
                     (var insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
                     Type insertObjType = null;
+                    object firstInsertObj = null;
                     foreach (var insertObj in insertObjs)
                     {
                         insertObjType = insertObj.GetType();
+                        firstInsertObj = insertObj;
                         break;
                     }
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
@@ -195,7 +200,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCon
                         var isNeedSplit = this.Visitor.Tables[0].Body == null;
                         if (isNeedSplit)
                         {
-                            var tabledInsertObjs = this.Visitor.SplitShardingParameters(tableShardingInfo, insertObjs);
+                            var tabledInsertObjs = this.Visitor.SplitShardingParameters(insertObjType, tableShardingInfo, insertObjs, firstInsertObj);
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
                                 result += await dialectOrmProvider.ExecuteBulkCopyAsync(false, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
@@ -238,7 +243,8 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCon
                             command.Parameters.Clear();
                         }
                         return count;
-                    };
+                    }
+                    ;
                     await connection.OpenAsync(cancellationToken);
                     if (tabledInsertObjs != null)
                     {
@@ -348,9 +354,11 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
                 {
                     (var insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
                     Type insertObjType = null;
+                    object firstInsertObj = null;
                     foreach (var insertObj in insertObjs)
                     {
                         insertObjType = insertObj.GetType();
+                        firstInsertObj = insertObj;
                         break;
                     }
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
@@ -360,7 +368,7 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
                         var isNeedSplit = this.Visitor.Tables[0].Body == null;
                         if (isNeedSplit)
                         {
-                            var tabledInsertObjs = this.Visitor.SplitShardingParameters(tableShardingInfo, insertObjs);
+                            var tabledInsertObjs = this.Visitor.SplitShardingParameters(insertObjType, tableShardingInfo, insertObjs, firstInsertObj);
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
                                 result += dialectOrmProvider.ExecuteBulkCopy(false, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
@@ -462,9 +470,11 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
                 {
                     (var insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
                     Type insertObjType = null;
+                    object firstInsertObj = null;
                     foreach (var insertObj in insertObjs)
                     {
                         insertObjType = insertObj.GetType();
+                        firstInsertObj = insertObj;
                         break;
                     }
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
@@ -474,7 +484,7 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
                         var isNeedSplit = this.Visitor.Tables[0].Body == null;
                         if (isNeedSplit)
                         {
-                            var tabledInsertObjs = this.Visitor.SplitShardingParameters(tableShardingInfo, insertObjs);
+                            var tabledInsertObjs = this.Visitor.SplitShardingParameters(insertObjType, tableShardingInfo, insertObjs, firstInsertObj);
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
                                 result += await dialectOrmProvider.ExecuteBulkCopyAsync(false, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);

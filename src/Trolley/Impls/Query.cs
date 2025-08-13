@@ -85,19 +85,19 @@ public class QueryBase : QueryInternal, IQueryBase
 
         return await this.QueryScalarAsync<long>("COUNT(DISTINCT {0})", "COUNT_VALUE", fieldExpr, cancellationToken);
     }
-    protected TField SumInternal<TField>(Expression fieldExpr)
+    protected decimal SumInternal<TField>(Expression fieldExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
-        return this.QueryScalar<TField>("SUM({0})", "SUM_VALUE", fieldExpr);
+        return this.QueryScalar<decimal>("SUM({0})", "SUM_VALUE", fieldExpr);
     }
-    protected async Task<TField> SumInternalAsync<TField>(Expression fieldExpr, CancellationToken cancellationToken = default)
+    protected async Task<decimal> SumInternalAsync<TField>(Expression fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
-        return await this.QueryScalarAsync<TField>("SUM({0})", "SUM_VALUE", fieldExpr, cancellationToken);
+        return await this.QueryScalarAsync<decimal>("SUM({0})", "SUM_VALUE", fieldExpr, cancellationToken);
     }
     protected TField AvgInternal<TField>(Expression fieldExpr)
     {
@@ -523,9 +523,9 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region Aggregate
-    public virtual TField Sum<TField>(Expression<Func<T, TField>> fieldExpr)
+    public virtual decimal Sum<TField>(Expression<Func<T, TField>> fieldExpr)
         => base.SumInternal<TField>(fieldExpr);
-    public virtual async Task<TField> SumAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<decimal> SumAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => await base.SumInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual TField Avg<TField>(Expression<Func<T, TField>> fieldExpr)
         => base.AvgInternal<TField>(fieldExpr);
@@ -694,9 +694,9 @@ public class CteQuery<T> : Query<T>, ICteQuery<T>
     public override long LongCountDistinct<TField>(Expression<Func<T, TField>> fieldExpr)
         => throw new NotSupportedException("不支持的方法调用");
     public override Task<long> LongCountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default) => throw new NotSupportedException("不支持的方法调用");
-    public override TField Sum<TField>(Expression<Func<T, TField>> fieldExpr)
+    public override decimal Sum<TField>(Expression<Func<T, TField>> fieldExpr)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
-    public override Task<TField> SumAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public override Task<decimal> SumAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
     public override TField Avg<TField>(Expression<Func<T, TField>> fieldExpr)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");

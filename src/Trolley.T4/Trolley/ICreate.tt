@@ -22,7 +22,13 @@ namespace Trolley;
 public interface ICreate<TEntity>
 {
     #region Properties
+    /// <summary>
+    /// DbContext对象
+    /// </summary>
     DbContext DbContext { get; }
+    /// <summary>
+    /// Visitor对象
+    /// </summary>
     ICreateVisitor Visitor { get; }
     #endregion
 
@@ -44,7 +50,7 @@ public interface ICreate<TEntity>
     /// 手动指定分表规则参数值，执行分表规则确定TEntity表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
-    /// <returns>返回查询对象</returns>
+    /// <returns>返回插入对象</returns>
     ICreate<TEntity> UseTableBy(params object[] fieldValues);
     #endregion
 
@@ -124,6 +130,34 @@ public interface ICreate<TEntity>
     /// <returns>返回查询对象</returns>
     IFromCommand<<#=tables#>> From<<#=tables#>>();
 <#  }#>
+    #endregion
+
+    #region FromQuery
+    /// <summary>
+    /// 使用子查询subQuery作为创建子查询对象，子查询subQuery也可以是CTE表，如：
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// repository.Create&lt;Menu&gt;().FromQuery(subQuery)
+    /// SQL: INSERT INTO `sys_menu` SELECT ... FROM ( ... )
+    /// </code>
+    /// </summary>
+    /// <typeparam name="T">子查询返回的实体类型</typeparam>
+    /// <param name="subQuery">子查询</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T> FromQuery<T>(IQuery<T> subQuery);
+    /// <summary>
+    /// 使用子查询subQuery作为创建子查询对象，子查询subQuery也可以是CTE表，如：
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// repository.Create&lt;Menu&gt;(f =&gt; f.UseQuery(subQuery))
+    /// repository.Create&lt;Menu&gt;(f =&gt; f.From&lt;Page, Menu&gt;('o').Where(...)...)
+    /// SQL: INSERT INTO `sys_menu` SELECT ... FROM ( ... )
+    /// </code>
+    /// </summary>
+    /// <typeparam name="T">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询表达式</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     #endregion
 }
 /// <summary>
@@ -225,7 +259,22 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用fieldValue单个字段插入，如：
+    /// 单个字段插入，可多次调用，如：
+    /// <code>
+    /// repository.Create&lt;User&gt;()
+    ///     .WithBy(new { Name = "kevin", Age = 25 })
+    ///     .WithBy(f =&gt; f.Gender, Gender.Female)
+    ///     ...
+    ///     .Execute();
+    /// SQL: INSERT INTO `sys_user` (`Name`,`Age`,`Gender`, ... ) VALUES(@Name,@Age,@Gender, ... )
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldSelector">字段选择表达式，只能选择单个字段</param>
+    /// <param name="fieldValue">字段值</param>
+    /// <returns>返回插入对象</returns>
+    IContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
+    /// <summary>
+    /// 单个字段插入，可多次调用，condition为true有效，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { Name = "kevin", Age = 25 })
@@ -240,6 +289,9 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
     /// <param name="fieldValue">字段值</param>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
+    #endregion
+
+    #region IgnoreFields
     /// <summary>
     /// 忽略字段，实体属性名称，如：IgnoreFields("Name") | IgnoreFields("Name", "CreatedAt")
     /// </summary>
@@ -253,6 +305,9 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
     /// <param name="fieldsSelector">忽略的字段选择表达式，不可为null</param>
     /// <returns></returns>
     IContinuedCreate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);
+    #endregion
+
+    #region OnlyFields
     /// <summary>
     /// 只插入字段，实体属性名称，如：OnlyFields("Name") | OnlyFields("Name", "CreatedAt")
     /// </summary>

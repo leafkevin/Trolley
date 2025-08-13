@@ -15,13 +15,19 @@ namespace Trolley;
 public interface ICreate<TEntity>
 {
     #region Properties
+    /// <summary>
+    /// DbContext对象
+    /// </summary>
     DbContext DbContext { get; }
+    /// <summary>
+    /// Visitor对象
+    /// </summary>
     ICreateVisitor Visitor { get; }
     #endregion
 
     #region Sharding
     /// <summary>
-    /// 手动指定TEntity表分表名，如：.UseTable("sys_order_202001")
+    /// 手动指定分表名，如：.UseTable("sys_order_202001")
     /// </summary>
     /// <param name="tableName">完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回插入对象</returns>
@@ -285,7 +291,7 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     /// <summary>
-    /// 判断condition布尔值，如果为true，插入fieldSelector字段，为false则不插入，可多次调用，如：
+    /// 单个字段插入，可多次调用，condition为true有效，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { Name = "kevin", Age = 25 })

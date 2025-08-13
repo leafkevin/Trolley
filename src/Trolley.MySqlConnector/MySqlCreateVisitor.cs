@@ -127,7 +127,7 @@ public class MySqlCreateVisitor : CreateVisitor
         {
             if (tableSegment.IsSharding)
                 tableName = tableSegment.Body;
-            else tabledInsertObjs = this.SplitShardingParameters(tableShardingInfo, insertObjs);
+            else tabledInsertObjs = this.SplitShardingParameters(insertObjType, tableShardingInfo, insertObjs, firstInsertObj);
         }
         else tableName = tableSegment.Mapper.TableName;
 

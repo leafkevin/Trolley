@@ -575,13 +575,13 @@ public interface IFromCommand<T1, T2> : IFromCommand
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T2表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定1个或多个T2表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T2表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T2表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -842,7 +842,7 @@ public interface IFromCommand<T1, T2> : IFromCommand
     IFromCommand<T1, T2> Where(Expression<Func<T1, T2, bool>> predicate);
     /// <summary>
     /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -866,7 +866,7 @@ public interface IFromCommand<T1, T2> : IFromCommand
     IFromCommand<T1, T2> And(Expression<Func<T1, T2, bool>> predicate);
     /// <summary>
     /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -890,7 +890,7 @@ public interface IFromCommand<T1, T2> : IFromCommand
     IFromCommand<T1, T2> Or(Expression<Func<T1, T2, bool>> predicate);
     /// <summary>
     /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -1018,13 +1018,13 @@ public interface IFromCommand<T1, T2, T3> : IFromCommand
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T3表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定1个或多个T3表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T3表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T3表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -1285,7 +1285,7 @@ public interface IFromCommand<T1, T2, T3> : IFromCommand
     IFromCommand<T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate);
     /// <summary>
     /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -1309,7 +1309,7 @@ public interface IFromCommand<T1, T2, T3> : IFromCommand
     IFromCommand<T1, T2, T3> And(Expression<Func<T1, T2, T3, bool>> predicate);
     /// <summary>
     /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -1333,7 +1333,7 @@ public interface IFromCommand<T1, T2, T3> : IFromCommand
     IFromCommand<T1, T2, T3> Or(Expression<Func<T1, T2, T3, bool>> predicate);
     /// <summary>
     /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -1461,13 +1461,13 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T4表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定1个或多个T4表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T4表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T4表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -1728,7 +1728,7 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
     IFromCommand<T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate);
     /// <summary>
     /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -1752,7 +1752,7 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
     IFromCommand<T1, T2, T3, T4> And(Expression<Func<T1, T2, T3, T4, bool>> predicate);
     /// <summary>
     /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -1776,7 +1776,7 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
     IFromCommand<T1, T2, T3, T4> Or(Expression<Func<T1, T2, T3, T4, bool>> predicate);
     /// <summary>
     /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -1904,13 +1904,13 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T5表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定1个或多个T5表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4, T5> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T5表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T5表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -2171,7 +2171,7 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
     IFromCommand<T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate);
     /// <summary>
     /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -2195,7 +2195,7 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
     IFromCommand<T1, T2, T3, T4, T5> And(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate);
     /// <summary>
     /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -2219,7 +2219,7 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
     IFromCommand<T1, T2, T3, T4, T5> Or(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate);
     /// <summary>
     /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -2347,13 +2347,13 @@ public interface IFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T6表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定1个或多个T6表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4, T5, T6> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T6表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T6表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -2466,7 +2466,7 @@ public interface IFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand
     IFromCommand<T1, T2, T3, T4, T5, T6> Where(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate);
     /// <summary>
     /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -2490,7 +2490,7 @@ public interface IFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand
     IFromCommand<T1, T2, T3, T4, T5, T6> And(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate);
     /// <summary>
     /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -2514,7 +2514,7 @@ public interface IFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand
     IFromCommand<T1, T2, T3, T4, T5, T6> Or(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate);
     /// <summary>
     /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>

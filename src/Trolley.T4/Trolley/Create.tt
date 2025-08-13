@@ -40,9 +40,9 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
         this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
-    public virtual ICreate<TEntity> UseTableBy<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter)
+    public virtual ICreate<TEntity> UseTable<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter)
     {
-        this.Visitor.UseTableBy(tableNameGetter);
+        this.Visitor.UseTable(tableNameGetter);
         return this;
     }
     #endregion
@@ -92,13 +92,23 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
         return this.OrmProvider.NewFromCommand<<#=tables#>>(this.DbContext, queryVisitor);
     }
 <#  }#>
-    public virtual IFromCommand<T> From<T>(IQuery<T> subQuery)
+    #endregion
+
+    #region FromQuery
+    public virtual IFromCommand<T> FromQuery<T>(IQuery<T> subQuery)
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.AddTable(this.Visitor.Tables[0]);
-        queryVisitor.From(typeof(T), subQuery);
         queryVisitor.IsFromCommand = true;
         queryVisitor.IsFromQuery = true;
+        queryVisitor.UseQuery(typeof(T), subQuery, true);
+        return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
+    }
+    public virtual IFromCommand<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
+    {
+        var queryVisitor = this.Visitor.CreateQueryVisitor();
+        queryVisitor.IsFromCommand = true;
+        queryVisitor.IsFromQuery = true;
+        queryVisitor.UseNewQuery(typeof(T), subQueryExpr, true);
         return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
     }
     #endregion

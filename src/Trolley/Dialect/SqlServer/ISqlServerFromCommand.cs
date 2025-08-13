@@ -63,9 +63,9 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>
 
     #region Union/UnionAll
     new ISqlServerFromCommand<T> Union(IQuery<T> subQuery);
-    new ISqlServerFromCommand<T> Union(Func<IFromQuery, IQuery<T>> subQuery);
+    new ISqlServerFromCommand<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     new ISqlServerFromCommand<T> UnionAll(IQuery<T> subQuery);
-    new ISqlServerFromCommand<T> UnionAll(Func<IFromQuery, IQuery<T>> subQuery);
+    new ISqlServerFromCommand<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     #endregion
 
     #region Join
@@ -194,7 +194,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>
     new ISqlServerFromCommand<T> Where(Expression<Func<T, bool>> predicate);
     /// <summary>
     /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -209,7 +209,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>
     new ISqlServerFromCommand<T> And(Expression<Func<T, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -535,7 +535,7 @@ public interface ISqlServerFromCommand<T1, T2> : IFromCommand<T1, T2>
     new ISqlServerFromCommand<T1, T2> Where(Expression<Func<T1, T2, bool>> predicate);
     /// <summary>
     /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -550,7 +550,7 @@ public interface ISqlServerFromCommand<T1, T2> : IFromCommand<T1, T2>
     new ISqlServerFromCommand<T1, T2> And(Expression<Func<T1, T2, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -839,7 +839,7 @@ public interface ISqlServerFromCommand<T1, T2, T3> : IFromCommand<T1, T2, T3>
     new ISqlServerFromCommand<T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate);
     /// <summary>
     /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -854,7 +854,7 @@ public interface ISqlServerFromCommand<T1, T2, T3> : IFromCommand<T1, T2, T3>
     new ISqlServerFromCommand<T1, T2, T3> And(Expression<Func<T1, T2, T3, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -1143,7 +1143,7 @@ public interface ISqlServerFromCommand<T1, T2, T3, T4> : IFromCommand<T1, T2, T3
     new ISqlServerFromCommand<T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate);
     /// <summary>
     /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -1158,7 +1158,7 @@ public interface ISqlServerFromCommand<T1, T2, T3, T4> : IFromCommand<T1, T2, T3
     new ISqlServerFromCommand<T1, T2, T3, T4> And(Expression<Func<T1, T2, T3, T4, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -1447,7 +1447,7 @@ public interface ISqlServerFromCommand<T1, T2, T3, T4, T5> : IFromCommand<T1, T2
     new ISqlServerFromCommand<T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate);
     /// <summary>
     /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -1462,7 +1462,7 @@ public interface ISqlServerFromCommand<T1, T2, T3, T4, T5> : IFromCommand<T1, T2
     new ISqlServerFromCommand<T1, T2, T3, T4, T5> And(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -1637,7 +1637,7 @@ public interface ISqlServerFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand<T1
     new ISqlServerFromCommand<T1, T2, T3, T4, T5, T6> Where(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate);
     /// <summary>
     /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -1652,7 +1652,7 @@ public interface ISqlServerFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand<T1
     new ISqlServerFromCommand<T1, T2, T3, T4, T5, T6> And(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
