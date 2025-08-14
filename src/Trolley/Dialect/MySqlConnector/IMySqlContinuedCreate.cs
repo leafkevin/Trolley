@@ -129,7 +129,7 @@ public interface IMySqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldsSelector">返回字段名称列表</param>
-    /// <returns>返回插入的部分字段值</returns>
+    /// <returns>返回插入的选择字段值</returns>
     IMySqlCreated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
     #endregion
 }

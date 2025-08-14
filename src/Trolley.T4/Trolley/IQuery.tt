@@ -505,7 +505,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> And(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
@@ -514,7 +514,7 @@ public interface IQuery<T> : IQueryBase
 
     #region Or
     /// <summary>
-    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不可为null
+    /// 条件查询，并与已有的条件OR操作，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
@@ -528,7 +528,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> Or(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
@@ -1200,7 +1200,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
@@ -1209,7 +1209,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
 
     #region Or
     /// <summary>
-    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不可为null
+    /// 条件查询，并与已有的条件OR操作，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
@@ -1223,7 +1223,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<<#=tables#>> Or(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>

@@ -163,7 +163,6 @@ public interface IOrmProvider
 
     IDelete<TEntity> NewDelete<TEntity>(DbContext dbContext);
     IDeleted<TEntity> NewDeleted<TEntity>(DbContext dbContext, IDeleteVisitor visitor);
-    IContinuedDelete<TEntity> NewContinuedDelete<TEntity>(DbContext dbContext, IDeleteVisitor visitor);
 
     IQueryVisitor NewQueryVisitor(DbContext dbContext);
     IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart, IDataParameterCollection dbParameters = null);

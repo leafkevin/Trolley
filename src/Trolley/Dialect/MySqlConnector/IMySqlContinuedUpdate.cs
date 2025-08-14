@@ -239,7 +239,7 @@ public interface IMySqlContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new IMySqlContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回更新对象</returns>
@@ -248,7 +248,7 @@ public interface IMySqlContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
 
     #region Or
     /// <summary>
-    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不可为null
+    /// 条件查询，并与已有的条件OR操作，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回更新对象</returns>
@@ -263,7 +263,7 @@ public interface IMySqlContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new IMySqlContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回更新对象</returns>
@@ -431,7 +431,7 @@ public interface IMySqlBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<TEnti
     /// <returns>返回更新对象</returns>
     new IMySqlBulkContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回更新对象</returns>
@@ -440,7 +440,7 @@ public interface IMySqlBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<TEnti
 
     #region Or
     /// <summary>
-    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不可为null
+    /// 条件查询，并与已有的条件OR操作，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回更新对象</returns>
@@ -455,7 +455,7 @@ public interface IMySqlBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<TEnti
     /// <returns>返回更新对象</returns>
     new IMySqlBulkContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回更新对象</returns>

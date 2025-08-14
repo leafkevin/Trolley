@@ -369,7 +369,7 @@ public interface IPostgreSqlFromCommand<T> : IFromCommand<T>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T> And(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
@@ -378,7 +378,7 @@ public interface IPostgreSqlFromCommand<T> : IFromCommand<T>
 
     #region Or
     /// <summary>
-    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不可为null
+    /// 条件查询，并与已有的条件OR操作，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
@@ -393,7 +393,7 @@ public interface IPostgreSqlFromCommand<T> : IFromCommand<T>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T> Or(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
@@ -556,14 +556,14 @@ public interface IPostgreSqlFromCommand<T> : IFromCommand<T>
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldNames">字段名称列表</param>
-    /// <returns>返回插入的部分字段值</returns>
+    /// <returns>返回插入的选择字段值</returns>
     IPostgreSqlBulkCreated<T, TResult> Returning<TResult>(string fieldNames);
     /// <summary>
     /// 返回插入后想要返回字段的内容
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldsSelector">字段筛选表达式</param>
-    /// <returns>返回插入的部分字段值</returns>
+    /// <returns>返回插入的选择字段值</returns>
     IPostgreSqlBulkCreated<T, TResult> Returning<TResult>(Expression<Func<T, TResult>> fieldsSelector);
     #endregion
 }
@@ -847,7 +847,7 @@ public interface IPostgreSqlFromCommand<T1, T2> : IFromCommand<T1, T2>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> ifPredicate = null, Expression<Func<T1, T2, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
@@ -856,7 +856,7 @@ public interface IPostgreSqlFromCommand<T1, T2> : IFromCommand<T1, T2>
 
     #region Or
     /// <summary>
-    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不可为null
+    /// 条件查询，并与已有的条件OR操作，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
@@ -871,7 +871,7 @@ public interface IPostgreSqlFromCommand<T1, T2> : IFromCommand<T1, T2>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2> Or(bool condition, Expression<Func<T1, T2, bool>> ifPredicate = null, Expression<Func<T1, T2, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
@@ -1267,7 +1267,7 @@ public interface IPostgreSqlFromCommand<T1, T2, T3> : IFromCommand<T1, T2, T3>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
@@ -1276,7 +1276,7 @@ public interface IPostgreSqlFromCommand<T1, T2, T3> : IFromCommand<T1, T2, T3>
 
     #region Or
     /// <summary>
-    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不可为null
+    /// 条件查询，并与已有的条件OR操作，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
@@ -1291,7 +1291,7 @@ public interface IPostgreSqlFromCommand<T1, T2, T3> : IFromCommand<T1, T2, T3>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2, T3> Or(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
@@ -1687,7 +1687,7 @@ public interface IPostgreSqlFromCommand<T1, T2, T3, T4> : IFromCommand<T1, T2, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
@@ -1696,7 +1696,7 @@ public interface IPostgreSqlFromCommand<T1, T2, T3, T4> : IFromCommand<T1, T2, T
 
     #region Or
     /// <summary>
-    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不可为null
+    /// 条件查询，并与已有的条件OR操作，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
@@ -1711,7 +1711,7 @@ public interface IPostgreSqlFromCommand<T1, T2, T3, T4> : IFromCommand<T1, T2, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2, T3, T4> Or(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
@@ -2107,7 +2107,7 @@ public interface IPostgreSqlFromCommand<T1, T2, T3, T4, T5> : IFromCommand<T1, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
@@ -2116,7 +2116,7 @@ public interface IPostgreSqlFromCommand<T1, T2, T3, T4, T5> : IFromCommand<T1, T
 
     #region Or
     /// <summary>
-    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不可为null
+    /// 条件查询，并与已有的条件OR操作，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
@@ -2131,7 +2131,7 @@ public interface IPostgreSqlFromCommand<T1, T2, T3, T4, T5> : IFromCommand<T1, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
@@ -2376,7 +2376,7 @@ public interface IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand<T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
@@ -2385,7 +2385,7 @@ public interface IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand<T
 
     #region Or
     /// <summary>
-    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不可为null
+    /// 条件查询，并与已有的条件OR操作，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
@@ -2400,7 +2400,7 @@ public interface IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand<T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>

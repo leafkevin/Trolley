@@ -239,7 +239,7 @@ public interface IPostgreSqlContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new IPostgreSqlContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回更新对象</returns>
@@ -248,7 +248,7 @@ public interface IPostgreSqlContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
 
     #region Or
     /// <summary>
-    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不可为null
+    /// 条件查询，并与已有的条件OR操作，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回更新对象</returns>
@@ -263,7 +263,7 @@ public interface IPostgreSqlContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new IPostgreSqlContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回更新对象</returns>
@@ -283,7 +283,7 @@ public interface IPostgreSqlContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldsSelector">返回字段名称列表</param>
-    /// <returns>返回插入的部分字段值</returns>
+    /// <returns>返回插入的选择字段值</returns>
     IPostgreSqlUpdated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
     #endregion
 }
@@ -448,7 +448,7 @@ public interface IPostgreSqlBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<
     /// <returns>返回更新对象</returns>
     new IPostgreSqlBulkContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回更新对象</returns>
@@ -457,7 +457,7 @@ public interface IPostgreSqlBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<
 
     #region Or
     /// <summary>
-    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不可为null
+    /// 条件查询，并与已有的条件OR操作，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回更新对象</returns>
@@ -472,7 +472,7 @@ public interface IPostgreSqlBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<
     /// <returns>返回更新对象</returns>
     new IPostgreSqlBulkContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回更新对象</returns>
@@ -492,7 +492,7 @@ public interface IPostgreSqlBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldsSelector">返回字段名称列表</param>
-    /// <returns>返回插入的部分字段值</returns>
+    /// <returns>返回插入的选择字段值</returns>
     IPostgreSqlUpdated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
     #endregion
 }

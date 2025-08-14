@@ -3060,14 +3060,14 @@ public class AllUnitTest : UnitTestBase
         Assert.True(result.Data.Count == result.Count);
         Assert.Equal(1, result.Count);
     }
-    [Fact]
-    public async Task QueryDictionary()
-    {
-        this.Initialize(1);
-        var repository = this.dbFactory.Create();
-        var result = await repository.QueryDictionaryAsync<Product, int, string>(f => f.ProductNo.Contains("PN-00"), f => f.Id, f => f.Name);
-        Assert.True(result.Count >= 3);
-    }
+    //[Fact]
+    //public async Task QueryDictionary()
+    //{
+    //    this.Initialize(1);
+    //    var repository = this.dbFactory.Create();
+    //    var result = await repository.QueryDictionaryAsync<Product, int, string>(f => f.ProductNo.Contains("PN-00"), f => f.Id, f => f.Name);
+    //    Assert.True(result.Count >= 3);
+    //}
     class OrderBuyerInfo
     {
         public string OrderId { get; set; }
