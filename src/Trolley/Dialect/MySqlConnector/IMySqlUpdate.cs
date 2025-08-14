@@ -30,7 +30,7 @@ public interface IMySqlUpdate<TEntity> : IUpdate<TEntity>
     /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定TEntity表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回更新对象</returns>
     new IMySqlUpdate<TEntity> UseTableBy(params object[] fieldValues);   
     /// <summary>

@@ -27,13 +27,10 @@ public interface IUpdateVisitor : IDisposable
     void BuildMultiCommand(DbContext dbContext, ITheaCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
 
     void UseTable(bool isIncludeMany, params string[] tableNames);
-    void UseTable(bool isIncludeMany, Func<string, bool> tableNamePredicate);
+    void UseTableByRange(bool isIncludeMany, object[] fieldValues);
     void UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter);
     void UseTableMap(bool isIncludeMany, Type masterEntityType, Func<string, string, string, string> tableNameGetter);
-    void UseTableBy(bool isIncludeMany, params object[] fieldValues);    
-    void UseTableByRange(bool isIncludeMany, object beginFieldValue, object endFieldValue);
-    void UseTableByRange(bool isIncludeMany, object field1Value, object beginField2Value, object endField2Value);
-    void UseTableByRange(bool isIncludeMany, object field1Value, object field2Value, object beginField3Value, object endField3Value);
+    void UseTableBy(bool isIncludeMany, params object[] fieldValues);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
     void Join(string joinType, Type entityType, Expression joinOn);

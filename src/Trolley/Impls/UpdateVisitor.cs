@@ -318,6 +318,21 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             shardingSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
         };
         var tableName = tableSegment.Mapper.TableName;
+        if (tableSegment.IsSharding)
+        {
+            if (this.ShardingTables != null && this.ShardingTables.Count > 0)
+            {
+                if (this.ShardingTables[0].TableNames.Count == 0)
+                    throw new NotSupportedException("ShardingTables中没有表名，请先设置ShardingTables");
+                if (this.ShardingTables[0].TableNames.Count > 1)
+                    throw new NotSupportedException("ShardingTables中有多个表名，请使用SetShardingTables方法设置ShardingTables");
+            }
+            else
+            {
+                this.ShardingTables = new List<TableSegment> { tableSegment };
+                tableName = this.ShardingTables[0].TableNames[0];
+            }
+        }
         return (updateObjs, bulkCount, tableName, fixedParametersSetter, firstSqlSetter, sqlSetter, null);
     }
     public virtual void Join(string joinType, Type entityType, Expression joinOn)

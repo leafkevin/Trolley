@@ -203,11 +203,6 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
-    public virtual IQuery<T> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(false, tableNamePredicate);
-        return this;
-    }
     public virtual IQuery<T> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
@@ -215,17 +210,17 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     public virtual IQuery<T> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
         return this;
     }
     public virtual IQuery<T> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
         return this;
     }
     public virtual IQuery<T> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
+        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
         return this;
     }
     #endregion

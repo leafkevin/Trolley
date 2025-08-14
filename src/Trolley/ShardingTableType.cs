@@ -11,19 +11,11 @@ public enum ShardingTableType : byte
     /// </summary>
     SingleTable,
     /// <summary>
-    /// 指定多个分表
+    /// 多分表，首个多分表为主分表
     /// </summary>
     MultiTable,
     /// <summary>
-    /// 范围区间表，通常是时间分表场景
+    /// 映射表，与首个多分表的进行表名映射的表，可能是一个或是多个分表
     /// </summary>
-    TableRange,
-    /// <summary>
-    /// 主表表达式条件过滤
-    /// </summary>
-    MasterFilter,
-    /// <summary>
-    /// 从表表名映射
-    /// </summary>
-    SubordinateMap
+    TableMap
 }

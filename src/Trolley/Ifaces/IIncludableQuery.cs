@@ -22,31 +22,23 @@ public interface IIncludableQuery<T, TMember> : IIncludableQueryBase, IQuery<T>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定TMember表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T, TMember> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前TMember表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前TMember表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前TMember表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据首个分表TMasterSharding表与当前TMember表名的映射关系，指定当前TMember表分表名获取委托，执行委托获取当前TMember表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前TMember表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前TMember表分表名称，如：
     /// <code>
-    /// repository.From&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .Include(f =&gt; f.Buyer)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    /// .From&lt;Order&gt;()
+    /// .UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .Include(f =&gt; f.Buyer)
+    /// .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// })
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a LEFT JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -55,39 +47,37 @@ public interface IIncludableQuery<T, TMember> : IIncludableQueryBase, IQuery<T>
     /// </summary>
     /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前TMember表分表名获取委托</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定TMember表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定TMember表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T, TMember> UseTableBy(params object[] fieldValues);
-    //// <summary>
-    /// 根据1个字段范围值，手动指定TMember表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// <summary>
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
     /// <param name="beginField3Value">字段3范围起始值</param>
     /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
@@ -96,7 +86,7 @@ public interface IIncludableQuery<T, TMember> : IIncludableQueryBase, IQuery<T>
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T, TMember> UseTableSchema(string tableSchema);
     #endregion
 
@@ -113,7 +103,7 @@ public interface IIncludableQuery<T, TMember> : IIncludableQueryBase, IQuery<T>
     /// </summary>
     /// <typeparam name="TNavigation">导航属性实体类型</typeparam>
     /// <param name="member">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member);
     /// <summary>
     /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -122,13 +112,12 @@ public interface IIncludableQuery<T, TMember> : IIncludableQueryBase, IQuery<T>
     /// repository.From&lt;User&gt;()
     ///   .IncludeMany(f =&gt; f.Orders)
     ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
     /// <param name="member">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T, TElement> ThenIncludeMany<TElement>(Expression<Func<TMember, IEnumerable<TElement>>> member, Expression<Func<TElement, bool>> filter = null);
     #endregion
 }
@@ -142,31 +131,22 @@ public interface IIncludableQuery<T1, T2, TMember> : IIncludableQueryBase, IQuer
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定TMember表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, TMember> UseTable(params string[] tableNames);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, TMember> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前TMember表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前TMember表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前TMember表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据首个分表TMasterSharding表与当前TMember表名的映射关系，指定当前TMember表分表名获取委托，执行委托获取当前TMember表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前TMember表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前TMember表分表名称，如：
     /// <code>
-    /// repository.From&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .Include(f =&gt; f.Buyer)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// })
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a LEFT JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -174,41 +154,39 @@ public interface IIncludableQuery<T1, T2, TMember> : IIncludableQueryBase, IQuer
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前TMember表分表名获取委托</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    /// <param name="tableNameGetter">TMember表分表名获取委托</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定TMember表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定TMember表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, TMember> UseTableBy(params object[] fieldValues);
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, TMember> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定TMember表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
     /// <param name="beginField3Value">字段3范围起始值</param>
     /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -216,7 +194,7 @@ public interface IIncludableQuery<T1, T2, TMember> : IIncludableQueryBase, IQuer
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, TMember> UseTableSchema(string tableSchema);
     #endregion
 
@@ -233,7 +211,7 @@ public interface IIncludableQuery<T1, T2, TMember> : IIncludableQueryBase, IQuer
     /// </summary>
     /// <typeparam name="TNavigation">导航属性实体类型</typeparam>
     /// <param name="member">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member);
     /// <summary>
     /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -242,13 +220,12 @@ public interface IIncludableQuery<T1, T2, TMember> : IIncludableQueryBase, IQuer
     /// repository.From&lt;User&gt;()
     ///   .IncludeMany(f =&gt; f.Orders)
     ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
     /// <param name="member">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, TElement> ThenIncludeMany<TElement>(Expression<Func<TMember, IEnumerable<TElement>>> member, Expression<Func<TElement, bool>> filter = null);
     #endregion
 }
@@ -263,31 +240,22 @@ public interface IIncludableQuery<T1, T2, T3, TMember> : IIncludableQueryBase, I
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定TMember表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, TMember> UseTable(params string[] tableNames);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, TMember> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前TMember表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前TMember表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前TMember表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据首个分表TMasterSharding表与当前TMember表名的映射关系，指定当前TMember表分表名获取委托，执行委托获取当前TMember表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前TMember表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前TMember表分表名称，如：
     /// <code>
-    /// repository.From&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .Include(f =&gt; f.Buyer)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// })
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a LEFT JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -295,41 +263,39 @@ public interface IIncludableQuery<T1, T2, T3, TMember> : IIncludableQueryBase, I
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前TMember表分表名获取委托</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    /// <param name="tableNameGetter">TMember表分表名获取委托</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定TMember表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定TMember表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, TMember> UseTableBy(params object[] fieldValues);
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, TMember> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定TMember表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
     /// <param name="beginField3Value">字段3范围起始值</param>
     /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -337,7 +303,7 @@ public interface IIncludableQuery<T1, T2, T3, TMember> : IIncludableQueryBase, I
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, TMember> UseTableSchema(string tableSchema);
     #endregion
 
@@ -354,7 +320,7 @@ public interface IIncludableQuery<T1, T2, T3, TMember> : IIncludableQueryBase, I
     /// </summary>
     /// <typeparam name="TNavigation">导航属性实体类型</typeparam>
     /// <param name="member">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member);
     /// <summary>
     /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -363,13 +329,12 @@ public interface IIncludableQuery<T1, T2, T3, TMember> : IIncludableQueryBase, I
     /// repository.From&lt;User&gt;()
     ///   .IncludeMany(f =&gt; f.Orders)
     ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
     /// <param name="member">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, TElement> ThenIncludeMany<TElement>(Expression<Func<TMember, IEnumerable<TElement>>> member, Expression<Func<TElement, bool>> filter = null);
     #endregion
 }
@@ -385,31 +350,22 @@ public interface IIncludableQuery<T1, T2, T3, T4, TMember> : IIncludableQueryBas
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定TMember表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, TMember> UseTable(params string[] tableNames);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, TMember> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前TMember表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前TMember表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前TMember表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据首个分表TMasterSharding表与当前TMember表名的映射关系，指定当前TMember表分表名获取委托，执行委托获取当前TMember表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前TMember表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前TMember表分表名称，如：
     /// <code>
-    /// repository.From&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .Include(f =&gt; f.Buyer)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// })
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a LEFT JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -417,41 +373,39 @@ public interface IIncludableQuery<T1, T2, T3, T4, TMember> : IIncludableQueryBas
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前TMember表分表名获取委托</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    /// <param name="tableNameGetter">TMember表分表名获取委托</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定TMember表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定TMember表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, TMember> UseTableBy(params object[] fieldValues);
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, TMember> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定TMember表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
     /// <param name="beginField3Value">字段3范围起始值</param>
     /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -459,7 +413,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, TMember> : IIncludableQueryBas
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, TMember> UseTableSchema(string tableSchema);
     #endregion
 
@@ -476,7 +430,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, TMember> : IIncludableQueryBas
     /// </summary>
     /// <typeparam name="TNavigation">导航属性实体类型</typeparam>
     /// <param name="member">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member);
     /// <summary>
     /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -485,13 +439,12 @@ public interface IIncludableQuery<T1, T2, T3, T4, TMember> : IIncludableQueryBas
     /// repository.From&lt;User&gt;()
     ///   .IncludeMany(f =&gt; f.Orders)
     ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
     /// <param name="member">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, TElement> ThenIncludeMany<TElement>(Expression<Func<TMember, IEnumerable<TElement>>> member, Expression<Func<TElement, bool>> filter = null);
     #endregion
 }
@@ -508,31 +461,22 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, TMember> : IIncludableQuer
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定TMember表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTable(params string[] tableNames);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前TMember表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前TMember表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前TMember表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据首个分表TMasterSharding表与当前TMember表名的映射关系，指定当前TMember表分表名获取委托，执行委托获取当前TMember表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前TMember表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前TMember表分表名称，如：
     /// <code>
-    /// repository.From&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .Include(f =&gt; f.Buyer)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// })
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a LEFT JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -540,41 +484,39 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, TMember> : IIncludableQuer
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前TMember表分表名获取委托</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    /// <param name="tableNameGetter">TMember表分表名获取委托</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定TMember表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定TMember表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableBy(params object[] fieldValues);
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定TMember表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
     /// <param name="beginField3Value">字段3范围起始值</param>
     /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -582,7 +524,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, TMember> : IIncludableQuer
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableSchema(string tableSchema);
     #endregion
 
@@ -599,7 +541,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, TMember> : IIncludableQuer
     /// </summary>
     /// <typeparam name="TNavigation">导航属性实体类型</typeparam>
     /// <param name="member">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member);
     /// <summary>
     /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -608,13 +550,12 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, TMember> : IIncludableQuer
     /// repository.From&lt;User&gt;()
     ///   .IncludeMany(f =&gt; f.Orders)
     ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
     /// <param name="member">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, TElement> ThenIncludeMany<TElement>(Expression<Func<TMember, IEnumerable<TElement>>> member, Expression<Func<TElement, bool>> filter = null);
     #endregion
 }
@@ -632,31 +573,22 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IIncludable
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定TMember表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTable(params string[] tableNames);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前TMember表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前TMember表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前TMember表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据首个分表TMasterSharding表与当前TMember表名的映射关系，指定当前TMember表分表名获取委托，执行委托获取当前TMember表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前TMember表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前TMember表分表名称，如：
     /// <code>
-    /// repository.From&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .Include(f =&gt; f.Buyer)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// })
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a LEFT JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -664,41 +596,39 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IIncludable
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前TMember表分表名获取委托</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    /// <param name="tableNameGetter">TMember表分表名获取委托</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定TMember表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定TMember表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableBy(params object[] fieldValues);
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定TMember表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
     /// <param name="beginField3Value">字段3范围起始值</param>
     /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -706,7 +636,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IIncludable
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableSchema(string tableSchema);
     #endregion
 
@@ -723,7 +653,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IIncludable
     /// </summary>
     /// <typeparam name="TNavigation">导航属性实体类型</typeparam>
     /// <param name="member">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member);
     /// <summary>
     /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -732,13 +662,12 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IIncludable
     /// repository.From&lt;User&gt;()
     ///   .IncludeMany(f =&gt; f.Orders)
     ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
     /// <param name="member">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, TElement> ThenIncludeMany<TElement>(Expression<Func<TMember, IEnumerable<TElement>>> member, Expression<Func<TElement, bool>> filter = null);
     #endregion
 }
@@ -757,31 +686,22 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : IInclud
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定TMember表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTable(params string[] tableNames);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前TMember表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前TMember表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前TMember表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据首个分表TMasterSharding表与当前TMember表名的映射关系，指定当前TMember表分表名获取委托，执行委托获取当前TMember表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前TMember表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前TMember表分表名称，如：
     /// <code>
-    /// repository.From&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .Include(f =&gt; f.Buyer)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// })
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a LEFT JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -789,41 +709,39 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : IInclud
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前TMember表分表名获取委托</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    /// <param name="tableNameGetter">TMember表分表名获取委托</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定TMember表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定TMember表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableBy(params object[] fieldValues);
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定TMember表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
     /// <param name="beginField3Value">字段3范围起始值</param>
     /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -831,7 +749,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : IInclud
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableSchema(string tableSchema);
     #endregion
 
@@ -848,7 +766,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : IInclud
     /// </summary>
     /// <typeparam name="TNavigation">导航属性实体类型</typeparam>
     /// <param name="member">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member);
     /// <summary>
     /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -857,13 +775,12 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : IInclud
     /// repository.From&lt;User&gt;()
     ///   .IncludeMany(f =&gt; f.Orders)
     ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
     /// <param name="member">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElement> ThenIncludeMany<TElement>(Expression<Func<TMember, IEnumerable<TElement>>> member, Expression<Func<TElement, bool>> filter = null);
     #endregion
 }
@@ -883,31 +800,22 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : IIn
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定TMember表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTable(params string[] tableNames);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前TMember表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前TMember表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前TMember表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据首个分表TMasterSharding表与当前TMember表名的映射关系，指定当前TMember表分表名获取委托，执行委托获取当前TMember表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前TMember表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前TMember表分表名称，如：
     /// <code>
-    /// repository.From&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .Include(f =&gt; f.Buyer)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// })
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a LEFT JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -915,41 +823,39 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : IIn
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前TMember表分表名获取委托</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    /// <param name="tableNameGetter">TMember表分表名获取委托</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定TMember表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定TMember表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableBy(params object[] fieldValues);
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定TMember表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
     /// <param name="beginField3Value">字段3范围起始值</param>
     /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -957,7 +863,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : IIn
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableSchema(string tableSchema);
     #endregion
 
@@ -974,7 +880,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : IIn
     /// </summary>
     /// <typeparam name="TNavigation">导航属性实体类型</typeparam>
     /// <param name="member">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member);
     /// <summary>
     /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -983,13 +889,12 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : IIn
     /// repository.From&lt;User&gt;()
     ///   .IncludeMany(f =&gt; f.Orders)
     ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
     /// <param name="member">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElement> ThenIncludeMany<TElement>(Expression<Func<TMember, IEnumerable<TElement>>> member, Expression<Func<TElement, bool>> filter = null);
     #endregion
 }
@@ -1010,31 +915,22 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> :
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定TMember表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTable(params string[] tableNames);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前TMember表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前TMember表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前TMember表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据首个分表TMasterSharding表与当前TMember表名的映射关系，指定当前TMember表分表名获取委托，执行委托获取当前TMember表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前TMember表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前TMember表分表名称，如：
     /// <code>
-    /// repository.From&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .Include(f =&gt; f.Buyer)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// })
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a LEFT JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -1042,41 +938,39 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> :
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前TMember表分表名获取委托</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    /// <param name="tableNameGetter">TMember表分表名获取委托</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定TMember表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定TMember表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableBy(params object[] fieldValues);
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定TMember表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
     /// <param name="beginField3Value">字段3范围起始值</param>
     /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -1084,7 +978,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> :
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableSchema(string tableSchema);
     #endregion
 
@@ -1101,7 +995,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> :
     /// </summary>
     /// <typeparam name="TNavigation">导航属性实体类型</typeparam>
     /// <param name="member">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member);
     /// <summary>
     /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -1110,13 +1004,12 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> :
     /// repository.From&lt;User&gt;()
     ///   .IncludeMany(f =&gt; f.Orders)
     ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
     /// <param name="member">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElement> ThenIncludeMany<TElement>(Expression<Func<TMember, IEnumerable<TElement>>> member, Expression<Func<TElement, bool>> filter = null);
     #endregion
 }
@@ -1138,31 +1031,22 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMemb
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定TMember表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTable(params string[] tableNames);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前TMember表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前TMember表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前TMember表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据首个分表TMasterSharding表与当前TMember表名的映射关系，指定当前TMember表分表名获取委托，执行委托获取当前TMember表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前TMember表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前TMember表分表名称，如：
     /// <code>
-    /// repository.From&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .Include(f =&gt; f.Buyer)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// })
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a LEFT JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -1170,41 +1054,39 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMemb
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前TMember表分表名获取委托</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    /// <param name="tableNameGetter">TMember表分表名获取委托</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定TMember表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定TMember表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableBy(params object[] fieldValues);
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定TMember表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
     /// <param name="beginField3Value">字段3范围起始值</param>
     /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -1212,7 +1094,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMemb
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableSchema(string tableSchema);
     #endregion
 
@@ -1229,7 +1111,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMemb
     /// </summary>
     /// <typeparam name="TNavigation">导航属性实体类型</typeparam>
     /// <param name="member">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member);
     /// <summary>
     /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -1238,13 +1120,12 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMemb
     /// repository.From&lt;User&gt;()
     ///   .IncludeMany(f =&gt; f.Orders)
     ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
     /// <param name="member">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElement> ThenIncludeMany<TElement>(Expression<Func<TMember, IEnumerable<TElement>>> member, Expression<Func<TElement, bool>> filter = null);
     #endregion
 }
@@ -1267,31 +1148,22 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定TMember表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTable(params string[] tableNames);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前TMember表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前TMember表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前TMember表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据首个分表TMasterSharding表与当前TMember表名的映射关系，指定当前TMember表分表名获取委托，执行委托获取当前TMember表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前TMember表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前TMember表分表名称，如：
     /// <code>
-    /// repository.From&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .Include(f =&gt; f.Buyer)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// })
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a LEFT JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -1299,41 +1171,39 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前TMember表分表名获取委托</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    /// <param name="tableNameGetter">TMember表分表名获取委托</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定TMember表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定TMember表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableBy(params object[] fieldValues);
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定TMember表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
     /// <param name="beginField3Value">字段3范围起始值</param>
     /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -1341,7 +1211,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableSchema(string tableSchema);
     #endregion
 
@@ -1358,7 +1228,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// </summary>
     /// <typeparam name="TNavigation">导航属性实体类型</typeparam>
     /// <param name="member">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member);
     /// <summary>
     /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -1367,13 +1237,12 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// repository.From&lt;User&gt;()
     ///   .IncludeMany(f =&gt; f.Orders)
     ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
     /// <param name="member">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElement> ThenIncludeMany<TElement>(Expression<Func<TMember, IEnumerable<TElement>>> member, Expression<Func<TElement, bool>> filter = null);
     #endregion
 }
@@ -1397,31 +1266,22 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定TMember表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTable(params string[] tableNames);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前TMember表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前TMember表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前TMember表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据首个分表TMasterSharding表与当前TMember表名的映射关系，指定当前TMember表分表名获取委托，执行委托获取当前TMember表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前TMember表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前TMember表分表名称，如：
     /// <code>
-    /// repository.From&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .Include(f =&gt; f.Buyer)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// })
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a LEFT JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -1429,41 +1289,39 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前TMember表分表名获取委托</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    /// <param name="tableNameGetter">TMember表分表名获取委托</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定TMember表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定TMember表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableBy(params object[] fieldValues);
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定TMember表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
     /// <param name="beginField3Value">字段3范围起始值</param>
     /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -1471,7 +1329,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableSchema(string tableSchema);
     #endregion
 
@@ -1488,7 +1346,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// </summary>
     /// <typeparam name="TNavigation">导航属性实体类型</typeparam>
     /// <param name="member">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member);
     /// <summary>
     /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -1497,13 +1355,12 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// repository.From&lt;User&gt;()
     ///   .IncludeMany(f =&gt; f.Orders)
     ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
     /// <param name="member">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElement> ThenIncludeMany<TElement>(Expression<Func<TMember, IEnumerable<TElement>>> member, Expression<Func<TElement, bool>> filter = null);
     #endregion
 }
@@ -1528,31 +1385,22 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定TMember表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTable(params string[] tableNames);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前TMember表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前TMember表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前TMember表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据首个分表TMasterSharding表与当前TMember表名的映射关系，指定当前TMember表分表名获取委托，执行委托获取当前TMember表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前TMember表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前TMember表分表名称，如：
     /// <code>
-    /// repository.From&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .Include(f =&gt; f.Buyer)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// })
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a LEFT JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -1560,41 +1408,39 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前TMember表分表名获取委托</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    /// <param name="tableNameGetter">TMember表分表名获取委托</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定TMember表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定TMember表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableBy(params object[] fieldValues);
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定TMember表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
     /// <param name="beginField3Value">字段3范围起始值</param>
     /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -1602,7 +1448,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableSchema(string tableSchema);
     #endregion
 
@@ -1619,7 +1465,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// </summary>
     /// <typeparam name="TNavigation">导航属性实体类型</typeparam>
     /// <param name="member">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member);
     /// <summary>
     /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -1628,13 +1474,12 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// repository.From&lt;User&gt;()
     ///   .IncludeMany(f =&gt; f.Orders)
     ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
     /// <param name="member">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElement> ThenIncludeMany<TElement>(Expression<Func<TMember, IEnumerable<TElement>>> member, Expression<Func<TElement, bool>> filter = null);
     #endregion
 }
@@ -1660,31 +1505,22 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定TMember表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTable(params string[] tableNames);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前TMember表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前TMember表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前TMember表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据首个分表TMasterSharding表与当前TMember表名的映射关系，指定当前TMember表分表名获取委托，执行委托获取当前TMember表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前TMember表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前TMember表分表名称，如：
     /// <code>
-    /// repository.From&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .Include(f =&gt; f.Buyer)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// })
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a LEFT JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -1692,41 +1528,39 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前TMember表分表名获取委托</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    /// <param name="tableNameGetter">TMember表分表名获取委托</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定TMember表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定TMember表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableBy(params object[] fieldValues);
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定TMember表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
     /// <param name="beginField3Value">字段3范围起始值</param>
     /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -1734,7 +1568,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableSchema(string tableSchema);
     #endregion
 
@@ -1751,7 +1585,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// </summary>
     /// <typeparam name="TNavigation">导航属性实体类型</typeparam>
     /// <param name="member">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member);
     /// <summary>
     /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -1760,13 +1594,12 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// repository.From&lt;User&gt;()
     ///   .IncludeMany(f =&gt; f.Orders)
     ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
     /// <param name="member">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElement> ThenIncludeMany<TElement>(Expression<Func<TMember, IEnumerable<TElement>>> member, Expression<Func<TElement, bool>> filter = null);
     #endregion
 }
@@ -1793,31 +1626,22 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定TMember表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTable(params string[] tableNames);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前TMember表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前TMember表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前TMember表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据首个分表TMasterSharding表与当前TMember表名的映射关系，指定当前TMember表分表名获取委托，执行委托获取当前TMember表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前TMember表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前TMember表分表名称，如：
     /// <code>
-    /// repository.From&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .Include(f =&gt; f.Buyer)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// })
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a LEFT JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
@@ -1825,41 +1649,39 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前TMember表分表名获取委托</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    /// <param name="tableNameGetter">TMember表分表名获取委托</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定TMember表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定TMember表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableBy(params object[] fieldValues);
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定TMember表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 手动指定分表范围规则参数值，手动指定TMember表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
     /// <param name="beginField3Value">字段3范围起始值</param>
     /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -1867,7 +1689,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableSchema(string tableSchema);
     #endregion
 
@@ -1884,7 +1706,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// </summary>
     /// <typeparam name="TNavigation">导航属性实体类型</typeparam>
     /// <param name="member">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member);
     /// <summary>
     /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -1893,13 +1715,12 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// repository.From&lt;User&gt;()
     ///   .IncludeMany(f =&gt; f.Orders)
     ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
     /// </code>
     /// </summary>
     /// <typeparam name="TElement">导航属性泛型类型</typeparam>
     /// <param name="member">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElement> ThenIncludeMany<TElement>(Expression<Func<TMember, IEnumerable<TElement>>> member, Expression<Func<TElement, bool>> filter = null);
     #endregion
 }

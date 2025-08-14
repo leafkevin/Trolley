@@ -27,14 +27,9 @@ public class Update<TEntity> : IUpdate<TEntity>
     #endregion
 
     #region Sharding
-    public virtual IUpdate<TEntity> UseTable(params string[] tableNames)
+    public virtual IUpdate<TEntity> UseTable(string tableName)
     {
-        this.Visitor.UseTable(false, tableNames);
-        return this;
-    }
-    public virtual IUpdate<TEntity> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(false, tableNamePredicate);
+        this.Visitor.UseTable(false, tableName);
         return this;
     }
     public virtual IUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
@@ -45,21 +40,6 @@ public class Update<TEntity> : IUpdate<TEntity>
     public virtual IUpdate<TEntity> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
-        return this;
-    }
-    public virtual IUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
-    {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
-        return this;
-    }
-    public virtual IUpdate<TEntity> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
-    {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
-        return this;
-    }
-    public virtual IUpdate<TEntity> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-    {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -751,45 +731,14 @@ public class UpdateJoin<TEntity, T1> : Updated<TEntity>, IUpdateJoin<TEntity, T1
     #endregion
 
     #region Sharding
-    public virtual IUpdateJoin<TEntity, T1> UseTable(params string[] tableNames)
+    public virtual IUpdateJoin<TEntity, T1> UseTable(string tableName)
     {
-        this.Visitor.UseTable(false, tableNames);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(false, tableNamePredicate);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
-    {
-        this.Visitor.UseTable(tableNameGetter);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-    {
-        var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(false, tableName);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1> UseTableByRange(object beginFieldValue, object endFieldValue)
-    {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
-    {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-    {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -981,45 +930,14 @@ public class UpdateJoin<TEntity, T1, T2> : Updated<TEntity>, IUpdateJoin<TEntity
     #endregion
 
     #region Sharding
-    public virtual IUpdateJoin<TEntity, T1, T2> UseTable(params string[] tableNames)
+    public virtual IUpdateJoin<TEntity, T1, T2> UseTable(string tableName)
     {
-        this.Visitor.UseTable(false, tableNames);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(false, tableNamePredicate);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
-    {
-        this.Visitor.UseTable(tableNameGetter);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-    {
-        var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(false, tableName);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2> UseTableByRange(object beginFieldValue, object endFieldValue)
-    {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
-    {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-    {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -1211,45 +1129,14 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateJoin<TEn
     #endregion
 
     #region Sharding
-    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTable(params string[] tableNames)
+    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTable(string tableName)
     {
-        this.Visitor.UseTable(false, tableNames);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(false, tableNamePredicate);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
-    {
-        this.Visitor.UseTable(tableNameGetter);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-    {
-        var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(false, tableName);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableByRange(object beginFieldValue, object endFieldValue)
-    {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
-    {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-    {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -1441,45 +1328,14 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateJoin
     #endregion
 
     #region Sharding
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTable(params string[] tableNames)
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTable(string tableName)
     {
-        this.Visitor.UseTable(false, tableNames);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(false, tableNamePredicate);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
-    {
-        this.Visitor.UseTable(tableNameGetter);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-    {
-        var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(false, tableName);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableByRange(object beginFieldValue, object endFieldValue)
-    {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
-    {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-    {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -1671,45 +1527,14 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdate
     #endregion
 
     #region Sharding
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTable(params string[] tableNames)
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTable(string tableName)
     {
-        this.Visitor.UseTable(false, tableNames);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(false, tableNamePredicate);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
-    {
-        this.Visitor.UseTable(tableNameGetter);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-    {
-        var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(false, tableName);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableByRange(object beginFieldValue, object endFieldValue)
-    {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
-    {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-    {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion

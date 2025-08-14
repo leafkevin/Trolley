@@ -42,12 +42,6 @@ public interface IFromCommand<T> : IFromCommand
     /// <returns>返回查询对象</returns>
     IFromCommand<T> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表分表名，参数是分表名称，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回查询对象</returns>
-    IFromCommand<T> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
@@ -577,12 +571,6 @@ public interface IFromCommand<T1, T2> : IFromCommand
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T2表分表名，参数是分表名称，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回查询对象</returns>
-    IFromCommand<T1, T2> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
     /// 根据首个分表TMasterSharding表与当前T2表名的映射关系，指定当前T2表分表名获取委托，执行委托获取当前T2表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前T2表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T2表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -1009,12 +997,6 @@ public interface IFromCommand<T1, T2, T3> : IFromCommand
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3> UseTable(params string[] tableNames);
-    /// <summary>
-    /// 使用表名断言确定T3表分表名，参数是分表名称，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回查询对象</returns>
-    IFromCommand<T1, T2, T3> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
     /// 根据首个分表TMasterSharding表与当前T3表名的映射关系，指定当前T3表分表名获取委托，执行委托获取当前T3表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前T3表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T3表分表名称，如：
     /// <code>
@@ -1443,12 +1425,6 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4> UseTable(params string[] tableNames);
-    /// <summary>
-    /// 使用表名断言确定T4表分表名，参数是分表名称，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回查询对象</returns>
-    IFromCommand<T1, T2, T3, T4> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
     /// 根据首个分表TMasterSharding表与当前T4表名的映射关系，指定当前T4表分表名获取委托，执行委托获取当前T4表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前T4表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T4表分表名称，如：
     /// <code>
@@ -1879,12 +1855,6 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4, T5> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T5表分表名，参数是分表名称，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回查询对象</returns>
-    IFromCommand<T1, T2, T3, T4, T5> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
     /// 根据首个分表TMasterSharding表与当前T5表名的映射关系，指定当前T5表分表名获取委托，执行委托获取当前T5表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前T5表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T5表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -2314,12 +2284,6 @@ public interface IFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4, T5, T6> UseTable(params string[] tableNames);
-    /// <summary>
-    /// 使用表名断言确定T6表分表名，参数是分表名称，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回查询对象</returns>
-    IFromCommand<T1, T2, T3, T4, T5, T6> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
     /// 根据首个分表TMasterSharding表与当前T6表名的映射关系，指定当前T6表分表名获取委托，执行委托获取当前T6表分表名。委托第一个参数是TMasterSharding主表原始表名，第二个参数是当前T6表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T6表分表名称，如：
     /// <code>

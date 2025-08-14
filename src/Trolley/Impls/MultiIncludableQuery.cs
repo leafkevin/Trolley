@@ -24,11 +24,6 @@ public class MultiIncludableQuery<T, TMember> : MultiQuery<T>, IMultiIncludableQ
         this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
-    public new IMultiIncludableQuery<T, TMember> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
-        return this;
-    }
     public new IMultiIncludableQuery<T, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
@@ -42,17 +37,17 @@ public class MultiIncludableQuery<T, TMember> : MultiQuery<T>, IMultiIncludableQ
     }
     public new IMultiIncludableQuery<T, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
         return this;
     }
     public new IMultiIncludableQuery<T, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
         return this;
     }
     public new IMultiIncludableQuery<T, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
+        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
         return this;
     }
     #endregion
@@ -98,11 +93,6 @@ public class MultiIncludableQuery<T1, T2, TMember> : MultiQuery<T1, T2>, IMultiI
         this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
-    public new IMultiIncludableQuery<T1, T2, TMember> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
-        return this;
-    }
     public new IMultiIncludableQuery<T1, T2, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
@@ -116,17 +106,17 @@ public class MultiIncludableQuery<T1, T2, TMember> : MultiQuery<T1, T2>, IMultiI
     }
     public new IMultiIncludableQuery<T1, T2, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
+        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
         return this;
     }
     #endregion
@@ -172,11 +162,6 @@ public class MultiIncludableQuery<T1, T2, T3, TMember> : MultiQuery<T1, T2, T3>,
         this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
-    public new IMultiIncludableQuery<T1, T2, T3, TMember> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
-        return this;
-    }
     public new IMultiIncludableQuery<T1, T2, T3, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
@@ -190,17 +175,17 @@ public class MultiIncludableQuery<T1, T2, T3, TMember> : MultiQuery<T1, T2, T3>,
     }
     public new IMultiIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
+        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
         return this;
     }
     #endregion
@@ -246,11 +231,6 @@ public class MultiIncludableQuery<T1, T2, T3, T4, TMember> : MultiQuery<T1, T2, 
         this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
-    public new IMultiIncludableQuery<T1, T2, T3, T4, TMember> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
-        return this;
-    }
     public new IMultiIncludableQuery<T1, T2, T3, T4, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
@@ -264,17 +244,17 @@ public class MultiIncludableQuery<T1, T2, T3, T4, TMember> : MultiQuery<T1, T2, 
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
+        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
         return this;
     }
     #endregion
@@ -320,11 +300,6 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, TMember> : MultiQuery<T1, 
         this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
-    public new IMultiIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
-        return this;
-    }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
@@ -338,17 +313,17 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, TMember> : MultiQuery<T1, 
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
+        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
         return this;
     }
     #endregion
@@ -394,11 +369,6 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : MultiQuery<
         this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
-    public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
-        return this;
-    }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
@@ -412,17 +382,17 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : MultiQuery<
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
+        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
         return this;
     }
     #endregion
@@ -468,11 +438,6 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : MultiQu
         this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
-    public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
-        return this;
-    }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
@@ -486,17 +451,17 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : MultiQu
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
+        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
         return this;
     }
     #endregion
@@ -542,11 +507,6 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : Mul
         this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
-    public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
-        return this;
-    }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
@@ -560,17 +520,17 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : Mul
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
+        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
         return this;
     }
     #endregion
@@ -616,11 +576,6 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> :
         this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
-    public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
-        return this;
-    }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
@@ -634,17 +589,17 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> :
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
+        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
         return this;
     }
     #endregion
@@ -690,11 +645,6 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMemb
         this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
-    public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
-        return this;
-    }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
@@ -708,17 +658,17 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMemb
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
+        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
         return this;
     }
     #endregion
@@ -764,11 +714,6 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
         this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
-    public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
-        return this;
-    }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
@@ -782,17 +727,17 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
+        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
         return this;
     }
     #endregion
@@ -838,11 +783,6 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
         this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
-    public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
-        return this;
-    }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
@@ -856,17 +796,17 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
+        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
         return this;
     }
     #endregion
@@ -912,11 +852,6 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
         this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
-    public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
-        return this;
-    }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
@@ -930,17 +865,17 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
+        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
         return this;
     }
     #endregion
@@ -986,11 +921,6 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
         this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
-    public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
-        return this;
-    }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
@@ -1004,17 +934,17 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
+        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
         return this;
     }
     #endregion
@@ -1060,11 +990,6 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
         this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
-    public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
-        return this;
-    }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
@@ -1078,17 +1003,17 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
         return this;
     }
     public new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
+        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
         return this;
     }
     #endregion

@@ -12,78 +12,17 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T1表分表名执行更新，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定T1表分表名，完整的表名，如：.UseTable("sys_order_202001")
     /// </summary>
-    /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
+    /// <param name="tableName">分表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> UseTable(params string[] tableNames);
+    IUpdateJoin<TEntity, T1> UseTable(string tableName);
     /// <summary>
-    /// 使用表名断言确定T1表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 手动指定分表规则参数值，执行分表规则确定T1表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 手动设置分表名获取委托，通常是根据某1个或多个字段值来确定分表名，执行时会根据实体字段的值自动更新对应的分表中，单条和批量更新均可使用，常用于批量操作。
-    /// </summary>
-    /// <typeparam name="TUpdateObj">更新的实体类型</typeparam>
-    /// <param name="tableNameGetter">分表名获取委托</param>
-    /// <exception cref="ArgumentNullException"></exception>
-    IUpdateJoin<TEntity, T1> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前Join表分表名的映射关系，设置当前Join表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前Join表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前Join表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
-    /// SQL:
-    /// UPDATE `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前Join表分表名获取委托</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
-    /// <summary>
-    /// 根据字段值，手动指定T1表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
-    /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1> UseTableBy(params object[] fieldValues);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定T1表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)，//时间分表，最近一周的订单
-    /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> UseTableByRange(object beginFieldValue, object endFieldValue);
-    /// <summary>
-    /// 根据1个固定字段值和1个字段范围值，手动指定T1表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1最近一周的订单
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="beginField2Value">字段2范围起始值</param>
-    /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
-    /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T1表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, 6, DateTime.Now.AddDays(-7), DateTime.Now)//商户+产品+时间分表，商户1，产品6，最近一周的订单
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="beginField3Value">字段3开始起始值</param>
-    /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -281,8 +220,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1> Where(Expression<Func<TEntity, T1, bool>> predicate);
     /// <summary>
-    /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+    /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -305,8 +243,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1> And(Expression<Func<TEntity, T1, bool>> predicate);
     /// <summary>
-    /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+    /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -329,8 +266,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1> Or(Expression<Func<TEntity, T1, bool>> predicate);
     /// <summary>
-    /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+    /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -355,78 +291,17 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T2表分表名执行更新，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定T2表分表名，完整的表名，如：.UseTable("sys_order_202001")
     /// </summary>
-    /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
+    /// <param name="tableName">分表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> UseTable(params string[] tableNames);
+    IUpdateJoin<TEntity, T1, T2> UseTable(string tableName);
     /// <summary>
-    /// 使用表名断言确定T2表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 手动指定分表规则参数值，执行分表规则确定T2表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 手动设置分表名获取委托，通常是根据某1个或多个字段值来确定分表名，执行时会根据实体字段的值自动更新对应的分表中，单条和批量更新均可使用，常用于批量操作。
-    /// </summary>
-    /// <typeparam name="TUpdateObj">更新的实体类型</typeparam>
-    /// <param name="tableNameGetter">分表名获取委托</param>
-    /// <exception cref="ArgumentNullException"></exception>
-    IUpdateJoin<TEntity, T1, T2> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前Join表分表名的映射关系，设置当前Join表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前Join表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前Join表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
-    /// SQL:
-    /// UPDATE `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前Join表分表名获取委托</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
-    /// <summary>
-    /// 根据字段值，手动指定T2表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
-    /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2> UseTableBy(params object[] fieldValues);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定T2表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)，//时间分表，最近一周的订单
-    /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> UseTableByRange(object beginFieldValue, object endFieldValue);
-    /// <summary>
-    /// 根据1个固定字段值和1个字段范围值，手动指定T2表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1最近一周的订单
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="beginField2Value">字段2范围起始值</param>
-    /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
-    /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T2表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, 6, DateTime.Now.AddDays(-7), DateTime.Now)//商户+产品+时间分表，商户1，产品6，最近一周的订单
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="beginField3Value">字段3开始起始值</param>
-    /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -624,8 +499,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2> Where(Expression<Func<TEntity, T1, T2, bool>> predicate);
     /// <summary>
-    /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+    /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -648,8 +522,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2> And(Expression<Func<TEntity, T1, T2, bool>> predicate);
     /// <summary>
-    /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+    /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -672,8 +545,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2> Or(Expression<Func<TEntity, T1, T2, bool>> predicate);
     /// <summary>
-    /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+    /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -699,78 +571,17 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T3表分表名执行更新，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定T3表分表名，完整的表名，如：.UseTable("sys_order_202001")
     /// </summary>
-    /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
+    /// <param name="tableName">分表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> UseTable(params string[] tableNames);
+    IUpdateJoin<TEntity, T1, T2, T3> UseTable(string tableName);
     /// <summary>
-    /// 使用表名断言确定T3表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 手动指定分表规则参数值，执行分表规则确定T3表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 手动设置分表名获取委托，通常是根据某1个或多个字段值来确定分表名，执行时会根据实体字段的值自动更新对应的分表中，单条和批量更新均可使用，常用于批量操作。
-    /// </summary>
-    /// <typeparam name="TUpdateObj">更新的实体类型</typeparam>
-    /// <param name="tableNameGetter">分表名获取委托</param>
-    /// <exception cref="ArgumentNullException"></exception>
-    IUpdateJoin<TEntity, T1, T2, T3> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前Join表分表名的映射关系，设置当前Join表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前Join表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前Join表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
-    /// SQL:
-    /// UPDATE `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前Join表分表名获取委托</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
-    /// <summary>
-    /// 根据字段值，手动指定T3表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
-    /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3> UseTableBy(params object[] fieldValues);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定T3表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)，//时间分表，最近一周的订单
-    /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> UseTableByRange(object beginFieldValue, object endFieldValue);
-    /// <summary>
-    /// 根据1个固定字段值和1个字段范围值，手动指定T3表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1最近一周的订单
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="beginField2Value">字段2范围起始值</param>
-    /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
-    /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T3表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, 6, DateTime.Now.AddDays(-7), DateTime.Now)//商户+产品+时间分表，商户1，产品6，最近一周的订单
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="beginField3Value">字段3开始起始值</param>
-    /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -968,8 +779,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3> Where(Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
     /// <summary>
-    /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+    /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -992,8 +802,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3> And(Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
     /// <summary>
-    /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+    /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -1016,8 +825,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3> Or(Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
     /// <summary>
-    /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+    /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -1044,78 +852,17 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T4表分表名执行更新，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定T4表分表名，完整的表名，如：.UseTable("sys_order_202001")
     /// </summary>
-    /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
+    /// <param name="tableName">分表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> UseTable(params string[] tableNames);
+    IUpdateJoin<TEntity, T1, T2, T3, T4> UseTable(string tableName);
     /// <summary>
-    /// 使用表名断言确定T4表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 手动指定分表规则参数值，执行分表规则确定T4表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 手动设置分表名获取委托，通常是根据某1个或多个字段值来确定分表名，执行时会根据实体字段的值自动更新对应的分表中，单条和批量更新均可使用，常用于批量操作。
-    /// </summary>
-    /// <typeparam name="TUpdateObj">更新的实体类型</typeparam>
-    /// <param name="tableNameGetter">分表名获取委托</param>
-    /// <exception cref="ArgumentNullException"></exception>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前Join表分表名的映射关系，设置当前Join表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前Join表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前Join表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
-    /// SQL:
-    /// UPDATE `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前Join表分表名获取委托</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
-    /// <summary>
-    /// 根据字段值，手动指定T4表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
-    /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableBy(params object[] fieldValues);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定T4表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)，//时间分表，最近一周的订单
-    /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableByRange(object beginFieldValue, object endFieldValue);
-    /// <summary>
-    /// 根据1个固定字段值和1个字段范围值，手动指定T4表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1最近一周的订单
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="beginField2Value">字段2范围起始值</param>
-    /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
-    /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T4表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, 6, DateTime.Now.AddDays(-7), DateTime.Now)//商户+产品+时间分表，商户1，产品6，最近一周的订单
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="beginField3Value">字段3开始起始值</param>
-    /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -1313,8 +1060,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4> Where(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
     /// <summary>
-    /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+    /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -1337,8 +1083,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4> And(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
     /// <summary>
-    /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+    /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -1361,8 +1106,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4> Or(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
     /// <summary>
-    /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+    /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -1390,78 +1134,17 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T5表分表名执行更新，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定T5表分表名，完整的表名，如：.UseTable("sys_order_202001")
     /// </summary>
-    /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
+    /// <param name="tableName">分表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTable(params string[] tableNames);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTable(string tableName);
     /// <summary>
-    /// 使用表名断言确定T5表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 手动指定分表规则参数值，执行分表规则确定T5表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 手动设置分表名获取委托，通常是根据某1个或多个字段值来确定分表名，执行时会根据实体字段的值自动更新对应的分表中，单条和批量更新均可使用，常用于批量操作。
-    /// </summary>
-    /// <typeparam name="TUpdateObj">更新的实体类型</typeparam>
-    /// <param name="tableNameGetter">分表名获取委托</param>
-    /// <exception cref="ArgumentNullException"></exception>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前Join表分表名的映射关系，设置当前Join表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前Join表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前Join表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
-    /// SQL:
-    /// UPDATE `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前Join表分表名获取委托</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
-    /// <summary>
-    /// 根据字段值，手动指定T5表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
-    /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定T5表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)，//时间分表，最近一周的订单
-    /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableByRange(object beginFieldValue, object endFieldValue);
-    /// <summary>
-    /// 根据1个固定字段值和1个字段范围值，手动指定T5表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1最近一周的订单
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="beginField2Value">字段2范围起始值</param>
-    /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
-    /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T5表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, 6, DateTime.Now.AddDays(-7), DateTime.Now)//商户+产品+时间分表，商户1，产品6，最近一周的订单
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="beginField3Value">字段3开始起始值</param>
-    /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -1642,8 +1325,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
     /// <summary>
-    /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+    /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -1666,8 +1348,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> And(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
     /// <summary>
-    /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+    /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -1690,8 +1371,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Or(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
     /// <summary>
-    /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+    /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>

@@ -48,7 +48,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定T表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> UseTableBy(params object[] fieldValues);
     /// <summary>
@@ -671,7 +671,7 @@ public interface IPostgreSqlQuery<T1, T2> : IQuery<T1, T2>
     /// <summary>
     /// 根据字段值，手动指定T2表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2> UseTableBy(params object[] fieldValues);
     /// <summary>
@@ -1168,7 +1168,7 @@ public interface IPostgreSqlQuery<T1, T2, T3> : IQuery<T1, T2, T3>
     /// <summary>
     /// 根据字段值，手动指定T3表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3> UseTableBy(params object[] fieldValues);
     /// <summary>
@@ -1666,7 +1666,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     /// <summary>
     /// 根据字段值，手动指定T4表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4> UseTableBy(params object[] fieldValues);
     /// <summary>
@@ -2165,7 +2165,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T
     /// <summary>
     /// 根据字段值，手动指定T5表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues);
     /// <summary>
@@ -2665,7 +2665,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T
     /// <summary>
     /// 根据字段值，手动指定T6表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> UseTableBy(params object[] fieldValues);
     /// <summary>
@@ -3166,7 +3166,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T
     /// <summary>
     /// 根据字段值，手动指定T7表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> UseTableBy(params object[] fieldValues);
     /// <summary>
@@ -3668,7 +3668,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T
     /// <summary>
     /// 根据字段值，手动指定T8表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableBy(params object[] fieldValues);
     /// <summary>
@@ -4171,7 +4171,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T
     /// <summary>
     /// 根据字段值，手动指定T9表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableBy(params object[] fieldValues);
     /// <summary>
@@ -4675,7 +4675,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQu
     /// <summary>
     /// 根据字段值，手动指定T10表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableBy(params object[] fieldValues);
     /// <summary>
@@ -5180,7 +5180,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> 
     /// <summary>
     /// 根据字段值，手动指定T11表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableBy(params object[] fieldValues);
     /// <summary>
@@ -5686,7 +5686,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <summary>
     /// 根据字段值，手动指定T12表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableBy(params object[] fieldValues);
     /// <summary>
@@ -6193,7 +6193,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <summary>
     /// 根据字段值，手动指定T13表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableBy(params object[] fieldValues);
     /// <summary>
@@ -6701,7 +6701,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <summary>
     /// 根据字段值，手动指定T14表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableBy(params object[] fieldValues);
     /// <summary>
@@ -7210,7 +7210,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <summary>
     /// 根据字段值，手动指定T15表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableBy(params object[] fieldValues);
     /// <summary>
@@ -7720,7 +7720,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <summary>
     /// 根据字段值，手动指定T16表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValues">字段值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableBy(params object[] fieldValues);
     /// <summary>

@@ -32,11 +32,6 @@ public class Delete<TEntity> : IDelete<TEntity>
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
-    public virtual IDelete<TEntity> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(false, tableNamePredicate);
-        return this;
-    }
     public virtual IDelete<TEntity> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
@@ -44,17 +39,17 @@ public class Delete<TEntity> : IDelete<TEntity>
     }
     public virtual IDelete<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
         return this;
     }
     public virtual IDelete<TEntity> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
         return this;
     }
     public virtual IDelete<TEntity> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
+        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
         return this;
     }
     #endregion
@@ -68,17 +63,17 @@ public class Delete<TEntity> : IDelete<TEntity>
     #endregion
 
     #region Where
-    public virtual IContinuedDelete<TEntity> Where(object keys)
+    public virtual IDelete<TEntity> Where(object keys)
     {
         if (keys == null)
             throw new ArgumentNullException(nameof(keys));
 
         this.Visitor.WhereWith(keys);
-        return this.OrmProvider.NewContinuedDelete<TEntity>(this.DbContext, this.Visitor);
+        return this;
     }
-    public virtual IContinuedDelete<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
+    public virtual IDelete<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.Where(true, predicate);
-    public virtual IContinuedDelete<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+    public virtual IDelete<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
     {
         if (condition)
         {
@@ -87,12 +82,54 @@ public class Delete<TEntity> : IDelete<TEntity>
             this.Visitor.Where(ifPredicate);
         }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
-        return this.OrmProvider.NewContinuedDelete<TEntity>(this.DbContext, this.Visitor);
+        return this;
     }
-    public virtual IContinuedDelete<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+    public virtual IDelete<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
     {
         var builder = new PredicateBuilder<TEntity>();
         return this.Where(predicateInitializer.Invoke(builder));
+    }
+    #endregion
+
+    #region And
+    public virtual IDelete<TEntity> And(Expression<Func<TEntity, bool>> predicate)
+        => this.And(true, predicate);
+    public virtual IDelete<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+    {
+        if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
+            this.Visitor.And(ifPredicate);
+        }
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
+        return this;
+    }
+    public virtual IDelete<TEntity> AndPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<TEntity>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
+    #endregion
+
+    #region Or
+    public virtual IDelete<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
+        => this.Or(true, predicate);
+    public virtual IDelete<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+    {
+        if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
+            this.Visitor.Or(ifPredicate);
+        }
+        else if (elsePredicate != null) this.Visitor.Or(elsePredicate);
+        return this;
+    }
+    public virtual IDelete<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<TEntity>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 }
@@ -170,53 +207,4 @@ public class Deleted<TEntity> : IDeleted<TEntity>
         return sql;
     }
     #endregion   
-}
-public class ContinuedDelete<TEntity> : Deleted<TEntity>, IContinuedDelete<TEntity>
-{
-    #region Constructor
-    public ContinuedDelete(DbContext dbContext, IDeleteVisitor visitor)
-        : base(dbContext, visitor) { }
-    #endregion
-
-    #region And
-    public virtual IContinuedDelete<TEntity> And(Expression<Func<TEntity, bool>> predicate)
-        => this.And(true, predicate);
-    public virtual IContinuedDelete<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
-    {
-        if (condition)
-        {
-            if (ifPredicate == null)
-                throw new ArgumentNullException(nameof(ifPredicate));
-            this.Visitor.And(ifPredicate);
-        }
-        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
-        return this;
-    }
-    public virtual IContinuedDelete<TEntity> AndPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<TEntity>();
-        return this.And(predicateInitializer.Invoke(builder));
-    }
-    #endregion
-
-    #region Or
-    public virtual IContinuedDelete<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
-        => this.Or(true, predicate);
-    public virtual IContinuedDelete<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
-    {
-        if (condition)
-        {
-            if (ifPredicate == null)
-                throw new ArgumentNullException(nameof(ifPredicate));
-            this.Visitor.Or(ifPredicate);
-        }
-        else if (elsePredicate != null) this.Visitor.Or(elsePredicate);
-        return this;
-    }
-    public virtual IContinuedDelete<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<TEntity>();
-        return this.Or(predicateInitializer.Invoke(builder));
-    }
-    #endregion
 }
