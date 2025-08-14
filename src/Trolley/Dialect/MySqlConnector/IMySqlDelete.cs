@@ -13,12 +13,6 @@ public interface IMySqlDelete<TEntity> : IDelete<TEntity>
     /// <returns>返回删除对象</returns>
     new IMySqlDelete<TEntity> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定TEntity表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回删除对象</returns>
-    new IMySqlDelete<TEntity> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定TEntity表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>

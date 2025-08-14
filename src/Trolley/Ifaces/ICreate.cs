@@ -33,7 +33,7 @@ public interface ICreate<TEntity>
     /// <returns>返回插入对象</returns>
     ICreate<TEntity> UseTable(string tableName);
     /// <summary>
-    /// 手动指定TEntity表分表名获取委托，执行委托获取分表名，在批量插入场景，插入对象的值自动插入对应分表中，此方法只适用批量场景。
+    /// 手动指定分表名获取委托，执行委托获取分表名，在批量插入场景，插入对象的值自动插入对应分表中，此方法只适用批量场景。
     /// 第一个参数是原始表名，第二个参数是插入的实体对象，返回值是分表名，如：.UseTable((tableName, insertObj) =&gt; $"{tableName}_{insertObj.CreatedAt:yyyyMM}")
     /// </summary>
     /// <typeparam name="TInsertObj">插入的实体类型</typeparam>
@@ -49,7 +49,7 @@ public interface ICreate<TEntity>
     #endregion
 
     #region UseTableSchema
-    /// <summary>
+	/// <summary>
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
@@ -81,9 +81,9 @@ public interface ICreate<TEntity>
 
     #region WithBulk
     /// <summary>
-    /// 批量插入,采用多表值方式，生成的SQL:
+    /// 批量插入，采用多表值方式，生成的SQL:
     /// <code>
-    /// INSERT INTO [sys_product] ([ProductNo],[Name], ...) VALUES (@ProductNo0,@Name0, ...),(@ProductNo1,@Name1, ...),(@ProductNo2,@Name2, ...)
+    /// INSERT INTO `sys_product` (`ProductNo`,`Name`, ...) VALUES (@ProductNo0,@Name0, ...),(@ProductNo1,@Name1, ...),(@ProductNo2,@Name2, ...)
     /// </code>
     /// </summary>
     /// <param name="insertObjs">插入的对象集合</param>
@@ -167,7 +167,7 @@ public interface ICreate<TEntity>
     /// 使用子查询subQuery作为创建子查询对象，子查询subQuery也可以是CTE表，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// repository.Create&lt;Menu&gt;(f =&gt; f.UseQuery(subQuery))
+    /// repository.Create&lt;Menu&gt;(f =&gt; f.UseQuery(subQuery)).Select( ... )
     /// repository.Create&lt;Menu&gt;(f =&gt; f.From&lt;Page, Menu&gt;('o').Where(...)...)
     /// SQL: INSERT INTO `sys_menu` SELECT ... FROM ( ... )
     /// </code>

@@ -8,13 +8,14 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 手动指定TEntity表分表名，如：.UseTable("sys_order_202001")
+    /// 手动指定分表名，如：.UseTable("sys_order_202001")
     /// </summary>
     /// <param name="tableName">完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回插入对象</returns>
     new IMySqlCreate<TEntity> UseTable(string tableName);
     /// <summary>
-    /// 手动指定TEntity表分表名获取委托，使用委托获取分表名，在批量插入场景，插入对象的值自动插入对应分表中，此方法只适用批量场景
+    /// 手动指定分表名获取委托，执行委托获取分表名，在批量插入场景，插入对象的值自动插入对应分表中，此方法只适用批量场景。
+    /// 第一个参数是原始表名，第二个参数是插入的实体对象，返回值是分表名，如：.UseTable((tableName, insertObj) =&gt; $"{tableName}_{insertObj.CreatedAt:yyyyMM}")
     /// </summary>
     /// <typeparam name="TInsertObj">插入的实体类型</typeparam>
     /// <param name="tableNameGetter">分表名获取委托</param>
@@ -29,6 +30,11 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     #endregion
 
     #region UseTableSchema
+	/// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
     new IMySqlCreate<TEntity> UseTableSchema(string tableSchema);
     #endregion
 
@@ -66,7 +72,7 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// <summary>
     /// 批量插入，采用多表值方式，生成的SQL:
     /// <code>
-    /// INSERT INTO [sys_product] ([ProductNo],[Name], ...) VALUES (@ProductNo0,@Name0, ...),(@ProductNo1,@Name1, ...),(@ProductNo2,@Name2, ...)
+    /// INSERT INTO `sys_product` (`ProductNo`,`Name`, ...) VALUES (@ProductNo0,@Name0, ...),(@ProductNo1,@Name1, ...),(@ProductNo2,@Name2, ...)
     /// </code>
     /// </summary>
     /// <param name="insertObjs">插入的对象集合</param>
