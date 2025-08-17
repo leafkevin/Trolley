@@ -29,7 +29,7 @@ public interface IRepository
 
     #region ShardingTableNames
     /// <summary>
-    /// 获取实体TEntity满足条件的所有分表名
+    /// 获取实体<typeparamref name="TEntity"/>满足条件的所有分表名
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="tableNameSelector">分表名选择表达式</param>
@@ -37,7 +37,7 @@ public interface IRepository
     /// <returns>返回满足条件的所有分表</returns>
     List<string> GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector = null, string tableSchema = null);
     /// <summary>
-    /// 获取实体TEntity满足条件的所有分表名
+    /// 获取实体<typeparamref name="TEntity"/>满足条件的所有分表名
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="tableNameSelector">分表名选择表达式</param>
@@ -46,7 +46,7 @@ public interface IRepository
     /// <returns>返回满足条件的所有分表</returns>
     Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector = null, string tableSchema = null, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 根据字段值确定TEntity表分表名，最多支持2个字段值
+    /// 根据字段值确定<typeparamref name="TEntity"/>表分表名，最多支持2个字段值
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="field1Value">字段1值</param>
@@ -72,7 +72,7 @@ public interface IRepository
     /// <returns></returns>
     Task CreateShardingTableAsync<TEntity>(string tableName, string tableSchema = null, string fromTableSchema = null, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 在当前数据库中创建实体TEntity的tableName分表，根据字段值确定TEntity表分表名，字段值的顺序与配置的字段顺序保持一致，表结构与实体TEntity相同并生成所有索引等信息
+    /// 在当前数据库中创建实体TEntity的tableName分表，根据字段值确定<typeparamref name="TEntity"/>表分表名，字段值的顺序与配置的字段顺序保持一致，表结构与实体TEntity相同并生成所有索引等信息
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="field1Value">字段1值</param>
@@ -81,7 +81,7 @@ public interface IRepository
     /// <param name="fromTableSchema">实体表所在的TableSchema，为null时是默认当前Schema</param>
     void CreateShardingTableBy<TEntity>(object field1Value, object field2Value = null, string tableSchema = null, string fromTableSchema = null);
     /// <summary>
-    /// 在当前数据库中创建实体TEntity的tableName分表，根据字段值确定TEntity表分表名，字段值的顺序与配置的字段顺序保持一致，表结构与实体TEntity相同并生成所有索引等信息
+    /// 在当前数据库中创建实体TEntity的tableName分表，根据字段值确定<typeparamref name="TEntity"/>表分表名，字段值的顺序与配置的字段顺序保持一致，表结构与实体TEntity相同并生成所有索引等信息
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="field1Value">字段1值</param>
@@ -115,11 +115,7 @@ public interface IRepository
 
     #region From
     /// <summary>
-    /// 从表T中查询数据，如：
-    /// <code>
-    /// repository.From&lt;Menu&gt;()
-    /// SQL:FROM `sys_menu`
-    /// </code>
+    /// 使用1个表创建查询对象
     /// </summary>
     /// <typeparam name="T">实体类型</typeparam>
     /// <param name="tableAsStart">表别名起始字母，默认从字母'a'开始</param>

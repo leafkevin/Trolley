@@ -67,6 +67,7 @@ public interface IQueryVisitor : ICloneable, IDisposable
     void UseTableByRange(bool isIncludeMany, object[] fieldValues);
     void UseTableMap(bool isIncludeMany, Type masterEntityType, Func<string, string, string, string> tableNameGetter);
     void UseTableBy(bool isIncludeMany, params object[] fieldValues);
+    void UseUnionShardingTable();
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
     void From(char tableAsStart = 'a', params Type[] entityTypes);

@@ -20,13 +20,13 @@ public interface IUpdate<TEntity>
 
     #region Sharding
     /// <summary>
-    /// 直接指定TEntity表分表名，完整的表名，如：.UseTable("sys_order_202001")
+    /// 直接指定表分表名，完整的表名，如：.UseTable("sys_order_202001")
     /// </summary>
     /// <param name="tableName">分表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回更新对象</returns>
     IUpdate<TEntity> UseTable(string tableName);
     /// <summary>
-    /// 手动指定TEntity表分表名获取委托，执行委托获取分表名，在批量更新场景，更新对象的值自动更新到对应分表中，此方法只适用批量场景。
+    /// 手动指定TEntity表分表名获取委托，执行委托获取分表名，更新到多个分表中，只用于批量场景。
     /// 第一个参数是原始表名，第二个参数是更新的实体对象，返回值是分表名，如：.UseTable((tableName, updateObj) =&gt; $"{tableName}_{updateObj.CreatedAt:yyyyMM}")
     /// </summary>
     /// <typeparam name="TUpdateObj">更新的实体类型</typeparam>

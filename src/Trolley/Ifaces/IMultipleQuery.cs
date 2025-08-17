@@ -16,7 +16,7 @@ public interface IMultipleQuery : IDisposable
 
     #region GetShardingTableNames
     /// <summary>
-    /// 获取实体TEntity满足条件的所有分表名
+    /// 获取实体<typeparamref name="TEntity"/>满足条件的所有分表名
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="tableNameSelector">分表名选择表达式</param>
@@ -24,7 +24,7 @@ public interface IMultipleQuery : IDisposable
     /// <returns>返回满足条件的所有分表</returns>
     IMultipleQuery GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector = null, string tableSchema = null);
     /// <summary>
-    /// 根据字段值确定TEntity表分表名，最多支持3个字段值，字段值的顺序与分表规则设置的顺序保持一致
+    /// 根据字段值确定<typeparamref name="TEntity"/>表分表名，最多支持3个字段值，字段值的顺序与分表规则设置的顺序保持一致
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="fieldValues">字段值数组，字段值的顺序与分表规则设置的顺序保持一致，不可为null</param>
@@ -34,11 +34,7 @@ public interface IMultipleQuery : IDisposable
 
     #region From
     /// <summary>
-    /// 从表T中查询数据，如：
-    /// <code>
-    /// f.From&lt;Menu&gt;()
-    /// SQL: FROM `sys_menu`
-    /// </code>
+    /// 使用1个表创建查询对象
     /// </summary>
     /// <typeparam name="T">实体类型</typeparam>
     /// <param name="tableAsStart">表别名起始字母，默认从字母'a'开始</param>

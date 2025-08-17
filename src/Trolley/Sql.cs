@@ -7,13 +7,14 @@ namespace Trolley;
 public static class Sql
 {
     /// <summary>
-    /// 使用原始SQL生成名一个字段，如：INSERT INTO XXX (...) VALUES(...) RETURNING myMethod(a.name,a.amount)+upper(a.order_no) as order_info
+    /// 原始SQL，可以做任何代码片段，解决Trolley无法完成的部分，可以是作为Select字段，Where条件，SQL函数调用，...任何位置的一部分，如：
+    /// .Select(f =&gt; new { RowNumber = Sql.Raw("ROW_NUMBER() OVER(ORDER BY e.CREATE_TIME DESC) AS RowNumber")})， .Returning(f =&gt; Sql.Raw&lt;string&gt;("myMethod(a.name,a.amount)+upper(a.order_no)")
     /// </summary>
-    /// <typeparam name="TField"></typeparam>
+    /// <typeparam name="T">类型</typeparam>
     /// <param name="rawSql"></param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    public static TField Raw<TField>(string rawSql) => throw new NotImplementedException();
+    public static T Raw<T>(string rawSql) => throw new NotImplementedException();
     public static TField Null<TField>() => throw new NotImplementedException();
     /// <summary>
     /// 用在修饰方法调用之后，表示前面的方法不做sql解析，当方法的参数从数据库读取后，再执行方法调用并把返回值赋值到对应的成员上，只做实体赋值解析，不实现

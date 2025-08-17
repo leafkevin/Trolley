@@ -23,7 +23,7 @@ public interface IMultipleQuery : IDisposable
 
     #region GetShardingTableNames
     /// <summary>
-    /// 获取实体TEntity满足条件的所有分表名
+    /// 获取实体<typeparamref name="TEntity"/>满足条件的所有分表名
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="tableNameSelector">分表名选择表达式</param>
@@ -34,11 +34,7 @@ public interface IMultipleQuery : IDisposable
 
     #region From
     /// <summary>
-    /// 从表T中查询数据，如：
-    /// <code>
-    /// f.From&lt;Menu&gt;()
-    /// SQL: FROM `sys_menu`
-    /// </code>
+    /// 使用1个表创建查询对象
     /// </summary>
     /// <typeparam name="T">实体类型</typeparam>
     /// <param name="tableAsStart">表别名起始字母，默认从字母'a'开始</param>

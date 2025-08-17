@@ -55,7 +55,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.BuildWithBulk(command);
                     Func<int, string> suffixGetter = index => this.IsMultiple ? $"_m{this.CommandIndex}{index}" : $"{index}";
 
-                    Action<object, int> sqlExecute = null;
+                    Action<object, int> sqlExecute = null; 
                     if (this.ShardingTables != null && this.ShardingTables.Count > 0)
                     {
                         sqlExecute = (updateObj, index) =>
@@ -322,10 +322,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         {
             if (this.ShardingTables != null && this.ShardingTables.Count > 0)
             {
-                if (this.ShardingTables[0].TableNames.Count == 0)
-                    throw new NotSupportedException("ShardingTables中没有表名，请先设置ShardingTables");
-                if (this.ShardingTables[0].TableNames.Count > 1)
-                    throw new NotSupportedException("ShardingTables中有多个表名，请使用SetShardingTables方法设置ShardingTables");
+                
             }
             else
             {

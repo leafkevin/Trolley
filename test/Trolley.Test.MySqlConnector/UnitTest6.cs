@@ -2089,4 +2089,18 @@ public class UnitTest6 : UnitTestBase
         repository.CreateShardingTableBy<OrderDetail>(tenantId, now);
         await repository.CreateShardingTableByAsync<OrderDetail>(tenantId, now.AddMonths(1));
     }
+    [Fact]
+    public async Task ManyShardingCountDistinct()
+    {
+        var repository = this.dbFactory.Create();
+        var result = repository.FromQuery(t=>t.From<User>()
+                .UseTableBy("sys_user_104", "sys_user_105")
+                .UseTable 
+                .Select(f => f.Id ).Distinct())
+            .CountAsync();
+            
+            .First();
+        Assert.NotNull(result);
+        Assert.Equal("104", result.TenantId);
+    }
 }

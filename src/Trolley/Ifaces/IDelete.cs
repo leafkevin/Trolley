@@ -26,6 +26,14 @@ public interface IDelete<TEntity>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回删除对象</returns>
     IDelete<TEntity> UseTableBy(params object[] fieldValues);
+    /// <summary>
+    /// 手动指定TEntity表分表名获取委托，执行委托获取分表名，删除多个分表中数据，只用于批量场景。
+    /// 第一个参数是原始表名，第二个参数是更新的实体对象，返回值是分表名，如：.UseTable((tableName, deleteObj) =&gt; $"{tableName}_{deleteObj.CreatedAt:yyyyMM}")
+    /// </summary>
+    /// <typeparam name="TUpdateObj">更新的实体类型</typeparam>
+    /// <param name="tableNameGetter">分表名获取委托</param>
+    /// <returns>返回更新对象</returns>
+    IUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter);
     #endregion
 
     #region UseTableSchema

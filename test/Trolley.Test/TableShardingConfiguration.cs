@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Trolley.Test;
 
@@ -12,10 +13,11 @@ public class TableShardingConfiguration : ITableShardingConfiguration
                 .DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
                 .UseRule((origName, tenantId, createdAt) => tenantId.Length >= 3 ? $"{origName}_{tenantId}_{createdAt:yyyyMM}" : origName, "^sys_order_[1-9]\\d{3}(0[1-9]|1[0-2])$")
                 //时间分表，通常都是支持范围查询
-                .UseRangeRule((origName, tenantId, beginTime, endTime) =>
+                .UseRangeRule((origName, parameters) =>
                 {
-                    if (tenantId.Length < 3)
-                        return new List<string> { origName };
+                    var tenantId = parameters[0] as string;
+                    var beginTime = parameters[1] as DateTime;
+                    var endTime = parameters[2] as DateTime;
                     var tableNames = new List<string>();
                     var current = beginTime.AddDays(1 - beginTime.Day);
                     while (current <= endTime)

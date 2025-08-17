@@ -73,7 +73,7 @@ public class SqlVisitor : ISqlVisitor
     /// </summary>
     public bool IsSecondUnion { get; set; }
 
-    public bool IsNeedFetchShardingTables { get; set; }
+    //public bool IsNeedFetchShardingTables { get; set; }
     public bool IsNeedUnionShardingTables { get; set; }
     public bool IsNeedFormatShardingTables { get; set; }
     public bool IsManyShardingTables { get; set; }
@@ -96,7 +96,7 @@ public class SqlVisitor : ISqlVisitor
     public SqlVisitor() { }
     public void UseTable(bool isIncludeMany, params string[] tableNames)
     {
-        if (tableNames == null || tableNames.Length <= 0)
+        if (tableNames == null || tableNames.Length == 0)
             throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
 
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
@@ -244,7 +244,7 @@ public class SqlVisitor : ISqlVisitor
         }
     }
     /// <summary>
-    /// 设置插入或更新时的分表名获取委托，根据某1个或多个字段值来确定分表，执行会根据实体字段的值自动插入、更新到对应分表中，单条、批量操作都适用，常用于批量操作中。
+    /// 设置批量插入、更新、删除操作时的分表名获取委托
     /// </summary>
     /// <typeparam name="TParameter">插入参数类型</typeparam>
     /// <param name="tableNameGetter"></param>
@@ -1785,16 +1785,8 @@ public class SqlVisitor : ISqlVisitor
                 case "UseTable":
                     entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
                     var parameterInfos = methodInfo.GetParameters();
-                    if (parameterInfos[0].ParameterType.IsArray)
-                    {
-                        var tableNames = this.Evaluate<string[]>(callExpr.Arguments[0]);
-                        queryVisitor.UseTable(false, tableNames);
-                    }
-                    else
-                    {
-                        var tableNameGetter = this.Evaluate<Func<string, bool>>(callExpr.Arguments[0]);
-                        queryVisitor.UseTable(false, tableNameGetter);
-                    }
+                    var tableNames = this.Evaluate<string[]>(callExpr.Arguments[0]);
+                    queryVisitor.UseTable(false, tableNames);
                     break;
                 case "UseTableMap":
                     var tableNameMapGetter = this.Evaluate<Func<string, string, string, string>>(callExpr.Arguments[0]);
@@ -1810,16 +1802,16 @@ public class SqlVisitor : ISqlVisitor
                     switch (callExpr.Arguments.Count)
                     {
                         case 2:
-                            queryVisitor.UseTableByRange(false, this.Evaluate(callExpr.Arguments[0]),
-                                this.Evaluate(callExpr.Arguments[1]));
+                            queryVisitor.UseTableByRange(false, [this.Evaluate(callExpr.Arguments[0]),
+                                this.Evaluate(callExpr.Arguments[1])]);
                             break;
                         case 3:
-                            queryVisitor.UseTableByRange(false, this.Evaluate(callExpr.Arguments[0]),
-                                this.Evaluate(callExpr.Arguments[1]), this.Evaluate(callExpr.Arguments[2]));
+                            queryVisitor.UseTableByRange(false, [this.Evaluate(callExpr.Arguments[0]),
+                                this.Evaluate(callExpr.Arguments[1]), this.Evaluate(callExpr.Arguments[2])]);
                             break;
                         case 4:
-                            queryVisitor.UseTableByRange(false, this.Evaluate(callExpr.Arguments[0]),
-                                this.Evaluate(callExpr.Arguments[1]), this.Evaluate(callExpr.Arguments[2]), this.Evaluate(callExpr.Arguments[3]));
+                            queryVisitor.UseTableByRange(false, [this.Evaluate(callExpr.Arguments[0]),
+                                this.Evaluate(callExpr.Arguments[1]), this.Evaluate(callExpr.Arguments[2]), this.Evaluate(callExpr.Arguments[3])]);
                             break;
                     }
                     break;
@@ -2682,8 +2674,8 @@ public class SqlVisitor : ISqlVisitor
         // 因为会生成新的子查询SQL，subQueryObj的Visitor状态已经通过新表更新到tableSegment.Body中，无需同步
         // 所以，只需要同步Sharding分表信息和IncludeTables表信息，这两个会影响到后面SQL的生成
         if (this.Equals(visitor)) return;
-        if (visitor.IsNeedFetchShardingTables)
-            this.IsNeedFetchShardingTables = true;
+        //if (visitor.IsNeedFetchShardingTables)
+        //    this.IsNeedFetchShardingTables = true;
         if (visitor.IsNeedUnionShardingTables)
             this.IsNeedUnionShardingTables = true;
         if (visitor.IsNeedFormatShardingTables)

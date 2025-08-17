@@ -223,6 +223,11 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
         return this;
     }
+    public virtual IQuery<T> UseUnionShardingTable()
+    {
+        this.Visitor.UseUnionShardingTable();
+        return this;
+    }
     #endregion
 
     #region UseTableSchema

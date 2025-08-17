@@ -17,7 +17,7 @@ public interface IFromQuery
 {
     #region From
     /// <summary>
-    /// 创建子查询，生成SQL: FROM T
+    /// 使用1个表创建查询对象
     /// </summary>
     /// <typeparam name="T">实体类型</typeparam>
     /// <returns>返回查询对象</returns>
