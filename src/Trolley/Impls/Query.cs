@@ -152,16 +152,7 @@ public class QueryBase : QueryInternal, IQueryBase
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        if (this.Visitor.IsNeedFetchShardingTables)
-            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
         var sql = this.Visitor.BuildSql(true, out var dbDataParameters);
-        if (this.Visitor.IsNeedFetchShardingTables)
-        {
-            var builder = new StringBuilder(this.Visitor.BuildTableShardingsSql());
-            builder.Append(';');
-            builder.Append(sql);
-            sql = builder.ToString();
-        }
         dbParameters = dbDataParameters.Cast<IDbDataParameter>().ToList();
         this.Visitor.Dispose();
         return sql;
@@ -208,19 +199,9 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
-    public virtual IQuery<T> UseTableByRange(object beginFieldValue, object endFieldValue)
+    public virtual IQuery<T> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
-        return this;
-    }
-    public virtual IQuery<T> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
-    {
-        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
-        return this;
-    }
-    public virtual IQuery<T> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-    {
-        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
+        this.Visitor.UseTableByRange(false, fieldValues);
         return this;
     }
     public virtual IQuery<T> UseUnionShardingTable()
@@ -640,14 +621,6 @@ public class Query<T> : QueryBase, IQuery<T>
         {
             dbParameters = null;
             return null;
-        }
-
-        if (this.Visitor.IsNeedFetchShardingTables)
-        {
-            var builder = new StringBuilder(this.Visitor.BuildTableShardingsSql());
-            builder.Append(';');
-            builder.Append(sql);
-            sql = builder.ToString();
         }
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         this.Visitor.Dispose();

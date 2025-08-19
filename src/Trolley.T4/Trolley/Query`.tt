@@ -48,19 +48,9 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
-    public virtual IQuery<<#=tables#>> UseTableByRange(object beginFieldValue, object endFieldValue)
+    public virtual IQuery<<#=tables#>> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
-        return this;
-    }
-    public virtual IQuery<<#=tables#>> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
-    {
-        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
-        return this;
-    }
-    public virtual IQuery<<#=tables#>> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-    {
-        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
+        this.Visitor.UseTableByRange(false, fieldValues);
         return this;
     }
     #endregion
