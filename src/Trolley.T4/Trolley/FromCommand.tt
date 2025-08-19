@@ -67,19 +67,9 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
-    public virtual IFromCommand<T> UseTableByRange(object beginFieldValue, object endFieldValue)
+    public virtual IFromCommand<T> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
-        return this;
-    }
-    public virtual IFromCommand<T> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
-    {
-        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
-        return this;
-    }
-    public virtual IFromCommand<T> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-    {
-        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
+        this.Visitor.UseTableByRange(false, fieldValues);
         return this;
     }
     #endregion
@@ -398,19 +388,9 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
         this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
-    public virtual IFromCommand<<#=tables#>> UseTableByRange(object beginFieldValue, object endFieldValue)
+    public virtual IFromCommand<<#=tables#>> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
-        return this;
-    }
-    public virtual IFromCommand<<#=tables#>> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
-    {
-        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
-        return this;
-    }
-    public virtual IFromCommand<<#=tables#>> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-    {
-        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
+        this.Visitor.UseTableByRange(false, fieldValues);
         return this;
     }
     #endregion

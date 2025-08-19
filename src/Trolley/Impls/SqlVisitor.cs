@@ -73,7 +73,7 @@ public class SqlVisitor : ISqlVisitor
     /// </summary>
     public bool IsSecondUnion { get; set; }
 
-    //public bool IsNeedFetchShardingTables { get; set; }
+    public string ShardingTableJointMark { get; set; } = "UNION ALL";
     public bool IsNeedUnionShardingTables { get; set; }
     public bool IsNeedFormatShardingTables { get; set; }
     public bool IsManyShardingTables { get; set; }
@@ -93,7 +93,7 @@ public class SqlVisitor : ISqlVisitor
     public object RefFrom { get; set; }
     public string UnionSql { get; set; }
 
-    public SqlVisitor() { }
+
     public void UseTable(bool isIncludeMany, params string[] tableNames)
     {
         if (tableNames == null || tableNames.Length == 0)
@@ -255,6 +255,7 @@ public class SqlVisitor : ISqlVisitor
             throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
         this.Tables[0].ShardingTableGetter = tableNameGetter;
     }
+    public void UseUnionShardingTable() => this.ShardingTableJointMark = "UNION";
     public virtual void UseTableSchema(bool isIncludeMany, string tableSchema)
     {
         if (tableSchema == this.DefaultTableSchema) return;

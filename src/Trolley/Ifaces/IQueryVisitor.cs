@@ -45,7 +45,6 @@ public interface IQueryVisitor : ICloneable, IDisposable
     int PageNumber { get; }
     int PageSize { get; }
     bool IsNeedCommandTableAlias { get; set; }
-    bool IsNeedFetchShardingTables { get; }
     bool IsNeedFormatShardingTables { get; }
     bool IsNeedUnionShardingTables { get; }
     bool IsManyShardingTables { get; }
