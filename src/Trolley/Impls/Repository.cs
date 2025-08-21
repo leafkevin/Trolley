@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -349,113 +348,6 @@ public class Repository : IRepository
         var reader = await command.ExecuteReaderAsync(CommandSqlType.MultiQuery, CommandBehavior.SequentialAccess, cancellationToken);
         //多语句查询，在最后reader读取后，自动关闭
         return new MultiQueryReader(this.DbContext, connection, command, reader, readerAfters, isNeedClose);
-    }
-    #endregion
-
-    #region MultipleExecute
-    public virtual int MultipleExecute(List<MultipleCommand> commands)
-    {
-        if (commands == null || commands.Count == 0)
-            throw new ArgumentNullException(nameof(commands));
-
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        int commandIndex = 0;
-        var sqlBuilder = new StringBuilder();
-        var visitors = new Dictionary<MultipleCommandType, object>();
-        foreach (var multiCcommand in commands)
-        {
-            bool isFirst = false;
-            if (!visitors.TryGetValue(multiCcommand.CommandType, out var visitor))
-            {
-                visitor = multiCcommand.CommandType switch
-                {
-                    MultipleCommandType.Insert => this.OrmProvider.NewCreateVisitor(this.DbContext),
-                    MultipleCommandType.Update => this.OrmProvider.NewUpdateVisitor(this.DbContext),
-                    MultipleCommandType.Delete => this.OrmProvider.NewDeleteVisitor(this.DbContext),
-                    _ => this.OrmProvider.NewUpdateVisitor(this.DbContext)
-                };
-                visitors.Add(multiCcommand.CommandType, visitor);
-                isFirst = true;
-            }
-            switch (multiCcommand.CommandType)
-            {
-                case MultipleCommandType.Insert:
-                    var insertVisitor = visitor as ICreateVisitor;
-                    insertVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
-                    insertVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
-                    break;
-                case MultipleCommandType.Update:
-                    var updateVisitor = visitor as IUpdateVisitor;
-                    updateVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
-                    updateVisitor.BuildMultiCommand(this.DbContext, command, sqlBuilder, multiCcommand, commandIndex);
-                    break;
-                case MultipleCommandType.Delete:
-                    var deleteVisitor = visitor as IDeleteVisitor;
-                    deleteVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
-                    deleteVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
-                    break;
-            }
-            commandIndex++;
-        }
-        command.CommandText = sqlBuilder.ToString();
-        connection.Open();
-        var result = command.ExecuteNonQuery(CommandSqlType.MultiCommand);
-
-        command.Dispose();
-        if (isNeedClose) connection.Close();
-        return result;
-    }
-    public virtual async Task<int> MultipleExecuteAsync(List<MultipleCommand> commands, CancellationToken cancellationToken = default)
-    {
-        if (commands == null || commands.Count == 0)
-            throw new ArgumentNullException(nameof(commands));
-
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        int commandIndex = 0;
-        var sqlBuilder = new StringBuilder();
-        var visitors = new Dictionary<MultipleCommandType, object>();
-        foreach (var multiCcommand in commands)
-        {
-            bool isFirst = false;
-            if (!visitors.TryGetValue(multiCcommand.CommandType, out var visitor))
-            {
-                visitor = multiCcommand.CommandType switch
-                {
-                    MultipleCommandType.Insert => this.OrmProvider.NewCreateVisitor(this.DbContext),
-                    MultipleCommandType.Update => this.OrmProvider.NewUpdateVisitor(this.DbContext),
-                    MultipleCommandType.Delete => this.OrmProvider.NewDeleteVisitor(this.DbContext),
-                    _ => this.OrmProvider.NewUpdateVisitor(this.DbContext)
-                };
-                visitors.Add(multiCcommand.CommandType, visitor);
-                isFirst = true;
-            }
-            switch (multiCcommand.CommandType)
-            {
-                case MultipleCommandType.Insert:
-                    var insertVisitor = visitor as ICreateVisitor;
-                    insertVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
-                    insertVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
-                    break;
-                case MultipleCommandType.Update:
-                    var updateVisitor = visitor as IUpdateVisitor;
-                    updateVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
-                    updateVisitor.BuildMultiCommand(this.DbContext, command, sqlBuilder, multiCcommand, commandIndex);
-                    break;
-                case MultipleCommandType.Delete:
-                    var deleteVisitor = visitor as IDeleteVisitor;
-                    deleteVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
-                    deleteVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
-                    break;
-            }
-            commandIndex++;
-        }
-        command.CommandText = sqlBuilder.ToString();
-        await connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(CommandSqlType.MultiCommand, cancellationToken);
-
-        await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
-        return result;
     }
     #endregion
 

@@ -529,7 +529,7 @@ public class UnitTest6 : UnitTestBase
         var repository = this.dbFactory.Create();
         var userIds = new[] { 101, 102, 103 };
         await repository.Delete<User>()
-            .UseTable(f => f.Contains("104") || f.Contains("105"))
+            .UseTable("sys_user_104", "sys_user_105")
             .Where(userIds)
             .ExecuteAsync();
         repository.Create<User>(new[]
@@ -681,18 +681,14 @@ public class UnitTest6 : UnitTestBase
         var removeIds = orders.Select(f => f.Id).ToList();
 
         await repository.BeginTransactionAsync();
-        var deleteOrders = repository.Delete<Order>()
+        repository.Delete<Order>()
            .UseTableBy("104", createdAt)
            .Where(f => removeIds.Contains(f.Id))
-           .ToMultipleCommand();
-        var deleteOrderDetails = repository.Delete<OrderDetail>()
+           .Execute();
+        repository.Delete<OrderDetail>()
            .UseTableBy("104", createdAt)
            .Where(f => removeIds.Contains(f.OrderId))
-           .ToMultipleCommand();
-        await repository.MultipleExecuteAsync(new List<MultipleCommand>
-        {
-            deleteOrders, deleteOrderDetails
-        });
+           .Execute();
         var count1 = await repository.Create<Order>()
             .UseTableBy("104", createdAt)
             .WithBulkCopy(orders)
@@ -2093,13 +2089,10 @@ public class UnitTest6 : UnitTestBase
     public async Task ManyShardingCountDistinct()
     {
         var repository = this.dbFactory.Create();
-        var result = repository.FromQuery(t=>t.From<User>()
+        var result = repository.FromQuery(t => t.From<User>()
                 .UseTableBy("sys_user_104", "sys_user_105")
-                .UseTable 
-                .Select(f => f.Id ).Distinct())
+                .Select(f => f.Id).Distinct())
             .CountAsync();
-            
-            .First();
         Assert.NotNull(result);
         Assert.Equal("104", result.TenantId);
     }

@@ -143,7 +143,7 @@ public interface IIncludableQuery<<#=tables#>, TMember> : IIncludableQueryBase, 
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<<#=tables#>, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)

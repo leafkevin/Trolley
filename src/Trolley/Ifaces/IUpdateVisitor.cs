@@ -20,10 +20,8 @@ public interface IUpdateVisitor : IDisposable
     List<TableSegment> Tables { get; }
     List<TableSegment> ShardingTables { get; set; }
 
-    void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
-    MultipleCommand CreateMultipleCommand();
+    void Initialize(Type entityType);
     string BuildCommand(DbContext dbContext, ITheaCommand command, out List<SqlFieldSegment> readerFields);
-    void BuildMultiCommand(DbContext dbContext, ITheaCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
 
     void UseTable(bool isIncludeMany, params string[] tableNames);
     void UseTableByRange(bool isIncludeMany, object[] fieldValues);

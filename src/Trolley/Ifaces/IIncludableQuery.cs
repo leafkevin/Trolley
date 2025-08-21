@@ -47,7 +47,7 @@ public interface IIncludableQuery<T, TMember> : IIncludableQueryBase, IQuery<T>
     /// </summary>
     /// <param name="tableNameGetter">当前<typeparamref name="TMember"/>表分表名获取委托</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    new IIncludableQuery<T, TMember> UseTableMap(Func<string, string, string, string> tableNameGetter);
+    IIncludableQuery<T, TMember> UseTableMap(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="TMember"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
@@ -118,7 +118,7 @@ public interface IIncludableQuery<T1, T2, TMember> : IIncludableQueryBase, IQuer
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -208,7 +208,7 @@ public interface IIncludableQuery<T1, T2, T3, TMember> : IIncludableQueryBase, I
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -299,7 +299,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, TMember> : IIncludableQueryBas
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -391,7 +391,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, TMember> : IIncludableQuer
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -484,7 +484,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IIncludable
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -578,7 +578,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : IInclud
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -673,7 +673,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : IIn
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -769,7 +769,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> :
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -866,7 +866,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMemb
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -964,7 +964,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -1063,7 +1063,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -1163,7 +1163,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -1264,7 +1264,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -1366,7 +1366,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="TMember"/>表名的映射关系，指定当前<typeparamref name="TMember"/>表分表名获取委托，执行委托获取当前<typeparamref name="TMember"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="TMember"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="TMember"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)

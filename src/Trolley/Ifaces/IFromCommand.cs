@@ -53,6 +53,10 @@ public interface IFromCommand<T> : IFromCommand
     /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T> UseTableByRange(params object[] fieldValues);
+    /// <summary>
+    /// 指定使用UNION连接分表查询语句，默认使用UNION ALL连接分表查询语句
+    /// </summary>
+    IFromCommand<T> UseUnionShardingTable();
     #endregion
 
     #region UseTableSchema
@@ -547,17 +551,17 @@ public interface IFromCommand<T1, T2> : IFromCommand
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T2表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T2"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个分表TMasterSharding表与当前T2表名的映射关系，指定当前T2表分表名获取委托，执行委托获取当前T2表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前T2表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T2表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T2"/>表名的映射关系，指定当前<typeparamref name="T2"/>表分表名获取委托，执行委托获取当前<typeparamref name="T2"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T2"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="T2"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    /// .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// .UseTableMap((orderOrigName, userOrigName, orderTableName) =&gt;
     /// {
     ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -569,10 +573,9 @@ public interface IFromCommand<T1, T2> : IFromCommand
     /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
     /// <param name="tableNameGetter"><typeparamref name="T2"/>表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
-    IFromCommand<T1, T2> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    IFromCommand<T1, T2> UseTableMap(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="T2"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
@@ -580,11 +583,15 @@ public interface IFromCommand<T1, T2> : IFromCommand
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T2"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T2"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2> UseTableByRange(params object[] fieldValues);
+    /// <summary>
+    /// 指定使用UNION连接分表查询语句，默认使用UNION ALL连接分表查询语句
+    /// </summary>
+    IFromCommand<T1, T2> UseUnionShardingTable();
     #endregion
 
     #region UseTableSchema
@@ -956,17 +963,17 @@ public interface IFromCommand<T1, T2, T3> : IFromCommand
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T3表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T3"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个分表TMasterSharding表与当前T3表名的映射关系，指定当前T3表分表名获取委托，执行委托获取当前T3表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前T3表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T3表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T3"/>表名的映射关系，指定当前<typeparamref name="T3"/>表分表名获取委托，执行委托获取当前<typeparamref name="T3"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T3"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="T3"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    /// .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// .UseTableMap((orderOrigName, userOrigName, orderTableName) =&gt;
     /// {
     ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -978,10 +985,9 @@ public interface IFromCommand<T1, T2, T3> : IFromCommand
     /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
     /// <param name="tableNameGetter"><typeparamref name="T3"/>表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
-    IFromCommand<T1, T2, T3> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    IFromCommand<T1, T2, T3> UseTableMap(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="T3"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
@@ -989,11 +995,15 @@ public interface IFromCommand<T1, T2, T3> : IFromCommand
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T3"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T3"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3> UseTableByRange(params object[] fieldValues);
+    /// <summary>
+    /// 指定使用UNION连接分表查询语句，默认使用UNION ALL连接分表查询语句
+    /// </summary>
+    IFromCommand<T1, T2, T3> UseUnionShardingTable();
     #endregion
 
     #region UseTableSchema
@@ -1366,17 +1376,17 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T4表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T4"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个分表TMasterSharding表与当前T4表名的映射关系，指定当前T4表分表名获取委托，执行委托获取当前T4表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前T4表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T4表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T4"/>表名的映射关系，指定当前<typeparamref name="T4"/>表分表名获取委托，执行委托获取当前<typeparamref name="T4"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T4"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="T4"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    /// .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// .UseTableMap((orderOrigName, userOrigName, orderTableName) =&gt;
     /// {
     ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -1388,10 +1398,9 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
     /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
     /// <param name="tableNameGetter"><typeparamref name="T4"/>表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
-    IFromCommand<T1, T2, T3, T4> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    IFromCommand<T1, T2, T3, T4> UseTableMap(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="T4"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
@@ -1399,11 +1408,15 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T4"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T4"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4> UseTableByRange(params object[] fieldValues);
+    /// <summary>
+    /// 指定使用UNION连接分表查询语句，默认使用UNION ALL连接分表查询语句
+    /// </summary>
+    IFromCommand<T1, T2, T3, T4> UseUnionShardingTable();
     #endregion
 
     #region UseTableSchema
@@ -1777,17 +1790,17 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T5表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T5"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4, T5> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个分表TMasterSharding表与当前T5表名的映射关系，指定当前T5表分表名获取委托，执行委托获取当前T5表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前T5表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T5表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T5"/>表名的映射关系，指定当前<typeparamref name="T5"/>表分表名获取委托，执行委托获取当前<typeparamref name="T5"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T5"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="T5"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    /// .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// .UseTableMap((orderOrigName, userOrigName, orderTableName) =&gt;
     /// {
     ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -1799,10 +1812,9 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
     /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
     /// <param name="tableNameGetter"><typeparamref name="T5"/>表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
-    IFromCommand<T1, T2, T3, T4, T5> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    IFromCommand<T1, T2, T3, T4, T5> UseTableMap(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="T5"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
@@ -1810,11 +1822,15 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T5"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T5"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4, T5> UseTableByRange(params object[] fieldValues);
+    /// <summary>
+    /// 指定使用UNION连接分表查询语句，默认使用UNION ALL连接分表查询语句
+    /// </summary>
+    IFromCommand<T1, T2, T3, T4, T5> UseUnionShardingTable();
     #endregion
 
     #region UseTableSchema
@@ -2189,17 +2205,17 @@ public interface IFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T6表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T6"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4, T5, T6> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个分表TMasterSharding表与当前T6表名的映射关系，指定当前T6表分表名获取委托，执行委托获取当前T6表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前T6表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前T6表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T6"/>表名的映射关系，指定当前<typeparamref name="T6"/>表分表名获取委托，执行委托获取当前<typeparamref name="T6"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T6"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="T6"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    /// .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// .UseTableMap((orderOrigName, userOrigName, orderTableName) =&gt;
     /// {
     ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -2211,10 +2227,9 @@ public interface IFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand
     /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
     /// <param name="tableNameGetter"><typeparamref name="T6"/>表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
-    IFromCommand<T1, T2, T3, T4, T5, T6> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    IFromCommand<T1, T2, T3, T4, T5, T6> UseTableMap(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="T6"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
@@ -2222,11 +2237,15 @@ public interface IFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4, T5, T6> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T6"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T6"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(params object[] fieldValues);
+    /// <summary>
+    /// 指定使用UNION连接分表查询语句，默认使用UNION ALL连接分表查询语句
+    /// </summary>
+    IFromCommand<T1, T2, T3, T4, T5, T6> UseUnionShardingTable();
     #endregion
 
     #region UseTableSchema

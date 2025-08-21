@@ -94,10 +94,9 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
-    public virtual IMultiQuery<T> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    public virtual IMultiQuery<T> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, tableNameGetter);
         return this;
     }
     public virtual IMultiQuery<T> UseTableBy(params object[] fieldValues)
@@ -105,19 +104,14 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
-    public virtual IMultiQuery<T> UseTableByRange(object beginFieldValue, object endFieldValue)
+    public virtual IMultiQuery<T> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
+        this.Visitor.UseTableByRange(false, fieldValues);
         return this;
     }
-    public virtual IMultiQuery<T> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+    public virtual IMultiQuery<T> UseUnionShardingTable()
     {
-        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
-        return this;
-    }
-    public virtual IMultiQuery<T> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-    {
-        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
+        this.Visitor.UseUnionShardingTable();
         return this;
     }
     #endregion

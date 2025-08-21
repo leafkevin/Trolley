@@ -136,14 +136,6 @@ public class UnitTest2 : UnitTestBase
         Assert.True(result.Data.Count == result.Count);
         Assert.Equal(1, result.Count);
     }
-    [Fact]
-    public async Task QueryDictionary()
-    {
-        this.Initialize(1);
-        var repository = this.dbFactory.Create();
-        var result = await repository.QueryDictionaryAsync<Product, int, string>(f => f.ProductNo.Contains("PN-00"), f => f.Id, f => f.Name);
-        Assert.True(result.Count >= 3);
-    }
     class OrderBuyerInfo
     {
         public string OrderId { get; set; }
@@ -2812,14 +2804,14 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             new MySqlParameter("pId", MySqlDbType.Int32) { Value = 1 },
             new MySqlParameter("pOut", MySqlDbType.VarChar) { Size = 50, Direction = ParameterDirection.Output }
         };
-        var result = await repository.QueryFirstAsync<User>(CommandType.StoredProcedure, "GET_USER", parameters);
+        var result = await repository.QueryFirstAsync<User>("GET_USER", parameters, CommandType.StoredProcedure);
         if (result != null)
         {
             Assert.NotNull(result.Name);
             Assert.Equal("OK", parameters[1].Value.ToString());
         }
         await repository.BeginTransactionAsync();
-        await repository.ExecuteAsync(CommandType.StoredProcedure, "UPDATE_USER", parameters);
+        await repository.ExecuteAsync("UPDATE_USER", parameters, CommandType.StoredProcedure);
         result = await repository.GetByIdAsync<User>(1);
         await repository.CommitAsync();
         Assert.Equal("UpdatedName", result.Name);

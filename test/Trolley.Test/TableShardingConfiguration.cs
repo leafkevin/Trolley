@@ -11,13 +11,18 @@ public class TableShardingConfiguration : ITableShardingConfiguration
         builder
             .Table<Order>(t => t
                 .DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
-                .UseRule((origName, tenantId, createdAt) => tenantId.Length >= 3 ? $"{origName}_{tenantId}_{createdAt:yyyyMM}" : origName, "^sys_order_[1-9]\\d{3}(0[1-9]|1[0-2])$")
-                //时间分表，通常都是支持范围查询
-                .UseRangeRule((origName, parameters) =>
+                .UseRule((origName, fieldValues) =>
                 {
-                    var tenantId = parameters[0] as string;
-                    var beginTime = parameters[1] as DateTime;
-                    var endTime = parameters[2] as DateTime;
+                    var tenantId = fieldValues[0] as string;
+                    var createdAt = (DateTime)fieldValues[1];
+                    return tenantId.Length >= 3 ? $"{origName}_{tenantId}_{createdAt: yyyyMM}" : origName;
+                }, "^sys_order_[1-9]\\d{3}(0[1-9]|1[0-2])$")
+                //时间分表，通常都是支持范围查询
+                .UseRangeRule((origName, fieldValues) =>
+                {
+                    var tenantId = fieldValues[0] as string;
+                    var beginTime = (DateTime)fieldValues[1];
+                    var endTime = (DateTime)fieldValues[2];
                     var tableNames = new List<string>();
                     var current = beginTime.AddDays(1 - beginTime.Day);
                     while (current <= endTime)
@@ -36,10 +41,18 @@ public class TableShardingConfiguration : ITableShardingConfiguration
             //按照租户+时间分表
             .Table<OrderDetail>(t => t
                 .DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
-                .UseRule((origName, tenantId, createdAt) => tenantId.Length >= 3 ? $"{origName}_{tenantId}_{createdAt:yyyyMM}" : origName, "^sys_order_detail_[1-9]\\d{3}(0[1-9]|1[0-2])$")
-                //时间分表，通常都是支持范围查询
-                .UseRangeRule((origName, tenantId, beginTime, endTime) =>
+                .UseRule((origName, fieldValues) =>
                 {
+                    var tenantId = fieldValues[0] as string;
+                    var createdAt = (DateTime)fieldValues[1];
+                    return tenantId.Length >= 3 ? $"{origName}_{tenantId}_{createdAt:yyyyMM}" : origName;
+                }, "^sys_order_detail_[1-9]\\d{3}(0[1-9]|1[0-2])$")
+                //时间分表，通常都是支持范围查询
+                .UseRangeRule((origName, fieldValues) =>
+                {
+                    var tenantId = fieldValues[0] as string;
+                    var beginTime = (DateTime)fieldValues[1];
+                    var endTime = (DateTime)fieldValues[2];
                     if (tenantId.Length < 3)
                         return new List<string> { origName };
                     var tableNames = new List<string>();

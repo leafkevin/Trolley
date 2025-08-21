@@ -119,7 +119,7 @@ public class UnitTest3 : UnitTestBase
         orders.Sort((x, y) => x.Id.CompareTo(y.Id));
         for (int i = 0; i < orders.Count; i++)
         {
-            Assert.True(orders[i].TotalAmount == parameters[i].TotalAmount);
+            Assert.True((decimal)orders[i].TotalAmount == parameters[i].TotalAmount);
         }
     }
     [Fact]
@@ -812,7 +812,7 @@ public class UnitTest3 : UnitTestBase
             .SetFrom(f => f.TotalAmount, (x, y) => x
                 .From<OrderDetail>('b')
                 .Where(t => t.OrderId == y.Id)
-                .SelectAggregate((x, f) => x.Sum(f.Amount)))
+                .SelectAggregate((x, f) => (double)x.Sum(f.Amount)))
             .Set(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.Id == "1")
@@ -825,14 +825,14 @@ public class UnitTest3 : UnitTestBase
             .SetFrom(f => f.TotalAmount, (x, y) => x
                 .From<OrderDetail>('b')
                 .Where(t => t.OrderId == y.Id)
-                .SelectAggregate((x, f) => x.Sum(f.Amount)))
+                .SelectAggregate((x, f) => (double)x.Sum(f.Amount)))
             .Set(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.Id == "1")
             .ExecuteAsync();
         var reult = repository.GetById<Order>("1");
         Assert.True(count > 0);
-        Assert.True(reult.TotalAmount == totalAmount);
+        Assert.True((decimal)reult.TotalAmount == totalAmount);
         Assert.True(reult.TotalAmount != order.TotalAmount);
 
         sql = repository.Update<Order>()
@@ -1081,7 +1081,7 @@ public class UnitTest3 : UnitTestBase
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
             .SetFrom(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
                 .Where(f => f.OrderId == y.Id)
-                .SelectAggregate((x, t) => x.Sum(t.Amount)))
+                .SelectAggregate((x, t) => (double)x.Sum(t.Amount)))
             .Set((a, b) => new { OrderNo = a.OrderNo + " - " + b.Id.ToString() })
             .Set((x, y) => new { BuyerId = DBNull.Value })
             .Where((x, y) => x.Id == "2")
@@ -1098,7 +1098,7 @@ public class UnitTest3 : UnitTestBase
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
             .SetFrom(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
                 .Where(f => f.OrderId == y.Id)
-                .SelectAggregate((x, t) => x.Sum(t.Amount)))
+                .SelectAggregate((x, t) => (double)x.Sum(t.Amount)))
             .Set((a, b) => new { OrderNo = a.OrderNo + " - " + b.Id.ToString() })
             .Set((x, y) => new { BuyerId = DBNull.Value })
             .Where((x, y) => x.Id == "2")

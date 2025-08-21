@@ -25,20 +25,18 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.DbContext = dbContext;
         this.TableAsStart = tableAsStart;
     }
-    public virtual void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true)
+    public virtual void Initialize(Type entityType)
     {
-        if (!isMultiple)
+        this.Tables = new()
         {
-            this.Tables = new();
-            this.TableAliases = new();
-            this.Tables.Add(new TableSegment
+            new TableSegment
             {
+                TableType = TableType.Entity,
                 EntityType = entityType,
                 AliasName = "a",
                 Mapper = this.MapProvider.GetEntityMap(entityType)
-            });
-        }
-        if (!isFirst) this.Clear();
+            }
+        };
     }
     public virtual string BuildCommand(ITheaCommand command, bool isReturnIdentity, out List<SqlFieldSegment> readerFields)
     {
@@ -65,36 +63,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             sql = this.BuildSql(out readerFields);
         }
         return sql;
-    }
-    public virtual MultipleCommand CreateMultipleCommand()
-    {
-        return new MultipleCommand
-        {
-            CommandType = MultipleCommandType.Insert,
-            EntityType = this.Tables[0].EntityType,
-            Body = this.deferredSegments,
-            Tables = this.Tables,
-            IgnoreFieldNames = this.IgnoreFieldNames,
-            OnlyFieldNames = this.OnlyFieldNames,
-            RefQueries = this.RefQueries,
-            IsNeedTableAlias = this.IsNeedTableAlias
-        };
-    }
-    public virtual void BuildMultiCommand(ITheaCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
-    {
-        this.IsMultiple = true;
-        this.CommandIndex = commandIndex;
-        this.deferredSegments = multiCommand.Body as List<CommandSegment>;
-        this.Tables = multiCommand.Tables;
-        this.IgnoreFieldNames = multiCommand.IgnoreFieldNames;
-        this.OnlyFieldNames = multiCommand.OnlyFieldNames;
-        this.RefQueries = multiCommand.RefQueries;
-        this.IsNeedTableAlias = multiCommand.IsNeedTableAlias;
-        if (sqlBuilder.Length > 0) sqlBuilder.Append(';');
-        if (this.deferredSegments.Count > 0 && this.deferredSegments[0].Type == "WithBulk")
-            this.ActionMode = ActionMode.Bulk;
-        sqlBuilder.Append(this.BuildCommand(command, false, out var readerFields));
-        this.ReaderFields = readerFields;
     }
     public virtual string BuildSql(out List<SqlFieldSegment> readerFields)
     {

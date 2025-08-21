@@ -232,10 +232,6 @@ public interface IUpdated<TEntity>
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     #endregion
 
-    #region ToMultipleCommand
-    MultipleCommand ToMultipleCommand();
-    #endregion
-
     #region ToSql
     /// <summary>
     /// 返回当前查询的SQL和参数列表
@@ -526,7 +522,7 @@ public interface IBulkContinuedUpdate<TEntity> : IUpdated<TEntity>
     /// <summary>
     /// 使用更新对象updateObj部分字段更新，updateObj对象中除OnlyFields、IgnoreFields、Where方法筛选外的所有字段都将参与更新，单对象更新，需要配合where条件使用，如：
     /// <code>.Set(new { Id = 1, Name = "kevin", SourceType = DBNull.Value }).Where(f =&gt; f.Id); .Set(new User { Id = 2, Name = "kevin", SourceType = null }).Where(f =&gt; f.Id);  
-    /// SQL: SET `Name`=@Name,SourceType=@SourceType WHERE `Id`=@kId </code>
+    /// SQL: SET `Name`=@Name,`SourceType`=@SourceType WHERE `Id`=@kId </code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
     /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新，可以是字典或是匿名对象或是现有命名对象</param>
@@ -534,7 +530,7 @@ public interface IBulkContinuedUpdate<TEntity> : IUpdated<TEntity>
     IBulkContinuedUpdate<TEntity> Set<TUpdateObj>(TUpdateObj updateObj);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中除OnlyFields、IgnoreFields、Where方法筛选外的所有字段都将参与更新，单对象更新，需要配合where条件使用，为false不做更新，如：
-    /// <code>.Set(true, new { Id = 1, Name = "kevin", SourceType = DBNull.Value }).Where(f =&gt; f.Id);  SQL: SET `Name`=@Name,SourceType=@SourceType WHERE `Id`=@kId
+    /// <code>.Set(true, new { Id = 1, Name = "kevin", SourceType = DBNull.Value }).Where(f =&gt; f.Id);  SQL: SET `Name`=@Name,`SourceType`=@SourceType WHERE `Id`=@kId
     /// .Set(true, new User { Id = 1, ... })  SQL: SET ... //只更新部分字段，可以使用OnlyFields方法，忽略部分字段，可以使用IgnoreFields方法</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>

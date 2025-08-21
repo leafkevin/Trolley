@@ -9,23 +9,18 @@ public interface IMySqlUpdate<TEntity> : IUpdate<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个分表名执行更新，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="TEntity"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回更新对象</returns>
     new IMySqlUpdate<TEntity> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回更新对象</returns>
-    new IMySqlUpdate<TEntity> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 手动设置分表名获取委托，只适用于批量更新场景，通常是根据某1个或多个字段值来确定分表名，执行时会根据实体字段的值自动更新对应的分表中
+    /// 手动指定<typeparamref name="TEntity"/>表分表名获取委托，执行委托获取分表名，更新到多个分表中，只用于批量场景。
+    /// 第一个参数是原始表名，第二个参数是更新的实体对象，返回值是分表名，如：.UseTable((tableName, updateObj) =&gt; $"{tableName}_{updateObj.CreatedAt:yyyyMM}")
     /// </summary>
     /// <typeparam name="TUpdateObj">更新的实体类型</typeparam>
     /// <param name="tableNameGetter">分表名获取委托</param>
-    /// <exception cref="ArgumentNullException"></exception>
+    /// <returns>返回更新对象</returns>
     new IMySqlUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter);
     /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="TEntity"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
@@ -34,31 +29,20 @@ public interface IMySqlUpdate<TEntity> : IUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new IMySqlUpdate<TEntity> UseTableBy(params object[] fieldValues);   
     /// <summary>
-    /// 根据1个字段范围值，手动指定<typeparamref name="TEntity"/>表分表名，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)，//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="TEntity"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回更新对象</returns>
-    new IMySqlUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue);
+    new IMySqlUpdate<TEntity> UseTableByRange(params object[] fieldValues);
+    #endregion
+
+    #region UseTableSchema
     /// <summary>
-    /// 根据1个固定字段值和1个字段范围值，手动指定<typeparamref name="TEntity"/>表分表名，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1最近一周的订单
+    /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="beginField2Value">字段2范围起始值</param>
-    /// <param name="endField2Value">字段2范围结束值</param>
+    /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回更新对象</returns>
-    new IMySqlUpdate<TEntity> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
-    /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定<typeparamref name="TEntity"/>表分表名，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, 6, DateTime.Now.AddDays(-7), DateTime.Now)//商户+产品+时间分表，商户1，产品6，最近一周的订单
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="beginField3Value">字段3开始起始值</param>
-    /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回更新对象</returns>
-    new IMySqlUpdate<TEntity> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
+    new IMySqlUpdate<TEntity> UseTableSchema(string tableSchema);
     #endregion
 
     #region Set

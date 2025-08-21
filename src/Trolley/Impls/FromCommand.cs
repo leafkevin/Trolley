@@ -56,6 +56,11 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         this.Visitor.UseTableByRange(false, fieldValues);
         return this;
     }
+    public virtual IFromCommand<T> UseUnionShardingTable()
+    {
+        this.Visitor.UseUnionShardingTable();
+        return this;
+    }
     #endregion
 
     #region UseTableSchema
@@ -347,10 +352,9 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
-    public virtual IFromCommand<T1, T2> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    public virtual IFromCommand<T1, T2> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, tableNameGetter);
         return this;
     }
     public virtual IFromCommand<T1, T2> UseTableBy(params object[] fieldValues)
@@ -361,6 +365,11 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
     public virtual IFromCommand<T1, T2> UseTableByRange(params object[] fieldValues)
     {
         this.Visitor.UseTableByRange(false, fieldValues);
+        return this;
+    }
+    public virtual IFromCommand<T1, T2> UseUnionShardingTable()
+    {
+        this.Visitor.UseUnionShardingTable();
         return this;
     }
     #endregion
@@ -593,10 +602,9 @@ public class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
-    public virtual IFromCommand<T1, T2, T3> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    public virtual IFromCommand<T1, T2, T3> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, tableNameGetter);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3> UseTableBy(params object[] fieldValues)
@@ -607,6 +615,11 @@ public class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
     public virtual IFromCommand<T1, T2, T3> UseTableByRange(params object[] fieldValues)
     {
         this.Visitor.UseTableByRange(false, fieldValues);
+        return this;
+    }
+    public virtual IFromCommand<T1, T2, T3> UseUnionShardingTable()
+    {
+        this.Visitor.UseUnionShardingTable();
         return this;
     }
     #endregion
@@ -839,10 +852,9 @@ public class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3,
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
-    public virtual IFromCommand<T1, T2, T3, T4> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    public virtual IFromCommand<T1, T2, T3, T4> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, tableNameGetter);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3, T4> UseTableBy(params object[] fieldValues)
@@ -853,6 +865,11 @@ public class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3,
     public virtual IFromCommand<T1, T2, T3, T4> UseTableByRange(params object[] fieldValues)
     {
         this.Visitor.UseTableByRange(false, fieldValues);
+        return this;
+    }
+    public virtual IFromCommand<T1, T2, T3, T4> UseUnionShardingTable()
+    {
+        this.Visitor.UseUnionShardingTable();
         return this;
     }
     #endregion
@@ -1085,10 +1102,9 @@ public class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2,
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
-    public virtual IFromCommand<T1, T2, T3, T4, T5> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    public virtual IFromCommand<T1, T2, T3, T4, T5> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, tableNameGetter);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues)
@@ -1099,6 +1115,11 @@ public class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2,
     public virtual IFromCommand<T1, T2, T3, T4, T5> UseTableByRange(params object[] fieldValues)
     {
         this.Visitor.UseTableByRange(false, fieldValues);
+        return this;
+    }
+    public virtual IFromCommand<T1, T2, T3, T4, T5> UseUnionShardingTable()
+    {
+        this.Visitor.UseUnionShardingTable();
         return this;
     }
     #endregion
@@ -1331,10 +1352,9 @@ public class FromCommand<T1, T2, T3, T4, T5, T6> : FromCommand, IFromCommand<T1,
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
-    public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, tableNameGetter);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseTableBy(params object[] fieldValues)
@@ -1345,6 +1365,11 @@ public class FromCommand<T1, T2, T3, T4, T5, T6> : FromCommand, IFromCommand<T1,
     public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(params object[] fieldValues)
     {
         this.Visitor.UseTableByRange(false, fieldValues);
+        return this;
+    }
+    public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseUnionShardingTable()
+    {
+        this.Visitor.UseUnionShardingTable();
         return this;
     }
     #endregion

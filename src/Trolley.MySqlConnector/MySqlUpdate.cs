@@ -21,18 +21,17 @@ public class MySqlUpdate<TEntity> : Update<TEntity>, IMySqlUpdate<TEntity>
     #region Sharding
     public new IMySqlUpdate<TEntity> UseTable(params string[] tableNames)
         => base.UseTable(tableNames) as IMySqlUpdate<TEntity>;
-    public new IMySqlUpdate<TEntity> UseTable(Func<string, bool> tableNamePredicate)
-        => base.UseTable(tableNamePredicate) as IMySqlUpdate<TEntity>;
     public new IMySqlUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
         => base.UseTable(tableNameGetter) as IMySqlUpdate<TEntity>;
     public new IMySqlUpdate<TEntity> UseTableBy(params object[] fieldValues)
         => base.UseTableBy(fieldValues) as IMySqlUpdate<TEntity>;
-    public new IMySqlUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableByRange(beginFieldValue, endFieldValue) as IMySqlUpdate<TEntity>;
-    public new IMySqlUpdate<TEntity> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
-        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IMySqlUpdate<TEntity>;
-    public new IMySqlUpdate<TEntity> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IMySqlUpdate<TEntity>;
+    public new IMySqlUpdate<TEntity> UseTableByRange(params object[] fieldValues)
+        => base.UseTableByRange(fieldValues) as IMySqlUpdate<TEntity>;
+    #endregion
+
+    #region UseTableSchema
+    public new IMySqlUpdate<TEntity> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IMySqlUpdate<TEntity>;
     #endregion
 
     #region Set

@@ -245,10 +245,6 @@ public interface IUpdated<TEntity>
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     #endregion
 
-    #region ToMultipleCommand
-    MultipleCommand ToMultipleCommand();
-    #endregion
-
     #region ToSql
     /// <summary>
     /// 返回当前查询的SQL和参数列表

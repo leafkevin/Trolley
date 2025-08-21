@@ -17,10 +17,8 @@ public interface ICreateVisitor : IDisposable
     List<TableSegment> Tables { get; }
 
     string BuildCommand(ITheaCommand command, bool isReturnIdentity, out List<SqlFieldSegment> readerFields);
-    MultipleCommand CreateMultipleCommand();
     IQueryVisitor CreateQueryVisitor(char? tableAsStart = null);
-    void BuildMultiCommand(ITheaCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
-    void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
+    void Initialize(Type entityType);
     string BuildSql(out List<SqlFieldSegment> readerFields);
 
     void UseTable(bool isIncludeMany, params string[] tableNames);

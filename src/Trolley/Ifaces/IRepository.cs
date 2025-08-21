@@ -789,11 +789,6 @@ public interface IRepository
     Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default);
     #endregion
 
-    #region MultipleExecute
-    int MultipleExecute(List<MultipleCommand> commands);
-    Task<int> MultipleExecuteAsync(List<MultipleCommand> commands, CancellationToken cancellationToken = default);
-    #endregion
-
     #region Transaction
     void BeginTransaction();
     Task BeginTransactionAsync(CancellationToken cancellationToken = default);

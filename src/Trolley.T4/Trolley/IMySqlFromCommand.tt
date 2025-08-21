@@ -20,43 +20,21 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <returns>返回查询对象</returns>
     new IMySqlFromCommand<T> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="T"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     new IMySqlFromCommand<T> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="beginFieldValue">字段范围起始值</param>
-    /// <param name="endFieldValue">字段范围结束值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> UseTableByRange(object beginFieldValue, object endFieldValue);
+    new IMySqlFromCommand<T> UseTableByRange(params object[] fieldValues);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 指定使用UNION连接分表查询语句，默认使用UNION ALL连接分表查询语句
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="beginField2Value">字段2范围起始值</param>
-    /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
-    /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="beginField3Value">字段3范围起始值</param>
-    /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
+    new IMySqlFromCommand<T> UseUnionShardingTable();
     #endregion
 
     #region UseTableSchema
@@ -598,73 +576,47 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个<#=currentTable#>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="<#=currentTable#>"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     new IMySqlFromCommand<<#=tables#>> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定<typeparamref name="<#=currentTable#>"/>表1个或多个分表名，如：.UseTable(f =&gt; f.Contains("202001"))
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> UseTable(Func<string, bool> tableNamePredicate);
-    /// <summary>
-    /// 根据TMasterSharding主表分表名与当前<typeparamref name="<#=currentTable#>"/>表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前<typeparamref name="<#=currentTable#>"/>表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前<typeparamref name="<#=currentTable#>"/>表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据首个多分表与当前<typeparamref name="<#=currentTable#>"/>表名的映射关系，指定当前<typeparamref name="<#=currentTable#>"/>表分表名获取委托，执行委托获取当前<typeparamref name="<#=currentTable#>"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="<#=currentTable#>"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="<#=currentTable#>"/>表分表名称，如：
     /// <code>
-    /// repository.From&lt;Order&gt;()
-    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
-    ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
-    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-    ///         return tableName.Substring(0, tableName.Length - 7);
-    ///     })
-    ///     ...
+    /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// }) ...
     /// SQL:
     /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
     /// UNION ALL
     /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
     /// <param name="tableNameGetter"><typeparamref name="<#=currentTable#>"/>表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    new IMySqlFromCommand<<#=tables#>> UseTableMap(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定<typeparamref name="<#=currentTable#>"/>表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="<#=currentTable#>"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
     new IMySqlFromCommand<<#=tables#>> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定<typeparamref name="<#=currentTable#>"/>表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="<#=currentTable#>"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="beginFieldValue">字段范围起始值</param>
-    /// <param name="endFieldValue">字段范围结束值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> UseTableByRange(object beginFieldValue, object endFieldValue);
+    new IMySqlFromCommand<<#=tables#>> UseTableByRange(params object[] fieldValues);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定<typeparamref name="<#=currentTable#>"/>表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// 指定使用UNION连接分表查询语句，默认使用UNION ALL连接分表查询语句
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="beginField2Value">字段2范围起始值</param>
-    /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
-    /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定<typeparamref name="<#=currentTable#>"/>表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="beginField3Value">字段3范围起始值</param>
-    /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
+    new IMySqlFromCommand<<#=tables#>> UseUnionShardingTable();
     #endregion
 
     #region UseTableSchema

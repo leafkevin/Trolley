@@ -7809,18 +7809,14 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         var removeIds = orders.Select(f => f.Id).ToList();
 
         await repository.BeginTransactionAsync();
-        var deleteOrders = repository.Delete<Order>()
+        await repository.Delete<Order>()
            .UseTableBy("104", createdAt)
            .Where(f => removeIds.Contains(f.Id))
-           .ToMultipleCommand();
-        var deleteOrderDetails = repository.Delete<OrderDetail>()
+           .ExecuteAsync();
+        await repository.Delete<OrderDetail>()
            .UseTableBy("104", createdAt)
            .Where(f => removeIds.Contains(f.OrderId))
-           .ToMultipleCommand();
-        await repository.MultipleExecuteAsync(new List<MultipleCommand>
-        {
-            deleteOrders, deleteOrderDetails
-        });
+           .ExecuteAsync();
         var count1 = await repository.Create<Order>()
             .UseTableBy("104", createdAt)
             .WithBulkCopy(orders)
@@ -8863,7 +8859,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .UseTableSchema("fengling")
             .Include(f => f.Details)
             .UseTableSchema("fengling")
-            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToSql(out _);
@@ -8874,7 +8870,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .UseTableSchema("fengling")
             .Include(f => f.Details)
             .UseTableSchema("fengling")
-            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToList();

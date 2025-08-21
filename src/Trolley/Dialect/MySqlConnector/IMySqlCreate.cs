@@ -19,7 +19,7 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// </summary>
     /// <typeparam name="TInsertObj">插入的实体类型</typeparam>
     /// <param name="tableNameGetter">分表名获取委托</param>
-    /// <exception cref="ArgumentNullException"></exception>
+    /// <returns>返回插入对象</returns>
     new IMySqlCreate<TEntity> UseTable<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter);
     /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="TEntity"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等

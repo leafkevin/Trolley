@@ -282,9 +282,6 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
         var dialectVisitor = this.Visitor as MySqlCreateVisitor;
         if (!string.IsNullOrEmpty(dialectVisitor.FromSql))
         {
-            if (dialectVisitor.IsNeedFetchShardingTables)
-                this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-
             command.CommandText = dialectVisitor.BuildCommand(command, false, out var readerFields);
             connection.Open();
             using var reader = command.ExecuteReader(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess);
@@ -369,9 +366,6 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
         var dialectVisitor = this.Visitor as MySqlCreateVisitor;
         if (!string.IsNullOrEmpty(dialectVisitor.FromSql))
         {
-            if (dialectVisitor.IsNeedFetchShardingTables)
-                await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
-
             command.CommandText = dialectVisitor.BuildCommand(command, false, out var readerFields);
             await connection.OpenAsync(cancellationToken);
             using var reader = await command.ExecuteReaderAsync(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess, cancellationToken);

@@ -334,24 +334,11 @@ public class Updated<TEntity> : IUpdated<TEntity>
     }
     #endregion
 
-    #region ToMultipleCommand
-    public virtual MultipleCommand ToMultipleCommand() => this.Visitor.CreateMultipleCommand();
-    #endregion
-
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        if (this.Visitor.IsNeedFetchShardingTables)
-            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         var sql = this.Visitor.BuildCommand(this.DbContext, command, out _);
-        if (this.Visitor.IsNeedFetchShardingTables)
-        {
-            var builder = new StringBuilder(this.Visitor.BuildTableShardingsSql());
-            builder.Append(';');
-            builder.Append(sql);
-            sql = builder.ToString();
-        }
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         this.Visitor.Dispose();

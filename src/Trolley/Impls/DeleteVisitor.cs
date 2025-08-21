@@ -18,21 +18,18 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         this.DbContext = dbContext;
         this.TableAsStart = tableAsStart;
     }
-    public virtual void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true)
+    public virtual void Initialize(Type entityType)
     {
-        if (!isMultiple)
+        this.Tables = new()
         {
-            this.Tables = new()
+            new TableSegment
             {
-                new TableSegment
-                {
-                    EntityType = entityType,
-                    AliasName = "a",
-                    Mapper = this.MapProvider.GetEntityMap(entityType)
-                }
-            };
-        }
-        if (!isFirst) this.Clear();
+                TableType = TableType.Entity,
+                EntityType = entityType,
+                AliasName = "a",
+                Mapper = this.MapProvider.GetEntityMap(entityType)
+            }
+        };
     }
     public virtual string BuildCommand(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
@@ -154,29 +151,6 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             sql = builder.ToString();
         }
         return sql;
-    }
-    public virtual MultipleCommand CreateMultipleCommand()
-    {
-        return new MultipleCommand
-        {
-            CommandType = MultipleCommandType.Delete,
-            EntityType = this.Tables[0].EntityType,
-            Body = this.deferredSegments,
-            Tables = this.Tables,
-            RefQueries = this.RefQueries,
-            IsNeedTableAlias = this.IsNeedTableAlias
-        };
-    }
-    public virtual void BuildMultiCommand(ITheaCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
-    {
-        this.IsMultiple = true;
-        this.CommandIndex = commandIndex;
-        this.deferredSegments = multiCommand.Body as List<CommandSegment>;
-        this.Tables = multiCommand.Tables;
-        this.RefQueries = multiCommand.RefQueries;
-        this.IsNeedTableAlias = multiCommand.IsNeedTableAlias;
-        if (sqlBuilder.Length > 0) sqlBuilder.Append(';');
-        sqlBuilder.Append(this.BuildCommand(command, out _));
     }
     public virtual void WhereWith(object wherKeys)
     {

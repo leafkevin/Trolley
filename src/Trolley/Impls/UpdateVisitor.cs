@@ -26,21 +26,18 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.DbContext = dbContext;
         this.TableAsStart = tableAsStart;
     }
-    public virtual void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true)
+    public virtual void Initialize(Type entityType)
     {
-        if (!isMultiple)
+        this.Tables = new()
         {
-            this.Tables = new();
-            this.TableAliases = new();
-            this.Tables.Add(new TableSegment
+            new TableSegment
             {
                 TableType = TableType.Entity,
                 EntityType = entityType,
                 AliasName = "a",
                 Mapper = this.MapProvider.GetEntityMap(entityType)
-            });
-        }
-        if (!isFirst) this.Clear();
+            }
+        };
     }
     public virtual string BuildCommand(DbContext dbContext, ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
@@ -55,7 +52,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.BuildWithBulk(command);
                     Func<int, string> suffixGetter = index => this.IsMultiple ? $"_m{this.CommandIndex}{index}" : $"{index}";
 
-                    Action<object, int> sqlExecute = null; 
+                    Action<object, int> sqlExecute = null;
                     if (this.ShardingTables != null && this.ShardingTables.Count > 0)
                     {
                         sqlExecute = (updateObj, index) =>
@@ -205,37 +202,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         builder.Clear();
         return sql;
     }
-    public virtual MultipleCommand CreateMultipleCommand()
-    {
-        return new MultipleCommand
-        {
-            CommandType = MultipleCommandType.Update,
-            EntityType = this.Tables[0].EntityType,
-            Body = this.deferredSegments,
-            Tables = this.Tables,
-            IgnoreFieldNames = this.IgnoreFieldNames,
-            OnlyFieldNames = this.OnlyFieldNames,
-            RefQueries = this.RefQueries,
-            IsNeedTableAlias = this.IsNeedTableAlias,
-            IsJoin = this.IsJoin
-        };
-    }
-    public virtual void BuildMultiCommand(DbContext dbContext, ITheaCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
-    {
-        this.IsMultiple = true;
-        this.CommandIndex = commandIndex;
-        this.deferredSegments = multiCommand.Body as List<CommandSegment>;
-        this.Tables = multiCommand.Tables;
-        this.IgnoreFieldNames = multiCommand.IgnoreFieldNames;
-        this.OnlyFieldNames = multiCommand.OnlyFieldNames;
-        this.RefQueries = multiCommand.RefQueries;
-        this.IsJoin = multiCommand.IsJoin;
-        this.IsNeedTableAlias = multiCommand.IsNeedTableAlias;
-        if (sqlBuilder.Length > 0) sqlBuilder.Append(';');
-        if (this.deferredSegments.Count > 0 && this.deferredSegments[0].Type == "SetBulk")
-            this.ActionMode = ActionMode.Bulk;
-        sqlBuilder.Append(this.BuildCommand(dbContext, command, out _));
-    }
     public virtual (IEnumerable, int, string, Action<IDataParameterCollection>, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>,
         Action<StringBuilder, DbContext, string, object, string>, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
     {
@@ -322,7 +288,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         {
             if (this.ShardingTables != null && this.ShardingTables.Count > 0)
             {
-                
+
             }
             else
             {

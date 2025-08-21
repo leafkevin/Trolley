@@ -11,11 +11,11 @@ namespace Trolley;
 /// 删除数据
 /// </summary>
 /// <typeparam name="TEntity">要删除的实体类型</typeparam>
-public interface IDelete<TEntity>
+public interface IDelete<TEntity> : IDeleted<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定<typeparamref name="TEntity"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回删除对象</returns>  
@@ -124,7 +124,7 @@ public interface IDelete<TEntity>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回删除对象</returns>
     IDelete<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer);
-    #endregion
+    #endregion    
 }
 /// <summary>
 /// 删除数据
@@ -132,6 +132,7 @@ public interface IDelete<TEntity>
 /// <typeparam name="TEntity">要删除的实体类型</typeparam>
 public interface IDeleted<TEntity>
 {
+    #region Execute
     /// <summary>
     /// 执行删除操作，并返回删除行数
     /// </summary>
@@ -143,11 +144,14 @@ public interface IDeleted<TEntity>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回删除行数</returns>
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    MultipleCommand ToMultipleCommand();
+    #endregion
+
+    #region ToSql
     /// <summary>
     /// 返回当前查询的SQL和参数列表
     /// </summary>
     /// <param name="dbParameters">参数列表</param>
     /// <returns>当前查询的SQL</returns>
     string ToSql(out List<IDbDataParameter> dbParameters);
+    #endregion
 }

@@ -3,27 +3,20 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Trolley;
 
-public class Delete<TEntity> : IDelete<TEntity>
+public class Delete<TEntity> : Deleted<TEntity>, IDelete<TEntity>
 {
     #region Properties
-    public DbContext DbContext { get; set; }
-    public IDeleteVisitor Visitor { get; set; }
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Constructor
     public Delete(DbContext dbContext)
-    {
-        this.DbContext = dbContext;
-        this.Visitor = dbContext.OrmProvider.NewDeleteVisitor(dbContext);
-        this.Visitor.Initialize(typeof(TEntity));
-    }
+        : base(dbContext, dbContext.OrmProvider.NewDeleteVisitor(dbContext)) { }
     #endregion
 
     #region Sharding
@@ -135,6 +128,7 @@ public class Deleted<TEntity> : IDeleted<TEntity>
     {
         this.DbContext = dbContext;
         this.Visitor = visitor;
+        this.Visitor.Initialize(typeof(TEntity));
     }
     #endregion
 
@@ -169,24 +163,11 @@ public class Deleted<TEntity> : IDeleted<TEntity>
     }
     #endregion
 
-    #region ToMultipleCommand
-    public virtual MultipleCommand ToMultipleCommand() => this.Visitor.CreateMultipleCommand();
-    #endregion
-
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        if (this.Visitor.IsNeedFetchShardingTables)
-            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         var sql = this.Visitor.BuildCommand(command, out _);
-        if (this.Visitor.IsNeedFetchShardingTables)
-        {
-            var builder = new StringBuilder(this.Visitor.BuildTableShardingsSql());
-            builder.Append(';');
-            builder.Append(sql);
-            sql = builder.ToString();
-        }
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         this.Visitor.Dispose();

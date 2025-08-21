@@ -31,19 +31,19 @@ public class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember
         this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
-    public new IIncludableQuery<T, TMember> UseTableMap(Func<string, string, string, string> tableNameGetter)
+    public IIncludableQuery<T, TMember> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
         this.Visitor.UseTableMap(this.IsIncludeMany, tableNameGetter);
         return this;
     }
     public new IIncludableQuery<T, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(this.IsIncludeMany, fieldValues);
         return this;
     }
     public new IIncludableQuery<T, TMember> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValues);
         return this;
     }
     public new IIncludableQuery<T, TMember> UseUnionShardingTable()
@@ -112,12 +112,12 @@ public class IncludableQuery<<#=tables#>, TMember> : Query<<#=tables#>>, IInclud
     }
     public new IIncludableQuery<<#=tables#>, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(this.IsIncludeMany, fieldValues);
         return this;
     }
     public new IIncludableQuery<<#=tables#>, TMember> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValues);
         return this;
     }
     public new IIncludableQuery<<#=tables#>, TMember> UseUnionShardingTable()

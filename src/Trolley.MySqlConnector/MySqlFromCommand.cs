@@ -13,16 +13,12 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
     #region Sharding
     public new IMySqlFromCommand<T> UseTable(params string[] tableNames)
         => base.UseTable(tableNames) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<T> UseTable(Func<string, bool> tableNamePredicate)
-        => base.UseTable(tableNamePredicate) as IMySqlFromCommand<T>;
     public new IMySqlFromCommand<T> UseTableBy(params object[] fieldValues)
         => base.UseTableBy(fieldValues) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<T> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableBy(beginFieldValue, endFieldValue) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<T> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
-        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<T> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IMySqlFromCommand<T>;
+    public new IMySqlFromCommand<T> UseTableByRange(params object[] fieldValues)
+        => base.UseTableByRange(fieldValues) as IMySqlFromCommand<T>;
+    public new IMySqlFromCommand<T> UseUnionShardingTable()
+        => base.UseUnionShardingTable() as IMySqlFromCommand<T>;
     #endregion
 
     #region UseTableSchema
@@ -215,18 +211,14 @@ public class MySqlFromCommand<T1, T2> : FromCommand<T1, T2>, IMySqlFromCommand<T
     #region Sharding
     public new IMySqlFromCommand<T1, T2> UseTable(params string[] tableNames)
         => base.UseTable(tableNames) as IMySqlFromCommand<T1, T2>;
-    public new IMySqlFromCommand<T1, T2> UseTable(Func<string, bool> tableNamePredicate)
-        => base.UseTable(tableNamePredicate) as IMySqlFromCommand<T1, T2>;
-    public new IMySqlFromCommand<T1, T2> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTableMap<TMasterSharding>(tableNameGetter) as IMySqlFromCommand<T1, T2>;
+    public new IMySqlFromCommand<T1, T2> UseTableMap(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap(tableNameGetter) as IMySqlFromCommand<T1, T2>;
     public new IMySqlFromCommand<T1, T2> UseTableBy(params object[] fieldValues)
         => base.UseTableBy(fieldValues) as IMySqlFromCommand<T1, T2>;
-    public new IMySqlFromCommand<T1, T2> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableBy(beginFieldValue, endFieldValue) as IMySqlFromCommand<T1, T2>;
-    public new IMySqlFromCommand<T1, T2> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
-        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IMySqlFromCommand<T1, T2>;
-    public new IMySqlFromCommand<T1, T2> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IMySqlFromCommand<T1, T2>;
+    public new IMySqlFromCommand<T1, T2> UseTableByRange(params object[] fieldValues)
+        => base.UseTableByRange(fieldValues) as IMySqlFromCommand<T1, T2>;
+    public new IMySqlFromCommand<T1, T2> UseUnionShardingTable()
+        => base.UseUnionShardingTable() as IMySqlFromCommand<T1, T2>;
     #endregion
 
     #region UseTableSchema
@@ -350,18 +342,14 @@ public class MySqlFromCommand<T1, T2, T3> : FromCommand<T1, T2, T3>, IMySqlFromC
     #region Sharding
     public new IMySqlFromCommand<T1, T2, T3> UseTable(params string[] tableNames)
         => base.UseTable(tableNames) as IMySqlFromCommand<T1, T2, T3>;
-    public new IMySqlFromCommand<T1, T2, T3> UseTable(Func<string, bool> tableNamePredicate)
-        => base.UseTable(tableNamePredicate) as IMySqlFromCommand<T1, T2, T3>;
-    public new IMySqlFromCommand<T1, T2, T3> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTableMap<TMasterSharding>(tableNameGetter) as IMySqlFromCommand<T1, T2, T3>;
+    public new IMySqlFromCommand<T1, T2, T3> UseTableMap(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap(tableNameGetter) as IMySqlFromCommand<T1, T2, T3>;
     public new IMySqlFromCommand<T1, T2, T3> UseTableBy(params object[] fieldValues)
         => base.UseTableBy(fieldValues) as IMySqlFromCommand<T1, T2, T3>;
-    public new IMySqlFromCommand<T1, T2, T3> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableBy(beginFieldValue, endFieldValue) as IMySqlFromCommand<T1, T2, T3>;
-    public new IMySqlFromCommand<T1, T2, T3> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
-        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IMySqlFromCommand<T1, T2, T3>;
-    public new IMySqlFromCommand<T1, T2, T3> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IMySqlFromCommand<T1, T2, T3>;
+    public new IMySqlFromCommand<T1, T2, T3> UseTableByRange(params object[] fieldValues)
+        => base.UseTableByRange(fieldValues) as IMySqlFromCommand<T1, T2, T3>;
+    public new IMySqlFromCommand<T1, T2, T3> UseUnionShardingTable()
+        => base.UseUnionShardingTable() as IMySqlFromCommand<T1, T2, T3>;
     #endregion
 
     #region UseTableSchema
@@ -485,18 +473,14 @@ public class MySqlFromCommand<T1, T2, T3, T4> : FromCommand<T1, T2, T3, T4>, IMy
     #region Sharding
     public new IMySqlFromCommand<T1, T2, T3, T4> UseTable(params string[] tableNames)
         => base.UseTable(tableNames) as IMySqlFromCommand<T1, T2, T3, T4>;
-    public new IMySqlFromCommand<T1, T2, T3, T4> UseTable(Func<string, bool> tableNamePredicate)
-        => base.UseTable(tableNamePredicate) as IMySqlFromCommand<T1, T2, T3, T4>;
-    public new IMySqlFromCommand<T1, T2, T3, T4> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTableMap<TMasterSharding>(tableNameGetter) as IMySqlFromCommand<T1, T2, T3, T4>;
+    public new IMySqlFromCommand<T1, T2, T3, T4> UseTableMap(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap(tableNameGetter) as IMySqlFromCommand<T1, T2, T3, T4>;
     public new IMySqlFromCommand<T1, T2, T3, T4> UseTableBy(params object[] fieldValues)
         => base.UseTableBy(fieldValues) as IMySqlFromCommand<T1, T2, T3, T4>;
-    public new IMySqlFromCommand<T1, T2, T3, T4> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableBy(beginFieldValue, endFieldValue) as IMySqlFromCommand<T1, T2, T3, T4>;
-    public new IMySqlFromCommand<T1, T2, T3, T4> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
-        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IMySqlFromCommand<T1, T2, T3, T4>;
-    public new IMySqlFromCommand<T1, T2, T3, T4> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IMySqlFromCommand<T1, T2, T3, T4>;
+    public new IMySqlFromCommand<T1, T2, T3, T4> UseTableByRange(params object[] fieldValues)
+        => base.UseTableByRange(fieldValues) as IMySqlFromCommand<T1, T2, T3, T4>;
+    public new IMySqlFromCommand<T1, T2, T3, T4> UseUnionShardingTable()
+        => base.UseUnionShardingTable() as IMySqlFromCommand<T1, T2, T3, T4>;
     #endregion
 
     #region UseTableSchema
@@ -620,18 +604,14 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5> : FromCommand<T1, T2, T3, T4, 
     #region Sharding
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> UseTable(params string[] tableNames)
         => base.UseTable(tableNames) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5> UseTable(Func<string, bool> tableNamePredicate)
-        => base.UseTable(tableNamePredicate) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTableMap<TMasterSharding>(tableNameGetter) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5> UseTableMap(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap(tableNameGetter) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues)
         => base.UseTableBy(fieldValues) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableBy(beginFieldValue, endFieldValue) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
-        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5> UseTableByRange(params object[] fieldValues)
+        => base.UseTableByRange(fieldValues) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5> UseUnionShardingTable()
+        => base.UseUnionShardingTable() as IMySqlFromCommand<T1, T2, T3, T4, T5>;
     #endregion
 
     #region UseTableSchema
@@ -755,18 +735,14 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5, T6> : FromCommand<T1, T2, T3, 
     #region Sharding
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> UseTable(params string[] tableNames)
         => base.UseTable(tableNames) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> UseTable(Func<string, bool> tableNamePredicate)
-        => base.UseTable(tableNamePredicate) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTableMap<TMasterSharding>(tableNameGetter) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> UseTableMap(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap(tableNameGetter) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> UseTableBy(params object[] fieldValues)
         => base.UseTableBy(fieldValues) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableBy(beginFieldValue, endFieldValue) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
-        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(params object[] fieldValues)
+        => base.UseTableByRange(fieldValues) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> UseUnionShardingTable()
+        => base.UseUnionShardingTable() as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
     #endregion
 
     #region UseTableSchema

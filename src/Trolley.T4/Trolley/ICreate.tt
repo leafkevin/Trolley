@@ -209,10 +209,6 @@ public interface ICreated<TEntity>
     Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default);
     #endregion
 
-    #region ToMultipleCommand
-    MultipleCommand ToMultipleCommand();
-    #endregion
-
     #region ToSql
     /// <summary>
     /// 返回当前查询的SQL和参数列表

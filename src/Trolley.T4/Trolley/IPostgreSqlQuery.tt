@@ -644,7 +644,7 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<<#=tables#>> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据TMasterSharding表名与当前<typeparamref name="<#=currentTable#>"/>表名的映射关系，指定当前<typeparamref name="<#=currentTable#>"/>表分表名获取委托，执行委托获取当前<typeparamref name="<#=currentTable#>"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="<#=currentTable#>"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="<#=currentTable#>"/>表分表名称，如：
+    /// 根据TMasterSharding表名与当前<typeparamref name="<#=currentTable#>"/>表名的映射关系，指定当前<typeparamref name="<#=currentTable#>"/>表分表名获取委托，执行委托获取当前<typeparamref name="<#=currentTable#>"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="<#=currentTable#>"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="<#=currentTable#>"/>表分表名称，如：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")

@@ -18,10 +18,8 @@ public interface IDeleteVisitor : IDisposable
     int CommandIndex { get; set; }
     List<TableSegment> ShardingTables { get; }
 
-    void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
-    MultipleCommand CreateMultipleCommand();
+    void Initialize(Type entityType);
     string BuildCommand(ITheaCommand command, out List<SqlFieldSegment> readerFields);
-    void BuildMultiCommand(ITheaCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
 
     void UseTable(bool isIncludeMany, params string[] tableNames);
     void UseTableByRange(bool isIncludeMany, object[] fieldValues);

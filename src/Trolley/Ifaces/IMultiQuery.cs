@@ -51,29 +51,11 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="beginFieldValue">字段范围起始值</param>
-    /// <param name="endFieldValue">字段范围结束值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T> UseTableByRange(object beginFieldValue, object endFieldValue);
-    /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField2Value &lt;= endField2Value，常用于是日期规则分表，如：.UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="beginField2Value">字段2范围起始值</param>
-    /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
-    /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginField3Value &lt;= endField3Value，常用于是日期规则分表，如：.UseTableByRange(1, "Game1", DateTime.Now.AddDays(-7), DateTime.Now)
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="beginField3Value">字段3范围起始值</param>
-    /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
+    IMultiQuery<T> UseTableByRange(params object[] fieldValues);
     /// <summary>
     /// 指定使用UNION连接分表查询语句，默认使用UNION ALL连接分表查询语句
     /// </summary>
@@ -685,7 +667,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="T2"/>表名的映射关系，指定当前<typeparamref name="T2"/>表分表名获取委托，执行委托获取当前<typeparamref name="T2"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T2"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="T2"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T2"/>表名的映射关系，指定当前<typeparamref name="T2"/>表分表名获取委托，执行委托获取当前<typeparamref name="T2"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T2"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="T2"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -711,10 +693,9 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T2"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T2"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="beginFieldValue">字段范围起始值</param>
-    /// <param name="endFieldValue">字段范围结束值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2> UseTableByRange(params object[] fieldValues);
     /// <summary>
@@ -1195,7 +1176,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="T3"/>表名的映射关系，指定当前<typeparamref name="T3"/>表分表名获取委托，执行委托获取当前<typeparamref name="T3"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T3"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="T3"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T3"/>表名的映射关系，指定当前<typeparamref name="T3"/>表分表名获取委托，执行委托获取当前<typeparamref name="T3"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T3"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="T3"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -1221,10 +1202,9 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T3"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T3"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="beginFieldValue">字段范围起始值</param>
-    /// <param name="endFieldValue">字段范围结束值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3> UseTableByRange(params object[] fieldValues);
     /// <summary>
@@ -1706,7 +1686,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="T4"/>表名的映射关系，指定当前<typeparamref name="T4"/>表分表名获取委托，执行委托获取当前<typeparamref name="T4"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T4"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="T4"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T4"/>表名的映射关系，指定当前<typeparamref name="T4"/>表分表名获取委托，执行委托获取当前<typeparamref name="T4"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T4"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="T4"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -1732,10 +1712,9 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T4"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T4"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="beginFieldValue">字段范围起始值</param>
-    /// <param name="endFieldValue">字段范围结束值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4> UseTableByRange(params object[] fieldValues);
     /// <summary>
@@ -2218,7 +2197,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="T5"/>表名的映射关系，指定当前<typeparamref name="T5"/>表分表名获取委托，执行委托获取当前<typeparamref name="T5"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T5"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="T5"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T5"/>表名的映射关系，指定当前<typeparamref name="T5"/>表分表名获取委托，执行委托获取当前<typeparamref name="T5"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T5"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="T5"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -2244,10 +2223,9 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T5"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T5"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="beginFieldValue">字段范围起始值</param>
-    /// <param name="endFieldValue">字段范围结束值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5> UseTableByRange(params object[] fieldValues);
     /// <summary>
@@ -2731,7 +2709,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="T6"/>表名的映射关系，指定当前<typeparamref name="T6"/>表分表名获取委托，执行委托获取当前<typeparamref name="T6"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T6"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="T6"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T6"/>表名的映射关系，指定当前<typeparamref name="T6"/>表分表名获取委托，执行委托获取当前<typeparamref name="T6"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T6"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="T6"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -2757,10 +2735,9 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T6"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T6"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="beginFieldValue">字段范围起始值</param>
-    /// <param name="endFieldValue">字段范围结束值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6> UseTableByRange(params object[] fieldValues);
     /// <summary>
@@ -3245,7 +3222,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="T7"/>表名的映射关系，指定当前<typeparamref name="T7"/>表分表名获取委托，执行委托获取当前<typeparamref name="T7"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T7"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="T7"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T7"/>表名的映射关系，指定当前<typeparamref name="T7"/>表分表名获取委托，执行委托获取当前<typeparamref name="T7"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T7"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="T7"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -3271,10 +3248,9 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T7"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T7"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="beginFieldValue">字段范围起始值</param>
-    /// <param name="endFieldValue">字段范围结束值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7> UseTableByRange(params object[] fieldValues);
     /// <summary>
@@ -3760,7 +3736,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="T8"/>表名的映射关系，指定当前<typeparamref name="T8"/>表分表名获取委托，执行委托获取当前<typeparamref name="T8"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T8"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="T8"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T8"/>表名的映射关系，指定当前<typeparamref name="T8"/>表分表名获取委托，执行委托获取当前<typeparamref name="T8"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T8"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="T8"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -3786,10 +3762,9 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T8"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T8"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="beginFieldValue">字段范围起始值</param>
-    /// <param name="endFieldValue">字段范围结束值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableByRange(params object[] fieldValues);
     /// <summary>
@@ -4276,7 +4251,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="T9"/>表名的映射关系，指定当前<typeparamref name="T9"/>表分表名获取委托，执行委托获取当前<typeparamref name="T9"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T9"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="T9"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T9"/>表名的映射关系，指定当前<typeparamref name="T9"/>表分表名获取委托，执行委托获取当前<typeparamref name="T9"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T9"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="T9"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -4302,10 +4277,9 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T9"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T9"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="beginFieldValue">字段范围起始值</param>
-    /// <param name="endFieldValue">字段范围结束值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableByRange(params object[] fieldValues);
     /// <summary>
@@ -4793,7 +4767,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="T10"/>表名的映射关系，指定当前<typeparamref name="T10"/>表分表名获取委托，执行委托获取当前<typeparamref name="T10"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T10"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="T10"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T10"/>表名的映射关系，指定当前<typeparamref name="T10"/>表分表名获取委托，执行委托获取当前<typeparamref name="T10"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T10"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="T10"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -4819,10 +4793,9 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T10"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T10"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="beginFieldValue">字段范围起始值</param>
-    /// <param name="endFieldValue">字段范围结束值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableByRange(params object[] fieldValues);
     /// <summary>
@@ -5311,7 +5284,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="T11"/>表名的映射关系，指定当前<typeparamref name="T11"/>表分表名获取委托，执行委托获取当前<typeparamref name="T11"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T11"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="T11"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T11"/>表名的映射关系，指定当前<typeparamref name="T11"/>表分表名获取委托，执行委托获取当前<typeparamref name="T11"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T11"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="T11"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -5337,10 +5310,9 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T11"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T11"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="beginFieldValue">字段范围起始值</param>
-    /// <param name="endFieldValue">字段范围结束值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableByRange(params object[] fieldValues);
     /// <summary>
@@ -5830,7 +5802,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="T12"/>表名的映射关系，指定当前<typeparamref name="T12"/>表分表名获取委托，执行委托获取当前<typeparamref name="T12"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T12"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="T12"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T12"/>表名的映射关系，指定当前<typeparamref name="T12"/>表分表名获取委托，执行委托获取当前<typeparamref name="T12"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T12"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="T12"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -5856,10 +5828,9 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T12"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T12"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="beginFieldValue">字段范围起始值</param>
-    /// <param name="endFieldValue">字段范围结束值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableByRange(params object[] fieldValues);
     /// <summary>
@@ -6350,7 +6321,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="T13"/>表名的映射关系，指定当前<typeparamref name="T13"/>表分表名获取委托，执行委托获取当前<typeparamref name="T13"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T13"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="T13"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T13"/>表名的映射关系，指定当前<typeparamref name="T13"/>表分表名获取委托，执行委托获取当前<typeparamref name="T13"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T13"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="T13"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -6376,10 +6347,9 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T13"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T13"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="beginFieldValue">字段范围起始值</param>
-    /// <param name="endFieldValue">字段范围结束值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableByRange(params object[] fieldValues);
     /// <summary>
@@ -6871,7 +6841,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="T14"/>表名的映射关系，指定当前<typeparamref name="T14"/>表分表名获取委托，执行委托获取当前<typeparamref name="T14"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T14"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="T14"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T14"/>表名的映射关系，指定当前<typeparamref name="T14"/>表分表名获取委托，执行委托获取当前<typeparamref name="T14"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T14"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="T14"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -6897,10 +6867,9 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T14"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T14"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="beginFieldValue">字段范围起始值</param>
-    /// <param name="endFieldValue">字段范围结束值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableByRange(params object[] fieldValues);
     /// <summary>
@@ -7393,7 +7362,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="T15"/>表名的映射关系，指定当前<typeparamref name="T15"/>表分表名获取委托，执行委托获取当前<typeparamref name="T15"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T15"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="T15"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T15"/>表名的映射关系，指定当前<typeparamref name="T15"/>表分表名获取委托，执行委托获取当前<typeparamref name="T15"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T15"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="T15"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -7419,10 +7388,9 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T15"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T15"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="beginFieldValue">字段范围起始值</param>
-    /// <param name="endFieldValue">字段范围结束值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableByRange(params object[] fieldValues);
     /// <summary>
@@ -7916,7 +7884,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个多分表与当前<typeparamref name="T16"/>表名的映射关系，指定当前<typeparamref name="T16"/>表分表名获取委托，执行委托获取当前<typeparamref name="T16"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T16"/>表原始表名，第三个参数是TMasterSharding表当前分表名，返回值是当前<typeparamref name="T16"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T16"/>表名的映射关系，指定当前<typeparamref name="T16"/>表分表名获取委托，执行委托获取当前<typeparamref name="T16"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="T16"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="T16"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -7942,10 +7910,9 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表范围规则参数值，手动指定<typeparamref name="T16"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值顺序保持一致，确保beginFieldValue &lt;= endFieldValue，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T16"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="beginFieldValue">字段范围起始值</param>
-    /// <param name="endFieldValue">字段范围结束值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableByRange(params object[] fieldValues);
     /// <summary>

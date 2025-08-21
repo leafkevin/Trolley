@@ -279,16 +279,6 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
         => await this.DbContext.CreateIdentityAsync<long>(this.Visitor, cancellationToken);
     #endregion
 
-    #region ToMultipleCommand
-    public virtual MultipleCommand ToMultipleCommand()
-    {
-        var result = this.Visitor.CreateMultipleCommand();
-        this.Visitor.Dispose();
-        this.Visitor = null;
-        return result;
-    }
-    #endregion
-
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {

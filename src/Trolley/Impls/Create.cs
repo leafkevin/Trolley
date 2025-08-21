@@ -18,7 +18,6 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
         this.DbContext = dbContext;
         this.Visitor = this.DbContext.OrmProvider.NewCreateVisitor(dbContext);
         this.Visitor.Initialize(typeof(TEntity));
-        this.DbContext = dbContext;
     }
     #endregion
 
@@ -280,16 +279,6 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
     public virtual long ExecuteIdentityLong() => this.DbContext.CreateIdentity<long>(this.Visitor);
     public virtual async Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
         => await this.DbContext.CreateIdentityAsync<long>(this.Visitor, cancellationToken);
-    #endregion
-
-    #region ToMultipleCommand
-    public virtual MultipleCommand ToMultipleCommand()
-    {
-        var result = this.Visitor.CreateMultipleCommand();
-        this.Visitor.Dispose();
-        this.Visitor = null;
-        return result;
-    }
     #endregion
 
     #region ToSql

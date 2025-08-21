@@ -61,8 +61,6 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>
                     }
                     builder.AppendLine($"PRIMARY KEY({string.Join(",", pkColumns)})");
                     builder.AppendLine(");");
-                    if (this.Visitor.IsNeedFetchShardingTables)
-                        builder.Append(this.Visitor.BuildTableShardingsSql());
                     var bulkCopySql = builder.ToString();
 
                     builder.Clear();
@@ -140,8 +138,6 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>
                             firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, suffixGetter.Invoke(index));
                         };
                     }
-                    if (this.Visitor.IsNeedFetchShardingTables)
-                        this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
                     int index = 0;
                     fixedParameterSetter?.Invoke(command.Parameters);
                     connection.Open();
@@ -173,8 +169,6 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>
                     if (!this.Visitor.HasWhere)
                         throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
-                    if (this.Visitor.IsNeedFetchShardingTables)
-                        this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
                     command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
                     connection.Open();
                     result = command.ExecuteNonQuery(CommandSqlType.Update);
@@ -223,8 +217,6 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>
                     }
                     builder.AppendLine($"PRIMARY KEY({string.Join(",", pkColumns)})");
                     builder.AppendLine(");");
-                    if (this.Visitor.IsNeedFetchShardingTables)
-                        builder.Append(this.Visitor.BuildTableShardingsSql());
                     var bulkCopySql = builder.ToString();
 
                     builder.Clear();
@@ -301,8 +293,6 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>
                             firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, suffixGetter.Invoke(index));
                         };
                     }
-                    if (this.Visitor.IsNeedFetchShardingTables)
-                        await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
 
                     int index = 0;
                     fixedParameterSetter?.Invoke(command.Parameters);
@@ -335,8 +325,6 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>
                     if (!this.Visitor.HasWhere)
                         throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
-                    if (this.Visitor.IsNeedFetchShardingTables)
-                        this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
                     command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
                     await connection.OpenAsync(cancellationToken);
                     result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
@@ -387,12 +375,6 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>
             builder.AppendLine($"PRIMARY KEY({string.Join(",", pkColumns)})");
             builder.AppendLine(");");
 
-            if (this.Visitor.IsNeedFetchShardingTables)
-            {
-                builder.Append(this.Visitor.BuildTableShardingsSql());
-                builder.Append(';');
-            }
-
             void Execute(string target, string source)
             {
                 builder.Append($"UPDATE {this.OrmProvider.GetTableName(target)} a INNER JOIN {this.OrmProvider.GetTableName(source)} b ON ");
@@ -427,19 +409,8 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>
         }
         else
         {
-            if (this.Visitor.IsNeedFetchShardingTables)
-            {
-                this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-                builder.Append(this.Visitor.BuildTableShardingsSql());
-                builder.Append(';');
-            }
             (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
             sql = this.Visitor.BuildCommand(this.DbContext, command, out _);
-            if (this.Visitor.IsNeedFetchShardingTables)
-            {
-                builder.Append(sql);
-                sql = builder.ToString();
-            }
             dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
             command.Dispose();
             if (isNeedClose) connection.Close();

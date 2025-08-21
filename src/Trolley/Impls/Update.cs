@@ -328,10 +328,6 @@ public class Updated<TEntity> : IUpdated<TEntity>
     }
     #endregion
 
-    #region ToMultipleCommand
-    public virtual MultipleCommand ToMultipleCommand() => this.Visitor.CreateMultipleCommand();
-    #endregion
-
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
