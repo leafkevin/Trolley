@@ -37,10 +37,9 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
-    public virtual IQuery<<#=tables#>> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    public virtual IQuery<<#=tables#>> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, tableNameGetter);
         return this;
     }
     public virtual IQuery<<#=tables#>> UseTableBy(params object[] fieldValues)
@@ -51,6 +50,11 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     public virtual IQuery<<#=tables#>> UseTableByRange(params object[] fieldValues)
     {
         this.Visitor.UseTableByRange(false, fieldValues);
+        return this;
+    }
+    public virtual IQuery<<#=tables#>> UseUnionShardingTable()
+    {
+        this.Visitor.UseUnionShardingTable();
         return this;
     }
     #endregion

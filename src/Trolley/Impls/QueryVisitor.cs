@@ -2166,7 +2166,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         queryVisitor.LastWhereOperationType = this.LastWhereOperationType;
         queryVisitor.IncludeTables = this.IncludeTables;
         queryVisitor.RefQueries = this.RefQueries;
-        queryVisitor.IsNeedFetchShardingTables = this.IsNeedFetchShardingTables;
         queryVisitor.IsNeedUnionShardingTables = this.IsNeedUnionShardingTables;
         queryVisitor.IsNeedFormatShardingTables = this.IsNeedFormatShardingTables;
         queryVisitor.IsManyShardingTables = this.IsManyShardingTables;

@@ -31,15 +31,15 @@ public interface IUpdate<TEntity>
     IUpdateVisitor Visitor { get; }
     #endregion
 
-    #region Sharding
+     #region Sharding
     /// <summary>
-    /// 直接指定TEntity表分表名，完整的表名，如：.UseTable("sys_order_202001")
+    /// 直接指定<typeparamref name="TEntity"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
-    /// <param name="tableName">分表名，完整的表名，如：sys_order_202001，按月分表</param>
+    /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回更新对象</returns>
-    IUpdate<TEntity> UseTable(string tableName);
+    IUpdate<TEntity> UseTable(params string[] tableNames);
     /// <summary>
-    /// 手动指定TEntity表分表名获取委托，执行委托获取分表名，在批量更新场景，更新对象的值自动更新到对应分表中，此方法只适用批量场景。
+    /// 手动指定<typeparamref name="TEntity"/>表分表名获取委托，执行委托获取分表名，更新到多个分表中，只用于批量场景。
     /// 第一个参数是原始表名，第二个参数是更新的实体对象，返回值是分表名，如：.UseTable((tableName, updateObj) =&gt; $"{tableName}_{updateObj.CreatedAt:yyyyMM}")
     /// </summary>
     /// <typeparam name="TUpdateObj">更新的实体类型</typeparam>
@@ -47,11 +47,17 @@ public interface IUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter);
     /// <summary>
-    /// 手动指定分表规则参数值，执行分表规则确定TEntity表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="TEntity"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回更新对象</returns>
     IUpdate<TEntity> UseTableBy(params object[] fieldValues);
+    /// <summary>
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="TEntity"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// </summary>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
+    /// <returns>返回更新对象</returns>
+    IUpdate<TEntity> UseTableByRange(params object[] fieldValues);
     #endregion
 
     #region UseTableSchema

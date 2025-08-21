@@ -37,19 +37,9 @@ public class Delete<TEntity> : IDelete<TEntity>
         this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
-    public virtual IDelete<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
+    public virtual IDelete<TEntity> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, [beginFieldValue, endFieldValue]);
-        return this;
-    }
-    public virtual IDelete<TEntity> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
-    {
-        this.Visitor.UseTableByRange(false, [field1Value, beginField2Value, endField2Value]);
-        return this;
-    }
-    public virtual IDelete<TEntity> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-    {
-        this.Visitor.UseTableByRange(false, [field1Value, field2Value, beginField3Value, endField3Value]);
+        this.Visitor.UseTableByRange(false, fieldValues);
         return this;
     }
     #endregion
@@ -153,8 +143,6 @@ public class Deleted<TEntity> : IDeleted<TEntity>
     {
         if (!this.Visitor.HasWhere)
             throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
-        if (this.Visitor.IsNeedFetchShardingTables)
-            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
 
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         command.CommandText = this.Visitor.BuildCommand(command, out _);
@@ -169,8 +157,6 @@ public class Deleted<TEntity> : IDeleted<TEntity>
     {
         if (!this.Visitor.HasWhere)
             throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
-        if (this.Visitor.IsNeedFetchShardingTables)
-            await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
 
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         command.CommandText = this.Visitor.BuildCommand(command, out _);

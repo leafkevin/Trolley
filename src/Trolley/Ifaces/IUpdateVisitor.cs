@@ -18,7 +18,6 @@ public interface IUpdateVisitor : IDisposable
     ITableShardingProvider ShardingProvider { get; }
     ActionMode ActionMode { get; set; }
     List<TableSegment> Tables { get; }
-    bool IsNeedFetchShardingTables { get; }
     List<TableSegment> ShardingTables { get; set; }
 
     void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
@@ -29,7 +28,7 @@ public interface IUpdateVisitor : IDisposable
     void UseTable(bool isIncludeMany, params string[] tableNames);
     void UseTableByRange(bool isIncludeMany, object[] fieldValues);
     void UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter);
-    void UseTableMap(bool isIncludeMany, Type masterEntityType, Func<string, string, string, string> tableNameGetter);
+    void UseTableMap(bool isIncludeMany, Func<string, string, string, string> tableNameGetter);
     void UseTableBy(bool isIncludeMany, params object[] fieldValues);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
@@ -53,7 +52,6 @@ public interface IUpdateVisitor : IDisposable
     DataTable ToDataTable(Type updateObjType, IEnumerable entities, List<(MemberMap, Func<object, object>)> memberMappers, string tableName = null);
     List<(MemberMap, Func<object, object>)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper, bool isUpdate = false);
     string BuildTableShardingsSql();
-    bool SetShardingTables(List<string> shardingTables);
     string GetTableName(TableSegment tableSegment);
     bool IsMemberVisit(Expression expr);
 }

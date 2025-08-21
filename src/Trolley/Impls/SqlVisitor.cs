@@ -6,7 +6,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace Trolley;
 
@@ -107,8 +106,8 @@ public class SqlVisitor : ISqlVisitor
             tableSegment.ShardingType = ShardingTableType.MultiTable;
             tableSegment.TableNames = new List<string>(tableNames);
             this.ShardingTables ??= new();
-            if (this.ShardingTables.Exists(f => f.ShardingType == ShardingTableType.MultiTable))
-                throw new NotSupportedException("仅支持首个多分表为MultiTable类型，其余表只能为调用方法UseTableMap与首个多分表表名映射实现多分表");
+            if (!this.ShardingTables.Exists(f => f.ShardingType == ShardingTableType.MultiTable))
+                throw new NotSupportedException("不存在多分表的实体表，不能使用此方法，可直接使用首个多分表为MultiTable类型，其余表只能为调用方法UseTableMap与首个多分表表名映射实现多分表");
             if (!this.ShardingTables.Contains(tableSegment))
             {
                 tableSegment.ShardingId = Guid.NewGuid().ToString("N");
@@ -128,7 +127,7 @@ public class SqlVisitor : ISqlVisitor
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out var shardingTableInfo))
             throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表，无需调用此方法");
-        if (shardingTableInfo.RangleRule == null) throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表范围规则，不能调用此方法");
+        if (shardingTableInfo.RangleRule == null) throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表范围规则，不能使用此方法");
         var origTableName = tableSegment.Mapper.TableName;
         var tableNames = shardingTableInfo.RangleRule.Invoke(origTableName, fieldValues);
         if (tableNames == null || tableNames.Count == 0)
@@ -152,44 +151,29 @@ public class SqlVisitor : ISqlVisitor
             tableSegment.Body = null;
         }
         if (tableSegment.TableNames != null)
-        {
-            if (!string.IsNullOrEmpty(tableSegment.Body))
-            {
-                tableSegment.TableNames.Add(tableSegment.Body);
-                tableSegment.Body = null;
-            }
             tableSegment.TableNames.AddRange(tableNames);
-        }
+
         //范围分表，都当作多分表处理，方便后续表映射
         this.IsNeedFormatShardingTables = true;
     }
-    public void UseTableMap(bool isIncludeMany, Type masterEntityType, Func<string, string, string, string> tableNameGetter)
+    public void UseTableMap(bool isIncludeMany, Func<string, string, string, string> tableNameGetter)
     {
         if (tableNameGetter == null)
             throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
 
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out var shardingTable))
-            throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表，无需调用此方法");
-        if (this.ShardingTables == null)
-            throw new NotSupportedException("仅当有首个多分表的表时，才能使用此方法UseTableMap，多分表可以通过UseTable、UseTableByRange方法设置");
+            throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表，不能使用此方法");
+        if (this.ShardingTables == null || !this.ShardingTables.Exists(f => f.ShardingType == ShardingTableType.MultiTable))
+            throw new NotSupportedException("不存在多分表的实体表，不能使用此方法，可使用UseTable、UseTableBy方法设置分表");
 
         tableSegment.IsSharding = true;
         tableSegment.ShardingType = ShardingTableType.TableMap;
-        //分表依赖，只要取一个主表就行，因为分表规则都是一样的
-        tableSegment.ShardingDependent = this.ShardingTables.Find(f => f.EntityType == masterEntityType);
         tableSegment.ShardingMapGetter = tableNameGetter;
-
-        //在实际按照分表规则执行时，可能会只有一个分表，此时会更改分表类型为ShardingTableType.SingleTable
-        var masterTableSegment = this.ShardingTables.Find(f => f.ShardingType >= ShardingTableType.SingleTable && f.ShardingType < ShardingTableType.TableMap);
-        if (masterTableSegment.EntityType != masterEntityType)
-            throw new NotSupportedException($"实体表{tableSegment.EntityType.FullName}的映射实体应该选择第一个多个分表的表实体类型:{masterTableSegment.EntityType.FullName}");
-
         if (!this.ShardingTables.Contains(tableSegment))
         {
             tableSegment.ShardingId = Guid.NewGuid().ToString("N");
             this.ShardingTables.Add(tableSegment);
-            this.IsNeedFetchShardingTables = true;
         }
         this.IsNeedFormatShardingTables = true;
     }
@@ -197,7 +181,7 @@ public class SqlVisitor : ISqlVisitor
     {
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out var shardingTableInfo))
-            throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表，不能调用此方法");
+            throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表，不能使用此方法");
         if (fieldValues == null)
             throw new ArgumentNullException($"实体{tableSegment.EntityType.FullName}表有配置分表规则依赖，字段值fieldValues不可为null");
 
@@ -264,81 +248,6 @@ public class SqlVisitor : ISqlVisitor
         tableSegment.TableSchema = tableSchema;
     }
     public virtual string BuildTableShardingsSql() => null;
-    public bool SetShardingTables(List<string> shardingTables)
-    {
-        if (this.ShardingTables.Count > 1)
-        {
-            var needQueryTables = this.ShardingTables.FindAll(f => f.ShardingType > ShardingTableType.MultiTable);
-            foreach (var tableSegment in needQueryTables)
-            {
-                var entityType = tableSegment.EntityType;
-                var tableName = tableSegment.Mapper.TableName;
-                if (!this.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
-                    throw new Exception($"实体{entityType.FullName}表没有配置分表信息");
-
-                switch (tableSegment.ShardingType)
-                {
-                    case ShardingTableType.TableRange:
-                        var oldTableNames = tableSegment.TableNames;
-                        tableSegment.TableNames = shardingTables.FindAll(f => oldTableNames.Contains(f) && Regex.IsMatch(f, tableShardingInfo.ValidateRegex));
-                        break;
-                    case ShardingTableType.TableMap:
-                        //此处只是把所有可能的分表名称设置一下，在执行前，再做过滤                      
-                        tableSegment.TableNames = shardingTables.FindAll(f => Regex.IsMatch(f, tableShardingInfo.ValidateRegex));
-                        break;
-                }
-            }
-        }
-        else
-        {
-            var tableSegment = this.ShardingTables[0];
-            var entityType = tableSegment.EntityType;
-            if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
-                throw new Exception($"实体{entityType.FullName}表有配置分表信息");
-
-            var tableNames = shardingTables;
-            if (!string.IsNullOrEmpty(tableSegment.Body))
-            {
-                tableNames = shardingTables.FindAll(f =>
-                {
-                    var result = Regex.IsMatch(f, shardingTable.ValidateRegex);
-                    return result && f == tableSegment.Body;
-                });
-                if (tableNames == null || tableNames.Count == 0)
-                    throw new Exception($"分表{tableSegment.Body}不存在");
-            }
-            else
-            {
-                switch (tableSegment.ShardingType)
-                {
-                    case ShardingTableType.TableRange:
-                        var oldTableNames = tableSegment.TableNames;
-                        tableNames = shardingTables.FindAll(f => oldTableNames.Contains(f) && Regex.IsMatch(f, shardingTable.ValidateRegex));
-                        break;
-                    case ShardingTableType.MasterFilter:
-                        tableNames = shardingTables.FindAll(f => Regex.IsMatch(f, shardingTable.ValidateRegex) && tableSegment.ShardingFilter.Invoke(f));
-                        break;
-                }
-                if (tableNames == null || tableNames.Count == 0)
-                    return false;
-                //throw new Exception($"没有搜索到满足条件的{tableSegment.Mapper.TableName}分表");
-            }
-
-            //只有一个分表时，会移除ShardingTables里面元素，生成SQL时候，直接取tableSegment.Body
-            if (tableNames.Count > 1)
-                tableSegment.TableNames = tableNames;
-            else
-            {
-                if (tableNames == null || tableNames.Count == 0)
-                    return false;
-                //throw new Exception($"没有搜索到满足条件的{tableSegment.Mapper.TableName}分表");
-                tableSegment.Body = tableNames[0];
-                if (tableSegment.ShardingType > ShardingTableType.SingleTable)
-                    tableSegment.TableNames = tableNames;
-            }
-        }
-        return true;
-    }
 
     public virtual SqlFieldSegment VisitAndDeferred(SqlFieldSegment sqlSegment)
     {
@@ -1740,6 +1649,7 @@ public class SqlVisitor : ISqlVisitor
         }
 
         string unionType = null;
+        object[] fieldValues = null;
         while (callStack.TryPop(out var callExpr))
         {
             var methodInfo = callExpr.Method;
@@ -1791,30 +1701,17 @@ public class SqlVisitor : ISqlVisitor
                     break;
                 case "UseTableMap":
                     var tableNameMapGetter = this.Evaluate<Func<string, string, string, string>>(callExpr.Arguments[0]);
-                    var masterEntityType = methodInfo.GetGenericArguments().Last();
-                    queryVisitor.UseTableMap(false, masterEntityType, tableNameMapGetter);
+                    queryVisitor.UseTableMap(false, tableNameMapGetter);
                     break;
                 case "UseTableBy":
-                    var fieldValues = (object[])this.Evaluate(callExpr.Arguments[0]);
+                    fieldValues = (object[])this.Evaluate(callExpr.Arguments[0]);
                     entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
                     queryVisitor.UseTableBy(false, fieldValues);
                     break;
                 case "UseTableByRange":
-                    switch (callExpr.Arguments.Count)
-                    {
-                        case 2:
-                            queryVisitor.UseTableByRange(false, [this.Evaluate(callExpr.Arguments[0]),
-                                this.Evaluate(callExpr.Arguments[1])]);
-                            break;
-                        case 3:
-                            queryVisitor.UseTableByRange(false, [this.Evaluate(callExpr.Arguments[0]),
-                                this.Evaluate(callExpr.Arguments[1]), this.Evaluate(callExpr.Arguments[2])]);
-                            break;
-                        case 4:
-                            queryVisitor.UseTableByRange(false, [this.Evaluate(callExpr.Arguments[0]),
-                                this.Evaluate(callExpr.Arguments[1]), this.Evaluate(callExpr.Arguments[2]), this.Evaluate(callExpr.Arguments[3])]);
-                            break;
-                    }
+                    fieldValues = (object[])this.Evaluate(callExpr.Arguments[0]);
+                    entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
+                    queryVisitor.UseTableByRange(false, fieldValues);
                     break;
                 case "UseTableSchema":
                     queryVisitor.UseTableSchema(false, this.Evaluate<string>(callExpr.Arguments[0]));

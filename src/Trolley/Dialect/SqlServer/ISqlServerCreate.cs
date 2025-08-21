@@ -7,20 +7,20 @@ public interface ISqlServerCreate<TEntity> : ICreate<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 手动指定TEntity表分表名，如：.UseTable("sys_order_202001")
+    /// 手动指定<typeparamref name="TEntity"/>表分表名，如：.UseTable("sys_order_202001")
     /// </summary>
     /// <param name="tableName">完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回插入对象</returns>
     new ISqlServerCreate<TEntity> UseTable(string tableName);
     /// <summary>
-    /// 手动指定TEntity表分表名获取委托，使用委托获取分表名，在批量插入场景，插入对象的值自动插入对应分表中，此方法只适用批量场景
+    /// 手动指定<typeparamref name="TEntity"/>表分表名获取委托，使用委托获取分表名，在批量插入场景，插入对象的值自动插入对应分表中，此方法只适用批量场景
     /// </summary>
     /// <typeparam name="TInsertObj">插入的实体类型</typeparam>
     /// <param name="tableNameGetter">分表名获取委托</param>
     /// <exception cref="ArgumentNullException"></exception>
     new ISqlServerCreate<TEntity> UseTable<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter);
     /// <summary>
-    /// 手动指定分表规则参数值，执行分表规则确定TEntity表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，最多支持3个字段值，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="TEntity"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回插入对象</returns>

@@ -22,16 +22,7 @@ public class FromCommand : QueryInternal, IFromCommand
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        if (this.Visitor.IsNeedFetchShardingTables)
-            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
         var sql = this.Visitor.BuildCommandSql(true, out var dbDataParameters);
-        if (this.Visitor.IsNeedFetchShardingTables)
-        {
-            var builder = new StringBuilder(this.Visitor.BuildTableShardingsSql());
-            builder.Append(';');
-            builder.Append(sql);
-            sql = builder.ToString();
-        }
         dbParameters = dbDataParameters.Cast<IDbDataParameter>().ToList();
         this.Dispose();
         return sql;
@@ -321,8 +312,6 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
     #region Execute
     public virtual int Execute()
     {
-        if (this.Visitor.IsNeedFetchShardingTables)
-            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         command.CommandText = this.Visitor.BuildCommandSql(true, out var dbParameters);
         dbParameters.CopyTo(command.Parameters);
@@ -334,9 +323,6 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
     }
     public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        if (this.Visitor.IsNeedFetchShardingTables)
-            await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
-
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         command.CommandText = this.Visitor.BuildCommandSql(true, out var dbParameters);
         dbParameters.CopyTo(command.Parameters);

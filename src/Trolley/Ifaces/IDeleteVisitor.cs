@@ -16,7 +16,6 @@ public interface IDeleteVisitor : IDisposable
     bool HasWhere { get; }
     bool IsMultiple { get; set; }
     int CommandIndex { get; set; }
-    bool IsNeedFetchShardingTables { get; }
     List<TableSegment> ShardingTables { get; }
 
     void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
@@ -26,7 +25,7 @@ public interface IDeleteVisitor : IDisposable
 
     void UseTable(bool isIncludeMany, params string[] tableNames);
     void UseTableByRange(bool isIncludeMany, object[] fieldValues);
-    void UseTableMap(bool isIncludeMany, Type masterEntityType, Func<string, string, string, string> tableNameGetter);
+    void UseTableMap(bool isIncludeMany, Func<string, string, string, string> tableNameGetter);
     void UseTableBy(bool isIncludeMany, params object[] fieldValues);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
@@ -37,5 +36,4 @@ public interface IDeleteVisitor : IDisposable
 
     string GetTableName(TableSegment tableSegment);
     string BuildTableShardingsSql();
-    bool SetShardingTables(List<string> shardingTables);
 }

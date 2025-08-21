@@ -186,9 +186,7 @@ public sealed class DbContext
     public TResult QueryScalar<TResult>(IQueryVisitor visitor)
     {
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        (var isSuccess, var sql, _) = this.BuildSql(visitor, " UNION ALL ");
-        if (!isSuccess) return default;
-
+        (var sql, _) = this.BuildSql(visitor, " UNION ALL ");
         sql = this.BuildScalarShardingSql(visitor, sql);
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
@@ -207,9 +205,7 @@ public sealed class DbContext
     public async Task<TResult> QueryScalarAsync<TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        (var isSuccess, var sql, var readerFields) = await this.BuildSqlAsync(visitor, " UNION ALL ", cancellationToken);
-        if (!isSuccess) return default;
-
+        (var sql, var readerFields) = this.BuildSql(visitor, " UNION ALL ");
         sql = this.BuildScalarShardingSql(visitor, sql);
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
@@ -593,8 +589,7 @@ public sealed class DbContext
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         Expression<Func<TEntity, TEntity>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
-        (var isSuccess, var sql, var readerFields) = this.BuildSql(visitor, " UNION ALL ");
-        if (!isSuccess) return default;
+        (var sql, var readerFields) = this.BuildSql(visitor, " UNION ALL ");
 
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
@@ -626,8 +621,7 @@ public sealed class DbContext
 
         Expression<Func<TEntity, TEntity>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
-        (var isSuccess, var sql, var readerFields) = await this.BuildSqlAsync(visitor, " UNION ALL ", cancellationToken);
-        if (!isSuccess) return default;
+        (var sql, var readerFields) = this.BuildSql(visitor, " UNION ALL ");
 
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
@@ -659,8 +653,7 @@ public sealed class DbContext
         Expression<Func<TResult, TResult>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         visitor.IsNeedPaging = true;
-        (var isSuccess, var sql, var readerFields) = this.BuildSql(visitor, " UNION ALL ");
-        if (!isSuccess) return default;
+        (var sql, var readerFields) = this.BuildSql(visitor, " UNION ALL ");
 
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
@@ -702,8 +695,7 @@ public sealed class DbContext
         Expression<Func<TResult, TResult>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         visitor.IsNeedPaging = true;
-        (var isSuccess, var sql, var readerFields) = await this.BuildSqlAsync(visitor, " UNION ALL ", cancellationToken);
-        if (!isSuccess) return result;
+        (var sql, var readerFields) = this.BuildSql(visitor, " UNION ALL ");
 
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
@@ -1270,33 +1262,14 @@ public sealed class DbContext
     #endregion
 
     #region Sharding
-    public (bool, string, List<SqlFieldSegment>) BuildSql(IQueryVisitor visitor, string jointMark)
+    public (string, List<SqlFieldSegment>) BuildSql(IQueryVisitor visitor, string jointMark)
     {
-        bool isSuccess = true;
-        string sql = null;
-        if (visitor.IsNeedFetchShardingTables)
-            isSuccess = this.FetchShardingTables(visitor as SqlVisitor);
-        if (!isSuccess) return (isSuccess, sql, null);
-        sql = visitor.BuildSql(true, out var readerFields);
+        var sql = visitor.BuildSql(true, out var readerFields);
         if (visitor.IsNeedFormatShardingTables)
             sql = this.BuildShardingTablesSqlByFormat(visitor as SqlVisitor, sql, jointMark);
         if (visitor.IsNeedUnionShardingTables)
             sql = visitor.BuildShardingSql(sql);
-        return (isSuccess, sql, readerFields);
-    }
-    public async Task<(bool, string, List<SqlFieldSegment>)> BuildSqlAsync(IQueryVisitor visitor, string jointMark, CancellationToken cancellationToken = default)
-    {
-        bool isSuccess = true;
-        string sql = null;
-        if (visitor.IsNeedFetchShardingTables)
-            isSuccess = await this.FetchShardingTablesAsync(visitor as SqlVisitor, cancellationToken);
-        if (!isSuccess) return (isSuccess, sql, null);
-        sql = visitor.BuildSql(true, out var readerFields);
-        if (visitor.IsNeedFormatShardingTables)
-            sql = this.BuildShardingTablesSqlByFormat(visitor as SqlVisitor, sql, jointMark);
-        if (visitor.IsNeedUnionShardingTables)
-            sql = visitor.BuildShardingSql(sql);
-        return (isSuccess, sql, readerFields);
+        return (sql, readerFields);
     }
     public string BuildScalarShardingSql(IQueryVisitor visitor, string rawSql)
     {
@@ -1325,45 +1298,6 @@ public sealed class DbContext
         }
         return rawSql;
     }
-    public bool FetchShardingTables(SqlVisitor visitor)
-    {
-        var fetchSql = visitor.BuildTableShardingsSql();
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        command.CommandText = fetchSql;
-        connection.Open();
-        using var reader = command.ExecuteReader(CommandSqlType.Select, CommandBehavior.SequentialAccess);
-        var shardingTables = new List<string>();
-        while (reader.Read())
-        {
-            shardingTables.Add(reader.ToValue<string>(this));
-        }
-        var hasTables = visitor.SetShardingTables(shardingTables);
-
-        reader.Dispose();
-        command.Dispose();
-        if (isNeedClose) connection.Close();
-        return hasTables;
-    }
-    public async Task<bool> FetchShardingTablesAsync(SqlVisitor visitor, CancellationToken cancellationToken = default)
-    {
-        var fetchSql = visitor.BuildTableShardingsSql();
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        command.CommandText = fetchSql;
-        command.Parameters.Clear();
-        await connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, CommandBehavior.SequentialAccess, cancellationToken);
-        var shardingTables = new List<string>();
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            shardingTables.Add(reader.ToValue<string>(this));
-        }
-        var hasTables = visitor.SetShardingTables(shardingTables);
-
-        await reader.DisposeAsync();
-        await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
-        return hasTables;
-    }
     public string BuildShardingTablesSqlByFormat(SqlVisitor visitor, string formatSql, string jointMark)
     {
         //查询，分表多个表时，都使用表名替换生成分表sql
@@ -1372,74 +1306,54 @@ public sealed class DbContext
         {
             var masterTableSegment = visitor.ShardingTables[0];
             var loopCount = masterTableSegment.TableNames.Count;
-            if (loopCount > 1) masterTableSegment.TableNames.Sort((x, y) => x.CompareTo(y));
             var origMasterName = masterTableSegment.Mapper.TableName;
-            Dictionary<TableSegment, List<string>> tableShardings = new();
             for (int i = 0; i < loopCount; i++)
             {
                 var masterTableName = masterTableSegment.TableNames[i];
                 var sql = formatSql.Replace($"__SHARDING_{masterTableSegment.ShardingId}_{origMasterName}", masterTableName);
-                if (this.GetdShardingMapTableName(visitor, origMasterName, masterTableName, sql, tableShardings, out sql))
+                for (int j = 1; j < visitor.ShardingTables.Count; j++)
                 {
-                    if (builder.Length > 0) builder.Append(jointMark);
-                    builder.Append(sql);
+                    var tableSegment = visitor.ShardingTables[j];
+                    var origTableName = tableSegment.Mapper.TableName;
+
+                    //如果主表分表名不存在，直接忽略本次关联
+                    var tableName = tableSegment.ShardingMapGetter.Invoke(origMasterName, origTableName, masterTableName);
+                    sql = sql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origTableName}", tableName);
+                    //1:N include表，需要统计一下表名，后续会用到
+                    if (visitor.IncludeTables != null && visitor.IncludeTables.Contains(tableSegment))
+                    {
+                        tableSegment.TableNames ??= new();
+                        if (!tableSegment.TableNames.Contains(tableName))
+                            tableSegment.TableNames.Add(tableName);
+                    }
                 }
-            }
-            if (tableShardings.Count > 0)
-            {
-                foreach (var tableSharding in tableShardings)
-                {
-                    tableSharding.Key.TableNames = tableSharding.Value;
-                }
+                if (builder.Length > 0) builder.Append(jointMark);
+                builder.Append(sql);
             }
         }
         else
         {
             var tableSegment = visitor.ShardingTables[0];
-            var origName = tableSegment.Mapper.TableName;
+            var origTableName = tableSegment.Mapper.TableName;
             if (tableSegment.TableNames != null)
             {
                 for (int i = 0; i < tableSegment.TableNames.Count; i++)
                 {
                     if (i > 0) builder.Append(jointMark);
                     var tableName = tableSegment.TableNames[i];
-                    var sql = formatSql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origName}", tableName);
+                    var sql = formatSql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origTableName}", tableName);
                     builder.Append(sql);
                 }
             }
             else
             {
-                var sql = formatSql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origName}", tableSegment.Body);
+                var sql = formatSql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origTableName}", tableSegment.Body);
                 builder.Append(sql);
             }
         }
         var result = builder.ToString();
         builder.Clear();
         return result;
-    }
-    private bool GetdShardingMapTableName(SqlVisitor visitor, string origMasterName, string masterTableName, string formatSql, Dictionary<TableSegment, List<string>> tableShardingNames, out string sql)
-    {
-        sql = formatSql;
-        for (int j = 1; j < visitor.ShardingTables.Count; j++)
-        {
-            var tableSegment = visitor.ShardingTables[j];
-            var origName = tableSegment.Mapper.TableName;
-
-            //如果主表分表名不存在，直接忽略本次关联
-            var tableName = tableSegment.ShardingMapGetter.Invoke(origMasterName, origName, masterTableName);
-            //主表存在分表，但从表不存在分表，直接忽略本次关联
-            if (!tableSegment.TableNames.Exists(f => f == tableName))
-                return false;
-            sql = sql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origName}", tableName);
-            //1:N include表，需要统计一下表名，后续会用到
-            if (visitor.IncludeTables != null && visitor.IncludeTables.Contains(tableSegment))
-            {
-                if (!tableShardingNames.TryGetValue(tableSegment, out var tableNames))
-                    tableShardingNames.Add(tableSegment, tableNames = new List<string>());
-                tableNames.Add(tableName);
-            }
-        }
-        return true;
     }
     public string GetShardingTableBy(Type entityType, params object[] fieldValues)
     {

@@ -39,7 +39,7 @@ public interface IRepository
     /// <returns>返回满足条件的所有分表</returns>
     Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector = null, string tableSchema = null, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 根据字段值确定<typeparamref name="TEntity"/>表分表名，最多支持3个字段值，字段值的顺序与分表规则设置的顺序保持一致
+    /// 根据字段值确定<typeparamref name="TEntity"/>表分表名，字段值的顺序与分表规则设置的顺序保持一致
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="fieldValues">字段值数组，字段值的顺序与分表规则设置的顺序保持一致，不可为null</param>
@@ -86,13 +86,13 @@ public interface IRepository
     /// <returns></returns>
     IRepository UseMaster();
     /// <summary>
-    /// 强制使用主库查询数据，根据字段值确定主库，适用于类似多租户、多租户多主库等带有水平分库模式场景，需要提供依赖字段值，最多支持3个字段值，如：租户Id、租户Id+时间等分库，同一个租户库也可以有多个主库
+    /// 强制使用主库查询数据，根据字段值确定主库，适用于类似多租户、多租户多主库等带有水平分库模式场景，需要提供依赖字段值，如：租户Id、租户Id+时间等分库，同一个租户库也可以有多个主库
     /// </summary>
     /// <param name="fieldValues">依赖字段值，最多支持3个字段值</param>
     /// <returns></returns>
     IRepository UseMasterBy(params object[] fieldValues);
     /// <summary>
-    /// 指定从库查询数据，根据字段值确定从库，适用于类似多租户、多租户多从库等带有水平分库模式场景，需要提供依赖字段值，最多支持3个字段值，如：租户Id、租户Id+时间等分库，同一个租户库也可以有多个从库
+    /// 指定从库查询数据，根据字段值确定从库，适用于类似多租户、多租户多从库等带有水平分库模式场景，需要提供依赖字段值，如：租户Id、租户Id+时间等分库，同一个租户库也可以有多个从库
     /// </summary>
     /// <param name="fieldValues">依赖字段值，最多支持3个字段值</param>
     /// <returns></returns>

@@ -27,9 +27,9 @@ public class Update<TEntity> : IUpdate<TEntity>
     #endregion
 
     #region Sharding
-    public virtual IUpdate<TEntity> UseTable(string tableName)
+    public virtual IUpdate<TEntity> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableName);
+        this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
@@ -40,6 +40,11 @@ public class Update<TEntity> : IUpdate<TEntity>
     public virtual IUpdate<TEntity> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
+        return this;
+    }
+    public virtual IUpdate<TEntity> UseTableByRange(params object[] fieldValues)
+    {
+        this.Visitor.UseTableByRange(false, fieldValues);
         return this;
     }
     #endregion
@@ -178,8 +183,6 @@ public class Updated<TEntity> : IUpdated<TEntity>
     {
         int result = 0;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        if (this.Visitor.IsNeedFetchShardingTables)
-            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.Bulk:
@@ -253,8 +256,6 @@ public class Updated<TEntity> : IUpdated<TEntity>
     {
         int result = 0;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        if (this.Visitor.IsNeedFetchShardingTables)
-            await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
 
         switch (this.Visitor.ActionMode)
         {
@@ -334,17 +335,8 @@ public class Updated<TEntity> : IUpdated<TEntity>
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        if (this.Visitor.IsNeedFetchShardingTables)
-            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         var sql = this.Visitor.BuildCommand(this.DbContext, command, out _);
-        if (this.Visitor.IsNeedFetchShardingTables)
-        {
-            var builder = new StringBuilder(this.Visitor.BuildTableShardingsSql());
-            builder.Append(';');
-            builder.Append(sql);
-            sql = builder.ToString();
-        }
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         this.Visitor.Dispose();
