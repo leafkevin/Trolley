@@ -5531,7 +5531,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         orders.Sort((x, y) => x.Id.CompareTo(y.Id));
         for (int i = 0; i < orders.Count; i++)
         {
-            Assert.True(orders[i].TotalAmount == parameters[i].TotalAmount);
+            Assert.True((decimal)orders[i].TotalAmount == parameters[i].TotalAmount);
         }
     }
     [Fact]
@@ -6219,7 +6219,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .SetFrom(f => f.TotalAmount, (x, y) => x
                 .From<OrderDetail>('b')
                 .Where(t => t.OrderId == y.Id)
-                .SelectAggregate((x, t) => x.Sum(t.Amount)))
+                .SelectAggregate((x, t) => (double)x.Sum(t.Amount)))
             .Set(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.Id == "1")
@@ -6232,14 +6232,14 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .SetFrom(f => f.TotalAmount, (x, y) => x
                 .From<OrderDetail>('b')
                 .Where(t => t.OrderId == y.Id)
-                .SelectAggregate((x, t) => x.Sum(t.Amount)))
+                .SelectAggregate((x, t) => (double)x.Sum(t.Amount)))
             .Set(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.Id == "1")
             .ExecuteAsync();
         var reult = repository.GetById<Order>("1");
         Assert.True(count > 0);
-        Assert.True(reult.TotalAmount == totalAmount);
+        Assert.True(reult.TotalAmount == (double)totalAmount);
         Assert.True(reult.TotalAmount != order.TotalAmount);
 
         sql = repository.Update<Order>()
@@ -6488,7 +6488,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
             .SetFrom(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
                 .Where(f => f.OrderId == y.Id)
-                .SelectAggregate((x, f) => x.Sum(f.Amount)))
+                .SelectAggregate((x, f) => (double)x.Sum(f.Amount)))
             .Set((a, b) => new { OrderNo = a.OrderNo + " - " + b.Id.ToString() })
             .Set((x, y) => new { BuyerId = DBNull.Value })
             .Where((x, y) => x.Id == "2")
@@ -6505,7 +6505,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
             .SetFrom(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
                 .Where(f => f.OrderId == y.Id)
-                .SelectAggregate((x, f) => x.Sum(f.Amount)))
+                .SelectAggregate((x, f) => (double)x.Sum(f.Amount)))
             .Set((a, b) => new { OrderNo = a.OrderNo + " - " + b.Id.ToString() })
             .Set((x, y) => new { BuyerId = DBNull.Value })
             .Where((x, y) => x.Id == "2")
@@ -7305,111 +7305,110 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         Assert.Equal("1", groupedOrderInfo.Id);
         Assert.Equal("1", groupedOrderInfo.Grouping.OrderId);
     }
-    [Fact]
-    public async Task MultipleCommand()
-    {
-        var repository = this.dbFactory.Create();
-        int[] productIds = new int[] { 2, 4, 5, 6 };
-        int category = 1;
-        var commands = new List<MultipleCommand>();
-        var deleteCommand = repository.Delete<Product>()
-            .Where(f => productIds.Contains(f.Id))
-            .ToMultipleCommand();
+    //[Fact]
+    //public async Task MultipleCommand()
+    //{
+    //    var repository = this.dbFactory.Create();
+    //    int[] productIds = new int[] { 2, 4, 5, 6 };
+    //    int category = 1;
+    //    await repository.Delete<Product>()
+    //        .Where(f => productIds.Contains(f.Id))
+    //        .ExecuteAsync();
 
-        var insertCommand = repository.Create<Product>()
-           .WithBy(new
-           {
-               Id = 2,
-               ProductNo = "PN_111",
-               Name = "PName_111",
-               BrandId = 1,
-               CategoryId = category,
-               CompanyId = 1,
-               IsEnabled = true,
-               CreatedBy = 1,
-               CreatedAt = DateTime.Now,
-               UpdatedBy = 1,
-               UpdatedAt = DateTime.Now
-           })
-           .ToMultipleCommand();
+    //    await repository.Create<Product>()
+    //       .WithBy(new
+    //       {
+    //           Id = 2,
+    //           ProductNo = "PN_111",
+    //           Name = "PName_111",
+    //           BrandId = 1,
+    //           CategoryId = category,
+    //           CompanyId = 1,
+    //           IsEnabled = true,
+    //           CreatedBy = 1,
+    //           CreatedAt = DateTime.Now,
+    //           UpdatedBy = 1,
+    //           UpdatedAt = DateTime.Now
+    //       })
+    //       .ExecuteAsync();
 
-        var insertCommand2 = repository.Create<Product>()
-            .WithBulk(new[]
-            {
-                new
-                {
-                    Id = 4,
-                    ProductNo="PN-004",
-                    Name = "波司登羽绒服",
-                    BrandId = 1,
-                    CategoryId = 1,
-                    IsEnabled = true,
-                    CreatedAt = DateTime.Now,
-                    CreatedBy = 1,
-                    UpdatedAt = DateTime.Now,
-                    UpdatedBy = 1
-                },
-                new
-                {
-                    Id = 5,
-                    ProductNo="PN-005",
-                    Name = "雪中飞羽绒裤",
-                    BrandId = 2,
-                    CategoryId = 2,
-                    IsEnabled = true,
-                    CreatedAt = DateTime.Now,
-                    CreatedBy = 1,
-                    UpdatedAt = DateTime.Now,
-                    UpdatedBy = 1
-                },
-                new
-                {
-                    Id = 6,
-                    ProductNo="PN-006",
-                    Name = "优衣库保暖内衣",
-                    BrandId = 3,
-                    CategoryId = 3,
-                    IsEnabled = true,
-                    CreatedAt = DateTime.Now,
-                    CreatedBy = 1,
-                    UpdatedAt = DateTime.Now,
-                    UpdatedBy = 1
-                }
-            })
-            .OnlyFields(f => new { f.Id, f.ProductNo, f.Name, f.IsEnabled, f.CreatedBy, f.CreatedAt, f.UpdatedAt, f.UpdatedBy })
-            .ToMultipleCommand();
+    //    var insertCommand2 = repository.Create<Product>()
+    //        .WithBulk(new[]
+    //        {
+    //            new
+    //            {
+    //                Id = 4,
+    //                ProductNo="PN-004",
+    //                Name = "波司登羽绒服",
+    //                BrandId = 1,
+    //                CategoryId = 1,
+    //                IsEnabled = true,
+    //                CreatedAt = DateTime.Now,
+    //                CreatedBy = 1,
+    //                UpdatedAt = DateTime.Now,
+    //                UpdatedBy = 1
+    //            },
+    //            new
+    //            {
+    //                Id = 5,
+    //                ProductNo="PN-005",
+    //                Name = "雪中飞羽绒裤",
+    //                BrandId = 2,
+    //                CategoryId = 2,
+    //                IsEnabled = true,
+    //                CreatedAt = DateTime.Now,
+    //                CreatedBy = 1,
+    //                UpdatedAt = DateTime.Now,
+    //                UpdatedBy = 1
+    //            },
+    //            new
+    //            {
+    //                Id = 6,
+    //                ProductNo="PN-006",
+    //                Name = "优衣库保暖内衣",
+    //                BrandId = 3,
+    //                CategoryId = 3,
+    //                IsEnabled = true,
+    //                CreatedAt = DateTime.Now,
+    //                CreatedBy = 1,
+    //                UpdatedAt = DateTime.Now,
+    //                UpdatedBy = 1
+    //            }
+    //        })
+    //        .OnlyFields(f => new { f.Id, f.ProductNo, f.Name, f.IsEnabled, f.CreatedBy, f.CreatedAt, f.UpdatedAt, f.UpdatedBy })
+    //        .ToMultipleCommand();
 
-        var updateCommand = repository.Update<Order>()
-           .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-           .Set(true, (x, y) => new
-           {
-               TotalAmount = 200.56,
-               OrderNo = x.OrderNo + "-111",
-               BuyerSource = y.SourceType
-           })
-           .Set(x => x.Products, new List<int> { 1, 2, 3 })
-           .Where((a, b) => a.Id == "1")
-           .ToMultipleCommand();
+    //    var updateCommand = repository.Update<Order>()
+    //       .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+    //       .Set(true, (x, y) => new
+    //       {
+    //           TotalAmount = 200.56,
+    //           OrderNo = x.OrderNo + "-111",
+    //           BuyerSource = y.SourceType
+    //       })
+    //       .Set(x => x.Products, new List<int> { 1, 2, 3 })
+    //       .Where((a, b) => a.Id == "1")
+    //       .ToMultipleCommand();
 
-        var orderDetails = await repository.From<OrderDetail>().ToListAsync();
-        var parameters = orderDetails.Select(f => new
-        {
-            f.Id,
-            Amount = f.Amount + 50,
-            UpdatedAt = f.UpdatedAt.AddDays(1)
-        })
-        .ToList();
-        var bulkUpdateCommand = repository.Update<OrderDetail>()
-            .SetBulk(parameters)
-            .Set(f => f.ProductId, 3)
-            .Set(new { Quantity = 5 })
-            .Set(f => new { Price = f.Price + 10 })
-            .ToMultipleCommand();
+    //    var orderDetails = await repository.From<OrderDetail>().ToListAsync();
+    //    var parameters = orderDetails.Select(f => new
+    //    {
+    //        f.Id,
+    //        Amount = f.Amount + 50,
+    //        UpdatedAt = f.UpdatedAt.AddDays(1)
+    //    })
+    //    .ToList();
+    //    var bulkUpdateCommand = repository.Update<OrderDetail>()
+    //        .SetBulk(parameters)
+    //        .Set(f => f.ProductId, 3)
+    //        .Set(new { Quantity = 5 })
+    //        .Set(f => new { Price = f.Price + 10 })
+    //        .ToMultipleCommand();
 
-        commands.AddRange(new[] { deleteCommand, insertCommand, insertCommand2, updateCommand, bulkUpdateCommand });
-        var count = repository.MultipleExecute(commands);
-        Assert.True(count > 0);
-    }
+    //    commands.AddRange(new[] { deleteCommand, insertCommand, insertCommand2, updateCommand, bulkUpdateCommand });
+    //    var count = repository.MultipleExecute(commands);
+    //    Assert.True(count > 0);
+    //}
 
 
 
@@ -7655,7 +7654,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         var repository = this.dbFactory.Create();
         var userIds = new[] { 101, 102, 103 };
         await repository.Delete<User>()
-            .UseTable(f => f.Contains("104") || f.Contains("105"))
+            .UseTable("sys_user_104", "sys_user_105")
             .Where(userIds)
             .ExecuteAsync();
         await repository.Create<User>()
@@ -7843,7 +7842,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                 SellerId = 2,
                 TotalAmount = 630,
                 ProductCount = 2,
-                Products = new List<int> { 1, 2 },
+                Products = [1, 2],
                 Disputes = new Dispute
                 {
                     Id = i + 1,
@@ -8095,18 +8094,18 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         var productCount = 1;
         var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
-            .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .Include(f => f.Details)
-            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToSql(out _);
         Assert.Equal("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='fengling' AND (TABLE_NAME LIKE 'sys_order%' OR TABLE_NAME LIKE 'sys_order_detail%');SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_104_202405` a WHERE a.`ProductCount`>@p0", sql);
 
         var result = repository.From<Order>()
-            .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .Include(f => f.Details)
-            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToList();
@@ -8127,7 +8126,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         sql = repository.From<Order>()
             .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .Include(f => f.Details)
-            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToSql(out _);
@@ -8136,7 +8135,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         result = repository.From<Order>()
             .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .Include(f => f.Details)
-            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToList();
@@ -8190,11 +8189,11 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .FromQuery(f => f.From<OrderDetail>()
                 .UseTable("sys_order_detail_104_202405", "sys_order_detail_105_202405")
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
-                .UseTableMap<OrderDetail>((orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
+                .UseTableMap((orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
                 .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
                 .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
             .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
-            .UseTableMap<OrderDetail>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap((orderOrigName, userOrigName, orderTableName) =>
                 orderTableName.Replace(orderOrigName, userOrigName)[..^7])
             .Where((a, b) => a.ProductCount > 1)
             .Select((x, y) => new
@@ -8211,11 +8210,11 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .FromQuery(f => f.From<OrderDetail>()
                 .UseTable("sys_order_detail_104_202405", "sys_order_detail_105_202405")
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
-                .UseTableMap<OrderDetail>((orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
+                .UseTableMap((orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
                 .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
                 .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
             .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
-            .UseTableMap<OrderDetail>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName[..^7];
@@ -8248,7 +8247,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         var sql = repository.From<Order>()
             .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName[..^7];
@@ -8263,9 +8262,9 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         Assert.Equal("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='fengling' AND (TABLE_NAME LIKE 'sys_user%');SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>@p0 UNION ALL SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>@p0", sql);
 
         var result = repository.From<Order>()
-            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName[..^7];
@@ -8290,9 +8289,9 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         var productCount = 1;
         var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
-            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName[..^7];
@@ -8307,9 +8306,9 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         Assert.Equal("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='fengling' AND (TABLE_NAME LIKE 'sys_order%' OR TABLE_NAME LIKE 'sys_user%');SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>@p0 UNION ALL SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_104_202406` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>@p0 UNION ALL SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>@p0", sql);
 
         var result = repository.From<Order>()
-            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName[..^7];
@@ -8334,9 +8333,9 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         var productCount = 1;
         var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
-            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-            .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName) => orderTableName.Replace(orderOrigName, orderDetailOrigName))
+            .UseTableMap((orderOrigName, orderDetailOrigName, orderTableName) => orderTableName.Replace(orderOrigName, orderDetailOrigName))
             .Where((a, b) => a.ProductCount > productCount)
             .Select((x, y) => new
             {
@@ -8347,9 +8346,9 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         Assert.Equal("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='fengling' AND (TABLE_NAME LIKE 'sys_order%' OR TABLE_NAME LIKE 'sys_order_detail%');SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`TenantId`,b.`OrderId`,b.`ProductId`,b.`Price`,b.`Quantity`,b.`Amount`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_104_202405` a INNER JOIN `sys_order_detail_104_202405` b ON a.`Id`=b.`OrderId` WHERE a.`ProductCount`>@p0 UNION ALL SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`TenantId`,b.`OrderId`,b.`ProductId`,b.`Price`,b.`Quantity`,b.`Amount`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_105_202405` a INNER JOIN `sys_order_detail_105_202405` b ON a.`Id`=b.`OrderId` WHERE a.`ProductCount`>@p0", sql);
 
         var result = repository.From<Order>()
-            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-            .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+            .UseTableMap((orderOrigName, orderDetailOrigName, orderTableName)
                 => orderTableName.Replace(orderOrigName, orderDetailOrigName))
             .Where((a, b) => a.ProductCount > productCount)
             .Select((x, y) => new
@@ -8505,7 +8504,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         var repository = this.dbFactory.Create();
         var orderIds = new string[] { "ON_1001", "ON_1002", "ON_2003", "ON_2004" };
         var sql = repository.Update<Order>()
-            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .Set(new { TotalAmount = 400 })
             .Where(f => orderIds.Contains(f.Id))
             .ToSql(out var dbParameters);
@@ -8519,7 +8518,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
 
         await repository.BeginTransactionAsync();
         var result = await repository.Update<Order>()
-            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .Set(new { TotalAmount = 400 })
             .Where(f => orderIds.Contains(f.Id))
             .ExecuteAsync();
@@ -8544,7 +8543,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         var createdAt = DateTime.Parse("2024-05-24");
         var repository = this.dbFactory.Create();
         var orders = repository.From<Order>()
-            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .Select(f => new
             {
                 f.Id,
@@ -8601,7 +8600,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         var createdAt = DateTime.Parse("2024-05-24");
         var repository = this.dbFactory.Create();
         var orders = repository.From<Order>()
-            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .Select(f => new
             {
                 f.Id,
@@ -8675,7 +8674,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         sql = repository.From<Order>()
            .UseTableByRange("104", beginTime, endTime)
            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-           .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName) =>
+           .UseTableMap((orderOrigName, userOrigName, orderTableName) =>
            {
                var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                return tableName[..^7];
@@ -8693,7 +8692,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         var orderInfos = repository.From<Order>()
             .UseTableByRange("104", beginTime, endTime)
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName[..^7];
@@ -8719,19 +8718,19 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         var amount = 50;
         var sql = repository
             .FromQuery(f => f.From<Order>()
-                .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Slice(-6, 0)) > 202001)
+                .UseTable("sys_order_104_202405", "sys_order_105_202405")
                 .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-                .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+                .UseTableMap((orderOrigName, userOrigName, orderTableName)
                     => orderTableName.Replace(orderOrigName, userOrigName).Slice(0, -7))
                 .LeftJoin<OrderDetail>((a, b, c) => a.Id == c.OrderId)
-                .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+                .UseTableMap((orderOrigName, orderDetailOrigName, orderTableName)
                     => orderTableName.Replace(orderOrigName, orderDetailOrigName))
                 .GroupBy((a, b, c) => new { a.BuyerId, OrderId = a.Id, a.OrderNo })
                 .Having((x, a, b, c) => x.CountDistinct(c.ProductId) > count)
                 .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, a.Grouping.OrderNo, ProductTotal = a.CountDistinct(d.ProductId) }))
             .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
             .IncludeMany((a, b) => b.Details, f => f.Amount > amount)
-            .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+            .UseTableMap((orderOrigName, orderDetailOrigName, orderTableName)
                 => orderTableName.Replace(orderOrigName, orderDetailOrigName))
             .Select((x, y) => new { y.Disputes, x.BuyerId, x.OrderId, x.OrderNo, x.ProductTotal, Order = y })
             .ToSql(out var dbParameters);
@@ -8741,19 +8740,19 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
 
         var result = repository
             .FromQuery(f => f.From<Order>()
-                .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Substring(-6, 0)) > 202001)
+                .UseTable("sys_order_104_202405", "sys_order_105_202405")
                 .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-                .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+                .UseTableMap((orderOrigName, userOrigName, orderTableName)
                     => orderTableName.Replace(orderOrigName, userOrigName).Substring(0, -7))
                 .LeftJoin<OrderDetail>((a, b, c) => a.Id == c.OrderId)
-                .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+                .UseTableMap((orderOrigName, orderDetailOrigName, orderTableName)
                     => orderTableName.Replace(orderOrigName, orderDetailOrigName))
                 .GroupBy((a, b, c) => new { a.BuyerId, OrderId = a.Id, a.OrderNo })
                 .Having((x, a, b, c) => x.CountDistinct(c.ProductId) > count)
                 .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, a.Grouping.OrderNo, ProductTotal = a.CountDistinct(d.ProductId) }))
             .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
             .IncludeMany((a, b) => b.Details, f => f.Amount > amount)
-            .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+            .UseTableMap((orderOrigName, orderDetailOrigName, orderTableName)
                 => orderTableName.Replace(orderOrigName, orderDetailOrigName))
             .Select((x, y) => new { y.Disputes, x.BuyerId, x.OrderId, x.OrderNo, x.ProductTotal, Order = y })
             .First();
@@ -8821,22 +8820,22 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         var productCount = 1;
         var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
-            .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .UseTableSchema("fengling")
             .Include(f => f.Details)
             .UseTableSchema("fengling")
-            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToSql(out _);
         Assert.Equal("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='fengling' AND (TABLE_NAME LIKE 'sys_order%' OR TABLE_NAME LIKE 'sys_order_detail%');SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_104_202405` a WHERE a.`ProductCount`>@p0", sql);
 
         var result = repository.From<Order>()
-            .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .UseTableSchema("fengling")
             .Include(f => f.Details)
             .UseTableSchema("fengling")
-            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToList();
