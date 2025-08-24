@@ -64,54 +64,54 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
     #endregion
 
     #region From
-    public virtual IFromCommand<T> From<T>()
+    public virtual IFromCommand<TEntity, T> From<T>()
     {
         var queryVisitor = this.FromInternal(typeof(T));
-        return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
+        return this.OrmProvider.NewFromCommand<TEntity, T>(this.DbContext, queryVisitor);
     }
-    public virtual IFromCommand<T1, T2> From<T1, T2>()
+    public virtual IFromCommand<TEntity, T1, T2> From<T1, T2>()
     {
         var queryVisitor = this.FromInternal(typeof(T1), typeof(T2));
-        return this.OrmProvider.NewFromCommand<T1, T2>(this.DbContext, queryVisitor);
+        return this.OrmProvider.NewFromCommand<TEntity, T1, T2>(this.DbContext, queryVisitor);
     }
-    public virtual IFromCommand<T1, T2, T3> From<T1, T2, T3>()
+    public virtual IFromCommand<TEntity, T1, T2, T3> From<T1, T2, T3>()
     {
         var queryVisitor = this.FromInternal(typeof(T1), typeof(T2), typeof(T3));
-        return this.OrmProvider.NewFromCommand<T1, T2, T3>(this.DbContext, queryVisitor);
+        return this.OrmProvider.NewFromCommand<TEntity, T1, T2, T3>(this.DbContext, queryVisitor);
     }
-    public virtual IFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>()
+    public virtual IFromCommand<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>()
     {
         var queryVisitor = this.FromInternal(typeof(T1), typeof(T2), typeof(T3), typeof(T4));
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4>(this.DbContext, queryVisitor);
+        return this.OrmProvider.NewFromCommand<TEntity, T1, T2, T3, T4>(this.DbContext, queryVisitor);
     }
-    public virtual IFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
+    public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
     {
         var queryVisitor = this.FromInternal(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5>(this.DbContext, queryVisitor);
+        return this.OrmProvider.NewFromCommand<TEntity, T1, T2, T3, T4, T5>(this.DbContext, queryVisitor);
     }
-    public virtual IFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
+    public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
     {
         var queryVisitor = this.FromInternal(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, T6>(this.DbContext, queryVisitor);
+        return this.OrmProvider.NewFromCommand<TEntity, T1, T2, T3, T4, T5, T6>(this.DbContext, queryVisitor);
     }
     #endregion
 
     #region FromQuery
-    public virtual IFromCommand<T> FromQuery<T>(IQuery<T> subQuery)
+    public virtual IFromCommand<TEntity, T> FromQuery<T>(IQuery<T> subQuery)
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.IsFromCommand = true;
         queryVisitor.IsFromQuery = true;
         queryVisitor.UseQuery(typeof(T), subQuery, true);
-        return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
+        return this.OrmProvider.NewFromCommand<TEntity, T>(this.DbContext, queryVisitor);
     }
-    public virtual IFromCommand<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
+    public virtual IFromCommand<TEntity, T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.IsFromCommand = true;
         queryVisitor.IsFromQuery = true;
         queryVisitor.UseNewQuery(typeof(T), subQueryExpr, true);
-        return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
+        return this.OrmProvider.NewFromCommand<TEntity, T>(this.DbContext, queryVisitor);
     }
     #endregion
 }

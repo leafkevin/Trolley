@@ -72,10 +72,10 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
     #endregion
 
     #region From
-    public virtual IFromCommand<T> From<T>()
+    public virtual IFromCommand<TEntity, T> From<T>()
     {
         var queryVisitor = this.FromInternal(typeof(T));
-        return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
+        return this.OrmProvider.NewFromCommand<TEntity, T>(this.DbContext, queryVisitor);
     }
 <#
     var count = 7;
@@ -86,30 +86,30 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
         tables += $", T{i}";
         typeOfTables += $", typeof(T{i})";
 #>
-    public virtual IFromCommand<<#=tables#>> From<<#=tables#>>()
+    public virtual IFromCommand<TEntity, <#=tables#>> From<<#=tables#>>()
     {
         var queryVisitor = this.FromInternal(<#=typeOfTables#>);
-        return this.OrmProvider.NewFromCommand<<#=tables#>>(this.DbContext, queryVisitor);
+        return this.OrmProvider.NewFromCommand<TEntity, <#=tables#>>(this.DbContext, queryVisitor);
     }
 <#  }#>
     #endregion
 
     #region FromQuery
-    public virtual IFromCommand<T> FromQuery<T>(IQuery<T> subQuery)
+    public virtual IFromCommand<TEntity, T> FromQuery<T>(IQuery<T> subQuery)
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.IsFromCommand = true;
         queryVisitor.IsFromQuery = true;
         queryVisitor.UseQuery(typeof(T), subQuery, true);
-        return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
+        return this.OrmProvider.NewFromCommand<TEntity, T>(this.DbContext, queryVisitor);
     }
-    public virtual IFromCommand<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
+    public virtual IFromCommand<TEntity, T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.IsFromCommand = true;
         queryVisitor.IsFromQuery = true;
         queryVisitor.UseNewQuery(typeof(T), subQueryExpr, true);
-        return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
+        return this.OrmProvider.NewFromCommand<TEntity, T>(this.DbContext, queryVisitor);
     }
     #endregion
 }

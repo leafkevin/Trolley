@@ -47,11 +47,6 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCon
     #endregion
 
     #region OnDuplicateKeyUpdate
-    public IMySqlContinuedCreate<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj)
-    {
-        this.DialectVisitor.OnDuplicateKeyUpdate(updateObj);
-        return this;
-    }
     public IMySqlContinuedCreate<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment)
     {
         this.DialectVisitor.OnDuplicateKeyUpdate(fieldsAssignment);
@@ -317,11 +312,6 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
     #endregion
 
     #region OnDuplicateKeyUpdate
-    public IMySqlBulkContinuedCreate<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj)
-    {
-        this.DialectVisitor.OnDuplicateKeyUpdate(updateObj);
-        return this;
-    }
     public IMySqlBulkContinuedCreate<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment)
     {
         this.DialectVisitor.OnDuplicateKeyUpdate(fieldsAssignment);

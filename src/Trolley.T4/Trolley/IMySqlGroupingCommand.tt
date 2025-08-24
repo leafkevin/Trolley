@@ -14,34 +14,34 @@ namespace Trolley.MySqlConnector;
 /// 分组查询对象
 /// </summary>
 /// <typeparam name="TGrouping">分组后的对象类型</typeparam>
-public interface IMySqlGroupingCommandBase<TGrouping> : IGroupingCommandBase<TGrouping>
+public interface IMySqlGroupingCommandBase<TEntity, TGrouping> : IGroupingCommandBase<TEntity, TGrouping>
 {
     /// <summary>
     /// 使用分组后对象直接返回
     /// </summary>
     /// <returns>返回分组后对象</returns>
-    new IMySqlFromCommand<TGrouping> Select();
+    new IMySqlFromCommand<TEntity, TGrouping> Select();
 }
 /// <summary>
 /// 分组查询对象
 /// </summary>
 /// <typeparam name="T">原始表类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IMySqlGroupingCommand<T, TGrouping> : IGroupingCommand<T, TGrouping>, IMySqlGroupingCommandBase<TGrouping>
+public interface IMySqlGroupingCommand<TEntity, T, TGrouping> : IGroupingCommand<TEntity, T, TGrouping>, IMySqlGroupingCommandBase<TEntity, TGrouping>
 {
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
-    new IMySqlGroupingCommand<T, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate);
+    new IMySqlGroupingCommand<TEntity, T, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate);
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
     /// <param name="condition">判断条件</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
-    new IMySqlGroupingCommand<T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate);
+    new IMySqlGroupingCommand<TEntity, T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate);
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// .OrderBy(x =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 .OrderBy(x =&gt; x.Grouping.Date)
@@ -49,7 +49,7 @@ public interface IMySqlGroupingCommand<T, TGrouping> : IGroupingCommand<T, TGrou
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    new IMySqlGroupingCommand<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
+    new IMySqlGroupingCommand<TEntity, T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
     /// <summary>
     /// ASC排序，condition为true，ASC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// .OrderBy(true, f =&gt; new { f.Id, f.OtherId }) 或是 .OrderBy(true, x =&gt; x.CreatedAt.Date)
@@ -58,7 +58,7 @@ public interface IMySqlGroupingCommand<T, TGrouping> : IGroupingCommand<T, TGrou
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlGroupingCommand<T, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
+    new IMySqlGroupingCommand<TEntity, T, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// .OrderByDescending(x =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 .OrderByDescending(x =&gt; x.Grouping.Date)
@@ -66,7 +66,7 @@ public interface IMySqlGroupingCommand<T, TGrouping> : IGroupingCommand<T, TGrou
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    new IMySqlGroupingCommand<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
+    new IMySqlGroupingCommand<TEntity, T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，condition为true，DESC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// .OrderByDescending(true, f =&gt; new { f.Id, f.OtherId }) 或是 .OrderByDescending(true, x =&gt; x.CreatedAt.Date)
@@ -75,7 +75,7 @@ public interface IMySqlGroupingCommand<T, TGrouping> : IGroupingCommand<T, TGrou
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlGroupingCommand<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
+    new IMySqlGroupingCommand<TEntity, T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
     /// <summary>
     /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个或多个字段的匿名对象，如：
     /// <code>string orderFields = "Amount";bool isAsc = true;
@@ -83,7 +83,7 @@ public interface IMySqlGroupingCommand<T, TGrouping> : IGroupingCommand<T, TGrou
     /// </summary>
     /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlGroupingCommand<T, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T>, Expression> fieldsGetter);
+    new IMySqlGroupingCommand<TEntity, T, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T>, Expression> fieldsGetter);
     /// <summary>
     /// 选择指定字段返回，可以是单个或多个字段的匿名对象，如：
     /// <code> .Select(x =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 .Select(x =&gt; a.Id)</code>
@@ -91,7 +91,7 @@ public interface IMySqlGroupingCommand<T, TGrouping> : IGroupingCommand<T, TGrou
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr);
+    new IMySqlFromCommand<TEntity, TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr);
 }
 <#
     var count = 6;
@@ -118,21 +118,21 @@ public interface IMySqlGroupingCommand<T, TGrouping> : IGroupingCommand<T, TGrou
 /// <typeparam name="<#=currentTable#>">表<#=currentTable#>实体类型</typeparam>
 <#      }#>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IMySqlGroupingCommand<<#=tables#>, TGrouping> : IGroupingCommand<<#=tables#>, TGrouping>, IGroupingCommandBase<TGrouping>
+public interface IMySqlGroupingCommand<TEntity, <#=tables#>, TGrouping> : IGroupingCommand<TEntity, <#=tables#>, TGrouping>, IGroupingCommandBase<TEntity, TGrouping>
 {
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
-    new IMySqlGroupingCommand<<#=tables#>, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate);
+    new IMySqlGroupingCommand<TEntity, <#=tables#>, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate);
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
     /// <param name="condition">判断条件</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
-    new IMySqlGroupingCommand<<#=tables#>, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate);
+    new IMySqlGroupingCommand<TEntity, <#=tables#>, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate);
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// .OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 .OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -140,7 +140,7 @@ public interface IMySqlGroupingCommand<<#=tables#>, TGrouping> : IGroupingComman
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    new IMySqlGroupingCommand<<#=tables#>, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr);
+    new IMySqlGroupingCommand<TEntity, <#=tables#>, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr);
     /// <summary>
     /// ASC排序，condition为true，ASC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// .OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 .OrderBy(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -149,7 +149,7 @@ public interface IMySqlGroupingCommand<<#=tables#>, TGrouping> : IGroupingComman
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlGroupingCommand<<#=tables#>, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr);
+    new IMySqlGroupingCommand<TEntity, <#=tables#>, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，fieldsExpr可以是单个或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，如：
     /// .OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 .OrderByDescending((x, a, ...) =&gt; x.Grouping.Date)
@@ -157,7 +157,7 @@ public interface IMySqlGroupingCommand<<#=tables#>, TGrouping> : IGroupingComman
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    new IMySqlGroupingCommand<<#=tables#>, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr);
+    new IMySqlGroupingCommand<TEntity, <#=tables#>, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，condition为true，DESC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// .OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 .OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -166,7 +166,7 @@ public interface IMySqlGroupingCommand<<#=tables#>, TGrouping> : IGroupingComman
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlGroupingCommand<<#=tables#>, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr);
+    new IMySqlGroupingCommand<TEntity, <#=tables#>, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr);
     /// <summary>
     /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个或多个字段的匿名对象，如：
     /// <code>string orderFields = "Amount";bool isAsc = true;
@@ -174,7 +174,7 @@ public interface IMySqlGroupingCommand<<#=tables#>, TGrouping> : IGroupingComman
     /// </summary>
     /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlGroupingCommand<<#=tables#>, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, <#=tables#>>, Expression> fieldsGetter);
+    new IMySqlGroupingCommand<TEntity, <#=tables#>, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, <#=tables#>>, Expression> fieldsGetter);
     /// <summary>
     /// 选择指定字段返回，可以是单个或多个字段的匿名对象，如：
     /// <code> .Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 .Select((x, a, ...) =&gt; a.Id)</code>
@@ -182,6 +182,6 @@ public interface IMySqlGroupingCommand<<#=tables#>, TGrouping> : IGroupingComman
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr);
+    new IMySqlFromCommand<TEntity, TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr);
 }
 <#  }#>

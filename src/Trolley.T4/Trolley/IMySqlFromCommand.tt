@@ -10,7 +10,7 @@ using System.Linq.Expressions;
 
 namespace Trolley.MySqlConnector;
 
-public interface IMySqlFromCommand<T> : IFromCommand<T>
+public interface IMySqlFromCommand<TEntity, T> : IFromCommand<TEntity, T>
 {
     #region Sharding
     /// <summary>
@@ -18,23 +18,23 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> UseTable(params string[] tableNames);
+    new IMySqlFromCommand<TEntity, T> UseTable(params string[] tableNames);
     /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="T"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> UseTableBy(params object[] fieldValues);
+    new IMySqlFromCommand<TEntity, T> UseTableBy(params object[] fieldValues);
     /// <summary>
     /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> UseTableByRange(params object[] fieldValues);
+    new IMySqlFromCommand<TEntity, T> UseTableByRange(params object[] fieldValues);
     /// <summary>
     /// 指定使用UNION连接分表查询语句，默认使用UNION ALL连接分表查询语句
     /// </summary>
-    new IMySqlFromCommand<T> UseUnionShardingTable();
+    new IMySqlFromCommand<TEntity, T> UseUnionShardingTable();
     #endregion
 
     #region UseTableSchema
@@ -43,7 +43,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> UseTableSchema(string tableSchema);
+    new IMySqlFromCommand<TEntity, T> UseTableSchema(string tableSchema);
     #endregion
 
     #region Union/UnionAll
@@ -64,7 +64,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <code>repository.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> Union(IQuery<T> subQuery);
+    new IMySqlFromCommand<TEntity, T> Union(IQuery<T> subQuery);
     /// <summary>
     /// Union操作，去掉重复记录，如：
     /// <code>
@@ -82,7 +82,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <param name="subQueryExpr">子查询，需要有Select语句，如：
     /// <code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
+    new IMySqlFromCommand<TEntity, T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     /// <summary>
     /// Union All操作，所有记录不去掉重复，如：
     /// <code>
@@ -99,7 +99,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <code>repository.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> UnionAll(IQuery<T> subQuery);
+    new IMySqlFromCommand<TEntity, T> UnionAll(IQuery<T> subQuery);
     /// <summary>
     /// Union All操作，所有记录不去掉重复
     /// <code>
@@ -115,7 +115,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <param name="subQueryExpr">子查询，需要有Select语句，如：
     /// <code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
+    new IMySqlFromCommand<TEntity, T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     /// <summary>
     /// 递归CTE子查询中的Union操作，表达式subQueryExpr中的第二参数是CTE自身引用，如：
     /// <code>
@@ -136,7 +136,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <code>f.From&lt;Menu&gt;().Where(x =&gt; ... ).Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
+    new IMySqlFromCommand<TEntity, T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
     /// <summary>
     /// 递归CTE子查询中的UnionAll操作，表达式subQueryExpr中的第二参数是CTE自身引用，如：
     /// <code>
@@ -156,7 +156,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <code>f.From&lt;Menu&gt;() .Where(x =&gt; ... ) .Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
+    new IMySqlFromCommand<TEntity, T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
     #endregion
 
     #region WithTable
@@ -166,7 +166,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T, TOther> WithTable<TOther>();
+    new IMySqlFromCommand<TEntity, T, TOther> WithTable<TOther>();
     #endregion
 
     #region WithQuery
@@ -180,7 +180,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
+    new IMySqlFromCommand<TEntity, T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加子查询，方便后面做JOIN关联，如：
     /// <code>
@@ -190,7 +190,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    new IMySqlFromCommand<TEntity, T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region InnerJoin
@@ -203,7 +203,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
     /// 添加子查询subQuery，并与现有表<typeparamref name="T"/>做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
@@ -216,7 +216,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
     /// 添加子查询subQueryExpr，并与现有表做INNER JOIN关联，如：
     /// <code>
@@ -230,7 +230,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
     #endregion
 
     #region LeftJoin
@@ -243,7 +243,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <typeparam name="TOther">表实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
     /// 添加子查询subQuery，并与现有表<typeparamref name="T"/>做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
@@ -256,7 +256,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
     /// 添加子查询subQueryExpr，并与现有表做LEFT JOIN关联，如：
     /// <code>
@@ -270,7 +270,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
     #endregion
 
     #region RightJoin
@@ -283,7 +283,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
     /// 添加子查询subQuery，并与现有表<typeparamref name="T"/>做RIGHT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
@@ -296,7 +296,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
@@ -310,7 +310,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
     #endregion
 
     #region Where
@@ -319,7 +319,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> Where(Expression<Func<T, bool>> predicate);
+    new IMySqlFromCommand<TEntity, T> Where(Expression<Func<T, bool>> predicate);
     /// <summary>
     /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
     
@@ -328,13 +328,13 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，elsePredicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null);
+    new IMySqlFromCommand<TEntity, T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null);
     /// <summary>
     /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> WherePredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer);
+    new IMySqlFromCommand<TEntity, T> WherePredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer);
     #endregion
 
     #region And
@@ -343,7 +343,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> And(Expression<Func<T, bool>> predicate);
+    new IMySqlFromCommand<TEntity, T> And(Expression<Func<T, bool>> predicate);
     /// <summary>
     /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
     
@@ -352,13 +352,13 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，elsePredicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> And(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null);
+    new IMySqlFromCommand<TEntity, T> And(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null);
     /// <summary>
     /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> AndPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer);
+    new IMySqlFromCommand<TEntity, T> AndPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer);
     #endregion
 
     #region Or
@@ -367,7 +367,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> Or(Expression<Func<T, bool>> predicate);
+    new IMySqlFromCommand<TEntity, T> Or(Expression<Func<T, bool>> predicate);
     /// <summary>
     /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
     
@@ -376,13 +376,13 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，elsePredicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> Or(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null);
+    new IMySqlFromCommand<TEntity, T> Or(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null);
     /// <summary>
     /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> OrPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer);
+    new IMySqlFromCommand<TEntity, T> OrPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer);
     #endregion
 
     #region GroupBy
@@ -405,7 +405,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <typeparam name="TGrouping">分组后的实体对象类型，可以是单个字段类型或是匿名类型</typeparam>
     /// <param name="groupingExpr">分组表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlGroupingCommand<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr);
+    new IMySqlGroupingCommand<TEntity, T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr);
     #endregion
 
     #region OrderBy
@@ -416,7 +416,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr);
+    new IMySqlFromCommand<TEntity, T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
     /// ASC排序，condition为true，ASC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// .OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 .OrderBy(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -425,7 +425,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr);
+    new IMySqlFromCommand<TEntity, T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
     /// DSC排序，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -433,7 +433,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr);
+    new IMySqlFromCommand<TEntity, T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，condition为true，DESC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// .OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 .OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -442,7 +442,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr);
+    new IMySqlFromCommand<TEntity, T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
     /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
@@ -450,7 +450,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// </summary>
     /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> OrderByDynamic(Func<OrderByBuilder<T>, Expression> fieldsGetter);
+    new IMySqlFromCommand<TEntity, T> OrderByDynamic(Func<OrderByBuilder<T>, Expression> fieldsGetter);
     #endregion
 
     #region Skip/Take/Page
@@ -459,20 +459,20 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// </summary>
     /// <param name="offset">要跳过的数据条数</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> Skip(int offset);
+    new IMySqlFromCommand<TEntity, T> Skip(int offset);
     /// <summary>
     /// 只返回limit条数据
     /// </summary>
     /// <param name="limit">返回的数据条数</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> Take(int limit);
+    new IMySqlFromCommand<TEntity, T> Take(int limit);
     /// <summary>
     /// 分页查询，pageNumber从1开始
     /// </summary>
     /// <param name="pageNumber">第几页，从1开始，小于1时当作1处理</param>
     /// <param name="pageSize">每页显示条数</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> Page(int pageNumber, int pageSize);
+    new IMySqlFromCommand<TEntity, T> Page(int pageNumber, int pageSize);
     #endregion
 
     #region Select
@@ -482,7 +482,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// </summary>
     /// <param name="fields">字段</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> Select(string fields = "*");
+    new IMySqlFromCommand<TEntity, T> Select(string fields = "*");
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b) =&gt; x.CreatedAt.Date)
@@ -490,7 +490,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr);
+    new IMySqlFromCommand<TEntity, TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定字段返回，只需要指定需要特殊处理的成员赋值即可，其他成员将从现有表的字段中按名称匹配赋值，多个同名字段时如果未特殊指定赋值，默认选取第一个表中的字段赋值。如：
     /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二个表的Id字段作为Id成员</code>
@@ -498,7 +498,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<TTarget> SelectTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null);
+    new IMySqlFromCommand<TEntity, TTarget> SelectTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null);
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，如：
     /// <code>
@@ -514,7 +514,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr);
+    new IMySqlFromCommand<TEntity, TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr);
     #endregion
 
     #region Distinct
@@ -522,7 +522,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// DISTINCT去掉重复数据
     /// </summary>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> Distinct();
+    new IMySqlFromCommand<TEntity, T> Distinct();
     #endregion
     
     #region OnDuplicateKeyUpdate
@@ -532,14 +532,14 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
     /// <param name="updateObj">更新实体对象</param>
     /// <returns>返回插入对象</returns>
-    IMySqlFromCommand<T> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj);
+    IMySqlFromCommand<TEntity, T> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj);
     /// <summary>
     /// 相同主键或唯一索引存在时执行更新动作，INSERT INTO ... ON DUPLICATE KEY UPDATE
     /// </summary>
     /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
     /// <param name="fieldsAssignment">要更新的字段赋值表达式</param>
     /// <returns>返回插入对象</returns>
-    IMySqlFromCommand<T> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<T>, TUpdateFields>> fieldsAssignment);
+    IMySqlFromCommand<TEntity, T> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<T>, TUpdateFields>> fieldsAssignment);
     #endregion
 
     #region Returning
@@ -572,7 +572,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
         currentAlias = $"{(char)(97 + i)}";
         currentTable = $"T{i}";
 #>
-public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
+public interface IMySqlFromCommand<TEntity, <#=tables#>> : IFromCommand<TEntity, <#=tables#>>
 {
     #region Sharding
     /// <summary>
@@ -580,7 +580,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> UseTable(params string[] tableNames);
+    new IMySqlFromCommand<TEntity, <#=tables#>> UseTable(params string[] tableNames);
     /// <summary>
     /// 根据首个多分表与当前<typeparamref name="<#=currentTable#>"/>表名的映射关系，指定当前<typeparamref name="<#=currentTable#>"/>表分表名获取委托，执行委托获取当前<typeparamref name="<#=currentTable#>"/>表分表名。委托第一个参数是<typeparamref name="TMasterSharding"/>主表原始表名，第二个参数是当前<typeparamref name="<#=currentTable#>"/>表原始表名，第三个参数是首个多分表当前分表名，返回值是当前<typeparamref name="<#=currentTable#>"/>表分表名称，如：
     /// <code>
@@ -600,23 +600,23 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// </summary>
     /// <param name="tableNameGetter"><typeparamref name="<#=currentTable#>"/>表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> UseTableMap(Func<string, string, string, string> tableNameGetter);
+    new IMySqlFromCommand<TEntity, <#=tables#>> UseTableMap(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="<#=currentTable#>"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> UseTableBy(params object[] fieldValues);
+    new IMySqlFromCommand<TEntity, <#=tables#>> UseTableBy(params object[] fieldValues);
     /// <summary>
     /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="<#=currentTable#>"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> UseTableByRange(params object[] fieldValues);
+    new IMySqlFromCommand<TEntity, <#=tables#>> UseTableByRange(params object[] fieldValues);
     /// <summary>
     /// 指定使用UNION连接分表查询语句，默认使用UNION ALL连接分表查询语句
     /// </summary>
-    new IMySqlFromCommand<<#=tables#>> UseUnionShardingTable();
+    new IMySqlFromCommand<TEntity, <#=tables#>> UseUnionShardingTable();
     #endregion
 
     #region UseTableSchema
@@ -625,7 +625,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> UseTableSchema(string tableSchema);
+    new IMySqlFromCommand<TEntity, <#=tables#>> UseTableSchema(string tableSchema);
     #endregion
 
 <#
@@ -641,7 +641,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>, TOther> WithTable<TOther>();
+    new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithTable<TOther>();
     #endregion
 
     #region WithQuery
@@ -655,7 +655,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
+    new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加subQueryExpr子查询，方便后面做JOIN关联，如：
     /// <code>
@@ -666,7 +666,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
 <#      }#>
@@ -677,7 +677,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, <#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn);
 <#
         if(i < count)
         {
@@ -691,7 +691,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, <#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
     /// 添加子查询临时表subQuery，并与现有表<typeparamref name="T"/>做INNER JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
@@ -705,7 +705,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, <#=tables#>, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，如：
     /// <code>
@@ -719,7 +719,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, <#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
 <#      }#>
     #endregion
 
@@ -730,7 +730,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, <#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn);
 <#
         if(i < count)
         {
@@ -744,7 +744,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <typeparam name="TOther">表实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, <#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
     /// 添加子查询临时表subQuery，并与现有表<typeparamref name="T"/>做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
@@ -758,7 +758,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, <#=tables#>, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，如：
     /// <code>
@@ -772,7 +772,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <param name="subQuery">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, <#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
 <#      }#>
     #endregion
 
@@ -783,7 +783,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, <#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn);
 <#
         if(i < count)
         {
@@ -797,7 +797,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, <#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
     /// 添加子查询临时表subQuery，并与现有表<typeparamref name="T"/>做LEFT JOIN关联，可以用在CTE子句中自我引用，如：
     /// <code>
@@ -811,7 +811,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, <#=tables#>, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，如：
     /// <code>
@@ -825,7 +825,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    new IMySqlFromCommand<TEntity, <#=tables#>, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
 <#      }#>
     #endregion
 
@@ -835,7 +835,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
+    new IMySqlFromCommand<TEntity, <#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
     /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
     
@@ -844,13 +844,13 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，elsePredicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
+    new IMySqlFromCommand<TEntity, <#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
     /// <summary>
     /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> WherePredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer);
+    new IMySqlFromCommand<TEntity, <#=tables#>> WherePredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer);
     #endregion
 
     #region And
@@ -859,7 +859,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate);
+    new IMySqlFromCommand<TEntity, <#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
     /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
     
@@ -868,13 +868,13 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，elsePredicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
+    new IMySqlFromCommand<TEntity, <#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
     /// <summary>
     /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> AndPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer);
+    new IMySqlFromCommand<TEntity, <#=tables#>> AndPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer);
     #endregion
 
     #region Or
@@ -883,7 +883,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> Or(Expression<Func<<#=tables#>, bool>> predicate);
+    new IMySqlFromCommand<TEntity, <#=tables#>> Or(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
     /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
     
@@ -892,13 +892,13 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，elsePredicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> Or(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
+    new IMySqlFromCommand<TEntity, <#=tables#>> Or(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
     /// <summary>
     /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> OrPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer);
+    new IMySqlFromCommand<TEntity, <#=tables#>> OrPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer);
     #endregion
 
     #region GroupBy
@@ -921,7 +921,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <typeparam name="TGrouping">分组后的实体对象类型，可以是单个字段类型或是匿名类型</typeparam>
     /// <param name="groupingExpr">分组表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlGroupingCommand<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr);
+    new IMySqlGroupingCommand<TEntity, <#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr);
     #endregion
 
     #region OrderBy
@@ -932,7 +932,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
+    new IMySqlFromCommand<TEntity, <#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
     /// <summary>
     /// ASC排序，condition为true，ASC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// .OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 .OrderBy(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -941,7 +941,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> OrderBy<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr);
+    new IMySqlFromCommand<TEntity, <#=tables#>> OrderBy<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr);
     /// <summary>
     /// DSC排序，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
@@ -949,7 +949,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
+    new IMySqlFromCommand<TEntity, <#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，condition为true，DESC排序生效，fieldsExpr可以是单个或多个字段的匿名对象，不可为null，如：
     /// .OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 .OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -958,7 +958,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr);
+    new IMySqlFromCommand<TEntity, <#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr);
     /// <summary>
     /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个或多个字段的匿名对象，如：
     /// <code>string orderFields = "Name";bool isAsc = true;
@@ -966,7 +966,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// </summary>
     /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> OrderByDynamic(Func<OrderByBuilder<<#=tables#>>, Expression> fieldsGetter);
+    new IMySqlFromCommand<TEntity, <#=tables#>> OrderByDynamic(Func<OrderByBuilder<<#=tables#>>, Expression> fieldsGetter);
     #endregion
 
     #region Skip/Take/Page
@@ -975,20 +975,20 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// </summary>
     /// <param name="offset">要跳过的数据条数</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> Skip(int offset);
+    new IMySqlFromCommand<TEntity, <#=tables#>> Skip(int offset);
     /// <summary>
     /// 只返回limit条数据
     /// </summary>
     /// <param name="limit">返回的数据条数</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> Take(int limit);
+    new IMySqlFromCommand<TEntity, <#=tables#>> Take(int limit);
     /// <summary>
     /// 分页查询，pageNumber从1开始
     /// </summary>
     /// <param name="pageNumber">第几页，从1开始，小于1时当作1处理</param>
     /// <param name="pageSize">每页显示条数</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<<#=tables#>> Page(int pageNumber, int pageSize);
+    new IMySqlFromCommand<TEntity, <#=tables#>> Page(int pageNumber, int pageSize);
     #endregion
 
     #region Select
@@ -999,7 +999,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr);
+    new IMySqlFromCommand<TEntity, TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定字段返回，只需要指定需要特殊处理的成员赋值即可，其他成员将从现有表的字段中按名称匹配赋值，多个同名字段时如果未特殊指定赋值，默认选取第一个表中的字段赋值。如：
     /// <code> ...SelectTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二个表的Id字段作为Id成员</code>
@@ -1007,7 +1007,7 @@ public interface IMySqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<TTarget> SelectTo<TTarget>(Expression<Func<<#=tables#>, TTarget>> specialMemberSelector = null);
+    new IMySqlFromCommand<TEntity, TTarget> SelectTo<TTarget>(Expression<Func<<#=tables#>, TTarget>> specialMemberSelector = null);
     #endregion
 }
 <#  }#>

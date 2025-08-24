@@ -72,19 +72,19 @@ public class SqlServerCreate<TEntity> : Create<TEntity>, ISqlServerCreate<TEntit
     #endregion
 
     #region From
-    public new ISqlServerFromCommand<T> From<T>()
-        => base.From<T>() as ISqlServerFromCommand<T>;
-    public new ISqlServerFromCommand<T1, T2> From<T1, T2>()
-        => base.From<T1, T2>() as ISqlServerFromCommand<T1, T2>;
-    public new ISqlServerFromCommand<T1, T2, T3> From<T1, T2, T3>()
-        => base.From<T1, T2, T3>() as ISqlServerFromCommand<T1, T2, T3>;
-    public new ISqlServerFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>()
-        => base.From<T1, T2, T3, T4>() as ISqlServerFromCommand<T1, T2, T3, T4>;
-    public new ISqlServerFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
-        => base.From<T1, T2, T3, T4, T5>() as ISqlServerFromCommand<T1, T2, T3, T4, T5>;
-    public new ISqlServerFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
-        => base.From<T1, T2, T3, T4, T5, T6>() as ISqlServerFromCommand<T1, T2, T3, T4, T5, T6>;
-    public new ISqlServerFromCommand<T> From<T>(IQuery<T> subQuery)
-        => base.From(subQuery) as ISqlServerFromCommand<T>;
+    public new ISqlServerFromCommand<TEntity, T> From<T>()
+        => base.From<T>() as ISqlServerFromCommand<TEntity, T>;
+    public new ISqlServerFromCommand<TEntity, T1, T2> From<T1, T2>()
+        => base.From<T1, T2>() as ISqlServerFromCommand<TEntity, T1, T2>;
+    public new ISqlServerFromCommand<TEntity, T1, T2, T3> From<T1, T2, T3>()
+        => base.From<T1, T2, T3>() as ISqlServerFromCommand<TEntity, T1, T2, T3>;
+    public new ISqlServerFromCommand<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>()
+        => base.From<T1, T2, T3, T4>() as ISqlServerFromCommand<TEntity, T1, T2, T3, T4>;
+    public new ISqlServerFromCommand<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
+        => base.From<T1, T2, T3, T4, T5>() as ISqlServerFromCommand<TEntity, T1, T2, T3, T4, T5>;
+    public new ISqlServerFromCommand<TEntity, T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
+        => base.From<T1, T2, T3, T4, T5, T6>() as ISqlServerFromCommand<TEntity, T1, T2, T3, T4, T5, T6>;
+    public new ISqlServerFromCommand<TEntity, T> From<T>(IQuery<T> subQuery)
+        => base.From(subQuery) as ISqlServerFromCommand<TEntity, T>;
     #endregion
 }

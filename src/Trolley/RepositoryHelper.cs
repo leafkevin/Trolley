@@ -996,7 +996,7 @@ public static class RepositoryHelper
                 as Func<DbContext, object, string>;
             var valuesParametersSetter = BuildFieldsSqlParametersPart(dbContext, entityType, insertObjType, 2, 3, 0, false, false, false, null, null)
                 as Action<IDataParameterCollection, DbContext, object>;
-            var sql = $"INSERT INTO {ormProvider.GetTableName(tableName)}" + fieldsSetter.Invoke(dbContext, null) + valuesSqlSetter.Invoke(dbContext, null);
+            var sql = $"INSERT INTO {ormProvider.GetTableName(tableName)}" + fieldsSetter.Invoke(dbContext, insertObj) + valuesSqlSetter.Invoke(dbContext, insertObj);
             return (dbContext, command, insertObjs) =>
             {
                 command.CommandText = sql;

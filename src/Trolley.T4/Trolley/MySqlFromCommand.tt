@@ -10,7 +10,7 @@ using System.Linq.Expressions;
 
 namespace Trolley.MySqlConnector;
 
-public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
+public class MySqlFromCommand<TEntity, T> : FromCommand<TEntity, T>, IMySqlFromCommand<TEntity, T>
 {
     #region Constructor
     public MySqlFromCommand(DbContext dbContext, IQueryVisitor visitor)
@@ -18,154 +18,154 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
     #endregion
 
     #region Sharding
-    public new IMySqlFromCommand<T> UseTable(params string[] tableNames)
-        => base.UseTable(tableNames) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<T> UseTableBy(params object[] fieldValues)
-        => base.UseTableBy(fieldValues) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<T> UseTableByRange(params object[] fieldValues)
-        => base.UseTableByRange(fieldValues) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<T> UseUnionShardingTable()
-        => base.UseUnionShardingTable() as IMySqlFromCommand<T>;
+    public new IMySqlFromCommand<TEntity, T> UseTable(params string[] tableNames)
+        => base.UseTable(tableNames) as IMySqlFromCommand<TEntity, T>;
+    public new IMySqlFromCommand<TEntity, T> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IMySqlFromCommand<TEntity, T>;
+    public new IMySqlFromCommand<TEntity, T> UseTableByRange(params object[] fieldValues)
+        => base.UseTableByRange(fieldValues) as IMySqlFromCommand<TEntity, T>;
+    public new IMySqlFromCommand<TEntity, T> UseUnionShardingTable()
+        => base.UseUnionShardingTable() as IMySqlFromCommand<TEntity, T>;
     #endregion
 
     #region UseTableSchema
-    public new IMySqlFromCommand<T> UseTableSchema(string tableSchema)
-        => base.UseTableSchema(tableSchema) as IMySqlFromCommand<T>;
+    public new IMySqlFromCommand<TEntity, T> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IMySqlFromCommand<TEntity, T>;
     #endregion
 
     #region Union/UnionAll
-    public new IMySqlFromCommand<T> Union(IQuery<T> subQuery)
-        => base.Union(subQuery) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
-        => base.Union(subQueryExpr) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<T> UnionAll(IQuery<T> subQuery)
-        => base.UnionAll(subQuery) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
-        => base.UnionAll(subQueryExpr) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
-        => base.UnionRecursive(subQueryExpr) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
-        => base.UnionAllRecursive(subQueryExpr) as IMySqlFromCommand<T>;
+    public new IMySqlFromCommand<TEntity, T> Union(IQuery<T> subQuery)
+        => base.Union(subQuery) as IMySqlFromCommand<TEntity, T>;
+    public new IMySqlFromCommand<TEntity, T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
+        => base.Union(subQueryExpr) as IMySqlFromCommand<TEntity, T>;
+    public new IMySqlFromCommand<TEntity, T> UnionAll(IQuery<T> subQuery)
+        => base.UnionAll(subQuery) as IMySqlFromCommand<TEntity, T>;
+    public new IMySqlFromCommand<TEntity, T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
+        => base.UnionAll(subQueryExpr) as IMySqlFromCommand<TEntity, T>;
+    public new IMySqlFromCommand<TEntity, T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
+        => base.UnionRecursive(subQueryExpr) as IMySqlFromCommand<TEntity, T>;
+    public new IMySqlFromCommand<TEntity, T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
+        => base.UnionAllRecursive(subQueryExpr) as IMySqlFromCommand<TEntity, T>;
     #endregion
 
     #region WithTable
-    public new IMySqlFromCommand<T, TOther> WithTable<TOther>()
-        => base.WithTable<TOther>() as IMySqlFromCommand<T, TOther>;
+    public new IMySqlFromCommand<TEntity, T, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IMySqlFromCommand<TEntity, T, TOther>;
     #endregion
 
     #region WithQuery
-    public new IMySqlFromCommand<T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
-        => base.WithQuery(subQuery) as IMySqlFromCommand<T, TOther>;
-    public new IMySqlFromCommand<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithQuery(subQueryExpr) as IMySqlFromCommand<T, TOther>;
+    public new IMySqlFromCommand<TEntity, T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IMySqlFromCommand<TEntity, T, TOther>;
+    public new IMySqlFromCommand<TEntity, T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IMySqlFromCommand<TEntity, T, TOther>;
     #endregion
 
     #region InnerJoin
-    public new IMySqlFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
-        => base.InnerJoin(joinOn) as IMySqlFromCommand<T, TOther>;
-    public new IMySqlFromCommand<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IMySqlFromCommand<T, TOther>;
-    public new IMySqlFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
-        => base.InnerJoin(subQueryExpr, joinOn) as IMySqlFromCommand<T, TOther>;
+    public new IMySqlFromCommand<TEntity, T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+        => base.InnerJoin(joinOn) as IMySqlFromCommand<TEntity, T, TOther>;
+    public new IMySqlFromCommand<TEntity, T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+        => base.InnerJoin(subQuery, joinOn) as IMySqlFromCommand<TEntity, T, TOther>;
+    public new IMySqlFromCommand<TEntity, T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IMySqlFromCommand<TEntity, T, TOther>;
     #endregion
 
     #region LeftJoin
-    public new IMySqlFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IMySqlFromCommand<T, TOther>;
-    public new IMySqlFromCommand<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IMySqlFromCommand<T, TOther>;
-    public new IMySqlFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
-        => base.LeftJoin(subQueryExpr, joinOn) as IMySqlFromCommand<T, TOther>;
+    public new IMySqlFromCommand<TEntity, T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IMySqlFromCommand<TEntity, T, TOther>;
+    public new IMySqlFromCommand<TEntity, T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+        => base.LeftJoin(subQuery, joinOn) as IMySqlFromCommand<TEntity, T, TOther>;
+    public new IMySqlFromCommand<TEntity, T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IMySqlFromCommand<TEntity, T, TOther>;
     #endregion
 
     #region RightJoin
-    public new IMySqlFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IMySqlFromCommand<T, TOther>;
-    public new IMySqlFromCommand<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IMySqlFromCommand<T, TOther>;
-    public new IMySqlFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
-        => base.RightJoin(subQueryExpr, joinOn) as IMySqlFromCommand<T, TOther>;
+    public new IMySqlFromCommand<TEntity, T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IMySqlFromCommand<TEntity, T, TOther>;
+    public new IMySqlFromCommand<TEntity, T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+        => base.RightJoin(subQuery, joinOn) as IMySqlFromCommand<TEntity, T, TOther>;
+    public new IMySqlFromCommand<TEntity, T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+        => base.RightJoin(subQueryExpr, joinOn) as IMySqlFromCommand<TEntity, T, TOther>;
     #endregion
 
     #region Where
-    public new IMySqlFromCommand<T> Where(Expression<Func<T, bool>> predicate)
+    public new IMySqlFromCommand<TEntity, T> Where(Expression<Func<T, bool>> predicate)
         => this.Where(true, predicate);
-    public new IMySqlFromCommand<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
-        => base.Where(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<T> WherePredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
-        => base.WherePredicate(predicateInitializer) as IMySqlFromCommand<T>;
+    public new IMySqlFromCommand<TEntity, T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
+        => base.Where(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<TEntity, T>;
+    public new IMySqlFromCommand<TEntity, T> WherePredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IMySqlFromCommand<TEntity, T>;
     #endregion
 
     #region And
-    public new IMySqlFromCommand<T> And(Expression<Func<T, bool>> predicate)
+    public new IMySqlFromCommand<TEntity, T> And(Expression<Func<T, bool>> predicate)
         => this.And(true, predicate);
-    public new IMySqlFromCommand<T> And(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
-        => base.And(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<T> AndPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
-        => base.AndPredicate(predicateInitializer) as IMySqlFromCommand<T>;
+    public new IMySqlFromCommand<TEntity, T> And(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
+        => base.And(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<TEntity, T>;
+    public new IMySqlFromCommand<TEntity, T> AndPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IMySqlFromCommand<TEntity, T>;
     #endregion
 
     #region Or
-    public new IMySqlFromCommand<T> Or(Expression<Func<T, bool>> predicate)
+    public new IMySqlFromCommand<TEntity, T> Or(Expression<Func<T, bool>> predicate)
         => this.Or(true, predicate);
-    public new IMySqlFromCommand<T> Or(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
-        => base.Or(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<T> OrPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
-        => base.OrPredicate(predicateInitializer) as IMySqlFromCommand<T>;
+    public new IMySqlFromCommand<TEntity, T> Or(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<TEntity, T>;
+    public new IMySqlFromCommand<TEntity, T> OrPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IMySqlFromCommand<TEntity, T>;
     #endregion
 
     #region GroupBy
-    public new IMySqlGroupingCommand<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr)
-        => base.GroupBy(groupingExpr) as IMySqlGroupingCommand<T, TGrouping>;
+    public new IMySqlGroupingCommand<TEntity, T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr)
+        => base.GroupBy(groupingExpr) as IMySqlGroupingCommand<TEntity, T, TGrouping>;
     #endregion
 
     #region OrderBy
-    public new IMySqlFromCommand<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr)
+    public new IMySqlFromCommand<TEntity, T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
-    public new IMySqlFromCommand<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
-        => base.OrderBy(condition, fieldsExpr) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr)
+    public new IMySqlFromCommand<TEntity, T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
+        => base.OrderBy(condition, fieldsExpr) as IMySqlFromCommand<TEntity, T>;
+    public new IMySqlFromCommand<TEntity, T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-    public new IMySqlFromCommand<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
-        => base.OrderByDescending(condition, fieldsExpr) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<T> OrderByDynamic(Func<OrderByBuilder<T>, Expression> fieldsGetter)
-        => base.OrderByDynamic(fieldsGetter) as IMySqlFromCommand<T>;
+    public new IMySqlFromCommand<TEntity, T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
+        => base.OrderByDescending(condition, fieldsExpr) as IMySqlFromCommand<TEntity, T>;
+    public new IMySqlFromCommand<TEntity, T> OrderByDynamic(Func<OrderByBuilder<T>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IMySqlFromCommand<TEntity, T>;
     #endregion
 
     #region Skip/Take/Page
-    public new IMySqlFromCommand<T> Skip(int offset)
-        => base.Skip(offset) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<T> Take(int limit)
-        => base.Take(limit) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<T> Page(int pageNumber, int pageSize)
-        => base.Page(pageNumber, pageSize) as IMySqlFromCommand<T>;
+    public new IMySqlFromCommand<TEntity, T> Skip(int offset)
+        => base.Skip(offset) as IMySqlFromCommand<TEntity, T>;
+    public new IMySqlFromCommand<TEntity, T> Take(int limit)
+        => base.Take(limit) as IMySqlFromCommand<TEntity, T>;
+    public new IMySqlFromCommand<TEntity, T> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IMySqlFromCommand<TEntity, T>;
     #endregion
 
     #region Select
-    public new IMySqlFromCommand<T> Select(string fields = "*")
-        => base.Select(fields) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
-    public new IMySqlFromCommand<TTarget> SelectTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
-        => base.SelectTo(specialMemberSelector) as IMySqlFromCommand<TTarget>;
-    public new IMySqlFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
-        => base.SelectAggregate(fieldsExpr) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<TEntity, T> Select(string fields = "*")
+        => base.Select(fields) as IMySqlFromCommand<TEntity, T>;
+    public new IMySqlFromCommand<TEntity, TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as IMySqlFromCommand<TEntity, TTarget>;
+    public new IMySqlFromCommand<TEntity, TTarget> SelectTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
+        => base.SelectTo(specialMemberSelector) as IMySqlFromCommand<TEntity, TTarget>;
+    public new IMySqlFromCommand<TEntity, TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
+        => base.SelectAggregate(fieldsExpr) as IMySqlFromCommand<TEntity, TTarget>;
     #endregion
 
     #region Distinct
-    public new IMySqlFromCommand<T> Distinct()
-        => base.Distinct() as IMySqlFromCommand<T>;
+    public new IMySqlFromCommand<TEntity, T> Distinct()
+        => base.Distinct() as IMySqlFromCommand<TEntity, T>;
     #endregion
 
     #region OnDuplicateKeyUpdate
-    public IMySqlFromCommand<T> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj)
+    public IMySqlFromCommand<TEntity, T> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj)
     {
         var sql = this.Visitor.BuildCommandSql(true, out _);
         var visitor = this.NewCreateVisitor(sql);
         visitor.OnDuplicateKeyUpdate(updateObj);
         return this;
     }
-    public IMySqlFromCommand<T> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<T>, TUpdateFields>> fieldsAssignment)
+    public IMySqlFromCommand<TEntity, T> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<T>, TUpdateFields>> fieldsAssignment)
     {
         var sql = this.Visitor.BuildCommandSql(true, out _);
         var visitor = this.NewCreateVisitor(sql);
@@ -217,7 +217,7 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
         tables += $", T{i}";
         currentTable = $"T{i}";
 #>
-public class MySqlFromCommand<<#=tables#>> : FromCommand<<#=tables#>>, IMySqlFromCommand<<#=tables#>>
+public class MySqlFromCommand<TEntity, <#=tables#>> : FromCommand<TEntity, <#=tables#>>, IMySqlFromCommand<TEntity, <#=tables#>>
 {
     #region Constructor
     public MySqlFromCommand(DbContext dbContext, IQueryVisitor visitor)
@@ -225,21 +225,21 @@ public class MySqlFromCommand<<#=tables#>> : FromCommand<<#=tables#>>, IMySqlFro
     #endregion
 
     #region Sharding
-    public new IMySqlFromCommand<<#=tables#>> UseTable(params string[] tableNames)
-        => base.UseTable(tableNames) as IMySqlFromCommand<<#=tables#>>;
-    public new IMySqlFromCommand<<#=tables#>> UseTableMap(Func<string, string, string, string> tableNameGetter)
-        => base.UseTableMap(tableNameGetter) as IMySqlFromCommand<<#=tables#>>;
-    public new IMySqlFromCommand<<#=tables#>> UseTableBy(params object[] fieldValues)
-        => base.UseTableBy(fieldValues) as IMySqlFromCommand<<#=tables#>>;
-    public new IMySqlFromCommand<<#=tables#>> UseTableByRange(params object[] fieldValues)
-        => base.UseTableByRange(fieldValues) as IMySqlFromCommand<<#=tables#>>;
-    public new IMySqlFromCommand<<#=tables#>> UseUnionShardingTable()
-        => base.UseUnionShardingTable() as IMySqlFromCommand<<#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> UseTable(params string[] tableNames)
+        => base.UseTable(tableNames) as IMySqlFromCommand<TEntity, <#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> UseTableMap(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap(tableNameGetter) as IMySqlFromCommand<TEntity, <#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IMySqlFromCommand<TEntity, <#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> UseTableByRange(params object[] fieldValues)
+        => base.UseTableByRange(fieldValues) as IMySqlFromCommand<TEntity, <#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> UseUnionShardingTable()
+        => base.UseUnionShardingTable() as IMySqlFromCommand<TEntity, <#=tables#>>;
     #endregion
 
     #region UseTableSchema
-    public new IMySqlFromCommand<<#=tables#>> UseTableSchema(string tableSchema)
-        => base.UseTableSchema(tableSchema) as IMySqlFromCommand<<#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IMySqlFromCommand<TEntity, <#=tables#>>;
     #endregion
 
 <#
@@ -247,125 +247,125 @@ public class MySqlFromCommand<<#=tables#>> : FromCommand<<#=tables#>>, IMySqlFro
         {
 #>
     #region WithTable
-    public new IMySqlFromCommand<<#=tables#>, TOther> WithTable<TOther>()
-        => base.WithTable<TOther>() as IMySqlFromCommand<<#=tables#>, TOther>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IMySqlFromCommand<TEntity, <#=tables#>, TOther>;
     #endregion
 
     #region WithQuery
-    public new IMySqlFromCommand<<#=tables#>, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
-        => base.WithQuery(subQuery) as IMySqlFromCommand<<#=tables#>, TOther>;
-    public new IMySqlFromCommand<<#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithQuery(subQueryExpr) as IMySqlFromCommand<<#=tables#>, TOther>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IMySqlFromCommand<TEntity, <#=tables#>, TOther>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IMySqlFromCommand<TEntity, <#=tables#>, TOther>;
     #endregion
 
 <#      }#>
     #region InnerJoin
-    public new IMySqlFromCommand<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
-        => base.InnerJoin(joinOn) as IMySqlFromCommand<<#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+        => base.InnerJoin(joinOn) as IMySqlFromCommand<TEntity, <#=tables#>>;
 <#
         if( i < count)
         {
 #>
-    public new IMySqlFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.InnerJoin(joinOn) as IMySqlFromCommand<<#=tables#>, TOther>;
-    public new IMySqlFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IMySqlFromCommand<<#=tables#>, TOther>;
-    public new IMySqlFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.InnerJoin(subQueryExpr, joinOn) as IMySqlFromCommand<<#=tables#>, TOther>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.InnerJoin(joinOn) as IMySqlFromCommand<TEntity, <#=tables#>, TOther>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.InnerJoin(subQuery, joinOn) as IMySqlFromCommand<TEntity, <#=tables#>, TOther>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IMySqlFromCommand<TEntity, <#=tables#>, TOther>;
 <#      }#>
     #endregion
 
     #region LeftJoin
-    public new IMySqlFromCommand<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IMySqlFromCommand<<#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IMySqlFromCommand<TEntity, <#=tables#>>;
 <#
         if( i < count)
         {
 #>
-    public new IMySqlFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IMySqlFromCommand<<#=tables#>, TOther>;
-    public new IMySqlFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IMySqlFromCommand<<#=tables#>, TOther>;
-    public new IMySqlFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.LeftJoin(subQueryExpr, joinOn) as IMySqlFromCommand<<#=tables#>, TOther>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IMySqlFromCommand<TEntity, <#=tables#>, TOther>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.LeftJoin(subQuery, joinOn) as IMySqlFromCommand<TEntity, <#=tables#>, TOther>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IMySqlFromCommand<TEntity, <#=tables#>, TOther>;
 <#      }#>
     #endregion
 
     #region RightJoin
-    public new IMySqlFromCommand<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
-        => base.RightJoin(joinOn) as IMySqlFromCommand<<#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+        => base.RightJoin(joinOn) as IMySqlFromCommand<TEntity, <#=tables#>>;
 <#
         if( i < count)
         {
 #>
-    public new IMySqlFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IMySqlFromCommand<<#=tables#>, TOther>;
-    public new IMySqlFromCommand<<#=tables#>, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IMySqlFromCommand<<#=tables#>, TOther>;
-    public new IMySqlFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.RightJoin(subQueryExpr, joinOn) as IMySqlFromCommand<<#=tables#>, TOther>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IMySqlFromCommand<TEntity, <#=tables#>, TOther>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.RightJoin(subQuery, joinOn) as IMySqlFromCommand<TEntity, <#=tables#>, TOther>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.RightJoin(subQueryExpr, joinOn) as IMySqlFromCommand<TEntity, <#=tables#>, TOther>;
 <#      }#>
     #endregion
 
     #region Where
-    public new IMySqlFromCommand<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
+    public new IMySqlFromCommand<TEntity, <#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
         => this.Where(true, predicate);
-    public new IMySqlFromCommand<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
-        => base.Where(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<<#=tables#>>;
-    public new IMySqlFromCommand<<#=tables#>> WherePredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
-        => base.WherePredicate(predicateInitializer) as IMySqlFromCommand<<#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+        => base.Where(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<TEntity, <#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> WherePredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IMySqlFromCommand<TEntity, <#=tables#>>;
     #endregion
 
     #region And
-    public new IMySqlFromCommand<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate)
+    public new IMySqlFromCommand<TEntity, <#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate)
         => this.And(true, predicate);
-    public new IMySqlFromCommand<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
-        => base.And(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<<#=tables#>>;
-    public new IMySqlFromCommand<<#=tables#>> AndPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
-        => base.AndPredicate(predicateInitializer) as IMySqlFromCommand<<#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+        => base.And(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<TEntity, <#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> AndPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IMySqlFromCommand<TEntity, <#=tables#>>;
     #endregion
 
     #region Or
-    public new IMySqlFromCommand<<#=tables#>> Or(Expression<Func<<#=tables#>, bool>> predicate)
+    public new IMySqlFromCommand<TEntity, <#=tables#>> Or(Expression<Func<<#=tables#>, bool>> predicate)
         => this.Or(true, predicate);
-    public new IMySqlFromCommand<<#=tables#>> Or(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
-        => base.Or(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<<#=tables#>>;
-    public new IMySqlFromCommand<<#=tables#>> OrPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
-        => base.OrPredicate(predicateInitializer) as IMySqlFromCommand<<#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> Or(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<TEntity, <#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> OrPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IMySqlFromCommand<TEntity, <#=tables#>>;
     #endregion
 
     #region GroupBy
-    public new IMySqlGroupingCommand<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr)
-        => base.GroupBy(groupingExpr) as IMySqlGroupingCommand<<#=tables#>, TGrouping>;
+    public new IMySqlGroupingCommand<TEntity, <#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr)
+        => base.GroupBy(groupingExpr) as IMySqlGroupingCommand<TEntity, <#=tables#>, TGrouping>;
     #endregion
 
     #region OrderBy
-    public new IMySqlFromCommand<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+    public new IMySqlFromCommand<TEntity, <#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
-    public new IMySqlFromCommand<<#=tables#>> OrderBy<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
-        => base.OrderBy(condition, fieldsExpr) as IMySqlFromCommand<<#=tables#>>;
-    public new IMySqlFromCommand<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+    public new IMySqlFromCommand<TEntity, <#=tables#>> OrderBy<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+        => base.OrderBy(condition, fieldsExpr) as IMySqlFromCommand<TEntity, <#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-    public new IMySqlFromCommand<<#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
-        => base.OrderByDescending(condition, fieldsExpr) as IMySqlFromCommand<<#=tables#>>;
-    public new IMySqlFromCommand<<#=tables#>> OrderByDynamic(Func<OrderByBuilder<<#=tables#>>, Expression> fieldsGetter)
-        => base.OrderByDynamic(fieldsGetter) as IMySqlFromCommand<<#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+        => base.OrderByDescending(condition, fieldsExpr) as IMySqlFromCommand<TEntity, <#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> OrderByDynamic(Func<OrderByBuilder<<#=tables#>>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IMySqlFromCommand<TEntity, <#=tables#>>;
     #endregion
 
     #region Skip/Take/Page
-    public new IMySqlFromCommand<<#=tables#>> Skip(int offset)
-        => base.Skip(offset) as IMySqlFromCommand<<#=tables#>>;
-    public new IMySqlFromCommand<<#=tables#>> Take(int limit)
-        => base.Take(limit) as IMySqlFromCommand<<#=tables#>>;
-    public new IMySqlFromCommand<<#=tables#>> Page(int pageNumber, int pageSize)
-        => base.Page(pageNumber, pageSize) as IMySqlFromCommand<<#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> Skip(int offset)
+        => base.Skip(offset) as IMySqlFromCommand<TEntity, <#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> Take(int limit)
+        => base.Take(limit) as IMySqlFromCommand<TEntity, <#=tables#>>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IMySqlFromCommand<TEntity, <#=tables#>>;
     #endregion
 
     #region Select
-    public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
-    public new IMySqlFromCommand<TTarget> SelectTo<TTarget>(Expression<Func<<#=tables#>, TTarget>> specialMemberSelector = null)
-        => base.SelectTo(specialMemberSelector) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<TEntity, TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as IMySqlFromCommand<TEntity, TTarget>;
+    public new IMySqlFromCommand<TEntity, TTarget> SelectTo<TTarget>(Expression<Func<<#=tables#>, TTarget>> specialMemberSelector = null)
+        => base.SelectTo(specialMemberSelector) as IMySqlFromCommand<TEntity, TTarget>;
     #endregion
 }
 <#  }#>

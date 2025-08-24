@@ -85,12 +85,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var hasShardingTables = this.ShardingTables != null && this.ShardingTables.Count > 0;
         if (this.Tables.Count > 0)
         {
-            //每个表都要有单独的GUID值，否则有类似的表前缀名，也会被替换导致表名替换错误
-            for (int i = 0; i < this.Tables.Count; i++)
+            var startIndex = this.IsFromCommand ? 1 : 0;
+            for (int i = startIndex; i < this.Tables.Count; i++)
             {
                 var tableSegment = this.Tables[i];
                 string tableName = this.GetTableName(tableSegment);
-                if (i > 0)
+                if (i > startIndex)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))
                     {
@@ -664,7 +664,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var rawSql = this.BuildSql(false, out var readerFields);
         rawSql += union + Environment.NewLine + subQuerySql;
         this.Clear();
-        this.AddJoinTable(targetType, null, TableType.FromQuery, $"({rawSql})", readerFields);
+        this.Tables.RemoveAt(this.Tables.Count - 1);
+        var tableSegment = this.AddJoinTable(targetType, null, TableType.FromQuery, $"({rawSql})", readerFields);
+        this.InitUseQueryReaderFields(tableSegment, readerFields);
         //先放到UnionSql中，在AsCteTable方法中，BuildCteTableSql时能得到这个SQL
         this.UnionSql = rawSql;
         this.IsUnion = false;
@@ -1954,8 +1956,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 if (sqlSegment.FieldType != SqlFieldType.IncludeRef)
                 {
                     this.GetQuotedValue(sqlSegment, true);
-                    if (sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression
-                        || sqlSegment.IsMethodCall || sqlSegment.FromMember != null && sqlSegment.FromMember.Name != memberInfo.Name)
+                    if (!this.IsFromCommand && (sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression
+                        || sqlSegment.IsMethodCall || sqlSegment.FromMember != null && sqlSegment.FromMember.Name != memberInfo.Name))
                         sqlSegment.IsNeedAlias = true;
                 }
                 sqlSegment.TargetMember = memberInfo;
@@ -1989,8 +1991,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     sqlSegment.FieldType = SqlFieldType.Field;
                     //只有常量、方法调用、表达式计算，没有设置NativeDbType和TypeHandler，需要根据memberInfo类型获取
                     //常量和变量，暂时不做GetQuotedValue处理，在BuildSql时候，再进行处理，Value值保留
-                    if (sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression
-                        || sqlSegment.IsMethodCall || sqlSegment.FromMember != null && sqlSegment.FromMember.Name != memberInfo.Name)
+                    if (!this.IsFromCommand && (sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression
+                        || sqlSegment.IsMethodCall || sqlSegment.FromMember != null && sqlSegment.FromMember.Name != memberInfo.Name))
                         sqlSegment.IsNeedAlias = true;
                 }
                 sqlSegment.TargetMember = memberInfo;
@@ -2115,7 +2117,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual bool IsNeedAlias(SqlFieldSegment readerField, bool isOnlyField)
     {
-        if (this.IsFromCommand || this.IsSecondUnion || this.IsCteTable) return false;
+        if (this.IsSecondUnion || this.IsCteTable) return false;
         if (readerField.IsNeedAlias) return true;
         if (isOnlyField) return false;
         if (readerField.Fields != null && readerField.Fields.Count > 1)
@@ -2125,12 +2127,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (readerField.IsConstant || readerField.IsVariable || readerField.HasParameter
             || readerField.IsExpression || readerField.IsMethodCall) return true;
         if (readerField.TargetMember != null && readerField.FromMember != null)
-            return readerField.TargetMember.Name != readerField.FromMember.Name;
+            return string.Compare(readerField.TargetMember.Name, readerField.FromMember.Name, true) != 0;
         return false;
     }
     public virtual void Clear(bool isClearReaderFields = false)
     {
-        this.Tables.Clear();
         if (isClearReaderFields)
             this.ReaderFields = null;
         this.WhereSql = null;

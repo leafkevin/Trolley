@@ -65,24 +65,24 @@ public class PostgreSqlCreate<TEntity> : Create<TEntity>, IPostgreSqlCreate<TEnt
     #endregion
 
     #region From
-    public new IPostgreSqlFromCommand<T> From<T>()
-        => base.From<T>() as IPostgreSqlFromCommand<T>;
-    public new IPostgreSqlFromCommand<T1, T2> From<T1, T2>()
-        => base.From<T1, T2>() as IPostgreSqlFromCommand<T1, T2>;
-    public new IPostgreSqlFromCommand<T1, T2, T3> From<T1, T2, T3>()
-       => base.From<T1, T2, T3>() as IPostgreSqlFromCommand<T1, T2, T3>;
-    public new IPostgreSqlFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>()
-        => base.From<T1, T2, T3, T4>() as IPostgreSqlFromCommand<T1, T2, T3, T4>;
-    public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
-        => base.From<T1, T2, T3, T4, T5>() as IPostgreSqlFromCommand<T1, T2, T3, T4, T5>;
-    public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
-        => base.From<T1, T2, T3, T4, T5, T6>() as IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6>;
+    public new IPostgreSqlFromCommand<TEntity, T> From<T>()
+        => base.From<T>() as IPostgreSqlFromCommand<TEntity, T>;
+    public new IPostgreSqlFromCommand<TEntity, T1, T2> From<T1, T2>()
+        => base.From<T1, T2>() as IPostgreSqlFromCommand<TEntity, T1, T2>;
+    public new IPostgreSqlFromCommand<TEntity, T1, T2, T3> From<T1, T2, T3>()
+       => base.From<T1, T2, T3>() as IPostgreSqlFromCommand<TEntity, T1, T2, T3>;
+    public new IPostgreSqlFromCommand<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>()
+        => base.From<T1, T2, T3, T4>() as IPostgreSqlFromCommand<TEntity, T1, T2, T3, T4>;
+    public new IPostgreSqlFromCommand<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
+        => base.From<T1, T2, T3, T4, T5>() as IPostgreSqlFromCommand<TEntity, T1, T2, T3, T4, T5>;
+    public new IPostgreSqlFromCommand<TEntity, T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
+        => base.From<T1, T2, T3, T4, T5, T6>() as IPostgreSqlFromCommand<TEntity, T1, T2, T3, T4, T5, T6>;
     #endregion
 
     #region FromQuery
-    public new IPostgreSqlFromCommand<T> FromQuery<T>(IQuery<T> subQuery)
-        => base.FromQuery(subQuery) as IPostgreSqlFromCommand<T>;
-    public new IPostgreSqlFromCommand<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
-        => base.FromQuery(subQueryExpr) as IPostgreSqlFromCommand<T>;
+    public new IPostgreSqlFromCommand<TEntity, T> FromQuery<T>(IQuery<T> subQuery)
+        => base.FromQuery(subQuery) as IPostgreSqlFromCommand<TEntity, T>;
+    public new IPostgreSqlFromCommand<TEntity, T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
+        => base.FromQuery(subQueryExpr) as IPostgreSqlFromCommand<TEntity, T>;
     #endregion
 }

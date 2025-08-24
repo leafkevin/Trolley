@@ -1111,7 +1111,7 @@ public class SqlVisitor : ISqlVisitor
                 this.HasAggFields = true;
                 break;
             case "Sum":
-                if (sqlSegment.IsNullFields)
+                if (this.IsWhere || sqlSegment.IsNullFields)
                 {
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"SUM({sqlSegment.Body})", false, true);
@@ -1128,7 +1128,7 @@ public class SqlVisitor : ISqlVisitor
                 }
                 break;
             case "Avg":
-                if (sqlSegment.IsNullFields)
+                if (this.IsWhere || sqlSegment.IsNullFields)
                 {
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"AVG({sqlSegment.Body})", false, true);
@@ -1146,7 +1146,7 @@ public class SqlVisitor : ISqlVisitor
                 }
                 break;
             case "Max":
-                if (sqlSegment.IsNullFields)
+                if (this.IsWhere || sqlSegment.IsNullFields)
                 {
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"MAX({sqlSegment.Body})", false, true);
@@ -1163,7 +1163,7 @@ public class SqlVisitor : ISqlVisitor
                 }
                 break;
             case "Min":
-                if (sqlSegment.IsNullFields)
+                if (this.IsWhere || sqlSegment.IsNullFields)
                 {
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"MIN({sqlSegment.Body})", false, true);
@@ -1294,7 +1294,7 @@ public class SqlVisitor : ISqlVisitor
                     this.HasAggFields = true;
                     break;
                 case "Sum":
-                    if (sqlSegment.IsNullFields)
+                    if (this.IsWhere || sqlSegment.IsNullFields)
                     {
                         sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                         builder.Append($"SUM({sqlSegment.Body})");
@@ -1311,7 +1311,7 @@ public class SqlVisitor : ISqlVisitor
                     }
                     break;
                 case "Avg":
-                    if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                    if (this.IsWhere || sqlSegment.IsNullFields)
                     {
                         sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                         builder.Append($"AVG({sqlSegment.Body})");
@@ -1328,7 +1328,7 @@ public class SqlVisitor : ISqlVisitor
                     }
                     break;
                 case "Max":
-                    if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                    if (this.IsWhere || sqlSegment.IsNullFields)
                     {
                         sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                         builder.Append($"MAX({sqlSegment.Body})");
@@ -1345,7 +1345,7 @@ public class SqlVisitor : ISqlVisitor
                     }
                     break;
                 case "Min":
-                    if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                    if (this.IsWhere || sqlSegment.IsNullFields)
                     {
                         sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                         builder.Append($"MIN({sqlSegment.Body})");
@@ -2540,8 +2540,8 @@ public class SqlVisitor : ISqlVisitor
         if (this.UnionSql == null) return;
 
         //有union操作的visitor，都是新New的，前面只有一个表
-        this.Tables[0].Body = $"({this.UnionSql})";
-        this.Tables[0].TableType = TableType.FromQuery;
+        this.Tables.Last().Body = $"({this.UnionSql})";
+        this.Tables.Last().TableType = TableType.FromQuery;
         this.UnionSql = null;
     }
     public void InitUseQueryReaderFields(TableSegment tableSegment, List<SqlFieldSegment> readerFields)
@@ -2559,10 +2559,13 @@ public class SqlVisitor : ISqlVisitor
                 //重新设置body内容，表别名变更，字段名也可能变更
                 if (readerField.TargetMember != null)
                     readerField.Body = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
+
                 //更改原SQL中原始字段解析属性，防止在GetQuotedValue中使用原始字段名,导致SQL解析错误
+                readerField.IsNeedAlias = false;
                 readerField.IsConstant = false;
                 readerField.IsVariable = false;
                 readerField.IsExpression = false;
+                readerField.IsMethodCall = false;
             }
         }
     }

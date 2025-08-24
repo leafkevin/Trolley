@@ -104,13 +104,6 @@ public interface IMySqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// 相同主键或唯一索引存在时执行更新动作，INSERT INTO ... ON DUPLICATE KEY UPDATE
     /// </summary>
     /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
-    /// <param name="updateObj">更新实体对象</param>
-    /// <returns>返回插入对象</returns>
-    IMySqlContinuedCreate<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj);
-    /// <summary>
-    /// 相同主键或唯一索引存在时执行更新动作，INSERT INTO ... ON DUPLICATE KEY UPDATE
-    /// </summary>
-    /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
     /// <param name="fieldsAssignment">要更新的字段赋值表达式</param>
     /// <returns>返回插入对象</returns>
     IMySqlContinuedCreate<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment);
@@ -230,13 +223,6 @@ public interface IMySqlBulkContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     #endregion
 
     #region OnDuplicateKeyUpdate
-    /// <summary>
-    /// 相同主键或唯一索引存在时执行更新动作，INSERT INTO ... ON DUPLICATE KEY UPDATE
-    /// </summary>
-    /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
-    /// <param name="updateObj">更新实体对象</param>
-    /// <returns>返回插入对象</returns>
-    IMySqlBulkContinuedCreate<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj);
     /// <summary>
     /// 相同主键或唯一索引存在时执行更新动作，INSERT INTO ... ON DUPLICATE KEY UPDATE
     /// </summary>

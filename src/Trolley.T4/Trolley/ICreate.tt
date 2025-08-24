@@ -107,7 +107,7 @@ public interface ICreate<TEntity>
     /// <typeparam name="T">实体类型</typeparam>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IFromCommand<T> From<T>();
+    IFromCommand<TEntity, T> From<T>();
 <#
     var count = 6;
     string tables = "T1";
@@ -127,7 +127,7 @@ public interface ICreate<TEntity>
     /// <typeparam name="<#=currentTable#>">表T<#=j#>实体类型</typeparam>
 <#      }#>
     /// <returns>返回查询对象</returns>
-    IFromCommand<<#=tables#>> From<<#=tables#>>();
+    IFromCommand<TEntity, <#=tables#>> From<<#=tables#>>();
 <#  }#>
     #endregion
 
@@ -143,7 +143,7 @@ public interface ICreate<TEntity>
     /// <typeparam name="T">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IFromCommand<T> FromQuery<T>(IQuery<T> subQuery);
+    IFromCommand<TEntity, T> FromQuery<T>(IQuery<T> subQuery);
     /// <summary>
     /// 使用子查询subQuery作为创建子查询对象，子查询subQuery也可以是CTE表，如：
     /// <code>
@@ -156,7 +156,7 @@ public interface ICreate<TEntity>
     /// <typeparam name="T">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    IFromCommand<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
+    IFromCommand<TEntity, T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     #endregion
 }
 /// <summary>

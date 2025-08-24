@@ -3,7 +3,7 @@ using System.Linq.Expressions;
 
 namespace Trolley.SqlServer;
 
-public class SqlServerGroupingCommand<T, TGrouping> : GroupingCommand<T, TGrouping>, ISqlServerGroupingCommand<T, TGrouping>
+public class SqlServerGroupingCommand<TEntity, T, TGrouping> : GroupingCommand<TEntity, T, TGrouping>, ISqlServerGroupingCommand<TEntity, T, TGrouping>
 {
     #region Constructor
     public SqlServerGroupingCommand(DbContext dbContext, IQueryVisitor visitor)
@@ -11,9 +11,9 @@ public class SqlServerGroupingCommand<T, TGrouping> : GroupingCommand<T, TGroupi
     #endregion
 
     #region Having
-    public new ISqlServerGroupingCommand<T, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
+    public new ISqlServerGroupingCommand<TEntity, T, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
         => this.Having(true, predicate);
-    public new ISqlServerGroupingCommand<T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
+    public new ISqlServerGroupingCommand<TEntity, T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
     {
         base.HavingInternal(condition, predicate);
         return this;
@@ -21,16 +21,16 @@ public class SqlServerGroupingCommand<T, TGrouping> : GroupingCommand<T, TGroupi
     #endregion
 
     #region OrderBy/OrderByDescending
-    public new ISqlServerGroupingCommand<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
-    public new ISqlServerGroupingCommand<T, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
     {
         this.OrderByInternal(condition, fieldsExpr);
         return this;
     }
-    public new ISqlServerGroupingCommand<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-    public new ISqlServerGroupingCommand<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
     {
         this.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
@@ -40,13 +40,13 @@ public class SqlServerGroupingCommand<T, TGrouping> : GroupingCommand<T, TGroupi
     #region Select
     public new ISqlServerFromCommand<TGrouping> Select()
         => base.Select() as ISqlServerFromCommand<TGrouping>;
-    public new ISqlServerFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as ISqlServerFromCommand<TTarget>;
-    public new ISqlServerFromCommand<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as ISqlServerFromCommand<TTarget>;
+    public new ISqlServerFromCommand<TEntity, TTarget> Select<TTarget>(string fields = "*")
+        => base.Select<TTarget>(fields) as ISqlServerFromCommand<TEntity, TTarget>;
+    public new ISqlServerFromCommand<TEntity, TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as ISqlServerFromCommand<TEntity, TTarget>;
     #endregion
 }
-public class SqlServerGroupingCommand<T1, T2, TGrouping> : GroupingCommand<T1, T2, TGrouping>, ISqlServerGroupingCommand<T1, T2, TGrouping>
+public class SqlServerGroupingCommand<TEntity, T1, T2, TGrouping> : GroupingCommand<TEntity, T1, T2, TGrouping>, ISqlServerGroupingCommand<TEntity, T1, T2, TGrouping>
 {
     #region Constructor
     public SqlServerGroupingCommand(DbContext dbContext, IQueryVisitor visitor)
@@ -54,9 +54,9 @@ public class SqlServerGroupingCommand<T1, T2, TGrouping> : GroupingCommand<T1, T
     #endregion
 
     #region Having
-    public new ISqlServerGroupingCommand<T1, T2, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, bool>> predicate)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, bool>> predicate)
         => this.Having(true, predicate);
-    public new ISqlServerGroupingCommand<T1, T2, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, bool>> predicate)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, bool>> predicate)
     {
         base.HavingInternal(condition, predicate);
         return this;
@@ -64,16 +64,16 @@ public class SqlServerGroupingCommand<T1, T2, TGrouping> : GroupingCommand<T1, T
     #endregion
 
     #region OrderBy/OrderByDescending
-    public new ISqlServerGroupingCommand<T1, T2, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
-    public new ISqlServerGroupingCommand<T1, T2, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr)
     {
         base.OrderByInternal(condition, fieldsExpr);
         return this;
     }
-    public new ISqlServerGroupingCommand<T1, T2, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-    public new ISqlServerGroupingCommand<T1, T2, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr)
     {
         base.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
@@ -83,13 +83,13 @@ public class SqlServerGroupingCommand<T1, T2, TGrouping> : GroupingCommand<T1, T
     #region Select
     public new ISqlServerFromCommand<TGrouping> Select()
         => base.Select() as ISqlServerFromCommand<TGrouping>;
-    public new ISqlServerFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as ISqlServerFromCommand<TTarget>;
-    public new ISqlServerFromCommand<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as ISqlServerFromCommand<TTarget>;
+    public new ISqlServerFromCommand<TEntity, TTarget> Select<TTarget>(string fields = "*")
+        => base.Select<TTarget>(fields) as ISqlServerFromCommand<TEntity, TTarget>;
+    public new ISqlServerFromCommand<TEntity, TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as ISqlServerFromCommand<TEntity, TTarget>;
     #endregion
 }
-public class SqlServerGroupingCommand<T1, T2, T3, TGrouping> : GroupingCommand<T1, T2, T3, TGrouping>, ISqlServerGroupingCommand<T1, T2, T3, TGrouping>
+public class SqlServerGroupingCommand<TEntity, T1, T2, T3, TGrouping> : GroupingCommand<TEntity, T1, T2, T3, TGrouping>, ISqlServerGroupingCommand<TEntity, T1, T2, T3, TGrouping>
 {
     #region Constructor
     public SqlServerGroupingCommand(DbContext dbContext, IQueryVisitor visitor)
@@ -97,9 +97,9 @@ public class SqlServerGroupingCommand<T1, T2, T3, TGrouping> : GroupingCommand<T
     #endregion
 
     #region Having
-    public new ISqlServerGroupingCommand<T1, T2, T3, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, bool>> predicate)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, bool>> predicate)
         => this.Having(true, predicate);
-    public new ISqlServerGroupingCommand<T1, T2, T3, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, bool>> predicate)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, bool>> predicate)
     {
         base.HavingInternal(condition, predicate);
         return this;
@@ -107,16 +107,16 @@ public class SqlServerGroupingCommand<T1, T2, T3, TGrouping> : GroupingCommand<T
     #endregion
 
     #region OrderBy/OrderByDescending
-    public new ISqlServerGroupingCommand<T1, T2, T3, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
-    public new ISqlServerGroupingCommand<T1, T2, T3, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr)
     {
         base.OrderByInternal(condition, fieldsExpr);
         return this;
     }
-    public new ISqlServerGroupingCommand<T1, T2, T3, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-    public new ISqlServerGroupingCommand<T1, T2, T3, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr)
     {
         base.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
@@ -126,13 +126,13 @@ public class SqlServerGroupingCommand<T1, T2, T3, TGrouping> : GroupingCommand<T
     #region Select
     public new ISqlServerFromCommand<TGrouping> Select()
         => base.Select() as ISqlServerFromCommand<TGrouping>;
-    public new ISqlServerFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as ISqlServerFromCommand<TTarget>;
-    public new ISqlServerFromCommand<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as ISqlServerFromCommand<TTarget>;
+    public new ISqlServerFromCommand<TEntity, TTarget> Select<TTarget>(string fields = "*")
+        => base.Select<TTarget>(fields) as ISqlServerFromCommand<TEntity, TTarget>;
+    public new ISqlServerFromCommand<TEntity, TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as ISqlServerFromCommand<TEntity, TTarget>;
     #endregion
 }
-public class SqlServerGroupingCommand<T1, T2, T3, T4, TGrouping> : GroupingCommand<T1, T2, T3, T4, TGrouping>, ISqlServerGroupingCommand<T1, T2, T3, T4, TGrouping>
+public class SqlServerGroupingCommand<TEntity, T1, T2, T3, T4, TGrouping> : GroupingCommand<TEntity, T1, T2, T3, T4, TGrouping>, ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, TGrouping>
 {
     #region Constructor
     public SqlServerGroupingCommand(DbContext dbContext, IQueryVisitor visitor)
@@ -140,9 +140,9 @@ public class SqlServerGroupingCommand<T1, T2, T3, T4, TGrouping> : GroupingComma
     #endregion
 
     #region Having
-    public new ISqlServerGroupingCommand<T1, T2, T3, T4, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, bool>> predicate)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, bool>> predicate)
         => this.Having(true, predicate);
-    public new ISqlServerGroupingCommand<T1, T2, T3, T4, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, bool>> predicate)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, bool>> predicate)
     {
         base.HavingInternal(condition, predicate);
         return this;
@@ -150,16 +150,16 @@ public class SqlServerGroupingCommand<T1, T2, T3, T4, TGrouping> : GroupingComma
     #endregion
 
     #region OrderBy/OrderByDescending
-    public new ISqlServerGroupingCommand<T1, T2, T3, T4, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
-    public new ISqlServerGroupingCommand<T1, T2, T3, T4, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr)
     {
         base.OrderByInternal(condition, fieldsExpr);
         return this;
     }
-    public new ISqlServerGroupingCommand<T1, T2, T3, T4, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-    public new ISqlServerGroupingCommand<T1, T2, T3, T4, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr)
     {
         base.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
@@ -169,13 +169,13 @@ public class SqlServerGroupingCommand<T1, T2, T3, T4, TGrouping> : GroupingComma
     #region Select
     public new ISqlServerFromCommand<TGrouping> Select()
         => base.Select() as ISqlServerFromCommand<TGrouping>;
-    public new ISqlServerFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as ISqlServerFromCommand<TTarget>;
-    public new ISqlServerFromCommand<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as ISqlServerFromCommand<TTarget>;
+    public new ISqlServerFromCommand<TEntity, TTarget> Select<TTarget>(string fields = "*")
+        => base.Select<TTarget>(fields) as ISqlServerFromCommand<TEntity, TTarget>;
+    public new ISqlServerFromCommand<TEntity, TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as ISqlServerFromCommand<TEntity, TTarget>;
     #endregion
 }
-public class SqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping> : GroupingCommand<T1, T2, T3, T4, T5, TGrouping>, ISqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping>
+public class SqlServerGroupingCommand<TEntity, T1, T2, T3, T4, T5, TGrouping> : GroupingCommand<TEntity, T1, T2, T3, T4, T5, TGrouping>, ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, T5, TGrouping>
 {
     #region Constructor
     public SqlServerGroupingCommand(DbContext dbContext, IQueryVisitor visitor)
@@ -183,9 +183,9 @@ public class SqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping> : GroupingC
     #endregion
 
     #region Having
-    public new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, bool>> predicate)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, T5, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, bool>> predicate)
         => this.Having(true, predicate);
-    public new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, bool>> predicate)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, T5, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, bool>> predicate)
     {
         base.HavingInternal(condition, predicate);
         return this;
@@ -193,16 +193,16 @@ public class SqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping> : GroupingC
     #endregion
 
     #region OrderBy/OrderByDescending
-    public new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, T5, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
-    public new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, T5, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
     {
         base.OrderByInternal(condition, fieldsExpr);
         return this;
     }
-    public new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, T5, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-    public new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, T5, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
     {
         base.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
@@ -212,13 +212,13 @@ public class SqlServerGroupingCommand<T1, T2, T3, T4, T5, TGrouping> : GroupingC
     #region Select
     public new ISqlServerFromCommand<TGrouping> Select()
         => base.Select() as ISqlServerFromCommand<TGrouping>;
-    public new ISqlServerFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as ISqlServerFromCommand<TTarget>;
-    public new ISqlServerFromCommand<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as ISqlServerFromCommand<TTarget>;
+    public new ISqlServerFromCommand<TEntity, TTarget> Select<TTarget>(string fields = "*")
+        => base.Select<TTarget>(fields) as ISqlServerFromCommand<TEntity, TTarget>;
+    public new ISqlServerFromCommand<TEntity, TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as ISqlServerFromCommand<TEntity, TTarget>;
     #endregion
 }
-public class SqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> : GroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping>, ISqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping>
+public class SqlServerGroupingCommand<TEntity, T1, T2, T3, T4, T5, T6, TGrouping> : GroupingCommand<TEntity, T1, T2, T3, T4, T5, T6, TGrouping>, ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, T5, T6, TGrouping>
 {
     #region Constructor
     public SqlServerGroupingCommand(DbContext dbContext, IQueryVisitor visitor)
@@ -226,9 +226,9 @@ public class SqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> : Group
     #endregion
 
     #region Having
-    public new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, bool>> predicate)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, T5, T6, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, bool>> predicate)
         => this.Having(true, predicate);
-    public new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, bool>> predicate)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, T5, T6, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, bool>> predicate)
     {
         base.HavingInternal(condition, predicate);
         return this;
@@ -236,16 +236,16 @@ public class SqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> : Group
     #endregion
 
     #region OrderBy/OrderByDescending
-    public new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, T5, T6, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
-    public new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, T5, T6, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
     {
         base.OrderByInternal(condition, fieldsExpr);
         return this;
     }
-    public new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, T5, T6, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-    public new ISqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
+    public new ISqlServerGroupingCommand<TEntity, T1, T2, T3, T4, T5, T6, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
     {
         base.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
@@ -255,9 +255,9 @@ public class SqlServerGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> : Group
     #region Select
     public new ISqlServerFromCommand<TGrouping> Select()
         => base.Select() as ISqlServerFromCommand<TGrouping>;
-    public new ISqlServerFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as ISqlServerFromCommand<TTarget>;
-    public new ISqlServerFromCommand<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as ISqlServerFromCommand<TTarget>;
+    public new ISqlServerFromCommand<TEntity, TTarget> Select<TTarget>(string fields = "*")
+        => base.Select<TTarget>(fields) as ISqlServerFromCommand<TEntity, TTarget>;
+    public new ISqlServerFromCommand<TEntity, TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as ISqlServerFromCommand<TEntity, TTarget>;
     #endregion
 }

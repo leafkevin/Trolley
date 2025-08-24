@@ -101,14 +101,14 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// <typeparam name="T">实体类型</typeparam>
     /// </param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> From<T>();
+    new IMySqlFromCommand<TEntity, T> From<T>();
     /// <summary>
     /// 使用2个表创建子查询对象
     /// </summary>
     /// <typeparam name="T1">表T1实体类型</typeparam>
     /// <typeparam name="T2">表T2实体类型</typeparam>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T1, T2> From<T1, T2>();
+    new IMySqlFromCommand<TEntity, T1, T2> From<T1, T2>();
     /// <summary>
     /// 使用3个表创建子查询对象
     /// </summary>
@@ -116,7 +116,7 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// <typeparam name="T2">表T2实体类型</typeparam>
     /// <typeparam name="T3">表T3实体类型</typeparam>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T1, T2, T3> From<T1, T2, T3>();
+    new IMySqlFromCommand<TEntity, T1, T2, T3> From<T1, T2, T3>();
     /// <summary>
     /// 使用4个表创建子查询对象
     /// </summary>
@@ -125,7 +125,7 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// <typeparam name="T3">表T3实体类型</typeparam>
     /// <typeparam name="T4">表T4实体类型</typeparam>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>();
+    new IMySqlFromCommand<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>();
     /// <summary>
     /// 使用5个表创建子查询对象
     /// </summary>
@@ -135,7 +135,7 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// <typeparam name="T4">表T4实体类型</typeparam>
     /// <typeparam name="T5">表T5实体类型</typeparam>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>();
+    new IMySqlFromCommand<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>();
     /// <summary>
     /// 使用6个表创建子查询对象
     /// </summary>
@@ -146,7 +146,7 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// <typeparam name="T5">表T5实体类型</typeparam>
     /// <typeparam name="T6">表T6实体类型</typeparam>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>();
+    new IMySqlFromCommand<TEntity, T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>();
     #endregion
 
     #region FromQuery
@@ -161,7 +161,7 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// <typeparam name="T">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> FromQuery<T>(IQuery<T> subQuery);
+    new IMySqlFromCommand<TEntity, T> FromQuery<T>(IQuery<T> subQuery);
     /// <summary>
     /// 使用子查询subQuery作为创建子查询对象，子查询subQuery也可以是CTE表，如：
     /// <code>
@@ -174,6 +174,6 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// <typeparam name="T">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
+    new IMySqlFromCommand<TEntity, T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     #endregion
 }
