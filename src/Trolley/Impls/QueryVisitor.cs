@@ -612,7 +612,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public TableSegment UseNewQuery(Type targetType, Expression subQueryExpr, bool isFirstTable)
     {
-        //repository.FromQuery(f => ... ) 或是 repository.WithQuery(f => ... )，具体参数如下：
+        //repository.FromQuery(f => ... ) 或是 ... .WithQuery(f => ... )，具体参数如下：
         //f => f.From<Order>().Where(o=>o.Id==1) ... 或是 f => cteOrders 或是 f => myRefOrders等
         //或是 f => myCteOrders.Where(o=>o.Id==1) ... 或是 f => myRefOrders.Where(o=>o.Id==1)等
         //都是从引用现有子查询、CTE表、新建子查询生成一个子查询加入到当前Tables中，后续会有Join/Where...等操作，子查询中表别名从'a'开始
@@ -627,17 +627,17 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         var fromQuery = new FromQuery(this.DbContext, queryVisiter);
         (var sql, var tableSegment, var readerFields) = this.VisitFromQuery(subQueryExpr, fromQuery);
+        //CTE引用表，已经添加过了，直接返回
         if (tableSegment != null) return tableSegment;
-        //CTE子查询：
-        //如果是直接引用，无后续操作，直接添加新的引用CTE表名，无需生成SQL和build，把CTE子查询对象添加到当前RefQueries中
-        //如果引用并有后续操作，在queryVisitor中，添加新的引用CTE表，进行后续操作，最后再build和生成SQL，把CTE子查询对象添加到当前RefQueries中
-        //子查询：
-        //如果是直接引用，无后续操作，直接在原来的子查询上进行build，只需要拷贝dbParameters、nextDbParameters
-        //如果引用并有后续操作，需要在新的queryVisitor上进行build和生成SQL，并把原有所有数据和参数拷贝到新的queryVisitor上
 
-        //从FromQuery对象开始的场景，直接build和生成SQL，就可以，正常逻辑
-        if (isFirstTable) this.Clear();
+        if (isFirstTable)
+        {
+            this.Clear();
+            this.Tables.Clear();
+        }
         tableSegment = this.AddJoinTable(targetType, null, TableType.FromQuery, $"({sql})", readerFields);
+      
+        //从FromQuery对象开始的场景，直接build和生成SQL，就可以，正常逻辑    
         this.InitUseQueryReaderFields(tableSegment, readerFields);
         return tableSegment;
     }
@@ -676,6 +676,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.IsUnion = true;
         var rawSql = this.BuildSql(false, out var readerFields);
         this.Clear();
+        this.Tables.Clear();
         //此时产生的queryObj是一个新的对象，只能用于解析sql，与传进来的queryObj不是同一个对象，舍弃
         //临时产生一个随机表名，在后面的AsCteTable时，再做替换
         var tempTableName = $"__CTE_TABLE_{Guid.NewGuid():N}__";

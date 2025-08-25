@@ -184,7 +184,7 @@ public class Repository : IRepository
 
     #region QueryFirst
     public virtual TEntity QueryFirst<TEntity>(string rawSql, CommandType commandType = CommandType.Text)
-        => this.DbContext.Query<TEntity, TEntity>(rawSql, true, (reader, deserializer) => reader.Read() ? (TEntity)reader.GetValue(0) : default, commandType);
+        => this.DbContext.Query<TEntity, TEntity>(rawSql, true, (reader, deserializer) => reader.Read() ? (TEntity)deserializer.Invoke(reader) : default, commandType);
     public virtual async Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
         => await this.DbContext.QueryAsync<TEntity, TEntity>(rawSql, true, async (reader, deserializer, cancellationToken) => (await reader.ReadAsync(cancellationToken)) ? (TEntity)deserializer.Invoke(reader) : default, commandType, cancellationToken);
     public virtual TEntity QueryFirst<TEntity>(string rawSql, object parameters, CommandType commandType = CommandType.Text)

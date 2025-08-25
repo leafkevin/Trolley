@@ -1915,6 +1915,7 @@ public class SqlVisitor : ISqlVisitor
                     entityType = callExpr.Type.GenericTypeArguments[0];
                     queryVisitor.AsCteTable(entityType, cteTableName);
                     queryVisitor.Clear();
+                    queryVisitor.Tables.Clear();
                     tableSegment = this.UseQuery(entityType, queryVisitor.CteQueryObj, true);
                     return (sql, tableSegment, readyReaderFields);
                 default: throw new NotSupportedException("不支持的表达式解析");
