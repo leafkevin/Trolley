@@ -106,7 +106,7 @@ public class SqlVisitor : ISqlVisitor
             tableSegment.ShardingType = ShardingTableType.MultiTable;
             tableSegment.TableNames = new List<string>(tableNames);
             this.ShardingTables ??= new();
-            if (!this.ShardingTables.Exists(f => f.ShardingType == ShardingTableType.MultiTable))
+            if (this.ShardingTables.Exists(f => f.ShardingType == ShardingTableType.MultiTable))
                 throw new NotSupportedException("不存在多分表的实体表，不能使用此方法，可直接使用首个多分表为MultiTable类型，其余表只能为调用方法UseTableMap与首个多分表表名映射实现多分表");
             if (!this.ShardingTables.Contains(tableSegment))
             {

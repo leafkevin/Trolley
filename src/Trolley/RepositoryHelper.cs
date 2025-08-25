@@ -1024,6 +1024,60 @@ public static class RepositoryHelper
                 as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
             var fieldsSql = fieldsSetter.Invoke(dbContext, firstInsertObj);
 
+            int Execute(DbContext dbContext, ITheaCommand command, string tableName, IEnumerable insertObjs, int bulkCount)
+            {
+                int count = 0, index = 0;
+                var builder = new StringBuilder($"INSERT INTO {ormProvider.GetTableName(tableName)}{fieldsSql} ");
+                foreach (var insertObj in insertObjs)
+                {
+                    if (index > 0) builder.Append(',');
+                    valuesSetter.Invoke(command.Parameters, builder, dbContext, insertObj, index.ToString());
+                    index++;
+
+                    if (index >= bulkCount)
+                    {
+                        command.CommandText = builder.ToString();
+                        count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                        builder.Clear();
+                        command.Parameters.Clear();
+                        builder.Append($"INSERT INTO {ormProvider.GetTableName(tableName)}{fieldsSql}");
+                        index = 0;
+                    }
+                }
+                if (index > 0)
+                {
+                    command.CommandText = builder.ToString();
+                    count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                    builder.Clear();
+                    command.Parameters.Clear();
+                }
+                return count;
+            }
+
+            Func<DbContext, ITheaCommand, IEnumerable, int, int> commandExecutor = null;
+            var entityMapper = dbContext.MapProvider.GetEntityMap(entityType);
+            if (dbContext.ShardingProvider != null && dbContext.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
+            {
+                commandExecutor = (dbContext, command, insertObjs, bulkCount) =>
+                {
+                    int count = 0;
+                     var tabledInsertObjs = SplitShardingParameters(tableShardingInfo, entityMapper, insertObjType, insertObjs);
+                    foreach (var tabledInsertObj in tabledInsertObjs)
+                    {
+                        count += Execute(dbContext, command, tabledInsertObj.Key, tabledInsertObj.Value, bulkCount);
+                    }
+                    return count;
+                };
+            }
+            else
+            {
+                var tableName = entityMapper.TableName;
+                commandExecutor = (dbContext, command, insertObjs, bulkCount) => Execute(dbContext, command, tableName, insertObjs, bulkCount);
+            }
+            return commandExecutor;
+
+
+
             return (DbContext dbContext, ITheaCommand command, IEnumerable insertObjs, int bulkCount) =>
             {
                 int count = 0, index = 0;
