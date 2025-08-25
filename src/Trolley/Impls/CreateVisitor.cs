@@ -372,6 +372,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         string tableName = tableSegment.Mapper.TableName;
         if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
         {
+            //已经手动设置过分表
             if (tableSegment.IsSharding)
                 tableName = tableSegment.Body;
             else
@@ -379,6 +380,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 if (tableShardingInfo.DependOnMembers == null || tableShardingInfo.DependOnMembers.Count == 0)
                     throw new InvalidOperationException($"实体表{entityType.FullName}已设置分表，但未指定分表名，也未指定依赖的成员，无法确定分表，原表名：{tableName}");
 
+                //未设置，就要根据依赖字段确定分表
                 var fieldValues = new List<object>();
                 foreach (var dependOnMember in tableShardingInfo.DependOnMembers)
                 {
@@ -390,7 +392,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                             case "WithBy":
                                 var insertObj = deferredSegment.Value;
                                 var insertObjType = insertObj.GetType();
-                                if (RepositoryHelper.TryGetMemberGetter(insertObjType, dependOnMember, insertObj, out var memberGetter))
+                                if (RepositoryHelper.TryGetMemberGetter(insertObjType, dependOnMember.ToLower(), insertObj, out var memberGetter))
                                     fieldValues.Add(memberGetter.Invoke(insertObj));
                                 break;
                             case "WithByField":
@@ -441,7 +443,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             var fieldValueGetters = new List<Func<object, object>>();
             foreach (var memberName in tableShardingInfo.DependOnMembers)
             {
-                if (RepositoryHelper.TryGetMemberGetter(insertObjType, memberName, insertObjSample, out var memberGetter))
+                if (RepositoryHelper.TryGetMemberGetter(insertObjType, memberName.ToLower(), insertObjSample, out var memberGetter))
                     fieldValueGetters.Add(memberGetter);
                 for (int i = 1; i < this.deferredSegments.Count; i++)
                 {
@@ -451,7 +453,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                         case "WithBy":
                             var insertObj = deferredSegment.Value;
                             var myInsertObjType = insertObj.GetType();
-                            if (RepositoryHelper.TryGetMemberGetter(myInsertObjType, memberName, insertObj, out memberGetter))
+                            if (RepositoryHelper.TryGetMemberGetter(myInsertObjType, memberName.ToLower(), insertObj, out memberGetter))
                             {
                                 fieldValueGetters.Add(f => memberGetter.Invoke(insertObj));
                                 break;
@@ -489,18 +491,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             }
         }
         return result;
-    }
-    public virtual void Clear()
-    {
-        this.Tables?.Clear();
-        this.TableAliases?.Clear();
-        this.ReaderFields?.Clear();
-        this.FieldsBuilder.Clear();
-        this.ValuesBuilder.Clear();
-        this.WhereSql = null;
-        this.TableAsStart = 'a';
-        this.IsNeedTableAlias = false;
-        this.deferredSegments.Clear();
     }
     public override void Dispose()
     {

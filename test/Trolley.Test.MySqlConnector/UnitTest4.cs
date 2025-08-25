@@ -138,10 +138,11 @@ public class UnitTest4 : UnitTestBase
         repository.Commit();
         Assert.Equal(1, count);
 
+        var id = 1;
         var sql = repository.Delete<User>()
-            .Where(f => f.Id == 1)
+            .Where(f => f.Id == id)
             .ToSql(out var parameters);
-        Assert.Equal("DELETE FROM `sys_user` WHERE `Id`=1", sql);
+        Assert.Equal("DELETE FROM `sys_user` WHERE `Id`=@p0", sql);
     }
     [Fact]
     public async Task Delete_Multi()
@@ -329,7 +330,7 @@ public class UnitTest4 : UnitTestBase
             .Where(f => f.Id == 1)
             .Returning(f => new { f.Id, f.TenantId, Info = $"{f.Gender}-{f.Age}-{f.Name.ToUpper()}" })
             .ToSql(out _);
-        Assert.Equal("DELETE FROM `sys_user` WHERE `Id`=@Id RETURNING `Id`,`TenantId`,CONCAT(`Gender`,'-',CAST(`Age` AS CHAR),'-',UPPER(`Name`)) AS `Info`", sql);
+        Assert.Equal("DELETE FROM `sys_user` WHERE `Id`=1 RETURNING `Id`,`TenantId`,CONCAT(`Gender`,'-',CAST(`Age` AS CHAR),'-',UPPER(`Name`)) AS `Info`", sql);
 
         var user = await repository.GetByIdAsync<User>(1);
         var result1 = await repository.Delete<User>()
@@ -345,7 +346,7 @@ public class UnitTest4 : UnitTestBase
             .Where(f => f.Id == 1)
             .Returning<User>("*")
             .ToSql(out _);
-        Assert.Equal("DELETE FROM `sys_user` WHERE `Id`=@Id RETURNING *", sql2);
+        Assert.Equal("DELETE FROM `sys_user` WHERE `Id`=1 RETURNING *", sql2);
 
         await repository.DeleteAsync<User>(1);
         await repository.Create<User>()
@@ -379,7 +380,7 @@ public class UnitTest4 : UnitTestBase
           .Where(f => userIds.Contains(f.Id))
           .Returning(f => new { f.Id, f.TenantId, Info = $"{f.Gender}-{f.Age}-{f.Name.ToUpper()}" })
           .ToSql(out _);
-        Assert.Equal("DELETE FROM `sys_user` WHERE `Id` IN (@Id0,@Id1,@Id2) RETURNING `Id`,`TenantId`,CONCAT(`Gender`,'-',CAST(`Age` AS CHAR),'-',UPPER(`Name`)) AS `Info`", sql);
+        Assert.Equal("DELETE FROM `sys_user` WHERE `Id` IN (@p0,@p1,@p2) RETURNING `Id`,`TenantId`,CONCAT(`Gender`,'-',CAST(`Age` AS CHAR),'-',UPPER(`Name`)) AS `Info`", sql);
 
         users = await repository.GetByIdsAsync<User>(userIds);
         result1 = await repository.Delete<User>()

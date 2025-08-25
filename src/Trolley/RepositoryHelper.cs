@@ -1024,11 +1024,9 @@ public static class RepositoryHelper
                 as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
             var fieldsSql = fieldsSetter.Invoke(dbContext, firstInsertObj);
 
-            return (DbContext dbContext, ITheaCommand command, IEnumerable insertObjs, int bulkCount) =>
+            int Execute(DbContext dbContext, ITheaCommand command, string tableName, IEnumerable insertObjs, int bulkCount)
             {
                 int count = 0, index = 0;
-                var entityMapper = dbContext.MapProvider.GetEntityMap(entityType);
-                var tableName = ormProvider.GetTableName(entityMapper.TableName);
                 var builder = new StringBuilder($"INSERT INTO {tableName}{fieldsSql} ");
                 foreach (var insertObj in insertObjs)
                 {
@@ -1054,7 +1052,31 @@ public static class RepositoryHelper
                     command.Parameters.Clear();
                 }
                 return count;
-            };
+            }
+
+            Func<DbContext, ITheaCommand, IEnumerable, int, int> commandExecutor = null;
+            var entityMapper = dbContext.MapProvider.GetEntityMap(entityType);
+            if (dbContext.ShardingProvider != null && dbContext.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
+            {
+                Func<object, string> jsonHandler = obj => $"{dbContext.JsonTypeHandler.ToFieldValue(ormProvider, obj)}";
+                commandExecutor = (dbContext, command, insertObjs, bulkCount) =>
+                {
+                    int count = 0;
+                    var tabledInsertObjs = SplitShardingParameters(tableShardingInfo, entityMapper, insertObjType, insertObjs, firstInsertObj, jsonHandler);
+                    var tableName = ormProvider.GetTableName(entityMapper.TableName);
+                    foreach (var tabledInsertObj in tabledInsertObjs)
+                    {
+                        count += Execute(dbContext, command, tabledInsertObj.Key, tabledInsertObj.Value, bulkCount);
+                    }
+                    return count;
+                };
+            }
+            else
+            {
+                var tableName = ormProvider.GetTableName(entityMapper.TableName);
+                commandExecutor = (dbContext, command, insertObjs, bulkCount) => Execute(dbContext, command, tableName, insertObjs, bulkCount);
+            }
+            return commandExecutor;
         });
     }
     public static Func<DbContext, ITheaCommand, IEnumerable, int, CancellationToken, Task<int>> BuildCreateBulkAsyncCommandExecutor(DbContext dbContext, Type entityType, IEnumerable insertObjs)
@@ -1077,11 +1099,9 @@ public static class RepositoryHelper
                 as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
             var fieldsSql = fieldsSetter.Invoke(dbContext, firstInsertObj);
 
-            return async (DbContext dbContext, ITheaCommand command, IEnumerable insertObjs, int bulkCount, CancellationToken cancellationToken) =>
+            async Task<int> Execute(DbContext dbContext, ITheaCommand command, string tableName, IEnumerable insertObjs, int bulkCount, CancellationToken cancellationToken)
             {
                 int count = 0, index = 0;
-                var entityMapper = dbContext.MapProvider.GetEntityMap(entityType);
-                var tableName = ormProvider.GetTableName(entityMapper.TableName);
                 var builder = new StringBuilder($"INSERT INTO {tableName}{fieldsSql} ");
                 foreach (var insertObj in insertObjs)
                 {
@@ -1107,7 +1127,31 @@ public static class RepositoryHelper
                     command.Parameters.Clear();
                 }
                 return count;
-            };
+            }
+
+            Func<DbContext, ITheaCommand, IEnumerable, int, CancellationToken, Task<int>> commandExecutor = null;
+            var entityMapper = dbContext.MapProvider.GetEntityMap(entityType);
+            if (dbContext.ShardingProvider != null && dbContext.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
+            {
+                Func<object, string> jsonHandler = obj => $"{dbContext.JsonTypeHandler.ToFieldValue(ormProvider, obj)}";
+                commandExecutor = async (dbContext, command, insertObjs, bulkCount, cancellationToken) =>
+                {
+                    int count = 0;
+                    var tabledInsertObjs = SplitShardingParameters(tableShardingInfo, entityMapper, insertObjType, insertObjs, firstInsertObj, jsonHandler);
+                    var tableName = ormProvider.GetTableName(entityMapper.TableName);
+                    foreach (var tabledInsertObj in tabledInsertObjs)
+                    {
+                        count += await Execute(dbContext, command, tabledInsertObj.Key, tabledInsertObj.Value, bulkCount, cancellationToken);
+                    }
+                    return count;
+                };
+            }
+            else
+            {
+                var tableName = ormProvider.GetTableName(entityMapper.TableName);
+                commandExecutor = (dbContext, command, insertObjs, bulkCount, cancellationToken) => Execute(dbContext, command, tableName, insertObjs, bulkCount, cancellationToken);
+            }
+            return commandExecutor;
         });
     }
     public static Action<StringBuilder, DbContext, object> BuildCreateFieldsSqlPart(DbContext dbContext, Type entityType, Type insertObjType, bool isUpdateRowVersion, List<string> onlyFieldNames, List<string> ignoreFieldNames)
@@ -1460,7 +1504,7 @@ public static class RepositoryHelper
         {
             var constructor = f.GetConstructor(Type.EmptyTypes);
             return Expression.Lambda<Func<object>>(Expression.New(constructor)).Compile();
-        });        
+        });
         return creator.Invoke();
     }
     public static object CreateInstance(Type targetType, Type[] parameterTypes, params object[] parameters)
@@ -1580,6 +1624,40 @@ public static class RepositoryHelper
             break;
         }
         return isContains;
+    }
+    public static Dictionary<string, List<object>> SplitShardingParameters(TableShardingInfo tableShardingInfo, EntityMap entityMapper, Type insertObjType, IEnumerable insertObjs, object insertObjSample, Func<object, string> jsonHandler)
+    {
+        var result = new Dictionary<string, List<object>>();
+        var origTableName = entityMapper.TableName;
+
+        //根据依赖的字段值执行分表规则委托获取分表名
+        if (tableShardingInfo.DependOnMembers == null || tableShardingInfo.DependOnMembers.Count == 0)
+            throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，但未指定分表名，也未指定依赖的成员，无法确定分表，原表名：{origTableName}");
+
+        var fieldValueGetters = new List<Func<object, object>>();
+        foreach (var memberName in tableShardingInfo.DependOnMembers)
+        {
+            if (TryGetMemberGetter(insertObjType, memberName.ToLower(), insertObjSample, out var memberGetter))
+                fieldValueGetters.Add(memberGetter);
+        }
+        Func<object, string> tableNameGetter = insertObj =>
+        {
+            var fieldValus = new List<object>();
+            foreach (var fieldValueGetter in fieldValueGetters)
+                fieldValus.Add(fieldValueGetter.Invoke(insertObj));
+            return tableShardingInfo.Rule.Invoke(origTableName, fieldValus.ToArray()) as string;
+        };
+
+        foreach (var insertObj in insertObjs)
+        {
+            var tableName = tableNameGetter.Invoke(insertObj);
+            if (string.IsNullOrEmpty(tableName))
+                throw new InvalidOperationException($"分表规则无法获取分表名，原表名：{origTableName}，当前参数：{jsonHandler(insertObj)}");
+            if (!result.TryGetValue(tableName, out var myParameters))
+                result.Add(tableName, myParameters = new List<object>());
+            myParameters.Add(insertObj);
+        }
+        return result;
     }
 
     public static DateTime ToUtcTime(DateTime dateTime)
