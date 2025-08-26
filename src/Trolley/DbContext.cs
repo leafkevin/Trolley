@@ -186,7 +186,7 @@ public sealed class DbContext
     public TResult QueryScalar<TResult>(IQueryVisitor visitor)
     {
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        (var sql, _) = this.BuildSql(visitor, " UNION ALL ");
+        (var sql, _) = this.BuildSql(visitor);
         sql = this.BuildScalarShardingSql(visitor, sql);
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
@@ -205,7 +205,7 @@ public sealed class DbContext
     public async Task<TResult> QueryScalarAsync<TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        (var sql, var readerFields) = this.BuildSql(visitor, " UNION ALL ");
+        (var sql, var readerFields) = this.BuildSql(visitor);
         sql = this.BuildScalarShardingSql(visitor, sql);
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
@@ -589,7 +589,7 @@ public sealed class DbContext
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         Expression<Func<TEntity, TEntity>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
-        (var sql, var readerFields) = this.BuildSql(visitor, " UNION ALL ");
+        (var sql, var readerFields) = this.BuildSql(visitor);
 
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
@@ -621,7 +621,7 @@ public sealed class DbContext
 
         Expression<Func<TEntity, TEntity>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
-        (var sql, var readerFields) = this.BuildSql(visitor, " UNION ALL ");
+        (var sql, var readerFields) = this.BuildSql(visitor);
 
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
@@ -653,7 +653,7 @@ public sealed class DbContext
         Expression<Func<TResult, TResult>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         visitor.IsNeedPaging = true;
-        (var sql, var readerFields) = this.BuildSql(visitor, " UNION ALL ");
+        (var sql, var readerFields) = this.BuildSql(visitor);
 
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
@@ -695,7 +695,7 @@ public sealed class DbContext
         Expression<Func<TResult, TResult>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         visitor.IsNeedPaging = true;
-        (var sql, var readerFields) = this.BuildSql(visitor, " UNION ALL ");
+        (var sql, var readerFields) = this.BuildSql(visitor);
 
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
@@ -1262,11 +1262,11 @@ public sealed class DbContext
     #endregion
 
     #region Sharding
-    public (string, List<SqlFieldSegment>) BuildSql(IQueryVisitor visitor, string jointMark)
+    public (string, List<SqlFieldSegment>) BuildSql(IQueryVisitor visitor)
     {
         var sql = visitor.BuildSql(true, out var readerFields);
         if (visitor.IsNeedFormatShardingTables)
-            sql = this.BuildShardingTablesSqlByFormat(visitor as SqlVisitor, sql, jointMark);
+            sql = this.BuildShardingTablesSqlByFormat(visitor as SqlVisitor, sql, visitor.ShardingTableJointMark);
         if (visitor.IsNeedUnionShardingTables)
             sql = visitor.BuildShardingSql(sql);
         return (sql, readerFields);
@@ -1314,8 +1314,9 @@ public sealed class DbContext
                 for (int j = 1; j < visitor.ShardingTables.Count; j++)
                 {
                     var tableSegment = visitor.ShardingTables[j];
-                    var origTableName = tableSegment.Mapper.TableName;
+                    if (tableSegment.IsIncludeManySharding) continue;
 
+                    var origTableName = tableSegment.Mapper.TableName;
                     //如果主表分表名不存在，直接忽略本次关联
                     var tableName = tableSegment.ShardingMapGetter.Invoke(origMasterName, origTableName, masterTableName);
                     sql = sql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origTableName}", tableName);

@@ -24,7 +24,7 @@ public class TableShardingInfo
     /// </summary>
     public string ValidateRegex { get; set; }
     /// <summary>
-    /// 分表范围规则，用于查询、更新操作，执行查询时，需要手动指定范围参数，常用于时间分表策略查询。
+    /// 分表范围规则，用于查询、更新操作，执行查询时，需要手动指定范围参数，常用于时间、数字等分表策略查询。
     /// 委托第一个参数是原始表名，第二个参数是依赖字段的值数组，数组的最后两个字段值是范围起始值和结束值，返回值是分表名称。
     /// </summary>
     public Func<string, object[], List<string>> RangleRule { get; set; }

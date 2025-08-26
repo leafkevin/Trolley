@@ -72,7 +72,7 @@ public class SqlVisitor : ISqlVisitor
     /// </summary>
     public bool IsSecondUnion { get; set; }
 
-    public string ShardingTableJointMark { get; set; } = "UNION ALL";
+    public string ShardingTableJointMark { get; set; } = " UNION ALL ";
     public bool IsNeedUnionShardingTables { get; set; }
     public bool IsNeedFormatShardingTables { get; set; }
     public bool IsManyShardingTables { get; set; }
@@ -101,6 +101,7 @@ public class SqlVisitor : ISqlVisitor
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         //多个分表，才当作分表处理
         tableSegment.IsSharding = true;
+        tableSegment.IsIncludeManySharding = isIncludeMany;
         if (tableNames.Length > 1)
         {
             tableSegment.ShardingType = ShardingTableType.MultiTable;
@@ -137,6 +138,7 @@ public class SqlVisitor : ISqlVisitor
             throw new NotSupportedException("仅支持首个多分表为MultiTable类型，其余表只能为调用方法UseTableMap与首个多分表表名映射实现多分表");
 
         tableSegment.IsSharding = true;
+        tableSegment.IsIncludeManySharding = isIncludeMany;
         tableSegment.ShardingType = ShardingTableType.MultiTable;
         if (!this.ShardingTables.Contains(tableSegment))
         {
@@ -168,6 +170,7 @@ public class SqlVisitor : ISqlVisitor
             throw new NotSupportedException("不存在多分表的实体表，不能使用此方法，可使用UseTable、UseTableBy方法设置分表");
 
         tableSegment.IsSharding = true;
+        tableSegment.IsIncludeManySharding = isIncludeMany;
         tableSegment.ShardingType = ShardingTableType.ShardingTableMap;
         tableSegment.ShardingMapGetter = tableNameGetter;
         if (!this.ShardingTables.Contains(tableSegment))
@@ -186,6 +189,7 @@ public class SqlVisitor : ISqlVisitor
             throw new ArgumentNullException($"实体{tableSegment.EntityType.FullName}表有配置分表规则依赖，字段值fieldValues不可为null");
 
         tableSegment.IsSharding = true;
+        tableSegment.IsIncludeManySharding = isIncludeMany;
         var origTableName = tableSegment.Mapper.TableName;
         for (int i = 0; i < fieldValues.Length; i++)
         {
@@ -2415,14 +2419,7 @@ public class SqlVisitor : ISqlVisitor
             //当单个ShardingTables时，只有一个分表的情况下，会移除ShardingTables中的表，存在多个分表的表时，不做移除
             if (tableSegment.ShardingType > ShardingTableType.SingleTable
                 && (tableSegment.TableType == TableType.Entity || tableSegment.TableType == TableType.Include))
-            {
-                if (!this.ShardingTables.Contains(tableSegment))
-                {
-                    tableSegment.ShardingId = Guid.NewGuid().ToString("N");
-                    this.ShardingTables.Add(tableSegment);
-                }
                 tableName = $"__SHARDING_{tableSegment.ShardingId}_{tableSegment.Mapper.TableName}";
-            }
             //单个明确分表或是有分表的子查询
             else tableName = tableSegment.Body;
         }
@@ -2574,8 +2571,6 @@ public class SqlVisitor : ISqlVisitor
         // 因为会生成新的子查询SQL，subQueryObj的Visitor状态已经通过新表更新到tableSegment.Body中，无需同步
         // 所以，只需要同步Sharding分表信息和IncludeTables表信息，这两个会影响到后面SQL的生成
         if (this.Equals(visitor)) return;
-        //if (visitor.IsNeedFetchShardingTables)
-        //    this.IsNeedFetchShardingTables = true;
         if (visitor.IsNeedUnionShardingTables)
             this.IsNeedUnionShardingTables = true;
         if (visitor.IsNeedFormatShardingTables)

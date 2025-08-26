@@ -50,6 +50,7 @@ public interface IQueryVisitor : ICloneable, IDisposable
     bool IsManyShardingTables { get; }
     string AggFieldAlias { get; set; }
     List<TableSegment> ShardingTables { get; set; }
+    string ShardingTableJointMark { get; set; }
     bool IsFromQuery { get; set; }
     bool IsFromCommand { get; set; }
     bool IsNeedPaging { get; set; }

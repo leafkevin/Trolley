@@ -207,9 +207,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql)
-            || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue || this.HasAggFields))
-            this.IsNeedUnionShardingTables = true;
+        //if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql)
+        //    || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue || this.HasAggFields))
+        //    this.IsNeedUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
         bool isNeedWrap = ((this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
@@ -625,8 +625,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             queryVisiter.CteQueryObj = null;
             queryVisiter.IsRecursive = false;
         }
+        //TODO:子查询中，有多分表并且还有Group By + Having操作，出子查询后，需要把所有多分表都打开UNION ALL起来，合成新的子查询，并去掉分表属性，以单表处理后续操作
         var fromQuery = new FromQuery(this.DbContext, queryVisiter);
         (var sql, var tableSegment, var readerFields) = this.VisitFromQuery(subQueryExpr, fromQuery);
+        //变成子查询了，不再需要UnionAll操作了
+        this.IsNeedUnionShardingTables = false;
+        this.IsManyShardingTables = false;
         //CTE引用表，已经添加过了，直接返回
         if (tableSegment != null) return tableSegment;
 
@@ -636,7 +640,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             this.Tables.Clear();
         }
         tableSegment = this.AddJoinTable(targetType, null, TableType.FromQuery, $"({sql})", readerFields);
-      
+
         //从FromQuery对象开始的场景，直接build和生成SQL，就可以，正常逻辑    
         this.InitUseQueryReaderFields(tableSegment, readerFields);
         return tableSegment;

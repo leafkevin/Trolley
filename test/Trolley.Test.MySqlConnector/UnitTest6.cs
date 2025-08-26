@@ -966,7 +966,7 @@ public class UnitTest6 : UnitTestBase
             })
             .Returning<OrderInfo>("BuyerId,TotalAmount")
             .ToSql(out var parameters);
-        Assert.Equal("INSERT INTO `sys_order_104_202405` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) SELECT b.`OrderId`,b.`TenantId`,CONCAT('ON-',b.`OrderId`),1,1,'Taobao',2,SUM(b.`Amount`),1,NOW(),1,NOW(),1 FROM `sys_order_detail_104_202405` b WHERE CHAR_LENGTH(b.`Id`)<1050 GROUP BY b.`OrderId` RETURNING BuyerId,TotalAmount", sql);
+        Assert.Equal("INSERT INTO `sys_order_104_202405` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) SELECT b.`OrderId` AS `Id`,b.`TenantId`,CONCAT('ON-',b.`OrderId`) AS `OrderNo`,1 AS `BuyerId`,1 AS `SellerId`,'Taobao' AS `BuyerSource`,2 AS `ProductCount`,IFNULL(SUM(b.`Amount`),0) AS `TotalAmount`,1 AS `IsEnabled`,NOW() AS `CreatedAt`,1 AS `CreatedBy`,NOW() AS `UpdatedAt`,1 AS `UpdatedBy` FROM `sys_order_detail_104_202405` b WHERE CHAR_LENGTH(b.`Id`)<1050 GROUP BY b.`OrderId` RETURNING BuyerId,TotalAmount", sql);
         await repository.BeginTransactionAsync();
         await repository.Delete<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-01"))
@@ -1666,7 +1666,7 @@ public class UnitTest6 : UnitTestBase
                 .UseTable("sys_order_104_202405", "sys_order_105_202405")
                 .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
                 .UseTableMap((orderOrigName, userOrigName, orderTableName)
-                    => orderTableName.Replace(orderOrigName, userOrigName).Slice(0, -7))
+                    => orderTableName.Replace(orderOrigName, userOrigName).Slice(0, -6))
                 .LeftJoin<OrderDetail>((a, b, c) => a.Id == c.OrderId)
                 .UseTableMap((orderOrigName, orderDetailOrigName, orderTableName)
                     => orderTableName.Replace(orderOrigName, orderDetailOrigName))
@@ -1675,8 +1675,8 @@ public class UnitTest6 : UnitTestBase
                 .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, a.Grouping.OrderNo, ProductTotal = a.CountDistinct(d.ProductId) }))
             .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
             .IncludeMany((a, b) => b.Details, f => f.Amount > amount)
-            .UseTableMap((orderOrigName, orderDetailOrigName, orderTableName)
-                => orderTableName.Replace(orderOrigName, orderDetailOrigName))
+            //.UseTableMap((orderOrigName, orderDetailOrigName, orderTableName)
+            //    => orderTableName.Replace(orderOrigName, orderDetailOrigName))
             .Select((x, y) => new { y.Disputes, x.BuyerId, x.OrderId, x.OrderNo, x.ProductTotal, Order = y })
             .ToSql(out var dbParameters);
         Assert.Equal("SELECT b.`Disputes`,a.`BuyerId`,a.`OrderId`,a.`OrderNo`,a.`ProductTotal`,b.`Id`,b.`TenantId`,b.`OrderNo`,b.`ProductCount`,b.`TotalAmount`,b.`BuyerId`,b.`BuyerSource`,b.`SellerId`,b.`Products`,b.`Disputes`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM (SELECT a.`BuyerId`,a.`Id` AS `OrderId`,a.`OrderNo`,COUNT(DISTINCT c.`ProductId`) AS `ProductTotal` FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` LEFT JOIN `sys_order_detail_104_202405` c ON a.`Id`=c.`OrderId` GROUP BY a.`BuyerId`,a.`Id`,a.`OrderNo` HAVING COUNT(DISTINCT c.`ProductId`)>@p0) a INNER JOIN `sys_order` b ON a.`OrderId`=b.`Id` UNION ALL SELECT b.`Disputes`,a.`BuyerId`,a.`OrderId`,a.`OrderNo`,a.`ProductTotal`,b.`Id`,b.`TenantId`,b.`OrderNo`,b.`ProductCount`,b.`TotalAmount`,b.`BuyerId`,b.`BuyerSource`,b.`SellerId`,b.`Products`,b.`Disputes`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM (SELECT a.`BuyerId`,a.`Id` AS `OrderId`,a.`OrderNo`,COUNT(DISTINCT c.`ProductId`) AS `ProductTotal` FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` LEFT JOIN `sys_order_detail_105_202405` c ON a.`Id`=c.`OrderId` GROUP BY a.`BuyerId`,a.`Id`,a.`OrderNo` HAVING COUNT(DISTINCT c.`ProductId`)>@p0) a INNER JOIN `sys_order` b ON a.`OrderId`=b.`Id`", sql);
@@ -1840,7 +1840,7 @@ public class UnitTest6 : UnitTestBase
         //await this.InitSharding();
         var repository = this.dbFactory.Create();
         var tenantId = "104";
-        var beginTime = DateTime.Parse("2024-04-05");
+        var beginTime = DateTime.Parse("2024-05-05");
         var endTime = DateTime.Parse("2024-06-05");
         var result1 = await repository.From<Order>()
             .UseTableByRange(tenantId, beginTime, endTime)

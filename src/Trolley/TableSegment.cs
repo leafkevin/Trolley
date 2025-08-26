@@ -126,6 +126,10 @@ public class TableSegment
     /// 插入和更新命令时，批量操作时获取分表名的委托
     /// </summary>
     public Delegate ShardingTableGetter { get; set; }
+    /// <summary>
+    /// 是否IncludeMany表分表
+    /// </summary>
+    public bool IsIncludeManySharding { get; set; }
 
     /// <summary>
     /// 生成一个自身引用的副本，主要用在cte表的自身引用

@@ -616,7 +616,7 @@ public class Query<T> : QueryBase, IQuery<T>
     {
         Expression<Func<T, T>> defaultExpr = f => f;
         this.Visitor.SelectDefault(defaultExpr);
-        (var sql, var readerFields) = this.DbContext.BuildSql(this.Visitor, " UNION ALL ");
+        (var sql, var readerFields) = this.DbContext.BuildSql(this.Visitor);
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         this.Visitor.Dispose();
         return sql;
