@@ -168,7 +168,7 @@ public class SqlVisitor : ISqlVisitor
             throw new NotSupportedException("不存在多分表的实体表，不能使用此方法，可使用UseTable、UseTableBy方法设置分表");
 
         tableSegment.IsSharding = true;
-        tableSegment.ShardingType = ShardingTableType.TableMap;
+        tableSegment.ShardingType = ShardingTableType.ShardingTableMap;
         tableSegment.ShardingMapGetter = tableNameGetter;
         if (!this.ShardingTables.Contains(tableSegment))
         {
@@ -192,9 +192,7 @@ public class SqlVisitor : ISqlVisitor
             if (fieldValues[i] == null)
                 throw new ArgumentNullException($"实体{tableSegment.EntityType.FullName}表有配置分表规则依赖，字段值fieldValues[{i}]不可为null");
         }
-        var parameters = new List<object>();
-        parameters.AddRange(fieldValues);
-        var tableName = shardingTableInfo.Rule.Invoke(origTableName, parameters.ToArray()) as string;
+        var tableName = shardingTableInfo.Rule.Invoke(origTableName, fieldValues) as string;
 
         //单个分表，直接设置body表名，当作不分表处理
         if (!string.IsNullOrEmpty(tableSegment.Body))

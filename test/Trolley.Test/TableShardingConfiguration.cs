@@ -15,7 +15,7 @@ public class TableShardingConfiguration : ITableShardingConfiguration
                 {
                     var tenantId = fieldValues[0] as string;
                     var createdAt = (DateTime)fieldValues[1];
-                    return tenantId.Length >= 3 ? $"{origName}_{tenantId}_{createdAt: yyyyMM}" : origName;
+                    return tenantId.Length >= 3 ? $"{origName}_{tenantId}_{createdAt:yyyyMM}" : origName;
                 }, "^sys_order_[1-9]\\d{3}(0[1-9]|1[0-2])$")
                 //时间分表，通常都是支持范围查询
                 .UseRangeRule((origName, fieldValues) =>
@@ -71,12 +71,16 @@ public class TableShardingConfiguration : ITableShardingConfiguration
                     return tableNames;
                 }))
             //按租户分表
-            //.UseTableMap(t => t.DependOn(d => d.TenantId).UseRule((origName, tenantId) => $"{origName}_{tenantId}", "^sys_order_\\d{1,4}$"))
+            //.Table<User>(t => t.DependOn(d => d.TenantId).UseRule((origName, fieldValues) => $"{origName}_{fieldValues[0]}", "^sys_order_\\d{1,4}$"))
             ////按照Id字段分表，Id字段是带有时间属性的ObjectId
-            //.UseTableMap(t => t.DependOn(d => d.Id).UseRule((origName, id) => $"{origName}_{new DateTime(ObjectId.Parse(id).Timestamp):yyyyMM}", "^sys_order_[1-9]\\d{3}$"))
+            //.Table(t => t.DependOn(d => d.Id).UseRule((origName, id) => $"{origName}_{ObjectId.Parse(id).CreationTime:yyyyMM}", "^sys_order_[1-9]\\d{3}$"))
             ////按照Id字段哈希取模分表
-            //.UseTableMap(t => t.DependOn(d => d.Id).UseRule((origName, id) => $"{origName}_{RepositoryHelper.GetCacheKey(id) % 5}", "^sys_order_\\S{24}$"))
+            //.Table(t => t.DependOn(d => d.Id).UseRule((origName, id) => $"{origName}_{RepositoryHelper.GetCacheKey(id) % 5}", "^sys_order_\\S{24}$"))
             //按照租户ID分表
-            .Table<User>(t => t.DependOn(d => d.TenantId).UseRule((origName, tenantId) => tenantId.Length >= 3 ? $"{origName}_{tenantId}" : origName, "^sys_user_[1-9]\\d{3}$"));
+            .Table<User>(t => t.DependOn(d => d.TenantId).UseRule((origName, fieldValues) =>
+            {
+                var tenantId = fieldValues[0] as string;
+                return tenantId.Length >= 3 ? $"{origName}_{tenantId}" : origName;
+            }, "^sys_user_[1-9]\\d{3}$"));
     }
 }

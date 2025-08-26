@@ -1634,19 +1634,31 @@ public static class RepositoryHelper
         if (tableShardingInfo.DependOnMembers == null || tableShardingInfo.DependOnMembers.Count == 0)
             throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，但未指定分表名，也未指定依赖的成员，无法确定分表，原表名：{origTableName}");
 
-        var fieldValueGetters = new List<Func<object, object>>();
-        foreach (var memberName in tableShardingInfo.DependOnMembers)
+        Func<object, string> tableNameGetter = null;
+        if (tableShardingInfo.DependOnMembers.Count > 1)
         {
-            if (TryGetMemberGetter(insertObjType, memberName.ToLower(), insertObjSample, out var memberGetter))
+            var fieldValueGetters = new List<Func<object, object>>();
+            foreach (var memberName in tableShardingInfo.DependOnMembers)
+            {
+                if (!TryGetMemberGetter(insertObjType, memberName.ToLower(), insertObjSample, out var memberGetter))
+                    throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，依赖的成员{memberName}在插入对象类型{insertObjType.FullName}中不存在，无法确定分表，原表名：{origTableName}");
                 fieldValueGetters.Add(memberGetter);
+            }
+            tableNameGetter = insertObj =>
+            {
+                var fieldValus = new List<object>();
+                foreach (var fieldValueGetter in fieldValueGetters)
+                    fieldValus.Add(fieldValueGetter.Invoke(insertObj));
+                return tableShardingInfo.Rule.Invoke(origTableName, fieldValus.ToArray()) as string;
+            };
         }
-        Func<object, string> tableNameGetter = insertObj =>
+        else
         {
-            var fieldValus = new List<object>();
-            foreach (var fieldValueGetter in fieldValueGetters)
-                fieldValus.Add(fieldValueGetter.Invoke(insertObj));
-            return tableShardingInfo.Rule.Invoke(origTableName, fieldValus.ToArray()) as string;
-        };
+            var memberName = tableShardingInfo.DependOnMembers[0].ToLower();
+            if (!TryGetMemberGetter(insertObjType, memberName.ToLower(), insertObjSample, out var memberGetter))
+                throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，依赖的成员{memberName}在插入对象类型{insertObjType.FullName}中不存在，无法确定分表，原表名：{origTableName}");
+            tableNameGetter = insertObj => tableShardingInfo.Rule.Invoke(origTableName, [memberGetter.Invoke(insertObj)]);
+        }
 
         foreach (var insertObj in insertObjs)
         {
