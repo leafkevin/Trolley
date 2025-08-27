@@ -525,7 +525,7 @@ public static class RepositoryHelper
             }
         }
     }
-    public static object BuildWhereSqlParametersPart(DbContext dbContext, Type entityType, Type whereObjType, int sqlType, bool isFunc, bool isUseKey, bool isWithKey, bool isInExpr, bool isMultiple, bool isBulk, string headSql = null)
+    public static object BuildWhereSqlParametersPart(DbContext dbContext, Type entityType, Type whereObjType, int sqlType, bool isFunc, bool isUseKey, bool isWithKey, bool isInExpr, bool isMultiple, bool isBulk, string headSql = null, string tailSql = null)
     {
         //sqlType 0:None 1:Sql And Parameters 2:Only Sql 3:Only Parameters
         var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
@@ -686,6 +686,10 @@ public static class RepositoryHelper
                 contentExpr = Expression.Call(ormProviderExpr, methodInfo, contentExpr);
                 contentExpr = Expression.Call(concatMethodInfo2, contentExpr, Expression.Constant("="), myParameterNameExpr);
                 loopBodies.Add(Expression.Call(builderExpr, appendMethodInfo, contentExpr));
+
+                //增加尾部固定条件
+                if (!string.IsNullOrEmpty(headSql))
+                    blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(tailSql)));
             }
             //生成参数
             if (sqlType != 2)
@@ -1156,7 +1160,7 @@ public static class RepositoryHelper
     }
     public static Action<StringBuilder, DbContext, object> BuildCreateFieldsSqlPart(DbContext dbContext, Type entityType, Type insertObjType, bool isUpdateRowVersion, List<string> onlyFieldNames, List<string> ignoreFieldNames)
     {
-        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.MapProvider, entityType, insertObjType, onlyFieldNames, ignoreFieldNames);
+        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.MapProvider, entityType, insertObjType, GetHashCode(onlyFieldNames), GetHashCode(ignoreFieldNames));
         return createFieldsSqlCache.GetOrAdd(cacheKey, f =>
         {
             Action<StringBuilder, DbContext, object> fieldsSetter = null;
@@ -1178,7 +1182,7 @@ public static class RepositoryHelper
     public static object BuildCreateValuesSqlPart(DbContext dbContext, Type entityType, Type insertObjType, bool hasSuffix, bool isUpdateRowVersion, List<string> onlyFieldNames, List<string> ignoreFieldNames)
     {
         var ormProvider = dbContext.OrmProvider;
-        var cacheKey = GetCacheKey(ormProvider.OrmProviderType, dbContext.MapProvider, entityType, insertObjType, onlyFieldNames, ignoreFieldNames);
+        var cacheKey = GetCacheKey(ormProvider.OrmProviderType, dbContext.MapProvider, entityType, insertObjType, GetHashCode(onlyFieldNames), GetHashCode(ignoreFieldNames));
         var cache = hasSuffix ? createBulkValuesSqlParametersCache : createValuesSqlParametersCache;
         return cache.GetOrAdd(cacheKey, f =>
         {
@@ -1263,7 +1267,7 @@ public static class RepositoryHelper
         //Bulk场景，反而没有别名，也没有suffix情况
         var ormProvider = dbContext.OrmProvider;
         var mapProvider = dbContext.MapProvider;
-        var cacheKey = GetCacheKey(ormProvider.OrmProviderType, dbContext.MapProvider, entityType, updateObjType, onlyFieldNames, ignoreFieldNames);
+        var cacheKey = GetCacheKey(ormProvider.OrmProviderType, dbContext.MapProvider, entityType, updateObjType, GetHashCode(onlyFieldNames), GetHashCode(ignoreFieldNames));
         var commandInitializerCache = isMultiple ? updateMultiWithCommandInitializerCache : updateWithCommandInitializerCache;
         return commandInitializerCache.GetOrAdd(cacheKey, f =>
         {
@@ -1457,9 +1461,10 @@ public static class RepositoryHelper
     {
         var ormProvider = dbContext.OrmProvider;
         var mapProvider = dbContext.MapProvider;
-        var cacheKey = GetCacheKey(ormProvider.OrmProviderType, dbContext.MapProvider, entityType, updateObjType, onlyFieldNames, ignoreFieldNames);
+        var cacheKey = GetCacheKey(ormProvider.OrmProviderType, dbContext.MapProvider, entityType, updateObjType, GetHashCode(onlyFieldNames), GetHashCode(ignoreFieldNames));
         return updateBulkWithCommandInitializerCache.GetOrAdd(cacheKey, f =>
         {
+            //TODO: 这里可以优化
             var fieldsSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 1, 2, false, true, isUpdateRowVersion, onlyFieldNames, ignoreFieldNames) as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
             var whereSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 1, false, true, true, false, isMultiple, true, " WHERE ") as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
             Action<IDataParameterCollection, StringBuilder, DbContext, object, string> firstSqlSetter = (dbParameters, builder, dbContext, updateObj, suffix) =>
@@ -1718,7 +1723,12 @@ public static class RepositoryHelper
         return hashCode;
 #endif
     }
-
+    private static int GetHashCode(List<string> strValues)
+    {
+        if (strValues == null || strValues.Count == 0)
+            return 0;
+        return GetCacheKey(string.Join(",", strValues));
+    }
     public static Func<ITheaDataReader, object> CreateReaderValueTupleDeserializer(Type entityType, DbContext dbContext, ITheaDataReader reader)
     {
         var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");

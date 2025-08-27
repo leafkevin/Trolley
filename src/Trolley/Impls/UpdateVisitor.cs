@@ -235,6 +235,13 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     case "SetWith":
                         this.VisitSetWith(deferredSegment.Value);
                         break;
+                    //分区表，二级分区为时间分区，为了提高性能，增加额外的时间条件命中二级时间分区
+                    case "Where":
+                        this.VisitWhere(deferredSegment.Value as Expression);
+                        break;
+                    case "And":
+                        this.VisitAnd(deferredSegment.Value as Expression);
+                        break;
                     default: throw new NotSupportedException("SetBulk操作后，只支持Set/IgnoreFields/OnlyFields操作");
                 }
             }
