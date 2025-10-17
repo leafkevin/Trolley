@@ -26,8 +26,6 @@ public class SqlVisitor : ISqlVisitor
     public IDataParameterCollection DbParameters { get; set; }
     public IDataParameterCollection NextDbParameters { get; set; }
     public char TableAsStart { get; set; }
-    public bool IsMultiple { get; set; }
-    public int CommandIndex { get; set; }
 
     /// <summary>
     /// 所有表都是扁平化的，主表、1:1关系Include子表，也在这里
@@ -2047,6 +2045,33 @@ public class SqlVisitor : ISqlVisitor
         }
         return sqlSegment.Body;
     }
+    /// <summary>
+    /// 在已知需要的类型，获取原值，只能是常量或变量，不做参数化处理，后需要运算操作，操作后再做参数化处理
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    /// <param name="sqlSegment"></param>
+    /// <returns></returns>
+    public virtual TValue GetQuotedValue<TValue>(SqlFieldSegment sqlSegment)
+    {
+        if (sqlSegment.Value == null || sqlSegment.Value == DBNull.Value)
+            return default(TValue);
+
+        var expectType = typeof(TValue);
+        var dbFieldValue = sqlSegment.Value;
+        if (sqlSegment.TypeHandler != null)
+            dbFieldValue = sqlSegment.TypeHandler.ToFieldValue(this.OrmProvider, dbFieldValue);
+        else
+        {
+            if (expectType.IsEnum && !sqlSegment.SegmentType.IsEnum)
+                dbFieldValue = Enum.ToObject(expectType, dbFieldValue);
+            if (!expectType.IsEnum && sqlSegment.SegmentType.IsEnum)
+            {
+                var underlyingType = Enum.GetUnderlyingType(sqlSegment.SegmentType);
+                dbFieldValue = Convert.ChangeType(dbFieldValue, underlyingType);
+            }
+        }
+        return (TValue)Convert.ChangeType(dbFieldValue, expectType);
+    }
     public virtual string GetQuotedValue(object elementValue, SqlFieldSegment arraySegment, SqlFieldSegment elementSegment)
     {
         if (elementValue is DBNull || elementValue == null)
@@ -2151,8 +2176,6 @@ public class SqlVisitor : ISqlVisitor
         //Union的时候，tableAsStart会传入'a'，表示从'a'开始
         //Join的时候，tableAsStart不传值，使用当前Visitor中的
         var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAsStart, this.DbParameters);
-        queryVisitor.IsMultiple = this.IsMultiple;
-        queryVisitor.CommandIndex = this.CommandIndex;
         queryVisitor.RefQueries = this.RefQueries;
         queryVisitor.ShardingTables = this.ShardingTables;
         queryVisitor.RefTableAliases = this.RefTableAliases;

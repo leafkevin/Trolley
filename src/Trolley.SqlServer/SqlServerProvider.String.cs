@@ -734,9 +734,10 @@ partial class SqlServerProvider
                                 return targetSegment.MergeValue(indexSegment, lengthSegment, targetSegment.Value.ToString().Substring(Convert.ToInt32(indexSegment.Value), Convert.ToInt32(lengthSegment.Value)));
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            indexSegment.Value = visitor.GetQuotedValue<int>(indexSegment) + 1;
                             var indexArgument = visitor.GetQuotedValue(indexSegment);
                             var lengthArgument = visitor.GetQuotedValue(lengthSegment);
-                            return targetSegment.Merge(indexSegment, lengthSegment, $"SUBSTRING({targetArgument},{indexArgument}+1,{lengthArgument})", false, true);
+                            return targetSegment.Merge(indexSegment, lengthSegment, $"SUBSTRING({targetArgument},{indexArgument},{lengthArgument})", false, true);
                         });
                         result = true;
                     }
@@ -752,8 +753,9 @@ partial class SqlServerProvider
                                 return targetSegment.MergeValue(indexSegment, targetSegment.Value.ToString().Substring(Convert.ToInt32(indexSegment.Value)));
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            indexSegment.Value = visitor.GetQuotedValue<int>(indexSegment) + 1;
                             var indexArgument = visitor.GetQuotedValue(indexSegment);
-                            return targetSegment.Merge(indexSegment, $"SUBSTRING({targetArgument},{indexArgument}+1)", false, true);
+                            return targetSegment.Merge(indexSegment, $"SUBSTRING({targetArgument},{indexArgument})", false, true);
                         });
                         result = true;
                     }
