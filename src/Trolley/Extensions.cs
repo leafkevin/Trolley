@@ -48,7 +48,7 @@ public static class Extensions
     public static void Configure(this IOrmDbFactory dbFactory, string dbKey, IModelConfiguration configuration)
     {
         if (!dbFactory.TryGetMapProvider(dbKey, out var mapProvider))
-            dbFactory.AddMapProvider(dbKey, mapProvider = new EntityMapProvider(dbFactory.Options.FieldMapHandler));
+            dbFactory.AddMapProvider(dbKey, mapProvider = new EntityMapProvider());
         configuration.OnModelCreating(new ModelBuilder(mapProvider));
     }
     public static void Configure<TModelConfiguration>(this IOrmDbFactory dbFactory, string dbKey) where TModelConfiguration : class, IModelConfiguration, new()
@@ -467,35 +467,52 @@ public static class Extensions
         return false;
     }
 #endif
-    public static (bool, object) ContainsLowerKey(this IDictionary<string, object> dict, string lowerKey)
+    public static bool TryGetKeyIgnoreCase(this IDictionary<string, object> dict, string lowerKey, out string itemKey)
     {
-        bool isContainsKey = false;
-        object value = null;
+        itemKey = null;
         foreach (var dictKey in dict.Keys)
         {
-            if (dictKey.ToLower() == lowerKey)
-            {
-                value = dict[dictKey];
-                isContainsKey = true;
-                break;
-            }
+            if (lowerKey != dictKey.ToLower())
+                continue;
+            itemKey = dictKey;
+            return true;
         }
-        return (isContainsKey, value);
+        return false;
     }
-    public static (bool, string) ContainsLower(this List<string> keys, string lowerKey)
+    public static bool TryGetMember(this Type entityType, string memberName, out MemberInfo memberInfo)
     {
-        bool isContainsKey = false;
-        string value = null;
-        foreach (var key in keys)
+        memberInfo = entityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+            .Where(f => (f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field)
+            && string.Equals(f.Name, memberName, StringComparison.OrdinalIgnoreCase)).First();
+        return memberInfo != null;
+    }
+    //public static bool TryGetValueIgnoreCase(this IDictionary<string, object> dict, string lowerKey, out object value)
+    //{
+    //    bool isContainsKey = false;
+    //    value = null;
+    //    foreach (var dictKey in dict.Keys)
+    //    {
+    //        if (dictKey.ToLower() == lowerKey)
+    //        {
+    //            value = dict[dictKey];
+    //            isContainsKey = true;
+    //            break;
+    //        }
+    //    }
+    //    return isContainsKey;
+    //}
+    public static bool ContainsIgnoreCase(this List<string> values, string lowerValue, out string value)
+    {
+        foreach (var myValue in values)
         {
-            if (key.ToLower() == lowerKey)
+            if (string.Equals(myValue, lowerValue, StringComparison.OrdinalIgnoreCase))
             {
-                value = key;
-                isContainsKey = true;
-                break;
+                value = myValue;
+                return true;
             }
         }
-        return (isContainsKey, value);
+        value = null;
+        return false;
     }
     internal static void CopyTo(this IDataParameterCollection dbParameters, IDataParameterCollection other)
     {

@@ -27,7 +27,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         string sql = null;
         this.IsReturnIdentity = isReturnIdentity;
         if (this.ActionMode == ActionMode.Bulk)
-            sql = this.BuildWithBulkSql(command, out readerFields);
+            sql = this.BuildBulkSql(command, out readerFields);
         else
         {
             //多命令执行时，第二次以后DbParameters有值，并且就是command.Parameters

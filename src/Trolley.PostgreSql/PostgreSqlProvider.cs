@@ -2311,7 +2311,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
             result = result | NpgsqlDbType.Array;
         return result;
     }
-    public override bool MapTables(string connectionString, IEntityMapProvider mapProvider)
+    public override bool MapTables(string connectionString, IEntityMapProvider mapProvider, IFieldMapHandler fieldMapHandler)
     {
         var tableNames = mapProvider.EntityMaps.Where(f => !f.IsMapped).Select(f => f.TableName).ToList();
         if (tableNames == null || tableNames.Count == 0)
@@ -2420,7 +2420,6 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         reader.Close();
         connection.Close();
 
-        var fieldMapHandler = mapProvider.FieldMapHandler;
         foreach (var entityMapper in entityMappers)
         {
             (var tableSchema, var tableName) = this.GetFullTableName(entityMapper.TableName);

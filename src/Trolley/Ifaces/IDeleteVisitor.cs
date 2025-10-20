@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
-using System.Text;
 
 namespace Trolley;
 
@@ -14,8 +13,6 @@ public interface IDeleteVisitor : IDisposable
     List<TableSegment> Tables { get; }
     ITableShardingProvider ShardingProvider { get; }
     bool HasWhere { get; }
-    bool IsMultiple { get; set; }
-    int CommandIndex { get; set; }
     List<TableSegment> ShardingTables { get; }
 
     void Initialize(Type entityType);

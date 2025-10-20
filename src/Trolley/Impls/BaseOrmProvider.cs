@@ -1914,7 +1914,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
         return typeHandler;
     }
     public abstract object MapNativeDbType(DbColumnInfo columnInfo);
-    public abstract bool MapTables(string connectionString, IEntityMapProvider mapProvider);
+    public abstract bool MapTables(string connectionString, IEntityMapProvider mapProvider, IFieldMapHandler fieldMapHandler);
     public virtual bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter)
     {
         var memberInfo = memberExpr.Member;

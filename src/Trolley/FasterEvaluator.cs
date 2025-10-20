@@ -86,7 +86,7 @@ public static class FasterEvaluator
         //throw new InvalidExpressionException($"The default constructor for expression '{expression}' is not found.");
     }
     public static object Evaluate(this DefaultExpression expression) => expression.Type.IsValueType ? RepositoryHelper.CreateInstance(expression.Type) : null;
-    public static object Evaluate(this MemberInfo member, object obj, object[] parameters = null)
+    public static object Evaluate(this MemberInfo member, object obj, object[] parameters = null, bool isCache = true)
     {
         return member switch
         {

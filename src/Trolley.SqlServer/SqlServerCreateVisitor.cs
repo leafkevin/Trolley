@@ -23,7 +23,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         string sql = null;
         this.IsReturnIdentity = isReturnIdentity;
         if (this.ActionMode == ActionMode.Bulk)
-            sql = this.BuildWithBulkSql(command, out readerFields);
+            sql = this.BuildBulkSql(command, out readerFields);
         else
         {
             //多命令执行时，第二次以后DbParameters有值，并且就是command.Parameters
@@ -83,7 +83,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         }
         return $"INSERT INTO {tableName} ({this.FieldsBuilder}){this.OutputSql} VALUES ({this.ValuesBuilder}){tailSql}";
     }
-    public override string BuildWithBulkSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
+    public override string BuildBulkSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
         //多命令查询或是ToSql才会走到此分支
         //多语句执行，一次性不分批次

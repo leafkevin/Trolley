@@ -29,6 +29,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
 
     public ICollection<TheaDatabase> Databases => this.databases.Values;
     public ICollection<IOrmProvider> OrmProviders => this.ormProviders.Values;
+    public IFieldMapHandler FieldMapHandler => this.options.FieldMapHandler;
     public OrmDbFactoryOptions Options => this.options;
 
     public TheaDatabase Register(OrmProviderType ormProviderType, string dbKey, bool isDefault)
@@ -188,6 +189,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
             ShardingProvider = tableShardingProvider,
             UserParameterPrefix = this.options.UserParameterPrefix,
             CommandTimeout = this.options.CommandTimeout,
+            FieldMapHandler = this.options.FieldMapHandler,
             DbInterceptors = this.options.DbInterceptors,
             DefaultEnumMapDbType = this.options.DefaultEnumMapDbType,
             IsConstantParameterized = this.options.IsConstantParameterized,

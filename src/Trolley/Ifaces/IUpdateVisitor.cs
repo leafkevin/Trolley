@@ -13,8 +13,6 @@ public interface IUpdateVisitor : IDisposable
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider MapProvider { get; }
     bool HasWhere { get; }
-    bool IsMultiple { get; set; }
-    int CommandIndex { get; set; }
     ITableShardingProvider ShardingProvider { get; }
     ActionMode ActionMode { get; set; }
     List<TableSegment> Tables { get; }

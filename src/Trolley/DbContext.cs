@@ -19,6 +19,7 @@ public sealed class DbContext
     public IOrmProvider OrmProvider { get; internal set; }
     public IEntityMapProvider MapProvider { get; internal set; }
     public ITableShardingProvider ShardingProvider { get; internal set; }
+    public IFieldMapHandler FieldMapHandler { get; internal set; }
     public DbInterceptors DbInterceptors { get; internal set; }
 
     public ITheaConnection Connection { get; set; }
@@ -490,29 +491,9 @@ public sealed class DbContext
         bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
 
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        if (isBulk)
-        {
-            (var isInExpr, var headSql, var commandInitializer) = ((bool, string, object))RepositoryHelper.BuildQueryWhereObjSqlParameters(this, entityType, whereObj, false, isBulk);
-            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-            var parameters = whereObj as IEnumerable;
-            int index = 0;
-            var builder = new StringBuilder(headSql);
-            var jointMark = isInExpr ? "," : " OR ";
-            foreach (var parameter in parameters)
-            {
-                if (index > 0) builder.Append(jointMark);
-                typedCommandInitializer.Invoke(command.Parameters, builder, this, parameter, index.ToString());
-                index++;
-            }
-            if (isInExpr) builder.Append(')');
-            command.CommandText = builder.ToString();
-        }
-        else
-        {
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this, entityType, whereObj, false, isBulk);
-            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
-            command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this, whereObj);
-        }
+        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this, entityType, whereObj, false, false, false, isBulk, false)
+            as Func<IDataParameterCollection, DbContext, object, string>;
+        command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereObj);
         return (isNeedClose, connection, command);
     }
     #endregion
@@ -554,30 +535,8 @@ public sealed class DbContext
             throw new ArgumentNullException(nameof(whereKeys));
         bool isBulk = whereKeys is IEnumerable && whereKeys is not string && whereKeys is not IDictionary<string, object>;
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-
-        if (isBulk)
-        {
-            (var isInExpr, var headSql, var commandInitializer) = ((bool, string, object))RepositoryHelper.BuildQueryWhereObjByKeySqlParameters(this, entityType, whereKeys, false, isBulk);
-            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-            var parameters = whereKeys as IEnumerable;
-            int index = 0;
-            var builder = new StringBuilder(headSql);
-            var jointMark = isInExpr ? "," : " OR ";
-            foreach (var parameter in parameters)
-            {
-                if (index > 0) builder.Append(jointMark);
-                typedCommandInitializer.Invoke(command.Parameters, builder, this, parameter, index.ToString());
-                index++;
-            }
-            if (isInExpr) builder.Append(')');
-            command.CommandText = builder.ToString();
-        }
-        else
-        {
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjByKeySqlParameters(this, entityType, whereKeys, false, isBulk);
-            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
-            command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this, whereKeys);
-        }
+        var commandInitializer = RepositoryHelper.BuildGetKeySqlParameters(this, entityType, whereKeys, false, isBulk);
+        command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereKeys);
         return (isNeedClose, connection, command);
     }
     #endregion 
@@ -767,29 +726,9 @@ public sealed class DbContext
             throw new ArgumentNullException(nameof(whereObjs));
         var isBulk = whereObjs is IEnumerable && whereObjs is not string && whereObjs is not IDictionary<string, object>;
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        if (isBulk)
-        {
-            (var isInExpr, var headSql, var commandInitializer) = ((bool, string, object))RepositoryHelper.BuildExistsSqlParameters(this, entityType, whereObjs, false, isBulk);
-            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-            var parameters = whereObjs as IEnumerable;
-            int index = 0;
-            var builder = new StringBuilder(headSql);
-            var jointMark = isInExpr ? "," : " OR ";
-            foreach (var parameter in parameters)
-            {
-                if (index > 0) builder.Append(jointMark);
-                typedCommandInitializer.Invoke(command.Parameters, builder, this, parameter, index.ToString());
-                index++;
-            }
-            if (isInExpr) builder.Append(')');
-            command.CommandText = builder.ToString();
-        }
-        else
-        {
-            var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this, entityType, whereObjs, false, isBulk);
-            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
-            command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this, whereObjs);
-        }
+        var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this, entityType, whereObjs, false, false, isBulk, false)
+            as Func<IDataParameterCollection, DbContext, object, string>;
+        command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereObjs);
         return (isNeedClose, connection, command);
     }
 
@@ -1120,49 +1059,11 @@ public sealed class DbContext
     {
         if (whereKeys == null)
             throw new ArgumentNullException(nameof(whereKeys));
-
         var isBulk = whereKeys is IEnumerable && whereKeys is not string && whereKeys is not IDictionary<string, object>;
-        IEnumerable entities = null;
-        Type whereObjType = null;
-        if (isBulk)
-        {
-            entities = whereKeys as IEnumerable;
-            foreach (var entity in entities)
-            {
-                whereObjType = entity.GetType();
-                break;
-            }
-        }
-        else whereObjType = whereKeys.GetType();
-        (var isMultiKeys, var tableName, var headSqlSetter, var whereSqlParametersSetter) = RepositoryHelper.BuildDeleteCommandInitializer(this, entityType, whereObjType, false, isBulk);
-
-        int index = 0;
-        var builder = new StringBuilder();
-        var whereSqlBuilder = new StringBuilder();
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        if (isBulk)
-        {
-            var jointMark = isMultiKeys ? " OR " : ",";
-            var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-
-            foreach (var entity in entities)
-            {
-                if (index > 0) whereSqlBuilder.Append(jointMark);
-                typedWhereSqlParametersSetter.Invoke(command.Parameters, whereSqlBuilder, this, entity, $"{index}");
-                index++;
-            }
-            if (!isMultiKeys) whereSqlBuilder.Append(')');
-        }
-        else
-        {
-            var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
-            typedWhereSqlParametersSetter.Invoke(command.Parameters, whereSqlBuilder, this, whereKeys);
-        }
-        headSqlSetter.Invoke(builder, tableName);
-        builder.Append(whereSqlBuilder);
-        command.CommandText = builder.ToString();
-        builder.Clear();
-        whereSqlBuilder.Clear();
+        var commandInitializer = RepositoryHelper.BuildDeleteSqlParameters(this, entityType, whereKeys, false, isBulk, false)
+            as Func<IDataParameterCollection, DbContext, object, string>;
+        command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereKeys);
         return (isNeedClose, connection, command);
     }
     #endregion

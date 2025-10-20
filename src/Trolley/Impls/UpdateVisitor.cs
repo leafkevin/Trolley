@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 
 namespace Trolley;
@@ -17,7 +18,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public ActionMode ActionMode { get; set; }
     public bool IsFrom { get; set; }
     public bool IsJoin { get; set; }
-    public List<string> UpdateFields { get; set; }
+    public StringBuilder UpdateFields { get; set; }
     public string FixedSql { get; set; }
     public bool HasWhere { get; protected set; }
 
@@ -50,7 +51,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 {
                     //此SQL只能用在多命令查询时和返回ToSql两个场景
                     (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.BuildWithBulk(command);
-                    Func<int, string> suffixGetter = index => this.IsMultiple ? $"_m{this.CommandIndex}{index}" : $"{index}";
 
                     Action<object, int> sqlExecute = null;
                     if (this.ShardingTables != null && this.ShardingTables.Count > 0)
@@ -202,25 +202,40 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         builder.Clear();
         return sql;
     }
-    public virtual (IEnumerable, int, string, Action<IDataParameterCollection>, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>,
-        Action<StringBuilder, DbContext, string, object, string>, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
+    public virtual (IEnumerable, int, string, Action<IDataParameterCollection>, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
     {
-        Type updateObjType = null;
         (var updateObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
+
+        object firstUpdateObj = null;
+        Type updateObjType = null;
         foreach (var updateObj in updateObjs)
         {
+            firstUpdateObj = updateObj;
             updateObjType = updateObj.GetType();
             break;
         }
-        var builder = new StringBuilder();
+
+        var tableSegment = this.Tables[0];
+        var entityType = tableSegment.EntityType;
+        var hasOnlyFields = this.OnlyFieldNames != null && this.OnlyFieldNames.Count > 0;
+        var hasIgnoreFields = this.IgnoreFieldNames != null && this.IgnoreFieldNames.Count > 0;
+        Action<IDataParameterCollection, StringBuilder, string, object, int> loopSqlSetter = null;
+        var valueFieldSegments = new List<ValueFieldSegment>();
+        var keyFieldSegments = new List<ValueFieldSegment>();
+
+        var headSql = "UPDATE";
+        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
+            headSql += $" {this.OrmProvider.GetTableName(tableSegment.TableSchema)}.";
+
+        string fixedHeadSql = "SET ", fixedTailSql = ";";
         List<IDbDataParameter> fixedDbParameters = null;
-        string fixedSql = null;
-        int index = 0;
+        Action<IDataParameterCollection> firstSqlSetter = null;
+
         if (this.deferredSegments.Count > 1)
         {
-            this.DbParameters = new TheaDbParameterCollection();
+            var tempDbParameters = new TheaDbParameterCollection();
+            this.DbParameters = tempDbParameters;
             //先解析其他sql，生成固定sql
-            this.UpdateFields = new();
             for (int i = 1; i < this.deferredSegments.Count; i++)
             {
                 var deferredSegment = this.deferredSegments[i];
@@ -239,71 +254,158 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     case "Where":
                         this.VisitWhere(deferredSegment.Value as Expression);
                         break;
+                    case "WhereWith":
+                        this.VisitWhereWith(deferredSegment.Value);
+                        break;
                     case "And":
                         this.VisitAnd(deferredSegment.Value as Expression);
                         break;
-                    default: throw new NotSupportedException("SetBulk操作后，只支持Set/IgnoreFields/OnlyFields操作");
+                    case "Or":
+                        this.VisitOr(deferredSegment.Value as Expression);
+                        break;
+                    default: throw new NotSupportedException("SetBulk操作后，只支持Set/IgnoreFields/OnlyFields/Where/And/Or操作");
                 }
-            }
-            if (this.UpdateFields.Count > 0)
-            {
-                foreach (var setField in this.UpdateFields)
-                {
-                    if (index > 0) builder.Append(',');
-                    builder.Append(setField);
-                    index++;
-                }
-                builder.Append(',');
-                fixedSql = builder.ToString();
             }
             if (this.DbParameters.Count > 0)
-                fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
-            this.DbParameters = command.Parameters;
-            this.UpdateFields.Clear();
-            builder.Clear();
-        }
-        //多命令查询时，第二次以后，DbParameters有值，不能再赋值
-        else this.DbParameters ??= command.Parameters;
-
-        builder.Append("UPDATE ");
-        var tableSegment = this.Tables[0];
-        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
-            builder.Append($" {this.OrmProvider.GetTableName(tableSegment.TableSchema)}.");
-        var headSql = builder.ToString();
-
-        var entityType = tableSegment.EntityType;
-        (var bulkSqlSetter, var shardingSqlSetter) = RepositoryHelper.BuildUpdateBulkSetWithSqlParametersPart(this.DbContext, entityType, updateObjType, this.IsMultiple, false, this.OnlyFieldNames, this.IgnoreFieldNames);
-
-        //处理有tableSchema的场景
-        Action<IDataParameterCollection> fixedParametersSetter = null;
-        if (fixedDbParameters != null)
-            fixedParametersSetter = dbParameters => fixedDbParameters.ForEach(f => dbParameters.Add(f));
-        Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string> firstSqlSetter = null;
-        Action<StringBuilder, DbContext, string, object, string> sqlSetter = null;
-        firstSqlSetter = (dbParameters, builder, dbContext, tableName, updateObj, suffix) =>
-        {
-            builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} SET {fixedSql}");
-            bulkSqlSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
-        };
-        sqlSetter = (builder, dbContext, tableName, updateObj, suffix) =>
-        {
-            builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} SET {fixedSql}");
-            shardingSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
-        };
-        var tableName = tableSegment.Mapper.TableName;
-        if (tableSegment.IsSharding)
-        {
-            if (this.ShardingTables != null && this.ShardingTables.Count > 0)
             {
+                fixedDbParameters = tempDbParameters.ToList();
+                firstSqlSetter = dbParameters => fixedDbParameters.ForEach(f => dbParameters.Add(f));
+            }
+            if (this.UpdateFields.Length > 0)
+            {
+                this.UpdateFields.Append(',');
+                fixedHeadSql += this.UpdateFields.ToString();
 
+                if (!string.IsNullOrEmpty(this.WhereSql))
+                    fixedTailSql = $" AND {this.WhereSql};";
+            }
+            this.DbParameters = command.Parameters;
+        }
+
+        var entityMapper = tableSegment.Mapper;
+        if (firstUpdateObj is IDictionary<string, object> dict)
+        {
+            foreach (var key in dict.Keys)
+            {
+                var fieldName = key.ToLower();
+                if (hasIgnoreFields && this.IgnoreFieldNames.Exists(f => f.ToLower() == fieldName))
+                    continue;
+                if (hasOnlyFields && !this.OnlyFieldNames.Exists(f => f.ToLower() == fieldName))
+                    continue;
+                if (!entityMapper.TryGetMemberMap(key, out var memberMapper))
+                    continue;
+                if (memberMapper.IsIgnore || memberMapper.IsIgnoreUpdate)
+                    continue;
+
+                Func<object, object> valueGetter = null;
+                if (memberMapper.TypeHandler != null)
+                {
+                    valueGetter = f =>
+                    {
+                        var myDict = f as IDictionary<string, object>;
+                        return memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, myDict[key]);
+                    };
+                }
+                else
+                {
+                    var targetType = this.OrmProvider.MapDefaultType(memberMapper);
+                    var myValueGetter = this.OrmProvider.GetParameterValueGetter(dict[key]?.GetType(), targetType, !memberMapper.IsRequired, this.DbContext);
+                    valueGetter = f =>
+                    {
+                        var myDict = f as IDictionary<string, object>;
+                        return myValueGetter.Invoke(myDict[key]);
+                    };
+                }
+                var valueFields = memberMapper.IsKey ? keyFieldSegments : valueFieldSegments;
+                valueFields.Add(new ValueFieldSegment(memberMapper, valueGetter));
+            }
+        }
+        else
+        {
+            var memberInfos = updateObjType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
+            foreach (var memberInfo in memberInfos)
+            {
+                var fieldName = memberInfo.Name.ToLower();
+                if (hasIgnoreFields && this.IgnoreFieldNames.Exists(f => f.ToLower() == fieldName))
+                    continue;
+                if (hasOnlyFields && !this.OnlyFieldNames.Exists(f => f.ToLower() == fieldName))
+                    continue;
+                if (!entityMapper.TryGetMemberMap(fieldName, out var memberMapper))
+                    continue;
+                if (memberMapper.IsIgnore || memberMapper.IsIgnoreUpdate)
+                    continue;
+
+                Func<object, object> valueGetter = null;
+                if (memberMapper.TypeHandler != null)
+                {
+                    valueGetter = f =>
+                    {
+                        var fieldValue = FasterEvaluator.EvaluateAndCache(f, memberInfo);
+                        return memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
+                    };
+                }
+                else
+                {
+                    var targetType = this.OrmProvider.MapDefaultType(memberMapper);
+                    var myValueGetter = this.OrmProvider.GetParameterValueGetter(memberInfo.GetMemberType(), targetType, !memberMapper.IsRequired, this.DbContext);
+                    valueGetter = f =>
+                    {
+                        var fieldValue = FasterEvaluator.EvaluateAndCache(f, memberInfo);
+                        return myValueGetter.Invoke(fieldValue);
+                    };
+                }
+                var valueFields = memberMapper.IsKey ? keyFieldSegments : valueFieldSegments;
+                valueFields.Add(new ValueFieldSegment(memberMapper, valueGetter));
+            }
+        }
+        loopSqlSetter = (dbParameters, builder, tableName, updateObj, index) =>
+        {
+            builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} SET {fixedHeadSql}");
+            for (int i = 0; i < valueFieldSegments.Count; i++)
+            {
+                if (i > 0) builder.Append(',');
+
+                var valueField = valueFieldSegments[i];
+                var fieldName = this.OrmProvider.GetFieldName(valueField.MemberMapper.FieldName);
+                var parameterName = $"{this.OrmProvider.ParameterPrefix}{valueField.MemberMapper.MemberName}{index}";
+                builder.Append($"{fieldName}={parameterName}");
+                var fieldValue = valueField.ValueGetter.Invoke(updateObj);
+                dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, valueField.MemberMapper.NativeDbType, fieldValue));
+            }
+            builder.Append(" WHERE ");
+            for (int i = 0; i < keyFieldSegments.Count; i++)
+            {
+                if (i > 0) builder.Append(" AND ");
+
+                var keyField = keyFieldSegments[i];
+                var fieldName = this.OrmProvider.GetFieldName(keyField.MemberMapper.FieldName);
+                var parameterName = $"{this.OrmProvider.ParameterPrefix}{keyField.MemberMapper.MemberName}{index}";
+                builder.Append($"{fieldName}={parameterName}");
+                var fieldValue = keyField.ValueGetter.Invoke(updateObj);
+                dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, keyField.MemberMapper.NativeDbType, fieldValue));
+            }
+            builder.Append(fixedTailSql);
+        };
+
+        Dictionary<string, List<object>> tabledUpdateObjs = null;
+        var isNeedSplit = false;
+        var tableName = tableSegment.Mapper.TableName;
+        if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
+        {
+            if (tableSegment.IsSharding)
+            {
+                if (!string.IsNullOrEmpty(tableSegment.Body))
+                    tableName = tableSegment.Body;
             }
             else
             {
-                this.ShardingTables = new List<TableSegment> { tableSegment };
-                tableName = this.ShardingTables[0].TableNames[0];
+                isNeedSplit = true;
+                tabledUpdateObjs = this.SplitShardingParameters(updateObjType, tableShardingInfo, updateObjs, firstUpdateObj);
             }
         }
-        return (updateObjs, bulkCount, tableName, fixedParametersSetter, firstSqlSetter, sqlSetter, null);
+        else tableName = tableSegment.Mapper.TableName;
+        return (updateObjs, bulkCount, tableName, firstSqlSetter, loopSqlSetter, null);
     }
     public virtual void Join(string joinType, Type entityType, Expression joinOn)
     {
@@ -477,30 +579,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.OnlyFieldNames = null;
         this.IgnoreFieldNames = null;
     }
-    public virtual void InitTableAlias(LambdaExpression lambdaExpr)
-    {
-        this.TableAliases.Clear();
-        lambdaExpr.Body.GetParameterNames(out var parameters);
-        if (parameters == null || parameters.Count == 0)
-            return;
-        int index = 0;
-        foreach (var parameterExpr in lambdaExpr.Parameters)
-        {
-            if (typeof(IAggregateSelect).IsAssignableFrom(parameterExpr.Type))
-                continue;
-            if (typeof(IFromQuery).IsAssignableFrom(parameterExpr.Type))
-                continue;
-            if (!parameters.Contains(parameterExpr.Name))
-            {
-                index++;
-                continue;
-            }
-            if (this.TableAliases.ContainsKey(parameterExpr.Name))
-                continue;
-            this.TableAliases.Add(parameterExpr.Name, this.Tables[index]);
-            index++;
-        }
-    }
     public virtual void VisitSetField(object deferredSegmentValue)
     {
         (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegmentValue;
@@ -519,18 +597,10 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     {
         var entityType = this.Tables[0].Mapper.EntityType;
         var updateObjType = updateObj.GetType();
-        var isBulk = this.ActionMode == ActionMode.Bulk;
-        var commandInitializer = RepositoryHelper.BuildUpdateSetWithSqlParametersPart(this.DbContext, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple, false);
-        if (this.IsMultiple)
-        {
-            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, DbContext, List<string>, object, string>;
-            typedCommandInitializer.Invoke(this.DbParameters, this.DbContext, this.UpdateFields, updateObj, $"_m{this.CommandIndex}");
-        }
-        else
-        {
-            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, DbContext, List<string>, object>;
-            typedCommandInitializer.Invoke(this.DbParameters, this.DbContext, this.UpdateFields, updateObj);
-        }
+        //单独更新多个字段，通过一个多字段实体类型，都当作单个实体类型处理
+        var commandInitializer = RepositoryHelper.BuildUpdateSqlParametersPart(this.DbContext, entityType, updateObjType, false, true, this.OnlyFieldNames != null, this.IgnoreFieldNames != null)
+            as Action<IDataParameterCollection, StringBuilder, DbContext, List<string>, List<string>, object>;
+        commandInitializer.Invoke(this.DbParameters, this.UpdateFields, this.DbContext, this.OnlyFieldNames, this.IgnoreFieldNames, updateObj);
     }
     public virtual void VisitSet(Expression fieldsAssignment)
     {
@@ -554,7 +624,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     {
                         var newLambdaExpr = Expression.Lambda(argumentExpr, lambdaExpr.Parameters.ToList());
                         (var sql, _, _) = this.VisitFromQuery(newLambdaExpr);
-                        this.UpdateFields.Add(this.OrmProvider.GetFieldName(memberMapper.FieldName) + $"=({sql})");
+                        this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
                     }
                     else
                     {
@@ -581,7 +651,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     {
                         var newLambdaExpr = Expression.Lambda(argumentExpr, lambdaExpr.Parameters.ToList());
                         (var sql, _, _) = this.VisitFromQuery(newLambdaExpr);
-                        this.UpdateFields.Add(this.OrmProvider.GetFieldName(memberMapper.FieldName) + $"=({sql})");
+                        this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
                     }
                     else
                     {
@@ -610,22 +680,25 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
         this.InitTableAlias(valueSelector as LambdaExpression);
         (var sql, _, _) = this.VisitFromQuery(valueSelector as LambdaExpression);
-        this.UpdateFields.Add(this.OrmProvider.GetFieldName(memberMapper.FieldName) + $"=({sql})");
+        this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
     }
     public virtual void VisitWhereWith(object whereObj)
     {
         var entityType = this.Tables[0].EntityType;
         var whereObjType = whereObj.GetType();
-        var whereSqlParameters = RepositoryHelper.BuildWhereSqlParametersPart(this.DbContext, entityType, whereObjType, 1, true, false, true, false, this.IsMultiple, false);
-        if (this.IsMultiple)
+        var whereSqlParameters = RepositoryHelper.BuildUpdateWhereObjSqlParameters(this.DbContext, entityType, whereObjType, false, true);
+        var conditionSql = whereSqlParameters.Invoke(this.DbParameters, this.DbContext, whereObj);
+        if (string.IsNullOrEmpty(this.WhereSql))
         {
-            var typedWhereSqlParameters = whereSqlParameters as Func<IDataParameterCollection, DbContext, object, string, string>;
-            this.WhereSql = typedWhereSqlParameters.Invoke(this.DbParameters, this.DbContext, whereObj, $"_m{this.CommandIndex}");
+            this.WhereSql = conditionSql;
+            this.LastWhereOperationType = OperationType.None;
         }
         else
         {
-            var typedWhereSqlParameters = whereSqlParameters as Func<IDataParameterCollection, DbContext, object, string>;
-            this.WhereSql = typedWhereSqlParameters.Invoke(this.DbParameters, this.DbContext, whereObj);
+            if (this.LastWhereOperationType == OperationType.Or)
+                this.WhereSql = $"({this.WhereSql})";
+            this.WhereSql += " AND " + conditionSql;
+            this.LastWhereOperationType = OperationType.And;
         }
     }
     public virtual void VisitWhere(Expression whereExpr)
@@ -736,14 +809,14 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public virtual void AddMemberElement(MemberMap memberMapper, object memberValue, bool isEntity = true)
     {
+        if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
         if (memberValue is DBNull || memberValue == null)
         {
-            this.UpdateFields.Add(this.OrmProvider.GetFieldName(memberMapper.FieldName) + "=NULL");
+            this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=NULL");
             return;
         }
         var fieldValue = isEntity ? memberMapper.Member.Evaluate(memberValue) : memberValue;
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
-        if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
         if (memberMapper.TypeHandler != null)
             fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
         else
@@ -753,31 +826,170 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             fieldValue = valueGetter.Invoke(fieldValue);
         }
         this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
-        this.UpdateFields.Add($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+        this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
     }
     public virtual void AddMemberElement(SqlFieldSegment sqlSegment, MemberMap memberMapper)
     {
+        if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
         if (sqlSegment == SqlFieldSegment.Null)
         {
-            this.UpdateFields.Add(this.OrmProvider.GetFieldName(memberMapper.FieldName) + "=NULL");
+            this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=NULL");
             return;
         }
         if (sqlSegment.IsConstant || sqlSegment.IsVariable)
         {
             var fieldValue = sqlSegment.Value;
-            var parameterName = this.OrmProvider.ParameterPrefix + this.UserParameterPrefix + this.DbParameters.Count.ToString();
-            if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
+            var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
             if (memberMapper.TypeHandler != null)
                 fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
             else
             {
                 var targetType = this.OrmProvider.MapDefaultType(memberMapper);
-                var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, this.DbContext);
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, !memberMapper.IsRequired, this.DbContext);
                 fieldValue = valueGetter.Invoke(fieldValue);
             }
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
-            sqlSegment.Body = parameterName;
+            this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
         }
-        this.UpdateFields.Add($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={sqlSegment.Body}");
+    }
+    public Dictionary<string, List<object>> SplitShardingParameters(Type updateObjType, TableShardingInfo tableShardingInfo, IEnumerable updateObjs, object sampleObj)
+    {
+        var result = new Dictionary<string, List<object>>();
+        var origTableName = this.Tables[0].Mapper.TableName;
+
+        //优先使用本次设置的分表名获取委托来获取分表名
+        if (this.Tables[0].ShardingTableGetter != null)
+        {
+            var tableNameGetter = this.Tables[0].ShardingTableGetter;
+            foreach (var updateObj in updateObjs)
+            {
+                var tableName = tableNameGetter.DynamicInvoke(updateObj) as string;
+                if (string.IsNullOrEmpty(tableName))
+                    throw new InvalidOperationException($"手动设置的分表名获取委托无法获取分表名，原表名：{origTableName}，当前参数：{this.DbContext.JsonTypeHandler.ToFieldValue(this.OrmProvider, updateObj)}");
+                if (!result.TryGetValue(tableName, out var myParameters))
+                    result.Add(tableName, myParameters = new List<object>());
+                myParameters.Add(updateObj);
+            }
+        }
+        else
+        {
+            //使用分表规则获取分表名，根据依赖的字段值执行分表规则委托获取分表名
+            if (tableShardingInfo.DependOnMembers == null || tableShardingInfo.DependOnMembers.Count == 0)
+                throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，但未指定分表名，也未指定依赖的成员，无法确定分表，原表名：{origTableName}");
+
+            var fieldValueGetters = new List<Func<object, object>>();
+            bool TryAddMemberGetter(string memberName)
+            {
+                for (int i = 1; i < this.deferredSegments.Count; i++)
+                {
+                    var deferredSegment = this.deferredSegments[i];
+                    switch (deferredSegment.Type)
+                    {
+                        case "Set":
+                            this.VisitSet(deferredSegment.Value as Expression);
+                            break;
+                        case "SetField":
+                            (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegment.Value;
+                            var lambdaExpr = fieldSelector as LambdaExpression;
+                            var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;
+                            if (memberExpr.Member.Name == memberName)
+                            {
+                                fieldValueGetters.Add(f => fieldValue);
+                                return true;
+                            }
+                            break;
+                        case "SetWith":
+                            var updateObj = deferredSegment.Value;
+                            var myInsertObjType = updateObj.GetType();
+                            if (RepositoryHelper.TryGetMemberGetter(myInsertObjType, memberName.ToLower(), updateObj, out var memberGetter))
+                            {
+                                fieldValueGetters.Add(f => memberGetter.Invoke(updateObj));
+                                return true;
+                            }
+                            break;
+                        //分区表，二级分区为时间分区，为了提高性能，增加额外的时间条件命中二级时间分区
+                        case "Where":
+                            this.VisitWhere(deferredSegment.Value as Expression);
+                            break;
+                        case "WhereWith":
+                            this.VisitWhereWith(deferredSegment.Value);
+                            break;
+                        case "And":
+                            this.VisitAnd(deferredSegment.Value as Expression);
+                            break;
+                        case "Or":
+                            this.VisitOr(deferredSegment.Value as Expression);
+                            break;
+                        default: throw new NotSupportedException("SetBulk操作后，只支持Set/IgnoreFields/OnlyFields/Where/And/Or操作");
+
+
+                        case "WithByField":
+                            (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegment.Value;
+                            var lambdaExpr = fieldSelector as LambdaExpression;
+                            var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;
+                            if (memberExpr.Member.Name == memberName)
+                            {
+                                fieldValueGetters.Add(f => fieldValue);
+                                return true;
+                            }
+                            break;
+                    }
+                }
+                return false;
+            }
+
+            foreach (var memberName in tableShardingInfo.DependOnMembers)
+            {
+                if (RepositoryHelper.TryGetMemberGetter(updateObjType, memberName.ToLower(), sampleObj, out var memberGetter))
+                {
+                    fieldValueGetters.Add(memberGetter);
+                    continue;
+                }
+                if (!TryAddMemberGetter(memberName))
+                    throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，依赖的成员{memberName}在插入对象类型{updateObjType.FullName}中不存在，无法确定分表，原表名：{origTableName}");
+            }
+            Func<object, string> tableNameGetter = insertObj =>
+            {
+                var fieldValus = new List<object>();
+                foreach (var fieldValueGetter in fieldValueGetters)
+                    fieldValus.Add(fieldValueGetter.Invoke(insertObj));
+                return tableShardingInfo.Rule.Invoke(origTableName, fieldValus.ToArray()) as string;
+            };
+
+            foreach (var insertObj in updateObjs)
+            {
+                var tableName = tableNameGetter.Invoke(insertObj);
+                if (string.IsNullOrEmpty(tableName))
+                    throw new InvalidOperationException($"分表规则无法获取分表名，原表名：{origTableName}，当前参数：{this.DbContext.JsonTypeHandler.ToFieldValue(this.OrmProvider, insertObj)}");
+                if (!result.TryGetValue(tableName, out var myParameters))
+                    result.Add(tableName, myParameters = new List<object>());
+                myParameters.Add(insertObj);
+            }
+        }
+        return result;
+    }
+    public virtual void InitTableAlias(LambdaExpression lambdaExpr)
+    {
+        this.TableAliases.Clear();
+        lambdaExpr.Body.GetParameterNames(out var parameters);
+        if (parameters == null || parameters.Count == 0)
+            return;
+        int index = 0;
+        foreach (var parameterExpr in lambdaExpr.Parameters)
+        {
+            if (typeof(IAggregateSelect).IsAssignableFrom(parameterExpr.Type))
+                continue;
+            if (typeof(IFromQuery).IsAssignableFrom(parameterExpr.Type))
+                continue;
+            if (!parameters.Contains(parameterExpr.Name))
+            {
+                index++;
+                continue;
+            }
+            if (this.TableAliases.ContainsKey(parameterExpr.Name))
+                continue;
+            this.TableAliases.Add(parameterExpr.Name, this.Tables[index]);
+            index++;
+        }
     }
 }

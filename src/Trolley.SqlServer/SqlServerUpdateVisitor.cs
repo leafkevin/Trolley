@@ -36,7 +36,6 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                 Mapper = mapper
             });
         }
-        if (!isFirst) this.Clear();
     }
     public override string BuildCommand(DbContext dbContext, ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {

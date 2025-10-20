@@ -151,6 +151,12 @@ class MultiQueryReader : IMultiQueryReader
         var readerAfter = this.readerAfters[this.readerIndex];
         var deserializer = reader.GetReaderDeserializer(readerAfter.TargetType, this.dbContext, readerAfter.QueryVisitor?.ReaderFields);
 
+        var index = 0;
+        while (index < this.reader.FieldCount)
+        {
+            this.reader.GetName(index);
+            this.reader.GetValue(index);
+        }
         while (await this.reader.ReadAsync(cancellationToken))
             dataList.Add((T)deserializer.Invoke(this.reader));
         if (isPaged)

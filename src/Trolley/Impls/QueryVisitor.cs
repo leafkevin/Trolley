@@ -625,7 +625,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             queryVisiter.CteQueryObj = null;
             queryVisiter.IsRecursive = false;
         }
-        //TODO:子查询中，有多分表并且还有Group By + Having操作，出子查询后，需要把所有多分表都打开UNION ALL起来，合成新的子查询，并去掉分表属性，以单表处理后续操作
+        //TODO:子查询中，有多分表并且还有Group By + Having/Count(Distinct)操作，出子查询后，需要把所有多分表都打开UNION ALL起来，合成新的子查询，并去掉分表属性，以单表处理后续操作
+        //除此之外，其他场景，还需要继续保留多分表属性，以便后面映射多分表
         var fromQuery = new FromQuery(this.DbContext, queryVisiter);
         (var sql, var tableSegment, var readerFields) = this.VisitFromQuery(subQueryExpr, fromQuery);
         //变成子查询了，不再需要UnionAll操作了
@@ -1106,7 +1107,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             blockBodies.Add(Expression.Call(builderExpr, methedInfo, foreignKeyValueExpr));
 
             var foreignKey = this.OrmProvider.GetFieldName(includeSegment.FromMember.ForeignKey);
-            var fields = RepositoryHelper.BuildSelectFieldsSqlPart(this.OrmProvider, includeSegment.Mapper, includeSegment.EntityType);
+            var fields = RepositoryHelper.BuildSelectFieldsSqlPart(this.DbContext, includeSegment.Mapper, includeSegment.EntityType);
             var headSql = $"SELECT {fields} FROM {{0}} WHERE {foreignKey} IN (";
             var sqlInitializer = Expression.Lambda<Action<StringBuilder, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), builderExpr, ormProviderExpr, targetExpr).Compile();
             return (headSql, sqlInitializer);
@@ -1961,9 +1962,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 if (sqlSegment.FieldType != SqlFieldType.IncludeRef)
                 {
                     this.GetQuotedValue(sqlSegment, true);
-                    if (!this.IsFromCommand && (sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression
-                        || sqlSegment.IsMethodCall || sqlSegment.FromMember != null && sqlSegment.FromMember.Name != memberInfo.Name))
-                        sqlSegment.IsNeedAlias = true;
+                    //if (!this.IsFromCommand && (sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression
+                    //    || sqlSegment.IsMethodCall || !this.DbContext.FieldMapHandler.IsCanMap(sqlSegment.FromMember, memberInfo)))
+                    //    sqlSegment.IsNeedAlias = true;
                 }
                 sqlSegment.TargetMember = memberInfo;
                 sqlSegment.SegmentType = memberInfo.GetMemberType();
@@ -1996,9 +1997,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     sqlSegment.FieldType = SqlFieldType.Field;
                     //只有常量、方法调用、表达式计算，没有设置NativeDbType和TypeHandler，需要根据memberInfo类型获取
                     //常量和变量，暂时不做GetQuotedValue处理，在BuildSql时候，再进行处理，Value值保留
-                    if (!this.IsFromCommand && (sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression
-                        || sqlSegment.IsMethodCall || sqlSegment.FromMember != null && sqlSegment.FromMember.Name != memberInfo.Name))
-                        sqlSegment.IsNeedAlias = true;
+                    //if (!this.IsFromCommand && (sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression
+                    //    || sqlSegment.IsMethodCall || !this.DbContext.FieldMapHandler.IsCanMap(sqlSegment.FromMember, memberInfo)))
+                    //    sqlSegment.IsNeedAlias = true;
                 }
                 sqlSegment.TargetMember = memberInfo;
                 //常量或变量场景，此值为null
@@ -2090,7 +2091,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         body = $"AVG({body})";
                     builder.Append(body);
                     //生成SQL的时候，才加上AS别名
-                    if (this.IsNeedAlias(readerField, isOnlyField))
+                    if (!isOnlyField && this.IsNeedAlias(readerField))
                         builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
                     break;
             }
@@ -2120,20 +2121,16 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 break;
         }
     }
-    public virtual bool IsNeedAlias(SqlFieldSegment readerField, bool isOnlyField)
+    public virtual bool IsNeedAlias(SqlFieldSegment readerField)
     {
         if (this.IsSecondUnion || this.IsCteTable) return false;
         if (readerField.IsNeedAlias) return true;
-        if (isOnlyField) return false;
-        if (readerField.Fields != null && readerField.Fields.Count > 1)
-            return false;
+        //if (isOnlyField) return false;
         //GroupFields中的ReaderField只设置了必须加as别名的情况，没有设置TargetMember.Name !=FromMember.Name的情况，这里把这种情况补上
         //PostgreSql时，DistinctOnFields中的ReaderField也是这个场景
         if (readerField.IsConstant || readerField.IsVariable || readerField.HasParameter
             || readerField.IsExpression || readerField.IsMethodCall) return true;
-        if (readerField.TargetMember != null && readerField.FromMember != null)
-            return string.Compare(readerField.TargetMember.Name, readerField.FromMember.Name, true) != 0;
-        return false;
+        return !this.DbContext.FieldMapHandler.IsCanMap(readerField.FromMember, readerField.TargetMember);
     }
     public virtual void Clear(bool isClearReaderFields = false)
     {
@@ -2164,8 +2161,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void CloneTo(IQueryVisitor visitor)
     {
         var queryVisitor = visitor as QueryVisitor;
-        queryVisitor.IsMultiple = this.IsMultiple;
-        queryVisitor.CommandIndex = this.CommandIndex;
         queryVisitor.RefTableAliases = this.RefTableAliases;
         queryVisitor.IsNeedTableAlias = this.IsNeedTableAlias;
         queryVisitor.WhereSql = this.WhereSql;

@@ -5,8 +5,8 @@ namespace Trolley;
 
 public interface IFieldMapHandler
 {
+    bool IsCanMap(string fromName, string toName);
+    bool IsCanMap(MemberInfo fromName, MemberInfo toName);
     bool TryFindMember(string fieldName, List<MemberMap> memberMappers, out MemberMap memberMapper);
     bool TryFindMember(string fieldName, List<MemberInfo> memberInfos, out MemberInfo memberInfo);
-    bool TryFindField(string memberName, List<MemberMap> memberMappers, out MemberMap memberMapper);
-    bool TryFindField(string memberName, List<string> fieldNames, out string fieldName);
 }

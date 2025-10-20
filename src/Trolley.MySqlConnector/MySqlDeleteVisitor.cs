@@ -57,7 +57,7 @@ public class MySqlDeleteVisitor : DeleteVisitor
                 }
             }
             else whereObjType = whereKeys.GetType();
-            (var isMultiKeys, var origName, var headSqlSetter, var whereSqlSetter) = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, entityType, whereObjType, this.IsMultiple, isBulk);
+            (var isMultiKeys, var origName, var headSqlSetter, var whereSqlSetter) = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, entityType, whereObjType, isBulk);
 
             int index = 0;
             var builder = new StringBuilder();
@@ -66,13 +66,12 @@ public class MySqlDeleteVisitor : DeleteVisitor
             if (isBulk)
             {
                 var typedWhereSqlSetter = whereSqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-                Func<int, string> suffixGetter = index => this.IsMultiple ? $"_m{this.CommandIndex}{index}" : $"{index}";
-                Action<object, int> loopExecute = (entity, index) => typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, entity, suffixGetter.Invoke(index));
+                Action<object, int> loopExecute = (entity, index) => typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, entity, $"{index}");
                 if (isMultiKeys && !string.IsNullOrEmpty(this.OutputSql))
                 {
                     loopExecute = (entity, index) =>
                     {
-                        typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, entity, suffixGetter.Invoke(index));
+                        typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, entity, $"{index}");
                         whereSqlBuilder.Append(this.OutputSql);
                     };
                 }
@@ -95,32 +94,16 @@ public class MySqlDeleteVisitor : DeleteVisitor
             }
             else
             {
-                if (this.IsMultiple)
+                var typedWhereSqlSetter = whereSqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
+                if (!string.IsNullOrEmpty(this.OutputSql))
                 {
-                    var typedWhereSqlSetter = whereSqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-                    if (!string.IsNullOrEmpty(this.OutputSql))
+                    sqlExecuter = () =>
                     {
-                        sqlExecuter = () =>
-                        {
-                            typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, whereKeys, $"_m{this.CommandIndex}");
-                            whereSqlBuilder.Append(this.OutputSql);
-                        };
-                    }
-                    else sqlExecuter = () => typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, whereKeys, $"_m{this.CommandIndex}");
+                        typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, whereKeys);
+                        whereSqlBuilder.Append(this.OutputSql);
+                    };
                 }
-                else
-                {
-                    var typedWhereSqlSetter = whereSqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
-                    if (!string.IsNullOrEmpty(this.OutputSql))
-                    {
-                        sqlExecuter = () =>
-                        {
-                            typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, whereKeys);
-                            whereSqlBuilder.Append(this.OutputSql);
-                        };
-                    }
-                    else sqlExecuter = () => typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, whereKeys);
-                }
+                else sqlExecuter = () => typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, whereKeys);
             }
             if (!string.IsNullOrEmpty(this.Tables[0].TableSchema))
                 headSqlSetter = (builder, tableName) => headSqlSetter.Invoke(builder, this.Tables[0].TableSchema + "." + tableName);

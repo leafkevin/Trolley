@@ -229,9 +229,8 @@ public class MultipleQuery : IMultipleQuery
 
         var entityType = typeof(TEntity);
         bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
-        var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObj, true, isBulk);
-        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string, string>;
-        var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.DbContext, whereObj, $"_m{this.ReaderAfters.Count}");
+        var commandInitializer = RepositoryHelper.BuildWhereKeysSqlParameters(this.DbContext, entityType, whereObj, isBulk, 2);
+        var sql = commandInitializer.Invoke(this.Command.Parameters, this.DbContext, whereObj);
         this.AddReader(typeof(bool), sql, false);
         return this;
     }
@@ -316,9 +315,8 @@ public class MultipleQuery : IMultipleQuery
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
         bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
-        var commandInitializer = RepositoryHelper.BuildQueryWhereObjByKeySqlParameters(this.DbContext, entityType, whereObj, true, isBulk);
-        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string, string>;
-        var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.DbContext, whereObj, $"_m{this.ReaderAfters.Count}");
+        var commandInitializer = RepositoryHelper.BuildWhereKeysSqlParameters(this.DbContext, entityType, whereObj, isBulk, 1);
+        var sql = commandInitializer.Invoke(this.Command.Parameters, this.DbContext, whereObj);
         this.AddReader(entityType, sql, isSingle);
     }
     #endregion

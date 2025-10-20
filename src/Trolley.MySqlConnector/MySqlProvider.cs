@@ -255,7 +255,7 @@ public partial class MySqlProvider : BaseOrmProvider
             default: return MySqlDbType.String;
         }
     }
-    public override bool MapTables(string connectionString, IEntityMapProvider mapProvider)
+    public override bool MapTables(string connectionString, IEntityMapProvider mapProvider, IFieldMapHandler fieldMapHandler)
     {
         var tableNames = mapProvider.EntityMaps.Where(f => !f.IsMapped).Select(f => f.TableName).ToList();
         if (tableNames == null || tableNames.Count == 0)
@@ -348,7 +348,6 @@ public partial class MySqlProvider : BaseOrmProvider
         reader.Close();
         connection.Close();
 
-        var fieldMapHandler = mapProvider.FieldMapHandler;
         foreach (var entityMapper in entityMappers)
         {
             (var tableSchema, var tableName) = this.GetFullTableName(entityMapper.TableName);

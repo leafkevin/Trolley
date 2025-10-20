@@ -184,7 +184,7 @@ public interface IOrmProvider
     Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType, DbContext dbContext);
     ITypeHandler GetTypeHandler(Type typeHandlerType);
     object MapNativeDbType(DbColumnInfo columnInfo);
-    bool MapTables(string connectionString, IEntityMapProvider mapProvider);
+    bool MapTables(string connectionString, IEntityMapProvider mapProvider, IFieldMapHandler fieldMapHandler);
     bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
     bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
 }

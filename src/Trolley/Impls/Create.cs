@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -135,18 +136,16 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
+                    (var isNeetSplit, var tableName, var tabledInsertObjs, var insertObjs, var bulkCount,
+                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk();
 
-                    int executor(string tableName, IEnumerable insertObjs)
+                    int count = 0, index = 0;
+                    void executor(string tableName, IEnumerable insertObjs)
                     {
-                        int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
                         {
-                            if (index > 0) builder.Append(',');
-                            loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                            loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index);
                             index++;
-
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
@@ -157,28 +156,25 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                                 index = 0;
                             }
                         }
-                        if (index > 0)
-                        {
-                            command.CommandText = builder.ToString();
-                            count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
-                            builder.Clear();
-                            command.Parameters.Clear();
-                        }
-                        return count;
                     }
                     connection.Open();
-                    if (tabledInsertObjs != null)
+                    if (isNeetSplit)
                     {
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                            result += executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                            executor(tabledInsertObj.Key, tabledInsertObj.Value);
                         }
                     }
                     else
                     {
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                        result = executor(tableName, insertObjs);
+                        executor(tableName, insertObjs);
+                    }
+                    if (index > 0)
+                    {
+                        command.CommandText = builder.ToString();
+                        count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
                     }
                     builder.Clear();
                 }
@@ -206,18 +202,16 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
+                    (var isNeetSplit, var tableName, var tabledInsertObjs, var insertObjs, var bulkCount,
+                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk();
 
-                    async Task<int> executor(string tableName, IEnumerable insertObjs)
+                    int count = 0, index = 0;
+                    async Task executor(string tableName, IEnumerable insertObjs, CancellationToken cancellationToken)
                     {
-                        int count = 0, index = 0, bulkIndex = 0;
                         foreach (var insertObj in insertObjs)
                         {
-                            if (index > 0) builder.Append(',');
-                            loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                            loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index);
                             index++;
-
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
@@ -226,34 +220,29 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                                 index = 0;
-                                bulkIndex++;
                             }
                         }
-                        if (index > 0)
-                        {
-                            command.CommandText = builder.ToString();
-                            count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
-                            builder.Clear();
-                            command.Parameters.Clear();
-                        }
-                        return count;
                     }
                     await connection.OpenAsync(cancellationToken);
-                    if (tabledInsertObjs != null)
+                    if (isNeetSplit)
                     {
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                            result += await executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                            await executor(tabledInsertObj.Key, tabledInsertObj.Value, cancellationToken);
                         }
                     }
                     else
                     {
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                        result = await executor(tableName, insertObjs);
+                        await executor(tableName, insertObjs, cancellationToken);
+                    }
+                    if (index > 0)
+                    {
+                        command.CommandText = builder.ToString();
+                        count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
                     }
                     builder.Clear();
-                    builder = null;
                 }
                 break;
             default:

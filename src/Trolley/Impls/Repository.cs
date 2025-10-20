@@ -180,7 +180,7 @@ public class Repository : IRepository
             return result;
         }, cancellationToken);
     }
-    #endregion 
+    #endregion
 
     #region QueryFirst
     public virtual TEntity QueryFirst<TEntity>(string rawSql, CommandType commandType = CommandType.Text)

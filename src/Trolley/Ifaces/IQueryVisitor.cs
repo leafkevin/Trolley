@@ -11,8 +11,6 @@ namespace Trolley;
 public interface IQueryVisitor : ICloneable, IDisposable
 {
     string DbKey { get; }
-    bool IsMultiple { get; set; }
-    int CommandIndex { get; set; }
     string WhereSql { get; }
     List<TableSegment> Tables { get; set; }
     List<TableSegment> IncludeTables { get; set; }
