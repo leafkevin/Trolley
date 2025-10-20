@@ -744,14 +744,13 @@ public static class RepositoryHelper
                 Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, valueBuilderExpr, dbContextExpr, insertObjExpr).Compile();
         });
     }
-    public static object BuildUpdateSqlParametersPart(DbContext dbContext, Type entityType, Type upateObjType, bool isBulk, bool hasFilterFields, bool hasOnlyFields, bool hasIgnoreFields)
+    public static object BuildUpdateSqlParametersPart(DbContext dbContext, Type entityType, Type upateObjType, bool hasFilterFields, bool hasOnlyFields, bool hasIgnoreFields)
     {
         var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.MapProvider, entityType, upateObjType, hasFilterFields);
-        var commandInitializerCache = isBulk ? createBulkCommandInitializerCache : createCommandInitializerCache;
-        return commandInitializerCache.GetOrAdd(cacheKey, f =>
+        return createCommandInitializerCache.GetOrAdd(cacheKey, f =>
         {
             var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
-            var builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
+            var updateFieldsExpr = Expression.Parameter(typeof(List<string>), "updateFields");
             var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
             var updateObjExpr = Expression.Parameter(typeof(object), "updateObj");
             var blockParameters = new List<ParameterExpression>();
