@@ -17,5 +17,9 @@ public enum ShardingTableType : byte
     /// <summary>
     /// 映射表，与首个多分表的进行表名映射的表，可能是一个或是多个分表
     /// </summary>
-    ShardingTableMap
+    ShardingTableMap,
+    /// <summary>
+    /// 需要拆分表
+    /// </summary>
+    SplitTables
 }

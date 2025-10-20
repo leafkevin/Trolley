@@ -39,8 +39,8 @@ public interface IUpdateVisitor : IDisposable
     void OnlyFields(params string[] fieldNames);
     void OnlyFields(Expression fieldsSelector);
     void SetBulk(IEnumerable updateObjs, int bulkCount);
-    (IEnumerable, int, string, Action<IDataParameterCollection>, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>,
-        Action<StringBuilder, DbContext, string, object, string>, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command);
+    (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>, Action<IDataParameterCollection, StringBuilder, string, object, int>, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command);
+
     void WhereWith(object whereObj);
     void Where(Expression whereExpr);
     void And(Expression whereExpr);

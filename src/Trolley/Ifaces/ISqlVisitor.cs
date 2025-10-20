@@ -38,6 +38,7 @@ public interface ISqlVisitor : IDisposable
     object Evaluate(Expression expr);
     T Evaluate<T>(Expression expr);
     string GetQuotedValue(SqlFieldSegment sqlSegment, bool isNeedExprWrap = false);
+    TValue GetQuotedValue<TValue>(SqlFieldSegment sqlSegment);
     string GetQuotedValue(object elementValue, SqlFieldSegment arraySegment, SqlFieldSegment elementSegmente);
     string ChangeParameterValue(SqlFieldSegment sqlSegment, Type targetType);
     SqlFieldSegment VisitSqlMethodCall(SqlFieldSegment sqlSegment);
