@@ -204,7 +204,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     continue;
                 if (!entityMapper.TryGetMemberMap(key, out var memberMapper))
                     continue;
-                if (memberMapper.IsAutoIncrement || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert) 
+                if (memberMapper.IsAutoIncrement || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert || memberMapper.IsNavigation)
                     continue;
 
                 Func<object, object> valueGetter = null;
@@ -242,7 +242,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     continue;
                 if (!entityMapper.TryGetMemberMap(fieldName, out var memberMapper))
                     continue;
-                if (memberMapper.IsAutoIncrement || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert)
+                if (memberMapper.IsAutoIncrement || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert || memberMapper.IsNavigation)
                     continue;
 
                 Func<object, object> valueGetter = null;

@@ -234,7 +234,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         string fixedHeadSql = "SET ", fixedTailSql = ";";
         List<IDbDataParameter> fixedDbParameters = null;
 
-
         if (this.deferredSegments.Count > 1)
         {
             var tempDbParameters = new TheaDbParameterCollection();
@@ -296,7 +295,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     continue;
                 if (!entityMapper.TryGetMemberMap(key, out var memberMapper))
                     continue;
-                if (memberMapper.IsIgnore || memberMapper.IsIgnoreUpdate)
+                if (memberMapper.IsIgnore || memberMapper.IsIgnoreUpdate || memberMapper.IsNavigation)
                     continue;
 
                 Func<object, object> valueGetter = null;
@@ -335,7 +334,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     continue;
                 if (!entityMapper.TryGetMemberMap(fieldName, out var memberMapper))
                     continue;
-                if (memberMapper.IsIgnore || memberMapper.IsIgnoreUpdate)
+                if (memberMapper.IsIgnore || memberMapper.IsIgnoreUpdate || memberMapper.IsNavigation)
                     continue;
 
                 Func<object, object> valueGetter = null;
