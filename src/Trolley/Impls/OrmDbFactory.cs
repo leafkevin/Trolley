@@ -19,18 +19,44 @@ public sealed class OrmDbFactory : IOrmDbFactory
     private readonly ConcurrentDictionary<string, ITableShardingProvider> tableShardingProviders = new();
     private readonly ConcurrentDictionary<OrmProviderType, ITableShardingProvider> globalTableShardingProviders = new();
 
-    private ConcurrentDictionary<string, Delegate> complexMasterConnectionStringSelectors = new();
-    private ConcurrentDictionary<string, Delegate> complexSlaveConnectionStringSelectors = new();
-    private ConcurrentDictionary<string, IEntityMapProvider> complexMapProviders = new();
-    private ConcurrentDictionary<string, ITableShardingProvider> complexTableShardingProviders = new();
-
-    private OrmDbFactoryOptions options = new();
+    private readonly ConcurrentDictionary<string, Delegate> complexMasterConnectionStringSelectors = new();
+    private readonly ConcurrentDictionary<string, Delegate> complexSlaveConnectionStringSelectors = new();
+    private readonly ConcurrentDictionary<string, IEntityMapProvider> complexMapProviders = new();
+    private readonly ConcurrentDictionary<string, ITableShardingProvider> complexTableShardingProviders = new();
     private TheaDatabase defaultDatabase;
+
+    /// <summary>
+    /// 获取或设置命令超时时间，单位是秒，默认是30秒
+    /// </summary>
+    public int CommandTimeout { get; set; } = 30;
+    /// <summary>
+    /// 表达式中使用变量默认的参数名前缀，默认值是p，如：@p1,@p2等
+    /// </summary>
+    public string UserParameterPrefix { get; set; } = "p";
+    /// <summary>
+    /// 表达式解析中，常量是否参数化。如果设置为true，所有常量也将都会参数化，所有变量都会做参数化处理。
+    /// </summary>
+    public bool IsConstantParameterized { get; set; } = false;
+    /// <summary>
+    /// 枚举类型常量或变量，在未指定dbType类型时映射到数据库的默认类型，默认值是int类型
+    /// </summary>
+    public Type DefaultEnumMapDbType { get; set; } = typeof(int);
+    /// <summary>
+    /// DateTime、DateTimeOffset类型的DateTimeKind，默认是DateTimeKind.Local，如果返回的日期类型不是默认是DefaultDateTimeKind，将转换为DefaultDateTimeKind类型，如果值为DateTimeKind.Unspecified，将不做处理
+    /// </summary>
+    public DateTimeKind DefaultDateTimeKind { get; set; } = DateTimeKind.Local;
+    /// <summary>
+    /// 拦截器，默认为null
+    /// </summary>
+    public DbInterceptors DbInterceptors { get; set; } = new DbInterceptors();
+    /// <summary>
+    /// 字段映射处理器，默认为DefaultFieldMapHandler实例
+    /// </summary>
+    public IFieldMapHandler FieldMapHandler { get; set; } = new DefaultFieldMapHandler();
+
 
     public ICollection<TheaDatabase> Databases => this.databases.Values;
     public ICollection<IOrmProvider> OrmProviders => this.ormProviders.Values;
-    public IFieldMapHandler FieldMapHandler => this.options.FieldMapHandler;
-    public OrmDbFactoryOptions Options => this.options;
 
     public TheaDatabase Register(OrmProviderType ormProviderType, string dbKey, bool isDefault)
     {
@@ -187,26 +213,19 @@ public sealed class OrmDbFactory : IOrmDbFactory
             OrmProvider = database.OrmProvider,
             MapProvider = mapProvider,
             ShardingProvider = tableShardingProvider,
-            UserParameterPrefix = this.options.UserParameterPrefix,
-            CommandTimeout = this.options.CommandTimeout,
-            FieldMapHandler = this.options.FieldMapHandler,
-            DbInterceptors = this.options.DbInterceptors,
-            DefaultEnumMapDbType = this.options.DefaultEnumMapDbType,
-            IsConstantParameterized = this.options.IsConstantParameterized,
-            JsonTypeHandler = database.OrmProvider.GetTypeHandler(typeof(JsonTypeHandler)),
-            ToStringTypeHandler = database.OrmProvider.GetTypeHandler(typeof(ToStringTypeHandler))
+            DefaultDateTimeKind = this.DefaultDateTimeKind,
+            UserParameterPrefix = this.UserParameterPrefix,
+            CommandTimeout = this.CommandTimeout,
+            FieldMapHandler = this.FieldMapHandler,
+            DbInterceptors = this.DbInterceptors,
+            DefaultEnumMapDbType = this.DefaultEnumMapDbType,
+            IsConstantParameterized = this.IsConstantParameterized
         });
     }
     public IRepository CreateRepository(DbContext dbContext)
     {
         var ormProvider = dbContext.OrmProvider;
         return ormProvider.CreateRepository(dbContext);
-    }
-    public void With(Action<OrmDbFactoryOptions> optionsInitializer)
-    {
-        if (optionsInitializer == null)
-            throw new ArgumentNullException(nameof(optionsInitializer));
-        optionsInitializer.Invoke(this.options);
     }
     public Type GetOrmProviderType(OrmProviderType ormProviderType)
     {
@@ -255,7 +274,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
             foreach (var mapProvider in this.mapProviders)
             {
                 var database = this.GetDatabase(mapProvider.Key);
-                mapProvider.Value.Build(database);
+                mapProvider.Value.Build(database, this.FieldMapHandler);
                 this.complexMapProviders.TryAdd(database.DbKey, mapProvider.Value);
             }
         }
@@ -271,7 +290,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
                         continue;
                     //确保每个实体都映射到，如果映射过了，不再映射
                     //有时候一个数据库并不能映射完所有实体，有的实体在其他数据库中使用，所以需要遍历所有数据库映射
-                    mapProvider.Value.Build(database);
+                    mapProvider.Value.Build(database, this.FieldMapHandler);
                     this.complexMapProviders.TryAdd(database.DbKey, mapProvider.Value);
                 }
             }

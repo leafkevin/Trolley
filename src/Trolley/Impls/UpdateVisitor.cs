@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -12,6 +13,9 @@ namespace Trolley;
 public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 {
     protected List<CommandSegment> deferredSegments = new();
+    protected bool isNeedSplitShardingTables = false;
+    protected TableShardingInfo tableShardingInfo = null;
+    protected Dictionary<string, object> shardingDependOnValues = null;
 
     public List<string> OnlyFieldNames { get; set; }
     public List<string> IgnoreFieldNames { get; set; }
@@ -283,83 +287,10 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             this.DbParameters = command.Parameters;
         }
 
-        var entityMapper = tableSegment.Mapper;
-        if (firstUpdateObj is IDictionary<string, object> dict)
-        {
-            foreach (var key in dict.Keys)
-            {
-                var fieldName = key.ToLower();
-                if (hasIgnoreFields && this.IgnoreFieldNames.Exists(f => f.ToLower() == fieldName))
-                    continue;
-                if (hasOnlyFields && !this.OnlyFieldNames.Exists(f => f.ToLower() == fieldName))
-                    continue;
-                if (!entityMapper.TryGetMemberMap(key, out var memberMapper))
-                    continue;
-                if (memberMapper.IsIgnore || memberMapper.IsIgnoreUpdate || memberMapper.IsNavigation)
-                    continue;
+        var valueFieldsInitializer = RepositoryHelper.BuildWithBulkFilterFieldsCommandInitializer(this.DbContext, entityType, updateObjType, 2, hasOnlyFields, hasIgnoreFields)
+            as Action<IDataParameterCollection, List<ValueFieldSegment>, List<ValueFieldSegment>, DbContext, List<string>, List<string>, object>;
+        valueFieldsInitializer.Invoke(this.DbParameters, keyFieldSegments, valueFieldSegments, this.DbContext, this.OnlyFieldNames, this.IgnoreFieldNames, firstUpdateObj);
 
-                Func<object, object> valueGetter = null;
-                if (memberMapper.TypeHandler != null)
-                {
-                    valueGetter = f =>
-                    {
-                        var myDict = f as IDictionary<string, object>;
-                        return memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, myDict[key]);
-                    };
-                }
-                else
-                {
-                    var targetType = this.OrmProvider.MapDefaultType(memberMapper);
-                    var myValueGetter = this.OrmProvider.GetParameterValueGetter(dict[key]?.GetType(), targetType, !memberMapper.IsRequired, this.DbContext);
-                    valueGetter = f =>
-                    {
-                        var myDict = f as IDictionary<string, object>;
-                        return myValueGetter.Invoke(myDict[key]);
-                    };
-                }
-                var valueFields = memberMapper.IsKey ? keyFieldSegments : valueFieldSegments;
-                valueFields.Add(new ValueFieldSegment(memberMapper, valueGetter));
-            }
-        }
-        else
-        {
-            var memberInfos = updateObjType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
-            foreach (var memberInfo in memberInfos)
-            {
-                var fieldName = memberInfo.Name.ToLower();
-                if (hasIgnoreFields && this.IgnoreFieldNames.Exists(f => f.ToLower() == fieldName))
-                    continue;
-                if (hasOnlyFields && !this.OnlyFieldNames.Exists(f => f.ToLower() == fieldName))
-                    continue;
-                if (!entityMapper.TryGetMemberMap(fieldName, out var memberMapper))
-                    continue;
-                if (memberMapper.IsIgnore || memberMapper.IsIgnoreUpdate || memberMapper.IsNavigation)
-                    continue;
-
-                Func<object, object> valueGetter = null;
-                if (memberMapper.TypeHandler != null)
-                {
-                    valueGetter = f =>
-                    {
-                        var fieldValue = FasterEvaluator.EvaluateAndCache(f, memberInfo);
-                        return memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
-                    };
-                }
-                else
-                {
-                    var targetType = this.OrmProvider.MapDefaultType(memberMapper);
-                    var myValueGetter = this.OrmProvider.GetParameterValueGetter(memberInfo.GetMemberType(), targetType, !memberMapper.IsRequired, this.DbContext);
-                    valueGetter = f =>
-                    {
-                        var fieldValue = FasterEvaluator.EvaluateAndCache(f, memberInfo);
-                        return myValueGetter.Invoke(fieldValue);
-                    };
-                }
-                var valueFields = memberMapper.IsKey ? keyFieldSegments : valueFieldSegments;
-                valueFields.Add(new ValueFieldSegment(memberMapper, valueGetter));
-            }
-        }
         loopSqlSetter = (dbParameters, builder, tableName, updateObj, index) =>
         {
             builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} SET {fixedHeadSql}");
@@ -504,6 +435,11 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             Type = "SetBulk",
             Value = (updateObjs, bulkCount)
         });
+        var tableSegment = this.Tables[0];
+        this.isNeedSplitShardingTables = this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out this.tableShardingInfo)
+            && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null;
+        if (this.isNeedSplitShardingTables && (this.tableShardingInfo.DependOnMembers == null || this.tableShardingInfo.DependOnMembers.Count == 0))
+            throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，但未指定分表名，也未指定依赖成员，无法确定分表，原表名：{tableSegment.Mapper.TableName}");
     }
     public virtual void WhereWith(object whereObj)
     {
@@ -605,7 +541,10 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var entityType = this.Tables[0].Mapper.EntityType;
         var updateObjType = updateObj.GetType();
         //单独更新多个字段，通过一个多字段实体类型，都当作单个实体类型处理
-        var commandInitializer = RepositoryHelper.BuildUpdateSqlParametersPart(this.DbContext, entityType, updateObjType, false, true, this.OnlyFieldNames != null, this.IgnoreFieldNames != null)
+        var hasOnlyFields = this.OnlyFieldNames != null && this.OnlyFieldNames.Count > 0;
+        var hasIgnoreFields = this.IgnoreFieldNames != null && this.IgnoreFieldNames.Count > 0;
+
+        var commandInitializer = RepositoryHelper.BuildWithFilterFieldsCommandInitializer(this.DbContext, entityType, updateObjType, 2, hasOnlyFields, hasIgnoreFields)
             as Action<IDataParameterCollection, List<string>, DbContext, List<string>, List<string>, object>;
         commandInitializer.Invoke(this.DbParameters, this.UpdateFields, this.DbContext, this.OnlyFieldNames, this.IgnoreFieldNames, updateObj);
     }
@@ -687,14 +626,15 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
         this.InitTableAlias(valueSelector as LambdaExpression);
         (var sql, _, _) = this.VisitFromQuery(valueSelector as LambdaExpression);
-        this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
+        this.UpdateFields.Add($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
     }
     public virtual void VisitWhereWith(object whereObj)
     {
         var entityType = this.Tables[0].EntityType;
         var whereObjType = whereObj.GetType();
-        var whereSqlParameters = RepositoryHelper.BuildUpdateWhereObjSqlParameters(this.DbContext, entityType, whereObjType, false, true);
-        var conditionSql = whereSqlParameters.Invoke(this.DbParameters, this.DbContext, whereObj);
+        var whereSqlSetter = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjType,true, false, true)
+            as Func<IDataParameterCollection, DbContext, object, string>;
+        var conditionSql = whereSqlSetter.Invoke(this.DbParameters, this.DbContext, whereObj);
         if (string.IsNullOrEmpty(this.WhereSql))
         {
             this.WhereSql = conditionSql;
@@ -816,13 +756,15 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public virtual void AddMemberElement(MemberMap memberMapper, object memberValue, bool isEntity = true)
     {
-        if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
         if (memberValue is DBNull || memberValue == null)
         {
-            this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=NULL");
+            this.UpdateFields.Add($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=NULL");
             return;
         }
         var fieldValue = isEntity ? memberMapper.Member.Evaluate(memberValue) : memberValue;
+        if (this.isNeedSplitShardingTables && this.tableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
+            this.shardingDependOnValues[memberMapper.MemberName] = fieldValue;
+
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
         if (memberMapper.TypeHandler != null)
             fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
@@ -833,7 +775,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             fieldValue = valueGetter.Invoke(fieldValue);
         }
         this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
-        this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+        this.UpdateFields.Add($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
     }
     public virtual void AddMemberElement(SqlFieldSegment sqlSegment, MemberMap memberMapper)
     {
@@ -845,6 +787,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (sqlSegment.IsConstant || sqlSegment.IsVariable)
         {
             var fieldValue = sqlSegment.Value;
+            if (this.isNeedSplitShardingTables && this.tableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
+                this.shardingDependOnValues[memberMapper.MemberName] = sqlSegment.Value;
+
             var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
             if (memberMapper.TypeHandler != null)
                 fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
@@ -855,7 +800,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 fieldValue = valueGetter.Invoke(fieldValue);
             }
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
-            this.UpdateFields.Add($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+            this.UpdateFields.Add($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");           
         }
     }
     public Dictionary<string, List<object>> SplitShardingParameters(Type updateObjType, TableShardingInfo tableShardingInfo, IEnumerable updateObjs, object sampleObj)
@@ -863,97 +808,114 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var result = new Dictionary<string, List<object>>();
         var origTableName = this.Tables[0].Mapper.TableName;
 
-        //使用分表规则获取分表名，根据依赖的字段值执行分表规则委托获取分表名
-        if (tableShardingInfo.DependOnMembers == null || tableShardingInfo.DependOnMembers.Count == 0)
-            throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，但未指定分表名，也未指定依赖的成员，无法确定分表，原表名：{origTableName}");
-
-        var fieldValueGetters = new List<Func<object, object>>();
-        bool TryAddMemberGetter(string memberName)
+        //优先使用本次设置的分表名获取委托来获取分表名
+        if (this.Tables[0].ShardingTableGetter != null)
         {
-            for (int i = 1; i < this.deferredSegments.Count; i++)
+            var tableNameGetter = this.Tables[0].ShardingTableGetter;
+            foreach (var updateObj in updateObjs)
             {
-                var deferredSegment = this.deferredSegments[i];
-                switch (deferredSegment.Type)
+                var tableName = tableNameGetter.DynamicInvoke(updateObj) as string;
+                if (string.IsNullOrEmpty(tableName))
+                    throw new InvalidOperationException($"手动设置的分表名获取委托无法获取分表名，原表名：{origTableName}，当前参数：{this.DbContext.JsonTypeHandler.ToFieldValue(this.OrmProvider, updateObj)}");
+                if (!result.TryGetValue(tableName, out var myParameters))
+                    result.Add(tableName, myParameters = new List<object>());
+                myParameters.Add(updateObj);
+            }
+        }
+        else
+        {
+            //使用分表规则获取分表名，根据依赖的字段值执行分表规则委托获取分表名
+            if (tableShardingInfo.DependOnMembers == null || tableShardingInfo.DependOnMembers.Count == 0)
+                throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，但未指定分表名，也未指定依赖的成员，无法确定分表，原表名：{origTableName}");
+
+            var fieldValueGetters = new List<Func<object, object>>();
+            bool TryAddMemberGetter(string memberName)
+            {
+                for (int i = 1; i < this.deferredSegments.Count; i++)
                 {
-                    case "Set":
-                        this.VisitSet(deferredSegment.Value as Expression);
-                        break;
-                    case "SetField":
-                        (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegment.Value;
-                        var lambdaExpr = fieldSelector as LambdaExpression;
-                        var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;
-                        if (memberExpr.Member.Name == memberName)
-                        {
-                            fieldValueGetters.Add(f => fieldValue);
-                            return true;
-                        }
-                        break;
-                    case "SetWith":
-                        var updateObj = deferredSegment.Value;
-                        var myInsertObjType = updateObj.GetType();
-                        if (RepositoryHelper.TryGetMemberGetter(myInsertObjType, memberName.ToLower(), updateObj, out var memberGetter))
-                        {
-                            fieldValueGetters.Add(f => memberGetter.Invoke(updateObj));
-                            return true;
-                        }
-                        break;
-                    //分区表，二级分区为时间分区，为了提高性能，增加额外的时间条件命中二级时间分区
-                    case "Where":
-                        this.VisitWhere(deferredSegment.Value as Expression);
-                        break;
-                    case "WhereWith":
-                        this.VisitWhereWith(deferredSegment.Value);
-                        break;
-                    case "And":
-                        this.VisitAnd(deferredSegment.Value as Expression);
-                        break;
-                    case "Or":
-                        this.VisitOr(deferredSegment.Value as Expression);
-                        break;
-                    default: throw new NotSupportedException("SetBulk操作后，只支持Set/IgnoreFields/OnlyFields/Where/And/Or操作");
+                    var deferredSegment = this.deferredSegments[i];
+                    switch (deferredSegment.Type)
+                    {
+                        case "Set":
+                            this.VisitSet(deferredSegment.Value as Expression);
+                            break;
+                        case "SetField":
+                            (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegment.Value;
+                            var lambdaExpr = fieldSelector as LambdaExpression;
+                            var memberExpr = this.EnsureMem berVisit(lambdaExpr.Body) as MemberExpression;
+                            if (memberExpr.Member.Name == memberName)
+                            {
+                                fieldValueGetters.Add(f => fieldValue);
+                                return true;
+                            }
+                            break;
+                        case "SetWith":
+                            var updateObj = deferredSegment.Value;
+                            var myInsertObjType = updateObj.GetType();
+                            if (RepositoryHelper.TryGetMemberGetter(myInsertObjType, memberName.ToLower(), updateObj, out var memberGetter))
+                            {
+                                fieldValueGetters.Add(f => memberGetter.Invoke(updateObj));
+                                return true;
+                            }
+                            break;
+                        //分区表，二级分区为时间分区，为了提高性能，增加额外的时间条件命中二级时间分区
+                        case "Where":
+                            this.VisitWhere(deferredSegment.Value as Expression);
+                            break;
+                        case "WhereWith":
+                            this.VisitWhereWith(deferredSegment.Value);
+                            break;
+                        case "And":
+                            this.VisitAnd(deferredSegment.Value as Expression);
+                            break;
+                        case "Or":
+                            this.VisitOr(deferredSegment.Value as Expression);
+                            break;
+                        default: throw new NotSupportedException("SetBulk操作后，只支持Set/IgnoreFields/OnlyFields/Where/And/Or操作");
 
 
-                    case "WithByField":
-                        (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegment.Value;
-                        var lambdaExpr = fieldSelector as LambdaExpression;
-                        var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;
-                        if (memberExpr.Member.Name == memberName)
-                        {
-                            fieldValueGetters.Add(f => fieldValue);
-                            return true;
-                        }
-                        break;
+                        case "WithByField":
+                            (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegment.Value;
+                            var lambdaExpr = fieldSelector as LambdaExpression;
+                            var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;
+                            if (memberExpr.Member.Name == memberName)
+                            {
+                                fieldValueGetters.Add(f => fieldValue);
+                                return true;
+                            }
+                            break;
+                    }
                 }
+                return false;
             }
-            return false;
-        }
 
-        foreach (var memberName in tableShardingInfo.DependOnMembers)
-        {
-            if (RepositoryHelper.TryGetMemberGetter(updateObjType, memberName.ToLower(), sampleObj, out var memberGetter))
+            foreach (var memberName in tableShardingInfo.DependOnMembers)
             {
-                fieldValueGetters.Add(memberGetter);
-                continue;
+                if (RepositoryHelper.TryGetMemberGetter(updateObjType, memberName.ToLower(), sampleObj, out var memberGetter))
+                {
+                    fieldValueGetters.Add(memberGetter);
+                    continue;
+                }
+                if (!TryAddMemberGetter(memberName))
+                    throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，依赖的成员{memberName}在插入对象类型{updateObjType.FullName}中不存在，无法确定分表，原表名：{origTableName}");
             }
-            if (!TryAddMemberGetter(memberName))
-                throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，依赖的成员{memberName}在插入对象类型{updateObjType.FullName}中不存在，无法确定分表，原表名：{origTableName}");
-        }
-        Func<object, string> tableNameGetter = insertObj =>
-        {
-            var fieldValus = new List<object>();
-            foreach (var fieldValueGetter in fieldValueGetters)
-                fieldValus.Add(fieldValueGetter.Invoke(insertObj));
-            return tableShardingInfo.Rule.Invoke(origTableName, fieldValus.ToArray()) as string;
-        };
+            Func<object, string> tableNameGetter = insertObj =>
+            {
+                var fieldValus = new List<object>();
+                foreach (var fieldValueGetter in fieldValueGetters)
+                    fieldValus.Add(fieldValueGetter.Invoke(insertObj));
+                return tableShardingInfo.Rule.Invoke(origTableName, fieldValus.ToArray()) as string;
+            };
 
-        foreach (var insertObj in updateObjs)
-        {
-            var tableName = tableNameGetter.Invoke(insertObj);
-            if (string.IsNullOrEmpty(tableName))
-                throw new InvalidOperationException($"分表规则无法获取分表名，原表名：{origTableName}，当前参数：{this.DbContext.JsonTypeHandler.ToFieldValue(this.OrmProvider, insertObj)}");
-            if (!result.TryGetValue(tableName, out var myParameters))
-                result.Add(tableName, myParameters = new List<object>());
-            myParameters.Add(insertObj);
+            foreach (var insertObj in updateObjs)
+            {
+                var tableName = tableNameGetter.Invoke(insertObj);
+                if (string.IsNullOrEmpty(tableName))
+                    throw new InvalidOperationException($"分表规则无法获取分表名，原表名：{origTableName}，当前参数：{this.DbContext.JsonTypeHandler.ToFieldValue(this.OrmProvider, insertObj)}");
+                if (!result.TryGetValue(tableName, out var myParameters))
+                    result.Add(tableName, myParameters = new List<object>());
+                myParameters.Add(insertObj);
+            }
         }
         return result;
     }

@@ -16,12 +16,12 @@ public sealed class OrmDbFactoryBuilder
         return this;
     }
 
-    public OrmDbFactoryBuilder Configure(string dbKey, IModelConfiguration configuration)
+    public OrmDbFactoryBuilder UseMap(string dbKey, IModelConfiguration configuration)
     {
         this.dbFactory.Configure(dbKey, configuration);
         return this;
     }
-    public OrmDbFactoryBuilder Configure(OrmProviderType ormProviderType, IModelConfiguration configuration)
+    public OrmDbFactoryBuilder UseMap(OrmProviderType ormProviderType, IModelConfiguration configuration)
     {
         this.dbFactory.Configure(ormProviderType, configuration);
         return this;
@@ -131,12 +131,25 @@ public sealed class OrmDbFactoryBuilder
     }
     public OrmDbFactoryBuilder UseFieldMapHandler(IFieldMapHandler fieldMapHandler)
     {
-        this.dbFactory.Options.FieldMapHandler = fieldMapHandler;
+        this.dbFactory.FieldMapHandler = fieldMapHandler;
         return this;
     }
-    public OrmDbFactoryBuilder With(Action<OrmDbFactoryOptions> optionsInitializer)
+    public OrmDbFactoryBuilder Configure(Action<OrmDbFactoryOptions> optionsInitializer)
     {
-        this.dbFactory.With(optionsInitializer);
+        var options = new OrmDbFactoryOptions
+        {
+            CommandTimeout = this.dbFactory.CommandTimeout,
+            UserParameterPrefix = this.dbFactory.UserParameterPrefix,
+            IsConstantParameterized = this.dbFactory.IsConstantParameterized,
+            DefaultEnumMapDbType = this.dbFactory.DefaultEnumMapDbType,
+            DefaultDateTimeKind = this.dbFactory.DefaultDateTimeKind
+        };
+        optionsInitializer.Invoke(options);
+        this.dbFactory.CommandTimeout = options.CommandTimeout;
+        this.dbFactory.UserParameterPrefix = options.UserParameterPrefix;
+        this.dbFactory.IsConstantParameterized = options.IsConstantParameterized;
+        this.dbFactory.DefaultEnumMapDbType = options.DefaultEnumMapDbType;
+        this.dbFactory.DefaultDateTimeKind = options.DefaultDateTimeKind;
         return this;
     }
     public OrmDbFactoryBuilder UseInterceptors(Action<DbInterceptors> filterInitializer)
@@ -144,7 +157,7 @@ public sealed class OrmDbFactoryBuilder
         if (filterInitializer == null)
             throw new ArgumentNullException(nameof(filterInitializer));
 
-        filterInitializer.Invoke(this.dbFactory.Options.DbInterceptors);
+        filterInitializer.Invoke(this.dbFactory.DbInterceptors);
         return this;
     }
     public IOrmDbFactory Build()

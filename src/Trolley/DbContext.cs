@@ -19,19 +19,17 @@ public sealed class DbContext
     public IOrmProvider OrmProvider { get; internal set; }
     public IEntityMapProvider MapProvider { get; internal set; }
     public ITableShardingProvider ShardingProvider { get; internal set; }
-    public IFieldMapHandler FieldMapHandler { get; internal set; }
-    public DbInterceptors DbInterceptors { get; internal set; }
 
     public ITheaConnection Connection { get; set; }
     public ITheaTransaction Transaction { get; set; }
 
-    public bool IsConstantParameterized { get; set; }
-    public string UserParameterPrefix { get; set; }
-    public int CommandTimeout { get; set; }
-    public Type DefaultEnumMapDbType { get; set; }
-    public DateTimeKind DefaultDateTimeKind { get; set; }
-    public ITypeHandler JsonTypeHandler { get; set; }
-    public ITypeHandler ToStringTypeHandler { get; set; }
+    public int CommandTimeout { get; internal set; }
+    public string UserParameterPrefix { get; internal set; }
+    public bool IsConstantParameterized { get; internal set; }
+    public Type DefaultEnumMapDbType { get; internal set; }
+    public DateTimeKind DefaultDateTimeKind { get; internal set; }
+    public DbInterceptors DbInterceptors { get; internal set; }
+    public IFieldMapHandler FieldMapHandler { get; internal set; }
     #endregion
 
     #region UseMasterCommand/UseSlaveCommand
@@ -929,7 +927,7 @@ public sealed class DbContext
                 break;
             }
 
-            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this, entityType, updateObjType, true, false);
+            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this, entityType, updateObjType, true);
             var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
             var builder = new StringBuilder();
 
@@ -959,7 +957,7 @@ public sealed class DbContext
         else
         {
             var updateObjType = updateObjs.GetType();
-            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this, entityType, updateObjType, false, false);
+            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this, entityType, updateObjType, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
             command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this, updateObjs);
             connection.Open();
@@ -990,7 +988,7 @@ public sealed class DbContext
                 updateObjType = updateObj.GetType();
                 break;
             }
-            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this, entityType, updateObjType, true, false);
+            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this, entityType, updateObjType, true);
             var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
             var builder = new StringBuilder();
 
@@ -1020,7 +1018,7 @@ public sealed class DbContext
         else
         {
             var updateObjType = updateObjs.GetType();
-            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this, entityType, updateObjType, false, false);
+            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this, entityType, updateObjType, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
             command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this, updateObjs);
 
@@ -1268,4 +1266,6 @@ public sealed class DbContext
         return shardingTable.Rule.Invoke(entityMap.TableName, fieldValues) as string;
     }
     #endregion
+
+    public ITypeHandler GetTypeHandler(Type type) => this.OrmProvider.GetTypeHandler(type);
 }

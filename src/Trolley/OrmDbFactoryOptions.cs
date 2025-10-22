@@ -24,12 +24,4 @@ public class OrmDbFactoryOptions
     /// DateTime、DateTimeOffset类型的DateTimeKind，默认是DateTimeKind.Local，如果返回的日期类型不是默认是DefaultDateTimeKind，将转换为DefaultDateTimeKind类型，如果值为DateTimeKind.Unspecified，将不做处理
     /// </summary>
     public DateTimeKind DefaultDateTimeKind { get; set; } = DateTimeKind.Local;
-    /// <summary>
-    /// 拦截器，默认为null
-    /// </summary>
-    public DbInterceptors DbInterceptors { get; set; } = new DbInterceptors();
-    /// <summary>
-    /// 字段映射处理器，默认为DefaultFieldMapHandler实例
-    /// </summary>
-    public IFieldMapHandler FieldMapHandler { get; set; } = new DefaultFieldMapHandler();
 }

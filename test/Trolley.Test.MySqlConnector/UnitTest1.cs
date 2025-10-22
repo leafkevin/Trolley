@@ -1001,7 +1001,7 @@ public class UnitTest1 : UnitTestBase
                 }))
             .Where(f => f.OrderNo.Length > 3)
             .AndPredicate(t => t.And(f => f.BuyerId > 0).Build())
-            .OrderBy(f=>f.Id)
+            .OrderBy(f => f.Id)
             .Distinct()
             .ToSql(out parameters);
         Assert.Equal("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) SELECT DISTINCT b.`Id`,b.`TenantId`,b.`OrderNo`,b.`BuyerId`,b.`SellerId`,b.`BuyerSource`,b.`ProductCount`,b.`TotalAmount`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM (SELECT b.`OrderId` AS `Id`,'1' AS `TenantId`,CONCAT('ON-',b.`OrderId`) AS `OrderNo`,1 AS `BuyerId`,1 AS `SellerId`,'Taobao' AS `BuyerSource`,2 AS `ProductCount`,IFNULL(SUM(b.`Amount`),0) AS `TotalAmount`,1 AS `IsEnabled`,NOW() AS `CreatedAt`,1 AS `CreatedBy`,NOW() AS `UpdatedAt`,1 AS `UpdatedBy` FROM `sys_order_detail` b GROUP BY b.`OrderId` UNION\r\nSELECT a.`OrderId`,'1',CONCAT('ON-',a.`OrderId`),1,1,'Taobao',2,IFNULL(SUM(a.`Amount`),0),1,NOW(),1,NOW(),1 FROM `sys_order_detail` a GROUP BY a.`OrderId`) b WHERE CHAR_LENGTH(b.`OrderNo`)>3 AND b.`BuyerId`>0 ORDER BY b.`Id`", sql);
