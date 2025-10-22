@@ -26,10 +26,10 @@ public static class Extensions
     private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> queryReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> deferredValueReaderDeserializerCache = new();
 
-    public static OrmDbFactoryBuilder Configure<TModelConfiguration>(this OrmDbFactoryBuilder builder, OrmProviderType ormProviderType) where TModelConfiguration : class, IModelConfiguration, new()
-        => builder.Configure(ormProviderType, new TModelConfiguration());
-    public static OrmDbFactoryBuilder Configure<TModelConfiguration>(this OrmDbFactoryBuilder builder, string dbKey) where TModelConfiguration : class, IModelConfiguration, new()
-        => builder.Configure(dbKey, new TModelConfiguration());
+    public static OrmDbFactoryBuilder UseMap<TModelConfiguration>(this OrmDbFactoryBuilder builder, OrmProviderType ormProviderType) where TModelConfiguration : class, IModelConfiguration, new()
+        => builder.UseMap(ormProviderType, new TModelConfiguration());
+    public static OrmDbFactoryBuilder UseMap<TModelConfiguration>(this OrmDbFactoryBuilder builder, string dbKey) where TModelConfiguration : class, IModelConfiguration, new()
+        => builder.UseMap(dbKey, new TModelConfiguration());
     public static OrmDbFactoryBuilder UseTableSharding<TTableShardingConfiguration>(this OrmDbFactoryBuilder builder, OrmProviderType ormProviderType) where TTableShardingConfiguration : class, ITableShardingConfiguration, new()
         => builder.UseTableSharding(ormProviderType, new TTableShardingConfiguration());
     public static OrmDbFactoryBuilder UseTableSharding<TTableShardingConfiguration>(this OrmDbFactoryBuilder builder, string dbKey) where TTableShardingConfiguration : class, ITableShardingConfiguration, new()
@@ -37,22 +37,22 @@ public static class Extensions
 
     public static OrmDbFactoryBuilder UseFieldMapHandler<TFieldMapHandler>(this OrmDbFactoryBuilder builder) where TFieldMapHandler : class, IFieldMapHandler, new()
         => builder.UseFieldMapHandler(new TFieldMapHandler());
-    public static void Configure(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType, IModelConfiguration configuration)
+    public static void UseMap(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType, IModelConfiguration configuration)
     {
         if (!dbFactory.TryGetMapProvider(ormProviderType, out var mapProvider))
-            dbFactory.AddMapProvider(ormProviderType, mapProvider = new EntityMapProvider(dbFactory.Options.FieldMapHandler));
+            dbFactory.AddMapProvider(ormProviderType, mapProvider = new EntityMapProvider());
         configuration.OnModelCreating(new ModelBuilder(mapProvider));
     }
-    public static void Configure<TModelConfiguration>(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType) where TModelConfiguration : class, IModelConfiguration, new()
-       => dbFactory.Configure(ormProviderType, new TModelConfiguration());
-    public static void Configure(this IOrmDbFactory dbFactory, string dbKey, IModelConfiguration configuration)
+    public static void UseMap<TModelConfiguration>(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType) where TModelConfiguration : class, IModelConfiguration, new()
+       => dbFactory.UseMap(ormProviderType, new TModelConfiguration());
+    public static void UseMap(this IOrmDbFactory dbFactory, string dbKey, IModelConfiguration configuration)
     {
         if (!dbFactory.TryGetMapProvider(dbKey, out var mapProvider))
             dbFactory.AddMapProvider(dbKey, mapProvider = new EntityMapProvider());
         configuration.OnModelCreating(new ModelBuilder(mapProvider));
     }
-    public static void Configure<TModelConfiguration>(this IOrmDbFactory dbFactory, string dbKey) where TModelConfiguration : class, IModelConfiguration, new()
-       => dbFactory.Configure(dbKey, new TModelConfiguration());
+    public static void UseMap<TModelConfiguration>(this IOrmDbFactory dbFactory, string dbKey) where TModelConfiguration : class, IModelConfiguration, new()
+       => dbFactory.UseMap(dbKey, new TModelConfiguration());
 
     public static void UseTableSharding(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType, Action<TableShardingBuilder> shardingInitializer)
     {
