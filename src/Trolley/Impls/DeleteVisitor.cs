@@ -13,13 +13,10 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     protected List<CommandSegment> deferredSegments = new();
 
     public bool HasWhere { get; protected set; }
-    public DeleteVisitor(DbContext dbContext, char tableAsStart = 'a')
+    public DeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
     {
         this.DbContext = dbContext;
         this.TableAsStart = tableAsStart;
-    }
-    public virtual void Initialize(Type entityType)
-    {
         this.Tables = new()
         {
             new TableSegment

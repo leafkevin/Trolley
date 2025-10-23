@@ -26,13 +26,10 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public string FixedSql { get; set; }
     public bool HasWhere { get; protected set; }
 
-    public UpdateVisitor(DbContext dbContext, char tableAsStart = 'a')
+    public UpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
     {
         this.DbContext = dbContext;
         this.TableAsStart = tableAsStart;
-    }
-    public virtual void Initialize(Type entityType)
-    {
         this.Tables = new()
         {
             new TableSegment
@@ -437,7 +434,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         });
         var tableSegment = this.Tables[0];
         this.isNeedSplitShardingTables = this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out this.tableShardingInfo)
-            && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null;
+          && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null;
         if (this.isNeedSplitShardingTables && (this.tableShardingInfo.DependOnMembers == null || this.tableShardingInfo.DependOnMembers.Count == 0))
             throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，但未指定分表名，也未指定依赖成员，无法确定分表，原表名：{tableSegment.Mapper.TableName}");
     }
@@ -632,7 +629,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var whereObjType = whereObj.GetType();
-        var whereSqlSetter = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjType,true, false, true)
+        var whereSqlSetter = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjType, true, false, true)
             as Func<IDataParameterCollection, DbContext, object, string>;
         var conditionSql = whereSqlSetter.Invoke(this.DbParameters, this.DbContext, whereObj);
         if (string.IsNullOrEmpty(this.WhereSql))
@@ -800,7 +797,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 fieldValue = valueGetter.Invoke(fieldValue);
             }
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
-            this.UpdateFields.Add($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");           
+            this.UpdateFields.Add($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
         }
     }
     public Dictionary<string, List<object>> SplitShardingParameters(Type updateObjType, TableShardingInfo tableShardingInfo, IEnumerable updateObjs, object sampleObj)

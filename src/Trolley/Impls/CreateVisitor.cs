@@ -20,13 +20,10 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     public ActionMode ActionMode { get; set; }
     public bool IsReturnIdentity { get; set; }
 
-    public CreateVisitor(DbContext dbContext, char tableAsStart = 'a')
+    public CreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
     {
         this.DbContext = dbContext;
         this.TableAsStart = tableAsStart;
-    }
-    public virtual void Initialize(Type entityType)
-    {
         this.Tables = new()
         {
             new TableSegment
