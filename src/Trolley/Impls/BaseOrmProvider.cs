@@ -47,7 +47,6 @@ public abstract partial class BaseOrmProvider : IOrmProvider
         return builder.ToString();
     }
     public abstract object GetNativeDbType(Type type);
-    public abstract Type MapDefaultType(object nativeDbType);
     public abstract Type MapDefaultType(MemberMap memberMappper);
     public abstract string CastTo(Type type, object value, string characterSetOrCollation = null);
     public virtual string GetIdentitySql(string keyField) => ";SELECT @@IDENTITY";
@@ -1914,7 +1913,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
         return typeHandler;
     }
     public abstract object MapNativeDbType(DbColumnInfo columnInfo);
-    public abstract bool MapTables(string connectionString, IEntityMapProvider mapProvider, IFieldMapHandler fieldMapHandler);
+    public abstract bool MapTables(string connectionString, IEntityMapProvider entityMapProvider);
     public virtual bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter)
     {
         var memberInfo = memberExpr.Member;

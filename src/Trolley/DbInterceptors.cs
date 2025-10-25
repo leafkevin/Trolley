@@ -26,8 +26,7 @@ public enum CommandSqlType
     BulkUpdate,
     BulkCopyUpdate,
     Delete,
-    MultiQuery,
-    MultiCommand
+    MultiQuery
 }
 public class ConectionEventArgs : EventArgs
 {

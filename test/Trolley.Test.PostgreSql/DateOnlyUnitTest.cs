@@ -23,7 +23,7 @@ public class DateOnlyUnitTest : UnitTestBase
         {
             var connectionString = "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public";
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.PostgreSql, "fengling", f => f.UseConnectionString(connectionString), true)
+                .Register(OrmProviderType.PostgreSql, "fengling", f => f.Use(connectionString), true)
                 .Configure<ModelConfiguration>(OrmProviderType.PostgreSql)
                 .Configure<ModelConfiguration>("fengling")
                 .UseInterceptors(df =>

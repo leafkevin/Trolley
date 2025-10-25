@@ -27,8 +27,8 @@ public class UnitTest6 : UnitTestBase
             var builder = new OrmDbFactoryBuilder()
                 .Register(OrmProviderType.PostgreSql, "fengling", f => f.UseMaster(connectionString)
                     .UseSlave(connectionString1, connectionString2), true)
-                .Register(OrmProviderType.PostgreSql, "fengling1", f => f.UseConnectionString(connectionString1))
-                .Register(OrmProviderType.PostgreSql, "fengling2", f => f.UseConnectionString(connectionString2))
+                .Register(OrmProviderType.PostgreSql, "fengling1", f => f.Use(connectionString1))
+                .Register(OrmProviderType.PostgreSql, "fengling2", f => f.Use(connectionString2))
                 .Configure<ModelConfiguration>(OrmProviderType.PostgreSql)
                 .UseTableSharding<TableShardingConfiguration>(OrmProviderType.PostgreSql)
                 .UseInterceptors(df =>

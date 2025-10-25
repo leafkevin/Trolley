@@ -20,8 +20,8 @@ public class DateTimeUnitTest : UnitTestBase
         {
             var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.MySql, "fengling", f => f.UseConnectionString(connectionString), true)
-                .Configure<ModelConfiguration>(OrmProviderType.MySql)
+                .Register(OrmProviderType.MySql, "fengling", f => f.Use(connectionString), true)
+                .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
                 .UseInterceptors(df =>
                 {
                     df.OnConnectionCreated += evt =>

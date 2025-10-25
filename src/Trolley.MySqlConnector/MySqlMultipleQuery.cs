@@ -12,7 +12,7 @@ public class MySqlMultipleQuery : MultipleQuery
     #region GetShardingTableNames
     public override IMultipleQuery GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null)
     {
-        var entityMapper = this.DbContext.MapProvider.GetEntityMap(typeof(TEntity));
+        var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(typeof(TEntity));
         var orgTableName = entityMapper.TableName;
         tableSchema ??= this.DbContext.DefaultTableSchema;
         var sql = $"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME LIKE '{orgTableName}_%' AND TABLE_SCHEMA='{tableSchema}'";

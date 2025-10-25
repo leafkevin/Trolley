@@ -29,9 +29,21 @@ public class TableShardingBuilder
 }
 public class TableShardingBuilder<TEntity>
 {
-    private readonly ITableShardingProvider shardingProvider;
+    private readonly Type entityType = typeof(TEntity);
+    private readonly ITableShardingProvider shardingProvider = null;
+    private readonly TableShardingInfo shardingTableInfo = null;
     public TableShardingBuilder(ITableShardingProvider tableShardingProvider)
-        => this.shardingProvider = tableShardingProvider;
+    {
+        this.shardingProvider = tableShardingProvider;
+        if (!shardingProvider.TryGetTableSharding(entityType, out this.shardingTableInfo))
+        {
+            this.shardingProvider.AddTableSharding(entityType, this.shardingTableInfo = new TableShardingInfo
+            {
+                EntityType = entityType,
+                UsageMode = TableShardingUsageMode.Default
+            });
+        }
+    }
 
     /// <summary>
     /// 设置分表依赖的字段，在未明确指定分表时，将使用依赖字段来确定分表名，如：.DependOn(x => new { x.TenantId, x.CreatedAt})
@@ -47,12 +59,8 @@ public class TableShardingBuilder<TEntity>
 
         var memberExpr = fieldSelector.Body as MemberExpression;
         var memberName = memberExpr.Member.Name;
-        var entityType = typeof(TEntity);
-        if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
-            this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.DependOnMembers ??= new();
-        shardingTable.DependOnMembers.Add(memberName);
-
+        this.shardingTableInfo.DependOnMembers ??= new();
+        this.shardingTableInfo.DependOnMembers.Add(memberName);
         return this;
     }
     /// <summary>
@@ -69,11 +77,8 @@ public class TableShardingBuilder<TEntity>
         if (string.IsNullOrEmpty(validateRegex))
             throw new ArgumentNullException(nameof(validateRegex));
 
-        var entityType = typeof(TEntity);
-        if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
-            this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.Rule = tableNameGetter;
-        shardingTable.ValidateRegex = validateRegex;
+        this.shardingTableInfo.Rule = tableNameGetter;
+        this.shardingTableInfo.ValidateRegex = validateRegex;
         return this;
     }
     /// <summary>
@@ -106,11 +111,9 @@ public class TableShardingBuilder<TEntity>
     {
         if (tableNamesGetter == null)
             throw new ArgumentNullException(nameof(tableNamesGetter));
-
-        var entityType = typeof(TEntity);
-        if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
-            this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.RangleRule = tableNamesGetter;
+        this.shardingTableInfo.RangleRule = tableNamesGetter;
         return this;
     }
+    public void Apply(TableShardingUsageMode usageMode = TableShardingUsageMode.Default)
+        => this.shardingTableInfo.UsageMode = usageMode;
 }

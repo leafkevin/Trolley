@@ -26,95 +26,34 @@ public static class Extensions
     private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> queryReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> deferredValueReaderDeserializerCache = new();
 
-    public static OrmDbFactoryBuilder UseMap<TModelConfiguration>(this OrmDbFactoryBuilder builder, OrmProviderType ormProviderType) where TModelConfiguration : class, IModelConfiguration, new()
-        => builder.UseMap(ormProviderType, new TModelConfiguration());
-    public static OrmDbFactoryBuilder UseMap<TModelConfiguration>(this OrmDbFactoryBuilder builder, string dbKey) where TModelConfiguration : class, IModelConfiguration, new()
-        => builder.UseMap(dbKey, new TModelConfiguration());
+    public static OrmDbFactoryBuilder UseMapping<TModelConfiguration>(this OrmDbFactoryBuilder builder, OrmProviderType ormProviderType) where TModelConfiguration : class, IModelMappingConfiguration, new()
+        => builder.UseMapping(ormProviderType, new TModelConfiguration());
+    public static OrmDbFactoryBuilder UseMapping<TModelConfiguration>(this OrmDbFactoryBuilder builder, string dbKey) where TModelConfiguration : class, IModelMappingConfiguration, new()
+        => builder.UseMapping(dbKey, new TModelConfiguration());
     public static OrmDbFactoryBuilder UseTableSharding<TTableShardingConfiguration>(this OrmDbFactoryBuilder builder, OrmProviderType ormProviderType) where TTableShardingConfiguration : class, ITableShardingConfiguration, new()
         => builder.UseTableSharding(ormProviderType, new TTableShardingConfiguration());
     public static OrmDbFactoryBuilder UseTableSharding<TTableShardingConfiguration>(this OrmDbFactoryBuilder builder, string dbKey) where TTableShardingConfiguration : class, ITableShardingConfiguration, new()
         => builder.UseTableSharding(dbKey, new TTableShardingConfiguration());
 
-    public static OrmDbFactoryBuilder UseFieldMapHandler<TFieldMapHandler>(this OrmDbFactoryBuilder builder) where TFieldMapHandler : class, IFieldMapHandler, new()
-        => builder.UseFieldMapHandler(new TFieldMapHandler());
-    public static void UseMap(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType, IModelConfiguration configuration)
+    public static bool IsCanMapTo(this IEntityMapProvider entityMapProvider, MemberInfo fromName, MemberInfo toName)
     {
-        if (!dbFactory.TryGetMapProvider(ormProviderType, out var mapProvider))
-            dbFactory.AddMapProvider(ormProviderType, mapProvider = new EntityMapProvider());
-        configuration.OnModelCreating(new ModelBuilder(mapProvider));
+        if (fromName == null || toName == null)
+            return false;
+        return entityMapProvider.FieldMapHandler(fromName.Name, toName.Name);
     }
-    public static void UseMap<TModelConfiguration>(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType) where TModelConfiguration : class, IModelConfiguration, new()
-       => dbFactory.UseMap(ormProviderType, new TModelConfiguration());
-    public static void UseMap(this IOrmDbFactory dbFactory, string dbKey, IModelConfiguration configuration)
+    public static bool TryMapMember(this IEntityMapProvider entityMapProvider, string fieldName, List<MemberMap> memberMappers, out MemberMap memberMapper)
     {
-        if (!dbFactory.TryGetMapProvider(dbKey, out var mapProvider))
-            dbFactory.AddMapProvider(dbKey, mapProvider = new EntityMapProvider());
-        configuration.OnModelCreating(new ModelBuilder(mapProvider));
+        if (string.IsNullOrEmpty(fieldName))
+            throw new ArgumentNullException(nameof(fieldName));
+        memberMapper = memberMappers.Find(f => entityMapProvider.FieldMapHandler(fieldName, f.FieldName));
+        return memberMapper != null;
     }
-    public static void UseMap<TModelConfiguration>(this IOrmDbFactory dbFactory, string dbKey) where TModelConfiguration : class, IModelConfiguration, new()
-       => dbFactory.UseMap(dbKey, new TModelConfiguration());
-
-    public static void UseTableSharding(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType, Action<TableShardingBuilder> shardingInitializer)
+    public static bool TryMapMember(this IEntityMapProvider entityMapProvider, string fieldName, List<MemberInfo> memberInfos, out MemberInfo memberInfo)
     {
-        if (shardingInitializer == null)
-            throw new ArgumentNullException(nameof(shardingInitializer));
-
-        if (!dbFactory.TryGetTableShardingProvider(ormProviderType, out var tableShardingProvider))
-            dbFactory.AddTableShardingProvider(ormProviderType, tableShardingProvider = new TableShardingProvider());
-
-        var builder = new TableShardingBuilder(tableShardingProvider);
-        shardingInitializer.Invoke(builder);
-    }
-    public static void UseTableSharding(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType, ITableShardingConfiguration configuration)
-    {
-        if (configuration == null)
-            throw new ArgumentNullException(nameof(configuration));
-
-        if (!dbFactory.TryGetTableShardingProvider(ormProviderType, out var tableShardingProvider))
-            dbFactory.AddTableShardingProvider(ormProviderType, tableShardingProvider = new TableShardingProvider());
-
-        var builder = new TableShardingBuilder(tableShardingProvider);
-        configuration.OnModelCreating(builder);
-    }
-    public static void UseTableSharding<TTableShardingConfiguration>(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType) where TTableShardingConfiguration : class, ITableShardingConfiguration, new()
-    {
-        if (!dbFactory.TryGetTableShardingProvider(ormProviderType, out var tableShardingProvider))
-            dbFactory.AddTableShardingProvider(ormProviderType, tableShardingProvider = new TableShardingProvider());
-
-        var builder = new TableShardingBuilder(tableShardingProvider);
-        var configuration = new TTableShardingConfiguration();
-        configuration.OnModelCreating(builder);
-    }
-    public static void UseTableSharding(this IOrmDbFactory dbFactory, string dbKey, Action<TableShardingBuilder> shardingInitializer)
-    {
-        if (shardingInitializer == null)
-            throw new ArgumentNullException(nameof(shardingInitializer));
-
-        if (!dbFactory.TryGetTableShardingProvider(dbKey, out var tableShardingProvider))
-            dbFactory.AddTableShardingProvider(dbKey, tableShardingProvider = new TableShardingProvider());
-
-        var builder = new TableShardingBuilder(tableShardingProvider);
-        shardingInitializer.Invoke(builder);
-    }
-    public static void UseTableSharding(this IOrmDbFactory dbFactory, string dbKey, ITableShardingConfiguration configuration)
-    {
-        if (configuration == null)
-            throw new ArgumentNullException(nameof(configuration));
-
-        if (!dbFactory.TryGetTableShardingProvider(dbKey, out var tableShardingProvider))
-            dbFactory.AddTableShardingProvider(dbKey, tableShardingProvider = new TableShardingProvider());
-
-        var builder = new TableShardingBuilder(tableShardingProvider);
-        configuration.OnModelCreating(builder);
-    }
-    public static void UseTableSharding<TTableShardingConfiguration>(this IOrmDbFactory dbFactory, string dbKey) where TTableShardingConfiguration : class, ITableShardingConfiguration, new()
-    {
-        if (!dbFactory.TryGetTableShardingProvider(dbKey, out var tableShardingProvider))
-            dbFactory.AddTableShardingProvider(dbKey, tableShardingProvider = new TableShardingProvider());
-
-        var builder = new TableShardingBuilder(tableShardingProvider);
-        var configuration = new TTableShardingConfiguration();
-        configuration.OnModelCreating(builder);
+        if (string.IsNullOrEmpty(fieldName))
+            throw new ArgumentNullException(nameof(fieldName));
+        memberInfo = memberInfos.Find(f => entityMapProvider.FieldMapHandler(fieldName, f.Name));
+        return memberInfo != null;
     }
 
     public static string GetQuotedValue(this IOrmProvider ormProvider, object value)
@@ -131,7 +70,7 @@ public static class Extensions
         if (!mapProvider.TryGetEntityMap(mapToType, out var mapper))
             throw new Exception($"实体类型{mapToType.FullName}没有配置映射，请在IModelConfiguration.OnModelCreating方法中配置映射");
         var entityMapper = mapper.CreateDefaultMap(entityType);
-        mapProvider.AddEntityMap(entityType, entityMapper);
+        mapProvider.UseEntityMap(entityType, entityMapper);
         return entityMapper;
     }
     internal static bool IsNullableType(this Type type, out Type underlyingType)

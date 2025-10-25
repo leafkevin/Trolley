@@ -14,7 +14,7 @@ namespace Trolley.SqlServer;
 
 public partial class SqlServerProvider : BaseOrmProvider
 {
-    private readonly static Dictionary<object, Type> defaultMapTypes = new();
+    private readonly static Dictionary<SqlDbType, Type> defaultMapTypes = new();
     private readonly static Dictionary<Type, object> defaultDbTypes = new();
     private readonly static Dictionary<Type, string> castTos = new();
 
@@ -197,14 +197,12 @@ public partial class SqlServerProvider : BaseOrmProvider
             throw new Exception($"类型{fieldType.FullName}没有对应的System.Data.SqlDbType映射类型");
         return dbType;
     }
-    public override Type MapDefaultType(object nativeDbType)
+    public override Type MapDefaultType(MemberMap memberMappper)
     {
-        if (defaultMapTypes.TryGetValue(nativeDbType, out var result))
+        if (defaultMapTypes.TryGetValue((SqlDbType)memberMappper.NativeDbType, out var result))
             return result;
         return typeof(object);
     }
-    public override Type MapDefaultType(MemberMap memberMappper)
-        => this.MapDefaultType(memberMappper.NativeDbType);
     public override string GetIdentitySql(string keyField) => ";SELECT SCOPE_IDENTITY()";
     public override string CastTo(Type type, object value, string characterSetOrCollation = null)
         => $"CAST({value} AS {castTos[type]})";
@@ -287,9 +285,9 @@ public partial class SqlServerProvider : BaseOrmProvider
             default: return SqlDbType.Variant;
         }
     }
-    public override bool MapTables(string connectionString, IEntityMapProvider mapProvider, IFieldMapHandler fieldMapHandler)
+    public override bool MapTables(string connectionString, IEntityMapProvider entityMapProvider)
     {
-        var tableNames = mapProvider.EntityMaps.Where(f => !f.IsMapped).Select(f => f.TableName).ToList();
+        var tableNames = entityMapProvider.EntityMaps.Where(f => !f.IsMapped).Select(f => f.TableName).ToList();
         if (tableNames == null || tableNames.Count == 0)
             return true;
         var sql = @"select b.name,a.name,c.name,d.name,(d.name+case when d.name in ('char','varchar','nchar','nvarchar','binary','varbinary') then '('+ case when c.max_length = -1 then 'MAX' when d.name
@@ -331,7 +329,7 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
             sqlBuilder.Append($"b.name='{tableBuilder.Key}' AND a.name IN ({tableBuilder.Value.ToString()})");
         }
         sql = string.Format(sql, sqlBuilder.ToString());
-        var entityMappers = mapProvider.EntityMaps.ToList();
+        var entityMappers = entityMapProvider.EntityMaps.ToList();
         var tableInfos = new List<DbTableInfo>();
         using var connection = new SqlConnection(connectionString);
         using var command = new SqlCommand(sql, connection);
@@ -385,7 +383,7 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
             var mappedMappers = new List<MemberMap>();
             foreach (var columnInfo in tableInfo.Columns)
             {
-                if (fieldMapHandler.TryFindMember(columnInfo.FieldName, entityMapper.MemberMaps, out var memberMapper))
+                if (entityMapProvider.TryMapMember(columnInfo.FieldName, entityMapper.MemberMaps, out var memberMapper))
                 {
                     memberMapper.DbColumnType = columnInfo.DbColumnType;
                     memberMapper.IsKey = columnInfo.IsPrimaryKey;
@@ -397,7 +395,7 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
                 }
                 else
                 {
-                    if (!fieldMapHandler.TryFindMember(columnInfo.FieldName, memberInfos, out var memberInfo))
+                    if (!entityMapProvider.TryMapMember(columnInfo.FieldName, memberInfos, out var memberInfo))
                     {
                         if (columnInfo.IsNullable || memberMapper.DbColumnType.ToLower() == "timestamp")
                             continue;
@@ -425,7 +423,7 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
                     //允许自定义TypeHandlerType设置，默认设置
                     if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string)
                         || memberMapper.UnderlyingType.IsEntityType(out _))
-                        && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
+                        && memberMapper.MappedTargetType == typeof(string))
                         memberMapper.TypeHandlerType = typeof(JsonTypeHandler);
 
                     if (memberMapper.TypeHandlerType != null)
@@ -452,26 +450,38 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
             else entityMapper.TableName = tableName;
             entityMapper.IsMapped = true;
         }
-        return mapProvider.EntityMaps.Count(f => !f.IsMapped) == 0;
+        return entityMapProvider.EntityMaps.Count(f => !f.IsMapped) == 0;
     }
     public virtual List<string> GetShardingTableNames<TEntity>(DbContext dbContext, Func<string, bool> tableNameSelector = null, string tableSchema = null)
     {
-        var entityMapper = dbContext.MapProvider.GetEntityMap(typeof(TEntity));
+        var entityMapper = dbContext.EntityMapProvider.GetEntityMap(typeof(TEntity));
         var orgTableName = entityMapper.TableName;
         tableSchema ??= dbContext.DefaultTableSchema;
         var sql = $"SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND a.type='U' AND a.name LIKE '{orgTableName}_%' AND b.name='{tableSchema}'";
-        var tableNames = dbContext.Query<string>(sql);
+        var tableNames = dbContext.QueryValue<string>(sql, reader =>
+        {
+            var result = new List<string>();
+            while (reader.Read())
+                result.Add(reader.GetFieldValue<string>(0));
+            return result;
+        });
         if (tableNameSelector != null)
             return tableNames.FindAll(f => tableNameSelector(f));
         return tableNames;
     }
     public virtual async Task<List<string>> GetShardingTableNamesAsync<TEntity>(DbContext dbContext, Func<string, bool> tableNameSelector = null, string tableSchema = null, CancellationToken cancellationToken = default)
     {
-        var entityMapper = dbContext.MapProvider.GetEntityMap(typeof(TEntity));
+        var entityMapper = dbContext.EntityMapProvider.GetEntityMap(typeof(TEntity));
         var orgTableName = entityMapper.TableName;
         tableSchema ??= dbContext.DefaultTableSchema;
         var sql = $"SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND a.type='U' AND a.name LIKE '{orgTableName}_%' AND b.name='{tableSchema}'";
-        var tableNames = await dbContext.QueryAsync<string>(sql);
+        var tableNames = await dbContext.QueryValueAsync<string>(sql, async (reader, cancellationToken) =>
+        {
+            var result = new List<string>();
+            while (await reader.ReadAsync(cancellationToken))
+                result.Add(await reader.GetFieldValueAsync<string>(0, cancellationToken));
+            return result;
+        }, CommandType.Text, cancellationToken);
         if (tableNameSelector != null)
             return tableNames.FindAll(f => tableNameSelector(f));
         return tableNames;

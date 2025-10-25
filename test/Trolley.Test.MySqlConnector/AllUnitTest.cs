@@ -29,9 +29,9 @@ public class AllUnitTest : UnitTestBase
             var builder = new OrmDbFactoryBuilder()
                 .Register(OrmProviderType.MySql, "fengling", f => f.UseMaster(connectionString)
                     .UseSlave(connectionString1, connectionString2), true)
-                .Register(OrmProviderType.MySql, "fengling1", f => f.UseConnectionString(connectionString1))
-                .Register(OrmProviderType.MySql, "fengling2", f => f.UseConnectionString(connectionString2))
-                .Configure<ModelConfiguration>(OrmProviderType.MySql)
+                .Register(OrmProviderType.MySql, "fengling1", f => f.Use(connectionString1))
+                .Register(OrmProviderType.MySql, "fengling2", f => f.Use(connectionString2))
+                .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
                 .UseTableSharding<TableShardingConfiguration>(OrmProviderType.MySql)
                 .UseInterceptors(df =>
                 {

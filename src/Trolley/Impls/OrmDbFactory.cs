@@ -1,29 +1,26 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Trolley;
 
 public sealed class OrmDbFactory : IOrmDbFactory
 {
-    private readonly ConcurrentDictionary<OrmProviderType, IOrmProvider> ormProviders = new();
     private readonly ConcurrentDictionary<string, TheaDatabase> databases = new();
-
-    private readonly ConcurrentDictionary<string, Delegate> masterConnectionStringSelectors = new();
-    private readonly ConcurrentDictionary<OrmProviderType, Delegate> masterGlobalConnectionStringSelectors = new();
-    private readonly ConcurrentDictionary<string, Delegate> slaveConnectionStringSelectors = new();
-    private readonly ConcurrentDictionary<OrmProviderType, Delegate> slaveGlobalConnectionStringSelectors = new();
-
-    private readonly ConcurrentDictionary<string, IEntityMapProvider> mapProviders = new();
-    private readonly ConcurrentDictionary<OrmProviderType, IEntityMapProvider> globalMapProviders = new();
+    private readonly ConcurrentDictionary<OrmProviderType, IOrmProvider> ormProviders = new();
+    private readonly ConcurrentDictionary<string, IEntityMapProvider> entityMapProviders = new();
+    private readonly ConcurrentDictionary<OrmProviderType, IEntityMapProvider> globalEntityMapProviders = new();
     private readonly ConcurrentDictionary<string, ITableShardingProvider> tableShardingProviders = new();
     private readonly ConcurrentDictionary<OrmProviderType, ITableShardingProvider> globalTableShardingProviders = new();
 
-    private readonly ConcurrentDictionary<string, Delegate> complexMasterConnectionStringSelectors = new();
-    private readonly ConcurrentDictionary<string, Delegate> complexSlaveConnectionStringSelectors = new();
-    private readonly ConcurrentDictionary<string, IEntityMapProvider> complexMapProviders = new();
-    private readonly ConcurrentDictionary<string, ITableShardingProvider> complexTableShardingProviders = new();
     private TheaDatabase defaultDatabase;
+    private Delegate dbKeySelector;
+    private List<TheaDatabase> allDatabases = null;
+    private List<IOrmProvider> allOrmProviders = null;
+    private List<IEntityMapProvider> allEntityMapProviders = null;
+    private List<ITableShardingProvider> allTableShardingProviders = null;
+    private DbInterceptors dbInterceptors = new DbInterceptors();
 
     /// <summary>
     /// 获取或设置命令超时时间，单位是秒，默认是30秒
@@ -45,39 +42,35 @@ public sealed class OrmDbFactory : IOrmDbFactory
     /// DateTime、DateTimeOffset类型的DateTimeKind，默认是DateTimeKind.Local，如果返回的日期类型不是默认是DefaultDateTimeKind，将转换为DefaultDateTimeKind类型，如果值为DateTimeKind.Unspecified，将不做处理
     /// </summary>
     public DateTimeKind DefaultDateTimeKind { get; set; } = DateTimeKind.Local;
-    /// <summary>
-    /// 拦截器，默认为null
-    /// </summary>
-    public DbInterceptors DbInterceptors { get; set; } = new DbInterceptors();
-    /// <summary>
-    /// 字段映射处理器，默认为DefaultFieldMapHandler实例
-    /// </summary>
-    public IFieldMapHandler FieldMapHandler { get; set; } = new DefaultFieldMapHandler();
 
 
-    public ICollection<TheaDatabase> Databases => this.databases.Values;
-    public ICollection<IOrmProvider> OrmProviders => this.ormProviders.Values;
+    public Delegate DbKeySelector => this.dbKeySelector;
+    public List<TheaDatabase> Databases => this.allDatabases;
+    public List<IOrmProvider> OrmProviders => this.allOrmProviders;
+    public List<IEntityMapProvider> EntityMapProviders => this.allEntityMapProviders;
+    public List<ITableShardingProvider> TableShardingProviders => this.allTableShardingProviders;
+    public DbInterceptors DbInterceptors => this.dbInterceptors;
 
-    public TheaDatabase Register(OrmProviderType ormProviderType, string dbKey, bool isDefault)
+    public void Register(TheaDatabase database)
     {
-        if (string.IsNullOrEmpty(dbKey)) throw new ArgumentNullException(nameof(dbKey));
-
-        if (!this.ormProviders.TryGetValue(ormProviderType, out var ormProvider))
+        if (string.IsNullOrEmpty(database.DbKey))
+            throw new ArgumentNullException(nameof(database.DbKey));
+        this.databases.TryAdd(database.DbKey, database);
+        if (database.OrmProvider != null)
+            this.ormProviders.TryAdd(database.OrmProviderType, database.OrmProvider);
+        if (database.IsDefault)
+            this.defaultDatabase = database;
+    }
+    public TheaDatabase GetDatabase(string dbKey = null)
+    {
+        if (string.IsNullOrEmpty(dbKey))
         {
-            var type = this.GetOrmProviderType(ormProviderType);
-            ormProvider = RepositoryHelper.CreateInstance(type) as IOrmProvider;
-            this.ormProviders.TryAdd(ormProviderType, ormProvider);
+            if (this.defaultDatabase == null)
+                throw new Exception($"未配置默认数据库");
+            return this.defaultDatabase;
         }
-
-        TheaDatabase database;
-        if (!this.databases.TryAdd(dbKey, database = new TheaDatabase
-        {
-            DbKey = dbKey,
-            OrmProviderType = ormProviderType,
-            OrmProvider = ormProvider,
-            IsDefault = isDefault
-        })) throw new Exception($"dbKey:{database.DbKey}数据库已经存在！");
-        if (isDefault) this.defaultDatabase = database;
+        if (!this.databases.TryGetValue(dbKey, out var database))
+            throw new Exception($"未配置dbKey:{dbKey}的数据库");
         return database;
     }
 
@@ -94,256 +87,164 @@ public sealed class OrmDbFactory : IOrmDbFactory
             throw new Exception($"未配置dbKey:{dbKey}的数据库");
         this.defaultDatabase = defaultDatabase;
     }
+    public void UseDbKeySelector(Delegate dbKeySelector)
+        => this.dbKeySelector = dbKeySelector;
 
-    public bool TryGetConnectionStringSelector(string dbKey, out Delegate connectionStringSelector)
-        => this.TryGetMasterConnectionStringSelector(dbKey, out connectionStringSelector);
-    public void AddConnectionStringSelector(string dbKey, Delegate connectionStringSelector)
-        => this.AddMasterConnectionStringSelector(dbKey, connectionStringSelector);
-    public bool TryGetConnectionStringSelector(OrmProviderType ormProviderType, out Delegate connectionStringSelector)
-        => this.TryGetMasterConnectionStringSelector(ormProviderType, out connectionStringSelector);
-    public void AddConnectionStringSelector(OrmProviderType ormProviderType, Delegate connectionStringSelector)
-        => this.AddMasterConnectionStringSelector(ormProviderType, connectionStringSelector);
-
-    public bool TryGetMasterConnectionStringSelector(string dbKey, out Delegate connectionStringSelector)
-       => this.masterConnectionStringSelectors.TryGetValue(dbKey, out connectionStringSelector);
-    public void AddMasterConnectionStringSelector(string dbKey, Delegate connectionStringSelector)
-        => this.masterConnectionStringSelectors.TryAdd(dbKey, connectionStringSelector);
-    public bool TryGetMasterConnectionStringSelector(OrmProviderType ormProviderType, out Delegate connectionStringSelector)
-        => this.masterGlobalConnectionStringSelectors.TryGetValue(ormProviderType, out connectionStringSelector);
-    public void AddMasterConnectionStringSelector(OrmProviderType ormProviderType, Delegate connectionStringSelector)
-        => this.masterGlobalConnectionStringSelectors.TryAdd(ormProviderType, connectionStringSelector);
-
-    public bool TryGetSlaveConnectionStringSelector(string dbKey, out Delegate connectionStringSelector)
-        => this.slaveConnectionStringSelectors.TryGetValue(dbKey, out connectionStringSelector);
-    public void AddSlaveConnectionStringSelector(string dbKey, Delegate connectionStringSelector)
-        => this.slaveConnectionStringSelectors.TryAdd(dbKey, connectionStringSelector);
-    public bool TryGetSlaveConnectionStringSelector(OrmProviderType ormProviderType, out Delegate connectionStringSelector)
-        => this.slaveGlobalConnectionStringSelectors.TryGetValue(ormProviderType, out connectionStringSelector);
-    public void AddSlaveConnectionStringSelector(OrmProviderType ormProviderType, Delegate connectionStringSelector)
-        => this.slaveGlobalConnectionStringSelectors.TryAdd(ormProviderType, connectionStringSelector);
-
-    public bool TryGetTableShardingProvider(string dbKey, out ITableShardingProvider tableShardingProvider)
-        => this.tableShardingProviders.TryGetValue(dbKey, out tableShardingProvider);
-    public void AddTableShardingProvider(string dbKey, ITableShardingProvider tableShardingProvider)
-        => this.tableShardingProviders.TryAdd(dbKey, tableShardingProvider);
-    public bool TryGetTableShardingProvider(OrmProviderType ormProviderType, out ITableShardingProvider tableShardingProvider)
-        => this.globalTableShardingProviders.TryGetValue(ormProviderType, out tableShardingProvider);
-    public void AddTableShardingProvider(OrmProviderType ormProviderType, ITableShardingProvider tableShardingProvider)
-        => this.globalTableShardingProviders.TryAdd(ormProviderType, tableShardingProvider);
-    public bool TryGetTableSharding(string dbKey, Type entityType, out TableShardingInfo tableShardingInfo)
-    {
-        if (this.tableShardingProviders.TryGetValue(dbKey, out var tableShardingProvider)
-            && tableShardingProvider.TryGetTableSharding(entityType, out tableShardingInfo))
-            return true;
-        var database = this.GetDatabase(dbKey);
-        if (this.globalTableShardingProviders.TryGetValue(database.OrmProviderType, out tableShardingProvider)
-            && tableShardingProvider.TryGetTableSharding(entityType, out tableShardingInfo))
-            return true;
-        tableShardingInfo = null;
-        return false;
-    }
-    public bool TryGetTableSharding(OrmProviderType ormProviderType, Type entityType, out TableShardingInfo tableShardingInfo)
-    {
-        if (this.globalTableShardingProviders.TryGetValue(ormProviderType, out var tableShardingProvider)
-            && tableShardingProvider.TryGetTableSharding(entityType, out tableShardingInfo))
-            return true;
-        tableShardingInfo = null;
-        return false;
-    }
-
-    public void AddOrmProvider(IOrmProvider ormProvider)
+    public void UseOrmProvider(IOrmProvider ormProvider)
     {
         if (ormProvider == null)
             throw new ArgumentNullException(nameof(ormProvider));
-        this.ormProviders.TryAdd(ormProvider.OrmProviderType, ormProvider);
+        this.ormProviders.AddOrUpdate(ormProvider.OrmProviderType, ormProvider, (o, k) => ormProvider);
     }
     public bool TryGetOrmProvider(OrmProviderType ormProviderType, out IOrmProvider ormProvider)
         => this.ormProviders.TryGetValue(ormProviderType, out ormProvider);
 
-    public void AddMapProvider(OrmProviderType ormProviderType, IEntityMapProvider entityMapProvider)
-    {
-        if (entityMapProvider == null)
-            throw new ArgumentNullException(nameof(entityMapProvider));
-        this.globalMapProviders.TryAdd(ormProviderType, entityMapProvider);
-    }
-    public bool TryGetMapProvider(OrmProviderType ormProviderType, out IEntityMapProvider entityMapProvider)
-        => this.globalMapProviders.TryGetValue(ormProviderType, out entityMapProvider);
-    public void AddMapProvider(string dbKey, IEntityMapProvider entityMapProvider)
+    public void UseEntityMapProvider(string dbKey, IEntityMapProvider entityMapProvider)
     {
         if (string.IsNullOrEmpty(dbKey))
             throw new ArgumentNullException(nameof(dbKey));
         if (entityMapProvider == null)
             throw new ArgumentNullException(nameof(entityMapProvider));
-
-        this.mapProviders.TryAdd(dbKey, entityMapProvider);
+        this.entityMapProviders.AddOrUpdate(dbKey, entityMapProvider, (o, k) => entityMapProvider);
     }
-    public bool TryGetMapProvider(string dbKey, out IEntityMapProvider entityMapProvider)
-        => this.mapProviders.TryGetValue(dbKey, out entityMapProvider);
+    public bool TryGetEntityMapProvider(string dbKey, out IEntityMapProvider entityMapProvider)
+        => this.entityMapProviders.TryGetValue(dbKey, out entityMapProvider);
+    public void UseEntityMapProvider(OrmProviderType ormProviderType, IEntityMapProvider entityMapProvider)
+    {
+        if (entityMapProvider == null)
+            throw new ArgumentNullException(nameof(entityMapProvider));
+        this.globalEntityMapProviders.AddOrUpdate(ormProviderType, entityMapProvider, (o, k) => entityMapProvider);
+    }
+    public bool TryGetEntityMapProvider(OrmProviderType ormProviderType, out IEntityMapProvider entityMapProvider)
+        => this.globalEntityMapProviders.TryGetValue(ormProviderType, out entityMapProvider);
 
-    public TheaDatabase GetDatabase(string dbKey = null)
+    public void UseTableShardingProvider(string dbKey, ITableShardingProvider tableShardingProvider)
+    {
+        if (tableShardingProvider == null)
+            throw new ArgumentNullException(nameof(tableShardingProvider));
+        this.tableShardingProviders.AddOrUpdate(dbKey, tableShardingProvider, (o, k) => tableShardingProvider);
+    }
+    public bool TryGetTableShardingProvider(string dbKey, out ITableShardingProvider tableShardingProvider)
+        => this.tableShardingProviders.TryGetValue(dbKey, out tableShardingProvider);
+    public void UseTableShardingProvider(OrmProviderType ormProviderType, ITableShardingProvider tableShardingProvider)
+    {
+        if (tableShardingProvider == null)
+            throw new ArgumentNullException(nameof(tableShardingProvider));
+        this.globalTableShardingProviders.AddOrUpdate(ormProviderType, tableShardingProvider, (o, k) => tableShardingProvider);
+    }
+    public bool TryGetTableShardingProvider(OrmProviderType ormProviderType, out ITableShardingProvider tableShardingProvider)
+        => this.globalTableShardingProviders.TryGetValue(ormProviderType, out tableShardingProvider);
+
+    public TRepository Create<TRepository>(params object[] dbKeySelectorValues) where TRepository : class, IRepository
+    {
+        //如果有指定dbKey，就是使用指定的dbKey创建IRepository对象,如果也没有指定，就使用配置的默认dbKey
+        string dbKey = null;
+        if (this.dbKeySelector != null)
+        {
+            if (dbKeySelectorValues != null && dbKeySelectorValues.Length > 0)
+            {
+                if (dbKeySelectorValues.Length != this.dbKeySelector.Method.GetParameters().Length)
+                    throw new ArgumentException("dbKeySelectorValues参数个数与dbKeySelector委托参数个数不匹配");
+                dbKey = this.dbKeySelector.DynamicInvoke(dbKeySelectorValues) as string;
+            }
+            else dbKey = this.dbKeySelector.DynamicInvoke() as string;
+        }
+        else
+        {
+            if (this.defaultDatabase == null)
+                throw new ArgumentNullException(nameof(dbKey), "dbKey不可为null，未配置dbKeySelector委托，也没有配置默认数据库");
+            dbKey = this.defaultDatabase.DbKey;
+        }
+        return this.CreateRepository<TRepository>(dbKey);
+    }
+    public TRepository CreateRepository<TRepository>(string dbKey) where TRepository : class, IRepository
     {
         if (string.IsNullOrEmpty(dbKey))
         {
             if (this.defaultDatabase == null)
-                throw new Exception($"未配置默认数据库");
-            return this.defaultDatabase;
+                throw new ArgumentNullException(nameof(dbKey), "dbKey不可为null，也没有配置默认数据库");
+            dbKey = this.defaultDatabase.DbKey;
         }
-        if (!this.databases.TryGetValue(dbKey, out var database))
-            throw new Exception($"未配置dbKey:{dbKey}的数据库");
-        return database;
-    }
-    public IRepository CreateRepository(string dbKey = null)
-    {
-        //如果有指定dbKey，就是使用指定的dbKey创建IRepository对象,如果也没有指定，就使用配置的默认dbKey
-        var localDbKey = dbKey ?? this.defaultDatabase?.DbKey;
-        if (string.IsNullOrEmpty(localDbKey))
-            throw new ArgumentNullException(nameof(dbKey), "dbKey不可为null，未配置dbKey，也没有配置默认数据库");
 
-        var database = this.GetDatabase(localDbKey);
-        //会不需要实体映射和分表规则的场景
-        this.complexMapProviders.TryGetValue(localDbKey, out var mapProvider);
-        this.complexTableShardingProviders.TryGetValue(localDbKey, out var tableShardingProvider);
-
+        var database = this.GetDatabase(dbKey);
         return database.OrmProvider.CreateRepository(new DbContext
         {
-            DbKey = localDbKey,
+            DbKey = dbKey,
             Database = database,
             //mysql默认Schema是数据库名，暂时此处为null,pgsql的默认Schema是public，sqlserver的默认Schema是dbo
             DefaultTableSchema = database.OrmProvider.DefaultTableSchema,
-            OrmProvider = database.OrmProvider,
-            MapProvider = mapProvider,
-            ShardingProvider = tableShardingProvider,
+            DbInterceptors = this.DbInterceptors,
+
             DefaultDateTimeKind = this.DefaultDateTimeKind,
             UserParameterPrefix = this.UserParameterPrefix,
             CommandTimeout = this.CommandTimeout,
-            FieldMapHandler = this.FieldMapHandler,
-            DbInterceptors = this.DbInterceptors,
             DefaultEnumMapDbType = this.DefaultEnumMapDbType,
             IsConstantParameterized = this.IsConstantParameterized
-        });
+        }) as TRepository;
     }
-    public IRepository CreateRepository(DbContext dbContext)
-    {
-        var ormProvider = dbContext.OrmProvider;
-        return ormProvider.CreateRepository(dbContext);
-    }
-    public Type GetOrmProviderType(OrmProviderType ormProviderType)
-    {
-        string fileName = null;
-        string strOrmProviderType = null;
-        switch (ormProviderType)
-        {
-            case OrmProviderType.MySql:
-                fileName = "Trolley.MySqlConnector.dll";
-                strOrmProviderType = "Trolley.MySqlConnector.MySqlProvider, Trolley.MySqlConnector";
-                break;
-            case OrmProviderType.PostgreSql:
-                fileName = "Trolley.PostgreSql.dll";
-                strOrmProviderType = "Trolley.PostgreSql.PostgreSqlProvider, Trolley.PostgreSql";
-                break;
-            case OrmProviderType.SqlServer:
-                fileName = "Trolley.SqlServer.dll";
-                strOrmProviderType = "Trolley.SqlServer.SqlServerProvider, Trolley.SqlServer";
-                break;
-        }
-        var type = Type.GetType(strOrmProviderType);
-        var packageName = fileName.Replace(".dll", string.Empty);
-        if (type == null)
-            throw new DllNotFoundException($"没有找到[{fileName}]文件，或是没有引入[{packageName}]nuget包");
-        return type;
-    }
-
     public void Build()
     {
-        //连接串选择器、实体映射、分表规则，都需要按照dbKey来进行分类存储，这样确保从dbKey开始数据库操作后，可以更快的使用他们
-        this.BuildConnectionStringSelectors(this.masterConnectionStringSelectors,
-            this.masterGlobalConnectionStringSelectors, this.complexMasterConnectionStringSelectors,
-            (database, connectionStringSelector) => database.UseMasterSelector(connectionStringSelector));
-
-        this.BuildConnectionStringSelectors(this.slaveConnectionStringSelectors,
-            this.slaveGlobalConnectionStringSelectors, this.complexSlaveConnectionStringSelectors,
-            (database, connectionStringSelector) => database.UseSlaveSelector(connectionStringSelector));
-
-        //遍历所有数据库，未设置连接串选择器的，默认设置轮询方式选择连接串
-        foreach (var database in this.Databases)
-            database.Build();
-
-        if (!this.mapProviders.IsEmpty)
+        this.allEntityMapProviders = new();
+        this.allTableShardingProviders = new();
+        if (!this.entityMapProviders.IsEmpty)
         {
             //遍历所有数据库，映射实体对象
-            foreach (var mapProvider in this.mapProviders)
+            foreach (var dbKey in this.entityMapProviders.Keys)
             {
-                var database = this.GetDatabase(mapProvider.Key);
-                mapProvider.Value.Build(database, this.FieldMapHandler);
-                this.complexMapProviders.TryAdd(database.DbKey, mapProvider.Value);
+                var database = this.GetDatabase(dbKey);
+                var entityMapProvider = this.entityMapProviders[dbKey];
+                entityMapProvider.Build(database);
+                database.UseEntityMapProvider(entityMapProvider);
+                this.allEntityMapProviders.Add(entityMapProvider);
             }
         }
-        if (!this.globalMapProviders.IsEmpty)
+        if (!this.globalEntityMapProviders.IsEmpty)
         {
-            foreach (var mapProvider in this.globalMapProviders)
+            foreach (var ormProviderType in this.globalEntityMapProviders.Keys)
             {
+                var entityMapProvider = this.globalEntityMapProviders[ormProviderType];
                 foreach (var database in this.Databases)
                 {
-                    //前面已经映射过了，就不再映射
-                    if (this.complexMapProviders.ContainsKey(database.DbKey)
-                        || database.OrmProviderType != mapProvider.Key)
+                    if (this.entityMapProviders.ContainsKey(database.DbKey)
+                        || database.OrmProviderType != ormProviderType)
                         continue;
                     //确保每个实体都映射到，如果映射过了，不再映射
                     //有时候一个数据库并不能映射完所有实体，有的实体在其他数据库中使用，所以需要遍历所有数据库映射
-                    mapProvider.Value.Build(database, this.FieldMapHandler);
-                    this.complexMapProviders.TryAdd(database.DbKey, mapProvider.Value);
+                    entityMapProvider.Build(database);
+                    database.UseEntityMapProvider(entityMapProvider);
                 }
+                this.allEntityMapProviders.Add(entityMapProvider);
             }
         }
         if (!this.tableShardingProviders.IsEmpty)
         {
-            foreach (var tableShardingProvider in this.tableShardingProviders)
-                this.complexTableShardingProviders.TryAdd(tableShardingProvider.Key, tableShardingProvider.Value);
+            foreach (var dbKey in this.tableShardingProviders.Keys)
+            {
+                var database = this.GetDatabase(dbKey);
+                var tableShardingProvider = this.tableShardingProviders[dbKey];
+                database.UseTableShardingProvider(tableShardingProvider);
+                this.allTableShardingProviders.Add(tableShardingProvider);
+            }
         }
         if (!this.globalTableShardingProviders.IsEmpty)
         {
-            foreach (var globalTableShardingProvider in this.globalTableShardingProviders)
+            foreach (var ormProviderType in this.globalTableShardingProviders.Keys)
             {
+                var tableShardingProvider = this.globalTableShardingProviders[ormProviderType];
                 foreach (var database in this.databases.Values)
                 {
-                    if (this.complexTableShardingProviders.ContainsKey(database.DbKey)
-                        || database.OrmProviderType != globalTableShardingProvider.Key)
+                    if (this.tableShardingProviders.ContainsKey(database.DbKey)
+                        || database.OrmProviderType != ormProviderType)
                         continue;
-                    this.complexTableShardingProviders.TryAdd(database.DbKey, globalTableShardingProvider.Value);
+                    database.UseTableShardingProvider(tableShardingProvider);
                 }
+                this.allTableShardingProviders.Add(tableShardingProvider);
             }
         }
-    }
-    private void BuildConnectionStringSelectors(ConcurrentDictionary<string, Delegate> connectionStringSelectors,
-        ConcurrentDictionary<OrmProviderType, Delegate> globalConnectionStringSelectors, ConcurrentDictionary<string, Delegate> complexConnectionStringSelectors,
-        Action<TheaDatabase, Delegate> useConnectionStringSelector)
-    {
-        if (connectionStringSelectors.IsEmpty && globalConnectionStringSelectors.IsEmpty)
-            return;
-
-        if (!connectionStringSelectors.IsEmpty)
-        {
-            foreach (var connectionStringSelector in connectionStringSelectors)
-            {
-                complexConnectionStringSelectors.TryAdd(connectionStringSelector.Key, connectionStringSelector.Value);
-                var database = this.databases[connectionStringSelector.Key];
-                useConnectionStringSelector.Invoke(database, connectionStringSelector.Value);
-            }
-        }
-        if (!globalConnectionStringSelectors.IsEmpty)
-        {
-            foreach (var globalConnectionStringSelector in globalConnectionStringSelectors)
-            {
-                foreach (var database in this.Databases)
-                {
-                    //前面已经映射过了，就不再映射
-                    if (complexConnectionStringSelectors.ContainsKey(database.DbKey)
-                        || database.OrmProviderType != globalConnectionStringSelector.Key)
-                        continue;
-                    complexConnectionStringSelectors.TryAdd(database.DbKey, globalConnectionStringSelector.Value);
-                    useConnectionStringSelector.Invoke(database, globalConnectionStringSelector.Value);
-                }
-            }
-        }
+        //遍历所有数据库，未设置连接串选择器的，默认设置轮询方式选择连接串
+        foreach (var database in this.Databases)
+            database.Build();
+        this.allOrmProviders = this.ormProviders.Values.ToList();
+        this.allDatabases = this.databases.Values.ToList();
     }
 }

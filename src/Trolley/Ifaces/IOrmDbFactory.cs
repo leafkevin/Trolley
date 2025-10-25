@@ -5,15 +5,7 @@ namespace Trolley;
 
 public interface IOrmDbFactory
 {
-    /// <summary>
-    /// 所有注册的数据库实例
-    /// </summary>
-    ICollection<TheaDatabase> Databases { get; }
-    /// <summary>
-    /// 所有注册的ORM提供器实例
-    /// </summary>
-    ICollection<IOrmProvider> OrmProviders { get; }
-
+    #region 配置属性Options
     /// <summary>
     /// 获取或设置命令超时时间，单位是秒，默认是30秒
     /// </summary>
@@ -34,51 +26,53 @@ public interface IOrmDbFactory
     /// DateTime、DateTimeOffset类型的DateTimeKind，默认是DateTimeKind.Local，如果返回的日期类型不是默认是DefaultDateTimeKind，将转换为DefaultDateTimeKind类型，如果值为DateTimeKind.Unspecified，将不做处理
     /// </summary>
     DateTimeKind DefaultDateTimeKind { get; set; }
+    #endregion
+
+    #region DbFactory运行时属性
+    /// <summary>
+    /// dbKey数据库实例选择器委托
+    /// </summary>
+    public Delegate DbKeySelector { get; }
+    /// <summary>
+    /// 所有注册的数据库实例
+    /// </summary>
+    List<TheaDatabase> Databases { get; }
+    /// <summary>
+    /// 所有注册的ORM提供器实例
+    /// </summary>
+    List<IOrmProvider> OrmProviders { get; }
+    /// <summary>
+    /// 所有注册的实体映射提供器实例
+    /// </summary>
+    List<IEntityMapProvider> EntityMapProviders { get; }
+    /// <summary>
+    /// 所有注册的分表提供器实例
+    /// </summary>
+    List<ITableShardingProvider> TableShardingProviders { get; }
     /// <summary>
     /// 拦截器，默认为null
     /// </summary>
-    DbInterceptors DbInterceptors { get; set; }
-    /// <summary>
-    /// 字段映射处理器，默认为DefaultFieldMapHandler实例
-    /// </summary>
-    IFieldMapHandler FieldMapHandler { get; set; }
+    DbInterceptors DbInterceptors { get; }
+    #endregion
 
-
-    void UseDefaultDatabase(string dbKey);
-    bool TryGetConnectionStringSelector(string dbKey, out Delegate connectionStringSelector);
-    void AddConnectionStringSelector(string dbKey, Delegate connectionStringSelector);
-    bool TryGetConnectionStringSelector(OrmProviderType ormProviderType, out Delegate connectionStringSelector);
-    void AddConnectionStringSelector(OrmProviderType ormProviderType, Delegate connectionStringSelector);
-
-    bool TryGetTableShardingProvider(string dbKey, out ITableShardingProvider tableShardingProvider);
-    void AddTableShardingProvider(string dbKey, ITableShardingProvider tableShardingProvider);
-    bool TryGetTableShardingProvider(OrmProviderType ormProviderType, out ITableShardingProvider tableShardingProvider);
-    void AddTableShardingProvider(OrmProviderType ormProviderType, ITableShardingProvider tableShardingProvider);
-    bool TryGetTableSharding(string dbKey, Type entityType, out TableShardingInfo tableShardingInfo);
-    bool TryGetTableSharding(OrmProviderType ormProviderType, Type entityType, out TableShardingInfo tableShardingInfo);
-
-    TheaDatabase Register(OrmProviderType ormProviderType, string dbKey, bool isDefaultDatabase);
-    void AddOrmProvider(IOrmProvider ormProvider);
-    bool TryGetOrmProvider(OrmProviderType ormProviderType, out IOrmProvider ormProvider);
-    void AddMapProvider(string dbKey, IEntityMapProvider mapProvider);
-    bool TryGetMapProvider(string dbKey, out IEntityMapProvider mapProvider);
-    void AddMapProvider(OrmProviderType ormProviderType, IEntityMapProvider mapProvider);
-    bool TryGetMapProvider(OrmProviderType ormProviderType, out IEntityMapProvider mapProvider);
+    void Register(TheaDatabase database);
     TheaDatabase GetDatabase(string dbKey = null);
-    /// <summary>
-    /// 使用指定的dbKey，创建仓储对象。
-    /// 如果没有指定dbKey，有指定分库规则，会调用分库规则获取dbKey
-    /// 如果也没有指定分库规则，就使用默认的dbKey
-    /// 如果默认dbKey也没有指定，就会抛出异常，需要配置dbKey
-    /// </summary>
-    /// <param name="dbKey">指定的dbKey</param>
-    /// <returns></returns>
-    IRepository CreateRepository(string dbKey = null);
-    /// <summary>
-    /// 根据已有的dbContext对象，创建仓储对象，可以使用已有的事务
-    /// </summary>
-    /// <param name="dbContext"></param>
-    /// <returns></returns>
-    IRepository CreateRepository(DbContext dbContext);
+    void UseDbKeySelector(Delegate dbKeySelector);
+
+    void UseOrmProvider(IOrmProvider ormProvider);
+    bool TryGetOrmProvider(OrmProviderType ormProviderType, out IOrmProvider ormProvider);
+
+    void UseEntityMapProvider(string dbKey, IEntityMapProvider entityMapProvider);
+    void UseEntityMapProvider(OrmProviderType ormProviderType, IEntityMapProvider entityMapProvider);
+    bool TryGetEntityMapProvider(string dbKey, out IEntityMapProvider entityMapProvider);
+    bool TryGetEntityMapProvider(OrmProviderType ormProviderType, out IEntityMapProvider entityMapProvider);
+
+    void UseTableShardingProvider(string dbKey, ITableShardingProvider tableShardingProvider);
+    void UseTableShardingProvider(OrmProviderType ormProviderType, ITableShardingProvider tableShardingProvider);
+    bool TryGetTableShardingProvider(string dbKey, out ITableShardingProvider tableShardingProvider);
+    bool TryGetTableShardingProvider(OrmProviderType ormProviderType, out ITableShardingProvider tableShardingProvider);
+
+    TRepository Create<TRepository>(params object[] dbKeySelectorValues) where TRepository : class, IRepository;
+    TRepository CreateRepository<TRepository>(string dbKey) where TRepository : class, IRepository;
     void Build();
 }

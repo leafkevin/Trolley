@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using System;
+using System.Data;
 
 namespace Trolley;
 
@@ -141,7 +142,7 @@ partial class BaseOrmProvider
 
     public virtual IQueryVisitor NewQueryVisitor(DbContext dbContext) => new QueryVisitor(dbContext);
     public virtual IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart, IDataParameterCollection dbParameters = null) => new QueryVisitor(dbContext, tableAsStart, dbParameters);
-    public virtual ICreateVisitor NewCreateVisitor(DbContext dbContext, char tableAsStart = 'a') => new CreateVisitor(dbContext, tableAsStart);
-    public virtual IUpdateVisitor NewUpdateVisitor(DbContext dbContext, char tableAsStart = 'a') => new UpdateVisitor(dbContext, tableAsStart);
-    public virtual IDeleteVisitor NewDeleteVisitor(DbContext dbContext, char tableAsStart = 'a') => new DeleteVisitor(dbContext, tableAsStart);
+    public virtual ICreateVisitor NewCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a') => new CreateVisitor(entityType, dbContext, tableAsStart);
+    public virtual IUpdateVisitor NewUpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a') => new UpdateVisitor(entityType, dbContext, tableAsStart);
+    public virtual IDeleteVisitor NewDeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a') => new DeleteVisitor(entityType, dbContext, tableAsStart);
 }

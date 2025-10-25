@@ -167,14 +167,13 @@ public interface IOrmProvider
     IQueryVisitor NewQueryVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a');
     //IQueryVisitor NewQueryVisitor(Type entityType, DbContext dbContext, char tableAsStart, IDataParameterCollection dbParameters = null);
     ICreateVisitor NewCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a');
-    IUpdateVisitor NewUpdateVisitor(Type entityType,  DbContext dbContext, char tableAsStart = 'a');
+    IUpdateVisitor NewUpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a');
     IDeleteVisitor NewDeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a');
 
     string GetTableName(string tableName);
     string GetFieldName(string fieldName);
     string GetPagingTemplate(int? skip, int? limit, string orderBy = null);
     object GetNativeDbType(Type type);
-    Type MapDefaultType(object nativeDbType);
     Type MapDefaultType(MemberMap memberMappper);
     string GetIdentitySql(string keyField);
     string CastTo(Type type, object value, string characterSetOrCollation = null);
@@ -184,7 +183,7 @@ public interface IOrmProvider
     Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType, DbContext dbContext);
     ITypeHandler GetTypeHandler(Type typeHandlerType);
     object MapNativeDbType(DbColumnInfo columnInfo);
-    bool MapTables(string connectionString, IEntityMapProvider mapProvider, IFieldMapHandler fieldMapHandler);
+    bool MapTables(string connectionString, IEntityMapProvider mapProvider);
     bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
     bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
 }

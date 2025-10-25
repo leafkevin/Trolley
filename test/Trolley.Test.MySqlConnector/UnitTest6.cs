@@ -24,11 +24,11 @@ public class UnitTest6 : UnitTestBase
             var connectionString1 = "Server=localhost;Database=fengling1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
             var connectionString2 = "Server=localhost;Database=fengling2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.MySql, "fengling", f => f.UseMaster(connectionString)
+                .Register(OrmProviderType.MySql, "fengling", f => f.Use(connectionString)
                     .UseSlave(connectionString1, connectionString2), true)
-                .Register(OrmProviderType.MySql, "fengling1", f => f.UseConnectionString(connectionString1))
-                .Register(OrmProviderType.MySql, "fengling2", f => f.UseConnectionString(connectionString2))
-                .Configure<ModelConfiguration>(OrmProviderType.MySql)
+                .Register(OrmProviderType.MySql, "fengling1", f => f.Use(connectionString1))
+                .Register(OrmProviderType.MySql, "fengling2", f => f.Use(connectionString2))
+                .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
                 .UseTableSharding<TableShardingConfiguration>(OrmProviderType.MySql)
                 .UseInterceptors(df =>
                 {

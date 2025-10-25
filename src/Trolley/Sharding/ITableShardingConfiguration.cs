@@ -2,5 +2,5 @@
 
 public interface ITableShardingConfiguration
 {
-    void OnModelCreating(TableShardingBuilder builder);
+    void Configure(TableShardingBuilder builder);
 }

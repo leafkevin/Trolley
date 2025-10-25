@@ -471,7 +471,7 @@ public class SqlServerDeleteVisitor : DeleteVisitor
     public static (bool, string, Action<StringBuilder, string, string>, object) BuildDeleteCommandInitializer(DbContext dbContext, Type entityType, Type whereObjType, bool isMultiple, bool isBulk, bool hasFixedSql = false)
     {
         var ormProvider = dbContext.OrmProvider;
-        var mapProvider = dbContext.MapProvider;
+        var mapProvider = dbContext.EntityMapProvider;
         var cacheKey = RepositoryHelper.GetCacheKey(ormProvider.OrmProviderType, mapProvider, entityType, whereObjType, isMultiple, isBulk, hasFixedSql);
         var commandInitializerCache = isBulk ? deleteBulkCommandInitializerCache : isMultiple ? deleteMultiCommandInitializerCache : deleteCommandInitializerCache;
         return commandInitializerCache.GetOrAdd(cacheKey, f =>

@@ -10,6 +10,7 @@ public class MemberMap
     public string MemberName { get; set; }
     public Type MemberType { get; set; }
     public Type UnderlyingType { get; set; }
+    public Type MappedTargetType { get; set; }
     public bool IsKey { get; set; }
     public bool IsAutoIncrement { get; set; }
     public string FieldName { get; set; }
@@ -49,6 +50,10 @@ public class MemberMap
     /// </summary>
     public ITypeHandler TypeHandler { get; set; }
     public Type TypeHandlerType { get; set; }
+
+  
+
+
     public MemberMap(EntityMap parent, MemberInfo memberInfo)
     {
         this.Parent = parent;

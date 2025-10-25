@@ -17,8 +17,8 @@ public class SqlVisitor : ISqlVisitor
     public DbContext DbContext { get; set; }
     public string DbKey => this.DbContext.DbKey;
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
-    public IEntityMapProvider MapProvider => this.DbContext.MapProvider;
-    public ITableShardingProvider ShardingProvider => this.DbContext.ShardingProvider;
+    public IEntityMapProvider MapProvider => this.DbContext.EntityMapProvider;
+    public ITableShardingProvider ShardingProvider => this.DbContext.TableShardingProvider;
     public string DefaultTableSchema => this.DbContext.DefaultTableSchema;
     public bool IsConstantParameterized => this.DbContext.IsConstantParameterized;
     public string UserParameterPrefix => this.DbContext.UserParameterPrefix;

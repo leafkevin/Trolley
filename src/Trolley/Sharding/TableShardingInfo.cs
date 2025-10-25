@@ -9,6 +9,7 @@ public class TableShardingInfo
     /// 映射实体
     /// </summary>
     public Type EntityType { get; set; }
+    public TableShardingUsageMode UsageMode { get; set; }
     /// <summary>
     /// 依赖的实体成员名称，分表规则参数对应的成员名称列表
     /// </summary>

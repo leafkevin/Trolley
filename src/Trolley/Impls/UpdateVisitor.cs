@@ -813,7 +813,10 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             {
                 var tableName = tableNameGetter.DynamicInvoke(updateObj) as string;
                 if (string.IsNullOrEmpty(tableName))
-                    throw new InvalidOperationException($"手动设置的分表名获取委托无法获取分表名，原表名：{origTableName}，当前参数：{this.DbContext.JsonTypeHandler.ToFieldValue(this.OrmProvider, updateObj)}");
+                {
+                    var jsonTypeHandler = this.OrmProvider.GetTypeHandler(typeof(JsonTypeHandler));
+                    throw new InvalidOperationException($"手动设置的分表名获取委托无法获取分表名，原表名：{origTableName}，当前参数：{jsonTypeHandler.ToFieldValue(this.OrmProvider, updateObj)}");
+                }
                 if (!result.TryGetValue(tableName, out var myParameters))
                     result.Add(tableName, myParameters = new List<object>());
                 myParameters.Add(updateObj);

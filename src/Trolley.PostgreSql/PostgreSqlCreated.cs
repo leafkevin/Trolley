@@ -41,7 +41,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>
                     }
                     var dialectOrmProvider = this.OrmProvider as PostgreSqlProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
-                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
+                    if (this.DbContext.TableShardingProvider != null && this.DbContext.TableShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
                     {
                         var isNeedSplit = this.Visitor.Tables[0].Body == null;
                         if (isNeedSplit)
@@ -139,7 +139,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>
                     }
                     var dialectOrmProvider = this.OrmProvider as PostgreSqlProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
-                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
+                    if (this.DbContext.TableShardingProvider != null && this.DbContext.TableShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
                     {
                         var isNeedSplit = this.Visitor.Tables[0].Body == null;
                         if (isNeedSplit)

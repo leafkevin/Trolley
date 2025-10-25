@@ -9,26 +9,16 @@ public class ModelBuilder
     {
         this.mapProvider = mapProvider;
     }
-    public virtual ModelBuilder Entity<TEntity>(Action<EntityBuilder<TEntity>> initializer) where TEntity : class
+    public virtual ModelBuilder Entity<TEntity>(Action<EntityTypeBuilder<TEntity>> initializer) where TEntity : class
     {
         var entityType = typeof(TEntity);
         if (initializer == null)
             throw new ArgumentNullException(nameof(initializer));
 
         var mapper = new EntityMap(entityType);
-        var builder = new EntityBuilder<TEntity>(mapper);
+        var builder = new EntityTypeBuilder<TEntity>(mapper);
         initializer.Invoke(builder);
-        this.mapProvider.AddEntityMap(entityType, mapper);
-        return this;
-    }
-    public ModelBuilder UseDefaultFieldMapHandler()
-    {
-        this.mapProvider.UseDefaultFieldMapHandler();
-        return this;
-    }
-    public ModelBuilder UseFieldMapHandler(IFieldMapHandler fieldMapHandler)
-    {
-        this.mapProvider.UseFieldMapHandler(fieldMapHandler);
+        this.mapProvider.UseEntityMap(entityType, mapper);
         return this;
     }
 }

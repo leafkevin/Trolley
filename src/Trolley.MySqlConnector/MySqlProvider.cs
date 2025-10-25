@@ -14,7 +14,7 @@ namespace Trolley.MySqlConnector;
 
 public partial class MySqlProvider : BaseOrmProvider
 {
-    private readonly static Dictionary<object, Type> defaultMapTypes = new();
+    private readonly static Dictionary<MySqlDbType, Type> defaultMapTypes = new();
     private readonly static Dictionary<Type, object> defaultDbTypes = new();
     private readonly static Dictionary<Type, string> castTos = new();
 
@@ -181,22 +181,21 @@ public partial class MySqlProvider : BaseOrmProvider
             throw new Exception($"类型{fieldType.FullName}没有对应的MySqlConnector.MySqlDbType映射类型");
         return dbType;
     }
-    public override Type MapDefaultType(object nativeDbType)
-    {
-        if (defaultMapTypes.TryGetValue(nativeDbType, out var result))
-            return result;
-        return typeof(object);
-    }
     public override Type MapDefaultType(MemberMap memberMappper)
     {
         //bit(n)，会映射为ulong类型，bit(1)映射为bool类型
-        if (memberMappper.NativeDbType is MySqlDbType nativeDbType && nativeDbType == MySqlDbType.Bit)
+        if (memberMappper.NativeDbType is MySqlDbType nativeDbType)
         {
-            if (memberMappper.MaxLength > 1)
-                return typeof(ulong);
-            else return typeof(bool);
+            if (nativeDbType == MySqlDbType.Bit)
+            {
+                if (memberMappper.MaxLength > 1)
+                    return typeof(ulong);
+                else return typeof(bool);
+            }
+            if (defaultMapTypes.TryGetValue(nativeDbType, out var result))
+                return result;
         }
-        return this.MapDefaultType(memberMappper.NativeDbType);
+        return typeof(object);
     }
     public override string CastTo(Type type, object value, string characterSetOrCollation = null)
     {
@@ -255,9 +254,9 @@ public partial class MySqlProvider : BaseOrmProvider
             default: return MySqlDbType.String;
         }
     }
-    public override bool MapTables(string connectionString, IEntityMapProvider mapProvider, IFieldMapHandler fieldMapHandler)
+    public override bool MapTables(string connectionString, IEntityMapProvider entityMapProvider)
     {
-        var tableNames = mapProvider.EntityMaps.Where(f => !f.IsMapped).Select(f => f.TableName).ToList();
+        var tableNames = entityMapProvider.EntityMaps.Where(f => !f.IsMapped).Select(f => f.TableName).ToList();
         if (tableNames == null || tableNames.Count == 0)
             return true;
         var sql = @"SELECT a.TABLE_SCHEMA,a.TABLE_NAME,a.COLUMN_NAME,a.DATA_TYPE,a.COLUMN_TYPE,a.CHARACTER_MAXIMUM_LENGTH,a.NUMERIC_SCALE,a.NUMERIC_PRECISION,a.COLUMN_COMMENT,a.COLUMN_DEFAULT,
@@ -297,7 +296,7 @@ public partial class MySqlProvider : BaseOrmProvider
             sqlBuilder.Append($"a.TABLE_SCHEMA='{tableBuilder.Key}' AND a.TABLE_NAME IN ({tableBuilder.Value.ToString()})");
         }
         sql = string.Format(sql, sqlBuilder.ToString());
-        var entityMappers = mapProvider.EntityMaps.ToList();
+        var entityMappers = entityMapProvider.EntityMaps.ToList();
         var tableInfos = new List<DbTableInfo>();
         using var command = new MySqlCommand(sql, connection);
         connection.Open();
@@ -362,7 +361,7 @@ public partial class MySqlProvider : BaseOrmProvider
             var mappedMappers = new List<MemberMap>();
             foreach (var columnInfo in tableInfo.Columns)
             {
-                if (fieldMapHandler.TryFindMember(columnInfo.FieldName, entityMapper.MemberMaps, out var memberMapper))
+                if (entityMapProvider.TryMapMember(columnInfo.FieldName, entityMapper.MemberMaps, out var memberMapper))
                 {
                     memberMapper.DbColumnType = columnInfo.DbColumnType;
                     memberMapper.IsKey = columnInfo.IsPrimaryKey;
@@ -374,7 +373,7 @@ public partial class MySqlProvider : BaseOrmProvider
                 }
                 else
                 {
-                    if (!fieldMapHandler.TryFindMember(columnInfo.FieldName, memberInfos, out var memberInfo))
+                    if (!entityMapProvider.TryMapMember(columnInfo.FieldName, memberInfos, out var memberInfo))
                     {
                         if (columnInfo.IsNullable)
                             continue;
@@ -401,7 +400,7 @@ public partial class MySqlProvider : BaseOrmProvider
                     //允许自定义TypeHandlerType设置，默认设置
                     if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string)
                         || memberMapper.UnderlyingType.IsEntityType(out _))
-                        && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
+                        && memberMapper.MappedTargetType == typeof(string))
                         memberMapper.TypeHandlerType = typeof(JsonTypeHandler);
 
                     if (memberMapper.TypeHandlerType != null)
@@ -424,7 +423,7 @@ public partial class MySqlProvider : BaseOrmProvider
             entityMapper.TableName = tableName;
             entityMapper.IsMapped = true;
         }
-        return mapProvider.EntityMaps.Count(f => !f.IsMapped) == 0;
+        return entityMapProvider.EntityMaps.Count(f => !f.IsMapped) == 0;
     }
     public virtual string GetSchemaName(string connectionString)
     {
@@ -433,7 +432,7 @@ public partial class MySqlProvider : BaseOrmProvider
     }
     public virtual string GetDefaultSchemaName(DbContext dbContext)
     {
-        var connectionString = dbContext.Database.MasterConnectionStrings.First();
+        var connectionString = dbContext.Database.ConnectionStrings.First();
         return this.GetSchemaName(connectionString);
     }
     public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
@@ -490,10 +489,10 @@ public partial class MySqlProvider : BaseOrmProvider
     }
     public virtual List<string> GetShardingTableNames<TEntity>(DbContext dbContext, Func<string, bool> tableNameSelector = null, string tableSchema = null)
     {
-        var entityMapper = dbContext.MapProvider.GetEntityMap(typeof(TEntity));
+        var entityMapper = dbContext.EntityMapProvider.GetEntityMap(typeof(TEntity));
         var orgTableName = entityMapper.TableName;
         if (string.IsNullOrEmpty(tableSchema))
-            tableSchema = this.GetSchemaName(dbContext.Database.MasterConnectionStrings.First());
+            tableSchema = this.GetSchemaName(dbContext.Database.ConnectionStrings.First());
         var sql = $"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME LIKE '{orgTableName}_%' AND TABLE_SCHEMA='{tableSchema}'";
         var tableNames = dbContext.QueryValue<string>(sql, reader =>
         {
@@ -508,10 +507,10 @@ public partial class MySqlProvider : BaseOrmProvider
     }
     public virtual async Task<List<string>> GetShardingTableNamesAsync<TEntity>(DbContext dbContext, Func<string, bool> tableNameSelector = null, string tableSchema = null, CancellationToken cancellationToken = default)
     {
-        var entityMapper = dbContext.MapProvider.GetEntityMap(typeof(TEntity));
+        var entityMapper = dbContext.EntityMapProvider.GetEntityMap(typeof(TEntity));
         var orgTableName = entityMapper.TableName;
         if (string.IsNullOrEmpty(tableSchema))
-            tableSchema = this.GetSchemaName(dbContext.Database.MasterConnectionStrings.First());
+            tableSchema = this.GetSchemaName(dbContext.Database.ConnectionStrings.First());
         var sql = $"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME LIKE '{orgTableName}_%' AND TABLE_SCHEMA='{tableSchema}'";
         var tableNames = await dbContext.QueryValueAsync<string>(sql, async (reader, cancellationToken) =>
         {

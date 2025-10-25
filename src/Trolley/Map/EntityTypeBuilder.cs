@@ -6,24 +6,24 @@ using System.Reflection;
 
 namespace Trolley;
 
-public class EntityBuilder<TEntity> where TEntity : class
+public class EntityTypeBuilder<TEntity> where TEntity : class
 {
     private readonly EntityMap mapper;
 
-    public EntityBuilder(EntityMap mapper) => this.mapper = mapper;
+    public EntityTypeBuilder(EntityMap mapper) => this.mapper = mapper;
 
-    public virtual EntityBuilder<TEntity> ToTable(string tableName)
+    public virtual EntityTypeBuilder<TEntity> ToTable(string tableName)
     {
         this.mapper.TableName = tableName;
         return this;
     }
-    public virtual EntityBuilder<TEntity> Key(params string[] propertyNames)
+    public virtual EntityTypeBuilder<TEntity> Key(params string[] propertyNames)
     {
         var properties = this.mapper.EntityType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
         this.mapper.SetKeys(properties);
         return this;
     }
-    public virtual EntityBuilder<TEntity> Key<TMember>(Expression<Func<TEntity, TMember>> keysExpr)
+    public virtual EntityTypeBuilder<TEntity> Key<TMember>(Expression<Func<TEntity, TMember>> keysExpr)
     {
         if (keysExpr.Body is NewExpression newExpr)
         {
@@ -35,13 +35,13 @@ public class EntityBuilder<TEntity> where TEntity : class
         else throw new Exception("不支持的Linq表达式");
         return this;
     }
-    public virtual EntityBuilder<TEntity> AutoIncrement(string memberName)
+    public virtual EntityTypeBuilder<TEntity> AutoIncrement(string memberName)
     {
         var memberInfos = this.mapper.EntityType.GetMember(memberName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
         this.mapper.SetAutoIncrement(memberInfos[0]);
         return this;
     }
-    public virtual EntityBuilder<TEntity> AutoIncrement<TMember>(Expression<Func<TEntity, TMember>> memberExpr)
+    public virtual EntityTypeBuilder<TEntity> AutoIncrement<TMember>(Expression<Func<TEntity, TMember>> memberExpr)
     {
         if (memberExpr.Body is not MemberExpression memberVisitExpr)
             throw new Exception("不支持的表达式");

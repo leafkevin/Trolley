@@ -132,9 +132,10 @@ public class EntityMap
             if (memberMapper.NativeDbType is int nativeDbType)
                 memberMapper.NativeDbType = Enum.ToObject(ormProvider.NativeDbTypeType, nativeDbType);
 
+            memberMapper.MappedTargetType = ormProvider.MapDefaultType(memberMapper);
             if (memberMapper.IsRequired && memberMapper.MemberType.IsNullableType(out _))
                 throw new NotSupportedException($"实体类{this.EntityType.FullName}成员{memberMapper.MemberName}的映射字段，配置为必需字段，但是成员类型却是可为null对象");
-            if (memberMapper.TypeHandler == null && memberMapper.TypeHandlerType != null)
+            if (memberMapper.TypeHandlerType != null && memberMapper.TypeHandler == null)
                 memberMapper.TypeHandler = ormProvider.GetTypeHandler(memberMapper.TypeHandlerType);
             this.AddFieldMap(memberMapper.FieldName, memberMapper);
         }

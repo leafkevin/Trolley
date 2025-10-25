@@ -1,8 +1,8 @@
 ﻿namespace Trolley.Test.MySqlConnector;
 
-public class ModelConfiguration : IModelConfiguration
+public class ModelMappingConfiguration : DefaultModelMappingConfiguration
 {
-    public void OnModelCreating(ModelBuilder builder)
+    public override void Configure(ModelBuilder builder)
     {
         builder
             .Entity<Brand>(f =>

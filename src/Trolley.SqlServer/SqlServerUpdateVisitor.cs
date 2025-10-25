@@ -675,8 +675,8 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
     private static (object, object) BuildUpdateBulkSetWithSqlParametersPart(DbContext dbContext, Type entityType, Type updateObjType, bool isMultiple, bool isUpdateRowVersion, List<string> onlyFieldNames, List<string> ignoreFieldNames, bool hasFixedSql = false)
     {
         var ormProvider = dbContext.OrmProvider;
-        var mapProvider = dbContext.MapProvider;
-        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider.OrmProviderType, dbContext.MapProvider, entityType, updateObjType, onlyFieldNames, ignoreFieldNames);
+        var mapProvider = dbContext.EntityMapProvider;
+        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, updateObjType, onlyFieldNames, ignoreFieldNames);
         return updateBulkWithCommandInitializerCache.GetOrAdd(cacheKey, f =>
         {
             var fieldsSetter = RepositoryHelper.BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 1, 2, false, true, isUpdateRowVersion, onlyFieldNames, ignoreFieldNames) as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Http.Headers;
 
 namespace Trolley;
 
@@ -10,100 +11,76 @@ public sealed class OrmDbFactoryBuilder
     {
         if (databaseInitializer == null)
             throw new ArgumentNullException(nameof(databaseInitializer));
-        var database = this.dbFactory.Register(ormProviderType, dbKey, isDefaultDatabase);
-        var builder = new OrmDatabaseBuilder(this.dbFactory, database);
+        if (!this.dbFactory.TryGetOrmProvider(ormProviderType, out var ormProvider))
+        {
+            var type = this.GetOrmProviderType(ormProviderType);
+            ormProvider = RepositoryHelper.CreateInstance(type) as IOrmProvider;
+            this.dbFactory.UseOrmProvider(ormProvider);
+        }
+        var builder = new OrmDatabaseBuilder(this.dbFactory, new TheaDatabase
+        {
+            DbKey = dbKey,
+            OrmProviderType = ormProviderType,
+            OrmProvider = ormProvider,
+            IsDefault = isDefaultDatabase
+        });
         databaseInitializer.Invoke(builder);
         return this;
     }
+    public OrmDbFactoryBuilder UseDbKeySelector(Delegate dbKeySelector)
+    {
+        if (dbKeySelector == null)
+            throw new ArgumentNullException(nameof(dbKeySelector));
 
-    public OrmDbFactoryBuilder UseMap(string dbKey, IModelConfiguration configuration)
-    {
-        this.dbFactory.Configure(dbKey, configuration);
-        return this;
-    }
-    public OrmDbFactoryBuilder UseMap(OrmProviderType ormProviderType, IModelConfiguration configuration)
-    {
-        this.dbFactory.Configure(ormProviderType, configuration);
+        this.dbFactory.UseDbKeySelector(dbKeySelector);
         return this;
     }
 
-    /// <summary>
-    /// 设置dbKey的数据库连接串选择器，通常是数据一致的多个数据库，非主从库模式，也非类似租户等水平分库模式，通常设置为轮询方式或者是随机方式选择连接串
-    /// </summary>
-    /// <param name="dbKey"></param>
-    /// <param name="connectionStringSelector"></param>
-    /// <returns></returns>
-    public OrmDbFactoryBuilder UseConnectionStringSelector(string dbKey, Func<string> connectionStringSelector)
+    public OrmDbFactoryBuilder UseMapping(string dbKey, IModelMappingConfiguration configuration)
     {
-        this.dbFactory.AddConnectionStringSelector(dbKey, connectionStringSelector);
+        if (string.IsNullOrEmpty(dbKey))
+            throw new ArgumentNullException(nameof(dbKey));
+        if (configuration == null)
+            throw new ArgumentNullException(nameof(configuration));
+
+        if (!this.dbFactory.TryGetEntityMapProvider(dbKey, out var entityMapProvider))
+            this.dbFactory.UseEntityMapProvider(dbKey, entityMapProvider = new EntityMapProvider());
+        entityMapProvider.FieldMapHandler = configuration.IsCanMapTo;
+        configuration.Configure(new ModelBuilder(entityMapProvider));
         return this;
     }
-    /// <summary>
-    /// 设置所有类型为ormProviderType的数据库的连接串选择器，此方法适用于数据一致的多个数据库，非主从库模式，也非类似租户等水平分库模式，通常设置为轮询方式或者是随机方式选择连接串
-    /// </summary>
-    /// <param name="ormProviderType"></param>
-    /// <param name="connectionStringSelector"></param>
-    /// <returns></returns>
-    public OrmDbFactoryBuilder UseConnectionStringSelector(OrmProviderType ormProviderType, Func<string> connectionStringSelector)
+    public OrmDbFactoryBuilder UseMapping(OrmProviderType ormProviderType, IModelMappingConfiguration configuration)
     {
-        this.dbFactory.AddConnectionStringSelector(ormProviderType, connectionStringSelector);
-        return this;
-    }
-    /// <summary>
-    /// 设置dbKey的数据库主库连接串选择器，此方法适用于主从库模式，并且主库有多个，也可以类似多租户等水平分库模式，也可以是多主库且又类似多租户等水平分库模式则默认使用轮询方式选择连接串
-    /// </summary>
-    /// <param name="dbKey"></param>
-    /// <param name="connectionStringSelector"></param>
-    /// <returns></returns>
-    public OrmDbFactoryBuilder UseMasterConnectionStringSelector(string dbKey, Func<object, string> connectionStringSelector)
-    {
-        this.dbFactory.AddConnectionStringSelector(dbKey, connectionStringSelector);
-        return this;
-    }
-    /// <summary>
-    /// 设置所有类型为ormProviderType的数据库主库连接串选择器，此方法适用于主从库模式，并且主库有多个时，未设置连接串选择器，则默认使用轮询方式选择连接串
-    /// </summary>
-    /// <param name="ormProviderType"></param>
-    /// <param name="connectionStringSelector"></param>
-    /// <returns></returns>
-    public OrmDbFactoryBuilder UseMasterConnectionStringSelector(OrmProviderType ormProviderType, Func<object, string> connectionStringSelector)
-    {
-        this.dbFactory.AddConnectionStringSelector(ormProviderType, connectionStringSelector);
-        return this;
-    }
-    public OrmDbFactoryBuilder UseSlaveConnectionStringSelector(string dbKey, Func<object, string> connectionStringSelector)
-    {
-        this.dbFactory.AddConnectionStringSelector(dbKey, connectionStringSelector);
-        return this;
-    }
-    public OrmDbFactoryBuilder UseSlaveConnectionStringSelector(OrmProviderType ormProviderType, Func<object, string> connectionStringSelector)
-    {
-        this.dbFactory.AddConnectionStringSelector(ormProviderType, connectionStringSelector);
+        if (configuration == null)
+            throw new ArgumentNullException(nameof(configuration));
+
+        if (!this.dbFactory.TryGetEntityMapProvider(ormProviderType, out var entityMapProvider))
+            this.dbFactory.UseEntityMapProvider(ormProviderType, entityMapProvider = new EntityMapProvider());
+        entityMapProvider.FieldMapHandler = configuration.IsCanMapTo;
+        configuration.Configure(new ModelBuilder(entityMapProvider));
         return this;
     }
 
     public OrmDbFactoryBuilder UseTableSharding(string dbKey, Action<TableShardingBuilder> shardingInitializer)
     {
+        if (string.IsNullOrEmpty(dbKey))
+            throw new ArgumentNullException(nameof(dbKey));
         if (shardingInitializer == null)
             throw new ArgumentNullException(nameof(shardingInitializer));
 
         if (!this.dbFactory.TryGetTableShardingProvider(dbKey, out var tableShardingProvider))
-            this.dbFactory.AddTableShardingProvider(dbKey, tableShardingProvider = new TableShardingProvider());
-
-        var builder = new TableShardingBuilder(tableShardingProvider);
-        shardingInitializer.Invoke(builder);
+            this.dbFactory.UseTableShardingProvider(dbKey, tableShardingProvider = new TableShardingProvider());
+        shardingInitializer.Invoke(new TableShardingBuilder(tableShardingProvider));
         return this;
     }
     public OrmDbFactoryBuilder UseTableSharding(string dbKey, ITableShardingConfiguration configuration)
     {
+        if (string.IsNullOrEmpty(dbKey))
+            throw new ArgumentNullException(nameof(dbKey));
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
 
-        if (!this.dbFactory.TryGetTableShardingProvider(dbKey, out var tableShardingProvider))
-            this.dbFactory.AddTableShardingProvider(dbKey, tableShardingProvider = new TableShardingProvider());
-        var builder = new TableShardingBuilder(tableShardingProvider);
-        configuration.OnModelCreating(builder);
-        return this;
+        return this.UseTableSharding(dbKey, configuration.Configure);
     }
     public OrmDbFactoryBuilder UseTableSharding(OrmProviderType ormProviderType, Action<TableShardingBuilder> shardingInitializer)
     {
@@ -111,10 +88,8 @@ public sealed class OrmDbFactoryBuilder
             throw new ArgumentNullException(nameof(shardingInitializer));
 
         if (!this.dbFactory.TryGetTableShardingProvider(ormProviderType, out var tableShardingProvider))
-            this.dbFactory.AddTableShardingProvider(ormProviderType, tableShardingProvider = new TableShardingProvider());
-
-        var builder = new TableShardingBuilder(tableShardingProvider);
-        shardingInitializer.Invoke(builder);
+            this.dbFactory.UseTableShardingProvider(ormProviderType, tableShardingProvider = new TableShardingProvider());
+        shardingInitializer.Invoke(new TableShardingBuilder(tableShardingProvider));
         return this;
     }
     public OrmDbFactoryBuilder UseTableSharding(OrmProviderType ormProviderType, ITableShardingConfiguration configuration)
@@ -122,19 +97,18 @@ public sealed class OrmDbFactoryBuilder
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
 
-        if (!this.dbFactory.TryGetTableShardingProvider(ormProviderType, out var tableShardingProvider))
-            this.dbFactory.AddTableShardingProvider(ormProviderType, tableShardingProvider = new TableShardingProvider());
+        return this.UseTableSharding(ormProviderType, configuration.Configure);
+    }
 
-        var builder = new TableShardingBuilder(tableShardingProvider);
-        configuration.OnModelCreating(builder);
-        return this;
-    }
-    public OrmDbFactoryBuilder UseFieldMapHandler(IFieldMapHandler fieldMapHandler)
+    public OrmDbFactoryBuilder UseInterceptors(Action<DbInterceptors> filterInitializer)
     {
-        this.dbFactory.FieldMapHandler = fieldMapHandler;
+        if (filterInitializer == null)
+            throw new ArgumentNullException(nameof(filterInitializer));
+
+        filterInitializer.Invoke(this.dbFactory.DbInterceptors);
         return this;
     }
-    public OrmDbFactoryBuilder Configure(Action<OrmDbFactoryOptions> optionsInitializer)
+    public OrmDbFactoryBuilder WithOptions(Action<OrmDbFactoryOptions> optionsInitializer)
     {
         var options = new OrmDbFactoryOptions
         {
@@ -152,18 +126,36 @@ public sealed class OrmDbFactoryBuilder
         this.dbFactory.DefaultDateTimeKind = options.DefaultDateTimeKind;
         return this;
     }
-    public OrmDbFactoryBuilder UseInterceptors(Action<DbInterceptors> filterInitializer)
-    {
-        if (filterInitializer == null)
-            throw new ArgumentNullException(nameof(filterInitializer));
 
-        filterInitializer.Invoke(this.dbFactory.DbInterceptors);
-        return this;
-    }
     public IOrmDbFactory Build()
     {
         this.dbFactory.Build();
         return this.dbFactory;
+    }
+    private Type GetOrmProviderType(OrmProviderType ormProviderType)
+    {
+        string fileName = null;
+        string strOrmProviderType = null;
+        switch (ormProviderType)
+        {
+            case OrmProviderType.MySql:
+                fileName = "Trolley.MySqlConnector.dll";
+                strOrmProviderType = "Trolley.MySqlConnector.MySqlProvider, Trolley.MySqlConnector";
+                break;
+            case OrmProviderType.PostgreSql:
+                fileName = "Trolley.PostgreSql.dll";
+                strOrmProviderType = "Trolley.PostgreSql.PostgreSqlProvider, Trolley.PostgreSql";
+                break;
+            case OrmProviderType.SqlServer:
+                fileName = "Trolley.SqlServer.dll";
+                strOrmProviderType = "Trolley.SqlServer.SqlServerProvider, Trolley.SqlServer";
+                break;
+        }
+        var type = Type.GetType(strOrmProviderType);
+        var packageName = fileName.Replace(".dll", string.Empty);
+        if (type == null)
+            throw new DllNotFoundException($"没有找到[{fileName}]文件，或是没有引入[{packageName}]nuget包");
+        return type;
     }
 }
 public sealed class OrmDatabaseBuilder
@@ -178,25 +170,14 @@ public sealed class OrmDatabaseBuilder
         this.dbKey = database.DbKey;
     }
     /// <summary>
-    /// 设置单库连接串，不使用主从库模式，直接使用此数据库进行所有操作
-    /// </summary>
-    /// <param name="connectionString"></param>
-    /// <returns></returns>
-    public OrmDatabaseBuilder UseConnectionString(string connectionString)
-    {
-        database.MasterConnectionStrings ??= new();
-        database.MasterConnectionStrings.Add(connectionString);
-        return this;
-    }
-    /// <summary>
-    /// 设置主库连接串，可多个主库连接串，多个主库时，未设置连接串选择器，则默认使用轮询方式选择连接串
+    /// 设置主库连接串，可1个或多个主库连接串，多个主库时，未设置连接串选择器，则默认使用轮询方式选择连接串
     /// </summary>
     /// <param name="connectionStrings"></param>
     /// <returns></returns>
-    public OrmDatabaseBuilder UseMaster(params string[] connectionStrings)
+    public OrmDatabaseBuilder Use(params string[] connectionStrings)
     {
-        database.MasterConnectionStrings ??= new();
-        database.MasterConnectionStrings.AddRange(connectionStrings);
+        this.database.ConnectionStrings ??= new();
+        this.database.ConnectionStrings.AddRange(connectionStrings);
         return this;
     }
     /// <summary>
@@ -204,31 +185,49 @@ public sealed class OrmDatabaseBuilder
     /// </summary>
     /// <param name="connectionStringSelector"></param>
     /// <returns></returns>
-    public OrmDatabaseBuilder UseMasterConnectionStringSelector(Delegate connectionStringSelector)
+    public OrmDatabaseBuilder UseSelector(Delegate connectionStringSelector)
     {
         if (connectionStringSelector == null)
             throw new ArgumentNullException(nameof(connectionStringSelector));
-        database.UseMasterSelector(connectionStringSelector);
+        this.database.UseSelector(connectionStringSelector);
         return this;
     }
     public OrmDatabaseBuilder UseSlave(params string[] connectionStrings)
     {
-        database.SlaveConnectionStrings ??= new();
-        database.SlaveConnectionStrings.AddRange(connectionStrings);
+        this.database.SlaveConnectionStrings ??= new();
+        this.database.SlaveConnectionStrings.AddRange(connectionStrings);
         return this;
     }
-    public OrmDatabaseBuilder UseSlaveConnectionStringSelector(Delegate connectionStringSelector)
+    public OrmDatabaseBuilder UseSlaveSelector(Delegate connectionStringSelector)
     {
         if (connectionStringSelector == null)
             throw new ArgumentNullException(nameof(connectionStringSelector));
-
-        database.UseSlaveSelector(connectionStringSelector);
+        this.database.UseSlaveSelector(connectionStringSelector);
         return this;
     }
-    public OrmDatabaseBuilder Configure<TModelConfiguration>() where TModelConfiguration : class, IModelConfiguration, new()
+
+    public OrmDatabaseBuilder UseMapping(IModelMappingConfiguration configuration)
     {
-        this.dbFactory.Configure(this.dbKey, new TModelConfiguration());
+        if (configuration == null)
+            throw new ArgumentNullException(nameof(configuration));
+        return this.UseMapping(configuration.Configure);
+    }
+    public OrmDatabaseBuilder UseMapping(Action<ModelBuilder> mappingInitializer)
+    {
+        if (mappingInitializer == null)
+            throw new ArgumentNullException(nameof(mappingInitializer));
+
+        if (!this.dbFactory.TryGetEntityMapProvider(this.dbKey, out var entityMapProvider))
+            this.dbFactory.UseEntityMapProvider(this.dbKey, entityMapProvider = new EntityMapProvider());
+        mappingInitializer.Invoke(new ModelBuilder(entityMapProvider));
         return this;
+    }
+
+    public OrmDatabaseBuilder UseTableSharding(ITableShardingConfiguration configuration)
+    {
+        if (configuration == null)
+            throw new ArgumentNullException(nameof(configuration));
+        return this.UseTableSharding(configuration.Configure);
     }
     public OrmDatabaseBuilder UseTableSharding(Action<TableShardingBuilder> shardingInitializer)
     {
@@ -236,15 +235,9 @@ public sealed class OrmDatabaseBuilder
             throw new ArgumentNullException(nameof(shardingInitializer));
 
         if (!this.dbFactory.TryGetTableShardingProvider(this.dbKey, out var tableShardingProvider))
-            this.dbFactory.AddTableShardingProvider(this.dbKey, tableShardingProvider = new TableShardingProvider());
-
-        var builder = new TableShardingBuilder(tableShardingProvider);
-        shardingInitializer.Invoke(builder);
-        return this;
-    }
-    public OrmDatabaseBuilder AsDefaultDatabase()
-    {
-        this.dbFactory.UseDefaultDatabase(this.dbKey);
+            this.dbFactory.UseTableShardingProvider(this.dbKey, tableShardingProvider = new TableShardingProvider());
+        shardingInitializer.Invoke(new TableShardingBuilder(tableShardingProvider));
+        this.database.UseTableShardingProvider(tableShardingProvider);
         return this;
     }
 }

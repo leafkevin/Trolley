@@ -16,7 +16,7 @@ public class MultipleQuery : IMultipleQuery
     #region Properties
     public DbContext DbContext { get; protected set; }
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
-    public IEntityMapProvider MapProvider => this.DbContext.MapProvider;
+    public IEntityMapProvider MapProvider => this.DbContext.EntityMapProvider;
     public IDbCommand Command { get; private set; }
     public List<ReaderAfter> ReaderAfters { get; private set; }
     #endregion

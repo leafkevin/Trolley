@@ -27,7 +27,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
     private static readonly Regex NpgsqlPointRegex = new Regex("\\((-?\\d+.?\\d*),(-?\\d+.?\\d*)\\)");
     private static Dictionary<Type, Func<object, object>> selfTypeParsers = new();
 
-    private readonly static Dictionary<object, Type> defaultMapTypes = new();
+    private readonly static Dictionary<NpgsqlDbType, Type> defaultMapTypes = new();
     private readonly static Dictionary<Type, object> defaultDbTypes = new();
     private readonly static Dictionary<Type, string> castTos = new();
     private readonly static List<Type> selfTypes = new() { typeof(NpgsqlInet), typeof(IPAddress),
@@ -322,37 +322,23 @@ public partial class PostgreSqlProvider : BaseOrmProvider
             throw new Exception($"类型{fieldType.FullName}没有对应的NpgsqlTypes.NpgsqlDbType映射类型");
         return dbType;
     }
-    public override Type MapDefaultType(object nativeDbType)
+    public override Type MapDefaultType(MemberMap memberMappper)
     {
-        if (nativeDbType == null)
-            throw new ArgumentNullException(nameof(nativeDbType));
-
-        if (defaultMapTypes.TryGetValue(nativeDbType, out var result))
-            return result;
-
-        if (nativeDbType is NpgsqlDbType dbType)
+        if (memberMappper.NativeDbType is NpgsqlDbType nativeDbType)
         {
-            var elementDbType = dbType & ~NpgsqlDbType.Array;
+            if (nativeDbType == NpgsqlDbType.Bit || nativeDbType == NpgsqlDbType.Varbit)
+            {
+                if (memberMappper.MaxLength > 1)
+                    return typeof(BitArray);
+                else return typeof(bool);
+            }
+            if (defaultMapTypes.TryGetValue(nativeDbType, out var result))
+                return result;
+            var elementDbType = nativeDbType & ~NpgsqlDbType.Array;
             if (defaultMapTypes.TryGetValue(elementDbType, out var elementType))
                 return elementType.MakeArrayType();
         }
-        if (nativeDbType is int iDbType)
-        {
-            var elementDbType = (NpgsqlDbType)(iDbType & ~(int)NpgsqlDbType.Array);
-            if (defaultMapTypes.TryGetValue(elementDbType, out result))
-                return result.MakeArrayType();
-        }
         return typeof(object);
-    }
-    public override Type MapDefaultType(MemberMap memberMappper)
-    {
-        if (memberMappper.NativeDbType is NpgsqlDbType nativeDbType && nativeDbType == NpgsqlDbType.Bit)
-        {
-            if (memberMappper.MaxLength > 1)
-                return typeof(BitArray);
-            else return typeof(bool);
-        }
-        return this.MapDefaultType(memberMappper.NativeDbType);
     }
     public override string CastTo(Type type, object value, string characterSetOrCollation = null)
         => $"CAST({value} AS {castTos[type]})";
@@ -2311,9 +2297,9 @@ public partial class PostgreSqlProvider : BaseOrmProvider
             result = result | NpgsqlDbType.Array;
         return result;
     }
-    public override bool MapTables(string connectionString, IEntityMapProvider mapProvider, IFieldMapHandler fieldMapHandler)
+    public override bool MapTables(string connectionString, IEntityMapProvider entityMapProvider)
     {
-        var tableNames = mapProvider.EntityMaps.Where(f => !f.IsMapped).Select(f => f.TableName).ToList();
+        var tableNames = entityMapProvider.EntityMaps.Where(f => !f.IsMapped).Select(f => f.TableName).ToList();
         if (tableNames == null || tableNames.Count == 0)
             return true;
         var sql = @"SELECT b.nspname,a.relname,c.attname,c.attndims,d.typname,CASE WHEN c.atttypmod>0 AND c.atttypmod<32767 THEN c.atttypmod-4 ELSE c.attlen END,e.description,pg_get_expr(g.adbin,g.adrelid),
@@ -2354,7 +2340,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
             sqlBuilder.Append($"b.nspname='{tableBuilder.Key}' AND a.relname IN ({tableBuilder.Value.ToString()})");
         }
         sql = string.Format(sql, sqlBuilder.ToString());
-        var entityMappers = mapProvider.EntityMaps.ToList();
+        var entityMappers = entityMapProvider.EntityMaps.ToList();
         var tableInfos = new List<DbTableInfo>();
         using var connection = new NpgsqlConnection(connectionString);
         using var command = new NpgsqlCommand(sql, connection);
@@ -2433,7 +2419,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
             var mappedMappers = new List<MemberMap>();
             foreach (var columnInfo in tableInfo.Columns)
             {
-                if (fieldMapHandler.TryFindMember(columnInfo.FieldName, entityMapper.MemberMaps, out var memberMapper))
+                if (entityMapProvider.TryMapMember(columnInfo.FieldName, entityMapper.MemberMaps, out var memberMapper))
                 {
                     memberMapper.DbColumnType = columnInfo.DbColumnType;
                     memberMapper.IsKey = columnInfo.IsPrimaryKey;
@@ -2445,7 +2431,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                 }
                 else
                 {
-                    if (!fieldMapHandler.TryFindMember(columnInfo.FieldName, memberInfos, out var memberInfo))
+                    if (!entityMapProvider.TryMapMember(columnInfo.FieldName, memberInfos, out var memberInfo))
                     {
                         if (columnInfo.IsNullable)
                             continue;
@@ -2471,7 +2457,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
 
                     //允许自定义TypeHandlerType设置，默认设置，刨除内置的支持类型
                     if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string) || memberMapper.UnderlyingType.IsEntityType(out _))
-                        && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string) && !selfTypes.Contains(memberMapper.UnderlyingType))
+                        && memberMapper.MappedTargetType == typeof(string) && !selfTypes.Contains(memberMapper.UnderlyingType))
                         memberMapper.TypeHandlerType = typeof(JsonTypeHandler);
 
                     if (memberMapper.TypeHandlerType != null)
@@ -2496,7 +2482,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
             else entityMapper.TableName = tableName;
             entityMapper.IsMapped = true;
         }
-        return mapProvider.EntityMaps.Count(f => !f.IsMapped) == 0;
+        return entityMapProvider.EntityMaps.Count(f => !f.IsMapped) == 0;
     }
     public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
     {
@@ -2550,7 +2536,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
     }
     public virtual List<string> GetShardingTableNames<TEntity>(DbContext dbContext, Func<string, bool> tableNameSelector = null, string tableSchema = null)
     {
-        var entityMapper = dbContext.MapProvider.GetEntityMap(typeof(TEntity));
+        var entityMapper = dbContext.EntityMapProvider.GetEntityMap(typeof(TEntity));
         var orgTableName = entityMapper.TableName;
         tableSchema ??= dbContext.DefaultTableSchema;
         var sql = $"SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND a.relname LIKE '{orgTableName}_%' AND b.nspname='{tableSchema}'";
@@ -2571,7 +2557,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
     }
     public virtual async Task<List<string>> GetShardingTableNamesAsync<TEntity>(DbContext dbContext, Func<string, bool> tableNameSelector = null, string tableSchema = null, CancellationToken cancellationToken = default)
     {
-        var entityMapper = dbContext.MapProvider.GetEntityMap(typeof(TEntity));
+        var entityMapper = dbContext.EntityMapProvider.GetEntityMap(typeof(TEntity));
         var orgTableName = entityMapper.TableName;
         tableSchema ??= dbContext.DefaultTableSchema;
         var sql = $"SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND a.relname LIKE '{orgTableName}_%' AND b.nspname='{tableSchema}'";
