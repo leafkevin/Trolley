@@ -236,6 +236,7 @@ public class PostgreSqlDeleteVisitor : DeleteVisitor
                     TargetMember = memberMapper.Member,
                     SegmentType = memberMapper.MemberType,
                     NativeDbType = memberMapper.NativeDbType,
+                    MappedTargetType = memberMapper.MappedTargetType,
                     TypeHandler = memberMapper.TypeHandler,
                     Body = memberMapper.FieldName
                 });

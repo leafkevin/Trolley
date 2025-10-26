@@ -13,6 +13,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
     private readonly ConcurrentDictionary<OrmProviderType, IEntityMapProvider> globalEntityMapProviders = new();
     private readonly ConcurrentDictionary<string, ITableShardingProvider> tableShardingProviders = new();
     private readonly ConcurrentDictionary<OrmProviderType, ITableShardingProvider> globalTableShardingProviders = new();
+    private readonly ConcurrentDictionary<Type, ITypeHandler> typeHandlers = new();
 
     private TheaDatabase defaultDatabase;
     private Delegate dbKeySelector;
@@ -61,7 +62,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
         if (database.IsDefault)
             this.defaultDatabase = database;
     }
-    public TheaDatabase GetDatabase(string dbKey = null)
+    public TheaDatabase GetDatabase(string dbKey)
     {
         if (string.IsNullOrEmpty(dbKey))
         {
@@ -134,6 +135,14 @@ public sealed class OrmDbFactory : IOrmDbFactory
     }
     public bool TryGetTableShardingProvider(OrmProviderType ormProviderType, out ITableShardingProvider tableShardingProvider)
         => this.globalTableShardingProviders.TryGetValue(ormProviderType, out tableShardingProvider);
+
+    public void UseTypeHandler(ITypeHandler typeHandler)
+    {
+        if (typeHandler == null)
+            throw new ArgumentNullException(nameof(typeHandler));
+        var typeHandlerType = typeHandler.GetType();
+        this.typeHandlers.AddOrUpdate(typeHandlerType, typeHandler, (o, k) => typeHandler);
+    }
 
     public TRepository Create<TRepository>(params object[] dbKeySelectorValues) where TRepository : class, IRepository
     {

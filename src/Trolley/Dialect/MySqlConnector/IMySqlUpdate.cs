@@ -15,19 +15,18 @@ public interface IMySqlUpdate<TEntity> : IUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new IMySqlUpdate<TEntity> UseTable(params string[] tableNames);
     /// <summary>
-    /// 手动指定<typeparamref name="TEntity"/>表分表名获取委托，执行委托获取分表名，更新到多个分表中，只用于批量场景。
-    /// 第一个参数是原始表名，第二个参数是更新的实体对象，返回值是分表名，如：.UseTable((tableName, updateObj) =&gt; $"{tableName}_{updateObj.CreatedAt:yyyyMM}")
+    /// 手动指定<typeparamref name="TEntity"/>表分表依赖字段值获取委托，返回的字段值对象用于确定分表名，字段值对象中的顺序与配置的依赖字段顺序一致，自动更新到多个分表中，只用于批量场景。
+    /// 如：.UseTable(f =&gt; new { TenantId = 125, f.CreatedAt })，Trolley会自动搜索所有更新参数中的包含名为CreatedAt的属性值，125是租户ID，根据租户ID+CreatedAt时间确定分表名
     /// </summary>
-    /// <typeparam name="TUpdateObj">更新的实体类型</typeparam>
-    /// <param name="tableNameGetter">分表名获取委托</param>
+    /// <param name="dependOnFieldValuesSelector">分表依赖字段值获取委托</param>
     /// <returns>返回更新对象</returns>
-    new IMySqlUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter);
+    new IMySqlUpdate<TEntity> UseTable(Expression<Func<TEntity, object>> dependOnFieldValuesSelector);
     /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="TEntity"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回更新对象</returns>
-    new IMySqlUpdate<TEntity> UseTableBy(params object[] fieldValues);   
+    new IMySqlUpdate<TEntity> UseTableBy(params object[] fieldValues);
     /// <summary>
     /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="TEntity"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>

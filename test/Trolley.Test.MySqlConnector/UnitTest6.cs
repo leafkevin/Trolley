@@ -14,6 +14,7 @@ namespace Trolley.Test.MySqlConnector;
 public class UnitTest6 : UnitTestBase
 {
     private readonly ITestOutputHelper output;
+    private int[] robinIndices = [0, 0, 0];
     public UnitTest6(ITestOutputHelper output)
     {
         this.output = output;
@@ -24,8 +25,21 @@ public class UnitTest6 : UnitTestBase
             var connectionString1 = "Server=localhost;Database=fengling1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
             var connectionString2 = "Server=localhost;Database=fengling2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.MySql, "fengling", f => f.Use(connectionString)
-                    .UseSlave(connectionString1, connectionString2), true)
+                .Register(OrmProviderType.MySql, "fengling", f => f.Use([connectionString], values =>
+                {
+                    var tenantId = (int)values[0];
+                    if (tenantId > 3) tenantId = 3;
+                    var connectionStrings = new Dictionary<int, string[]>() 
+                    { 
+                        { 1, [connectionString, connectionString1, connectionString2] },
+                        { 2, [connectionString, connectionString1, connectionString2] },
+                        { 3, [connectionString, connectionString1, connectionString2] }
+                    };
+                    int index = Interlocked.Increment(ref robinIndices[0]) % 2;
+                    if (Volatile.Read(ref robinIndices[0]) >= int.MaxValue - 1000)
+                        Interlocked.Exchange(ref robinIndices[0], 0);
+                    return connectionStrings[tenantId][Interlocked.Increment(ref robinIndices[0]) % 2];
+                }).UseSlave(connectionString1, connectionString2), true)
                 .Register(OrmProviderType.MySql, "fengling1", f => f.Use(connectionString1))
                 .Register(OrmProviderType.MySql, "fengling2", f => f.Use(connectionString2))
                 .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)

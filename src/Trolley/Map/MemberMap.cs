@@ -51,9 +51,6 @@ public class MemberMap
     public ITypeHandler TypeHandler { get; set; }
     public Type TypeHandlerType { get; set; }
 
-  
-
-
     public MemberMap(EntityMap parent, MemberInfo memberInfo)
     {
         this.Parent = parent;
@@ -72,6 +69,7 @@ public class MemberMap
         result.MemberName = memberInfo.Name;
         result.MemberType = memberInfo.GetMemberType();
         result.NativeDbType = this.NativeDbType;
+        result.MappedTargetType = this.MappedTargetType;
         result.UnderlyingType = this.UnderlyingType;
         result.TypeHandler = this.TypeHandler;
         return result;

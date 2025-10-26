@@ -15,11 +15,12 @@ public interface IPostgreSqlUpdate<TEntity> : IUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new IPostgreSqlUpdate<TEntity> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 手动指定<typeparamref name="TEntity"/>表分表依赖字段值获取委托，返回的字段值对象用于确定分表名，字段值对象中的顺序与配置的依赖字段顺序一致，自动更新到多个分表中，只用于批量场景。
+    /// 如：.UseTable(f =&gt; new { TenantId = 125, f.CreatedAt })，Trolley会自动搜索所有更新参数中的包含名为CreatedAt的属性值，125是租户ID，根据租户ID+CreatedAt时间确定分表名
     /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
+    /// <param name="dependOnFieldValuesSelector">分表依赖字段值获取委托</param>
     /// <returns>返回更新对象</returns>
-    new IPostgreSqlUpdate<TEntity> UseTable(Func<string, bool> tableNamePredicate);
+    new IPostgreSqlUpdate<TEntity> UseTable(Expression<Func<TEntity, object>> dependOnFieldValuesSelector);
     /// <summary>
     /// 手动设置分表名获取委托，只适用于批量更新场景，通常是根据某1个或多个字段值来确定分表名，执行时会根据实体字段的值自动更新对应的分表中
     /// </summary>

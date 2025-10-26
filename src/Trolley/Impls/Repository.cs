@@ -23,19 +23,14 @@ public class Repository : IRepository
     #endregion
 
     #region ShardingDatabase
-    public IRepository UseMaster()
+    public IRepository UseMaster(params object[] selectorValues)
     {
-        this.DbContext.ConnectionString = this.DbContext.Database.UseSelector();
+        this.DbContext.ConnectionString = this.DbContext.Database.Select(selectorValues);
         return this;
     }
-    public IRepository UseMasterBy(params object[] fieldValues)
+    public IRepository UseSlave(params object[] selectorValues)
     {
-        this.DbContext.ConnectionString = this.DbContext.Database.UseMasterBy(fieldValues);
-        return this;
-    }
-    public IRepository UseSlaveBy(params object[] fieldValues)
-    {
-        this.DbContext.ConnectionString = this.DbContext.Database.UseSlaveBy(fieldValues);
+        this.DbContext.ConnectionString = this.DbContext.Database.SelectSlave(selectorValues);
         return this;
     }
     #endregion
@@ -45,16 +40,16 @@ public class Repository : IRepository
     public virtual Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null, CancellationToken cancellationToken = default) => null;
     public virtual void CreateShardingTable<TEntity>(string tableName, string fromTableSchema = null) { }
     public virtual Task CreateShardingTableAsync<TEntity>(string tableName, string fromTableSchema = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
-    public virtual string GetShardingTableNameBy<TEntity>(CommandOperationType operationType, params object[] fieldValues)
-        => this.DbContext.GetShardingTableBy(operationType, typeof(TEntity), fieldValues);
-    public virtual void CreateShardingTableBy<TEntity>(CommandOperationType operationType, object[] fieldValues, string fromTableSchema = null)
+    public virtual string GetShardingTableNameBy<TEntity>(params object[] fieldValues)
+        => this.DbContext.GetShardingTableBy(typeof(TEntity), fieldValues);
+    public virtual void CreateShardingTableBy<TEntity>(object[] fieldValues, string fromTableSchema = null)
     {
-        var tableName = this.DbContext.GetShardingTableBy(operationType, typeof(TEntity), fieldValues);
+        var tableName = this.DbContext.GetShardingTableBy(typeof(TEntity), fieldValues);
         this.CreateShardingTable<TEntity>(tableName, fromTableSchema);
     }
-    public virtual async Task CreateShardingTableByAsync<TEntity>(CommandOperationType operationType, object[] fieldValues, string fromTableSchema = null, CancellationToken cancellationToken = default)
+    public virtual async Task CreateShardingTableByAsync<TEntity>(object[] fieldValues, string fromTableSchema = null, CancellationToken cancellationToken = default)
     {
-        var tableName = this.DbContext.GetShardingTableBy(operationType, typeof(TEntity), fieldValues);
+        var tableName = this.DbContext.GetShardingTableBy(typeof(TEntity), fieldValues);
         await this.CreateShardingTableAsync<TEntity>(tableName, fromTableSchema, cancellationToken);
     }
     #endregion     

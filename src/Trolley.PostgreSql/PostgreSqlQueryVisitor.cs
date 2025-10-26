@@ -9,9 +9,8 @@ namespace Trolley.PostgreSql;
 public class PostgreSqlQueryVisitor : QueryVisitor
 {
     private bool isDisposed;
-    public PostgreSqlQueryVisitor(DbContext dbContext)
-        : base(dbContext) { }
-    public PostgreSqlQueryVisitor(DbContext dbContext, char tableAsStart, IDataParameterCollection dbParameters = null)
+
+    public PostgreSqlQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
         : base(dbContext, tableAsStart, dbParameters) { }
 
     public bool IsDistinctOn { get; set; }
@@ -886,6 +885,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                             if (memberMapper.UnderlyingType.IsEnum)
                                 sqlSegment.ExpectType = memberMapper.UnderlyingType;
                             sqlSegment.NativeDbType = memberMapper.NativeDbType;
+                            sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
                             sqlSegment.TypeHandler = memberMapper.TypeHandler;
                             sqlSegment.Body = fieldName;
                         }
@@ -905,6 +905,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                         if (readerField.SegmentType.IsEnumType(out var underlyingType))
                             sqlSegment.ExpectType = underlyingType;
                         sqlSegment.NativeDbType = readerField.NativeDbType;
+                        sqlSegment.MappedTargetType = readerField.MappedTargetType;
                         sqlSegment.TypeHandler = readerField.TypeHandler;
                         sqlSegment.Body = readerField.Body;
                         sqlSegment.Fields = readerField.Fields;
@@ -932,6 +933,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                             sqlSegment.ExpectType = memberMapper.UnderlyingType;
                         sqlSegment.SegmentType = memberMapper.MemberType;
                         sqlSegment.NativeDbType = memberMapper.NativeDbType;
+                        sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
                         sqlSegment.TypeHandler = memberMapper.TypeHandler;
 
                         //查询时，IsNeedAlias始终为true，新增、更新、删除时，引用联表操作时，才会为true
@@ -974,6 +976,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                             sqlSegment.ExpectType = underlyingType;
 
                         sqlSegment.NativeDbType = readerField.NativeDbType;
+                        sqlSegment.MappedTargetType = readerField.MappedTargetType;
                         sqlSegment.TypeHandler = readerField.TypeHandler;
                         if (fromSegment.TableType == TableType.TempReaderFields)
                             fieldName = readerField.Body;

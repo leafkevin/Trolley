@@ -17,8 +17,7 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
     public Create(DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.Visitor = this.DbContext.OrmProvider.NewCreateVisitor(dbContext);
-        this.Visitor.Initialize(typeof(TEntity));
+        this.Visitor = this.DbContext.OrmProvider.NewCreateVisitor(typeof(TEntity), dbContext);
     }
     #endregion
 
@@ -33,9 +32,9 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
         this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
-    public virtual ICreate<TEntity> UseTable<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter)
+    public virtual ICreate<TEntity> UseTable(Expression<Func<TEntity, object>> dependOnFieldValuesSelector)
     {
-        this.Visitor.UseTable(tableNameGetter);
+        this.Visitor.UseTable(dependOnFieldValuesSelector);
         return this;
     }
     #endregion

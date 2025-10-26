@@ -21,8 +21,7 @@ public class Update<TEntity> : IUpdate<TEntity>
     public Update(DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.Visitor = this.DbContext.OrmProvider.NewUpdateVisitor(dbContext);
-        this.Visitor.Initialize(typeof(TEntity));
+        this.Visitor = this.DbContext.OrmProvider.NewUpdateVisitor(typeof(TEntity), dbContext);
     }
     #endregion
 
@@ -32,9 +31,9 @@ public class Update<TEntity> : IUpdate<TEntity>
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
-    public virtual IUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
+    public virtual IUpdate<TEntity> UseTable(Expression<Func<TEntity, object>> dependonFieldValuesSelector)
     {
-        this.Visitor.UseTable(tableNameGetter);
+        this.Visitor.UseTable(dependonFieldValuesSelector);
         return this;
     }
     public virtual IUpdate<TEntity> UseTableBy(params object[] fieldValues)

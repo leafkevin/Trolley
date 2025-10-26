@@ -8,7 +8,7 @@ public class EntityMapProvider : IEntityMapProvider
 {
     private readonly ConcurrentDictionary<Type, EntityMap> entityMappers = new();
     public ICollection<EntityMap> EntityMaps => this.entityMappers.Values;
-    public Func<string, string, bool> FieldMapHandler { get; set; }
+    public Func<string, string, bool> IsCanMapTo { get; set; }
     public void UseEntityMap(Type entityType, EntityMap entityMapper) =>
         this.entityMappers.AddOrUpdate(entityType, entityMapper, (k, o) => entityMapper);
     public bool TryGetEntityMap(Type entityType, out EntityMap entityMapper)

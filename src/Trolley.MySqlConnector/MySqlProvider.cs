@@ -465,6 +465,7 @@ public partial class MySqlProvider : BaseOrmProvider
                             HasField = true,
                             FromMember = memberMapper.Member,
                             NativeDbType = memberMapper.NativeDbType,
+                            MappedTargetType = memberMapper.MappedTargetType,
                             TypeHandler = memberMapper.TypeHandler,
                             Body = fieldName
                         };

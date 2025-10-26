@@ -516,6 +516,7 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
                                     FromMember = memberMapper.Member,
                                     SegmentType = memberMapper.MemberType,
                                     NativeDbType = memberMapper.NativeDbType,
+                                    MappedTargetType = memberMapper.MappedTargetType,
                                     TypeHandler = memberMapper.TypeHandler,
                                     Body = fieldName
                                 };
@@ -558,6 +559,7 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
                                     FromMember = memberMapper.Member,
                                     SegmentType = memberMapper.MemberType,
                                     NativeDbType = memberMapper.NativeDbType,
+                                    MappedTargetType = memberMapper.MappedTargetType,
                                     TypeHandler = memberMapper.TypeHandler,
                                     Body = fieldName
                                 };

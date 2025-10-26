@@ -237,6 +237,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                 if (memberMapper.UnderlyingType.IsEnum)
                     sqlSegment.ExpectType = memberMapper.UnderlyingType;
                 sqlSegment.NativeDbType = memberMapper.NativeDbType;
+                sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
                 sqlSegment.TypeHandler = memberMapper.TypeHandler;
                 sqlSegment.Body = fieldName;
                 return sqlSegment;

@@ -37,12 +37,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public int PageSize => this.limit ?? 0;
     public bool IsNeedPaging { get; set; }
 
-    public QueryVisitor(DbContext dbContext) => this.DbContext = dbContext;
-    public QueryVisitor(DbContext dbContext, char tableAsStart, IDataParameterCollection dbParameters = null)
+    public QueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
     {
         this.DbContext = dbContext;
         this.TableAsStart = tableAsStart;
-        this.DbParameters = dbParameters ?? new TheaDbParameterCollection();
+        if (dbParameters != null) this.DbParameters = dbParameters;
+        //TODO:
+        //this.DbParameters = dbParameters ?? new TheaDbParameterCollection();
         this.IsNeedTableAlias = true;
     }
     public virtual string BuildSql(bool isBuildCteSql, out List<SqlFieldSegment> readerFields)
@@ -1519,6 +1520,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 SegmentType = segmentType,
                 ExpectType = expectType,
                 NativeDbType = memberMapper.NativeDbType,
+                MappedTargetType = memberMapper.MappedTargetType,
                 TypeHandler = memberMapper.TypeHandler,
                 Body = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(memberMapper.FieldName)
             };
@@ -1744,6 +1746,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             if (memberMapper.UnderlyingType.IsEnum)
                                 sqlSegment.ExpectType = memberMapper.UnderlyingType;
                             sqlSegment.NativeDbType = memberMapper.NativeDbType;
+                            sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
                             sqlSegment.TypeHandler = memberMapper.TypeHandler;
                             sqlSegment.Body = fieldName;
                         }
@@ -1763,6 +1766,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         if (readerField.SegmentType.IsEnumType(out var underlyingType))
                             sqlSegment.ExpectType = underlyingType;
                         sqlSegment.NativeDbType = readerField.NativeDbType;
+                        sqlSegment.MappedTargetType = readerField.MappedTargetType;
                         sqlSegment.TypeHandler = readerField.TypeHandler;
                         sqlSegment.Body = readerField.Body;
                         sqlSegment.Fields = readerField.Fields;
@@ -1790,6 +1794,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             sqlSegment.ExpectType = memberMapper.UnderlyingType;
                         sqlSegment.SegmentType = memberMapper.MemberType;
                         sqlSegment.NativeDbType = memberMapper.NativeDbType;
+                        sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
                         sqlSegment.TypeHandler = memberMapper.TypeHandler;
 
                         //查询时，IsNeedAlias始终为true，新增、更新、删除时，引用联表操作时，才会为true
@@ -1832,6 +1837,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             sqlSegment.ExpectType = underlyingType;
 
                         sqlSegment.NativeDbType = readerField.NativeDbType;
+                        sqlSegment.MappedTargetType = readerField.MappedTargetType;
                         sqlSegment.TypeHandler = readerField.TypeHandler;
                         sqlSegment.TableSegment = fromSegment;
                         if (fromSegment.TableType == TableType.TempReaderFields)

@@ -114,6 +114,10 @@ public class SqlFieldSegment : ICloneable
     /// </summary>
     public object NativeDbType { get; set; }
     /// <summary>
+    /// 数据库字段映射的目标类型
+    /// </summary>
+    public Type MappedTargetType { get; set; }
+    /// <summary>
     /// 单字段访问时，映射的TypeHandler
     /// </summary>
     public ITypeHandler TypeHandler { get; set; }

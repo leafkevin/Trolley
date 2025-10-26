@@ -45,7 +45,7 @@ public sealed class OrmDbFactoryBuilder
 
         if (!this.dbFactory.TryGetEntityMapProvider(dbKey, out var entityMapProvider))
             this.dbFactory.UseEntityMapProvider(dbKey, entityMapProvider = new EntityMapProvider());
-        entityMapProvider.FieldMapHandler = configuration.IsCanMapTo;
+        entityMapProvider.IsCanMapTo = configuration.IsCanMapTo;
         configuration.Configure(new ModelBuilder(entityMapProvider));
         return this;
     }
@@ -56,7 +56,7 @@ public sealed class OrmDbFactoryBuilder
 
         if (!this.dbFactory.TryGetEntityMapProvider(ormProviderType, out var entityMapProvider))
             this.dbFactory.UseEntityMapProvider(ormProviderType, entityMapProvider = new EntityMapProvider());
-        entityMapProvider.FieldMapHandler = configuration.IsCanMapTo;
+        entityMapProvider.IsCanMapTo = configuration.IsCanMapTo;
         configuration.Configure(new ModelBuilder(entityMapProvider));
         return this;
     }
@@ -106,6 +106,14 @@ public sealed class OrmDbFactoryBuilder
             throw new ArgumentNullException(nameof(filterInitializer));
 
         filterInitializer.Invoke(this.dbFactory.DbInterceptors);
+        return this;
+    }
+    public OrmDbFactoryBuilder UseTypeHandler(ITypeHandler typeHandler)
+    {
+        if (typeHandler == null)
+            throw new ArgumentNullException(nameof(typeHandler));
+
+        this.dbFactory.UseTypeHandler(typeHandler);
         return this;
     }
     public OrmDbFactoryBuilder WithOptions(Action<OrmDbFactoryOptions> optionsInitializer)
@@ -176,33 +184,22 @@ public sealed class OrmDatabaseBuilder
     /// <returns></returns>
     public OrmDatabaseBuilder Use(params string[] connectionStrings)
     {
-        this.database.ConnectionStrings ??= new();
-        this.database.ConnectionStrings.AddRange(connectionStrings);
+        this.database.Use(connectionStrings);
         return this;
     }
-    /// <summary>
-    /// 设置主库连接串选择器，多个主库时通过指定参数的connectionStringSelector委托选择连接串，这个参数在调用CreateRepository方法时指定，使用此场景通常是多主库并且多租户，如：主库有4个数据库，分别为tenant1_master1、tenant1_master2、other_tenant_master1、other_tenant_master2，调用CreateRepository("default", tenant1)时，将选择tenant1中的某一个主库，调用CreateRepository("default", tenant2)时，将选择other_tenant中的某一个主库，进行写操作
-    /// </summary>
-    /// <param name="connectionStringSelector"></param>
-    /// <returns></returns>
-    public OrmDatabaseBuilder UseSelector(Delegate connectionStringSelector)
+    public OrmDatabaseBuilder Use(string[] connectionStrings, Func<object[], string> connectionStringSelector)
     {
-        if (connectionStringSelector == null)
-            throw new ArgumentNullException(nameof(connectionStringSelector));
-        this.database.UseSelector(connectionStringSelector);
+        this.database.Use(connectionStrings, connectionStringSelector);
         return this;
     }
     public OrmDatabaseBuilder UseSlave(params string[] connectionStrings)
     {
-        this.database.SlaveConnectionStrings ??= new();
-        this.database.SlaveConnectionStrings.AddRange(connectionStrings);
+        this.database.UseSlave(connectionStrings);
         return this;
     }
-    public OrmDatabaseBuilder UseSlaveSelector(Delegate connectionStringSelector)
+    public OrmDatabaseBuilder UseSlave(string[] connectionStrings, Func<object[], string> connectionStringSelector)
     {
-        if (connectionStringSelector == null)
-            throw new ArgumentNullException(nameof(connectionStringSelector));
-        this.database.UseSlaveSelector(connectionStringSelector);
+        this.database.Use(connectionStrings, connectionStringSelector);
         return this;
     }
 
@@ -210,7 +207,11 @@ public sealed class OrmDatabaseBuilder
     {
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
-        return this.UseMapping(configuration.Configure);
+        if (!this.dbFactory.TryGetEntityMapProvider(this.dbKey, out var entityMapProvider))
+            this.dbFactory.UseEntityMapProvider(this.dbKey, entityMapProvider = new EntityMapProvider());
+        configuration.Configure(new ModelBuilder(entityMapProvider));
+        this.database.UseEntityMapProvider(entityMapProvider);
+        return this;
     }
     public OrmDatabaseBuilder UseMapping(Action<ModelBuilder> mappingInitializer)
     {

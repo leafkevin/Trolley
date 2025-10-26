@@ -56,7 +56,7 @@ public interface IOrmDbFactory
     #endregion
 
     void Register(TheaDatabase database);
-    TheaDatabase GetDatabase(string dbKey = null);
+    TheaDatabase GetDatabase(string dbKey);
     void UseDbKeySelector(Delegate dbKeySelector);
 
     void UseOrmProvider(IOrmProvider ormProvider);
@@ -71,6 +71,8 @@ public interface IOrmDbFactory
     void UseTableShardingProvider(OrmProviderType ormProviderType, ITableShardingProvider tableShardingProvider);
     bool TryGetTableShardingProvider(string dbKey, out ITableShardingProvider tableShardingProvider);
     bool TryGetTableShardingProvider(OrmProviderType ormProviderType, out ITableShardingProvider tableShardingProvider);
+
+    void UseTypeHandler(ITypeHandler typeHandler);
 
     TRepository Create<TRepository>(params object[] dbKeySelectorValues) where TRepository : class, IRepository;
     TRepository CreateRepository<TRepository>(string dbKey) where TRepository : class, IRepository;

@@ -39,20 +39,20 @@ public static class Extensions
     {
         if (fromName == null || toName == null)
             return false;
-        return entityMapProvider.FieldMapHandler(fromName.Name, toName.Name);
+        return entityMapProvider.IsCanMapTo(fromName.Name, toName.Name);
     }
     public static bool TryMapMember(this IEntityMapProvider entityMapProvider, string fieldName, List<MemberMap> memberMappers, out MemberMap memberMapper)
     {
         if (string.IsNullOrEmpty(fieldName))
             throw new ArgumentNullException(nameof(fieldName));
-        memberMapper = memberMappers.Find(f => entityMapProvider.FieldMapHandler(fieldName, f.FieldName));
+        memberMapper = memberMappers.Find(f => entityMapProvider.IsCanMapTo(fieldName, f.MemberName));
         return memberMapper != null;
     }
     public static bool TryMapMember(this IEntityMapProvider entityMapProvider, string fieldName, List<MemberInfo> memberInfos, out MemberInfo memberInfo)
     {
         if (string.IsNullOrEmpty(fieldName))
             throw new ArgumentNullException(nameof(fieldName));
-        memberInfo = memberInfos.Find(f => entityMapProvider.FieldMapHandler(fieldName, f.Name));
+        memberInfo = memberInfos.Find(f => entityMapProvider.IsCanMapTo(fieldName, f.Name));
         return memberInfo != null;
     }
 

@@ -231,6 +231,7 @@ public class SqlServerDeleteVisitor : DeleteVisitor
                 if (memberMapper.UnderlyingType.IsEnum)
                     sqlSegment.ExpectType = memberMapper.UnderlyingType;
                 sqlSegment.NativeDbType = memberMapper.NativeDbType;
+                sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
                 sqlSegment.TypeHandler = memberMapper.TypeHandler;
                 if (this.IsOutput) fieldName = "DELETED." + fieldName;
                 else if (this.IsNeedTableAlias) fieldName = tableSegment.AliasName + "." + fieldName;
@@ -360,6 +361,7 @@ public class SqlServerDeleteVisitor : DeleteVisitor
                     TargetMember = memberMapper.Member,
                     SegmentType = memberMapper.MemberType,
                     NativeDbType = memberMapper.NativeDbType,
+                    MappedTargetType = memberMapper.MappedTargetType,
                     TypeHandler = memberMapper.TypeHandler,
                     Body = memberMapper.FieldName
                 });

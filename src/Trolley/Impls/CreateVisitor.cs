@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 
 namespace Trolley;
@@ -12,6 +11,10 @@ namespace Trolley;
 public class CreateVisitor : SqlVisitor, ICreateVisitor
 {
     protected List<CommandSegment> deferredSegments = new();
+    protected bool isNeedSplitShardingTables = false;
+    protected TableShardingInfo tableShardingInfo = null;
+    protected Dictionary<string, object> shardingDependOnValues = null;
+
     public StringBuilder FieldsBuilder { get; set; } = new();
     public StringBuilder ValuesBuilder { get; set; }
 
@@ -105,6 +108,11 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             Type = "WithBulk",
             Value = (insertObjs, bulkCount)
         });
+        var tableSegment = this.Tables[0];
+        this.isNeedSplitShardingTables = this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out this.tableShardingInfo)
+            && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null && this.tableShardingInfo.UsageMode != TableShardingUsageMode.ReadOnly;
+        if (this.isNeedSplitShardingTables && (this.tableShardingInfo.DependOnMembers == null || this.tableShardingInfo.DependOnMembers.Count == 0))
+            throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，但未指定分表名，也未指定依赖成员，无法确定分表，原表名：{tableSegment.Mapper.TableName}");
     }
     public virtual void IgnoreFields(string[] fieldNames)
     {
@@ -267,9 +275,18 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var insertObjType = insertObj.GetType();
         var hasOnlyFields = this.OnlyFieldNames != null && this.OnlyFieldNames.Count > 0;
         var hasIgnoreFields = this.IgnoreFieldNames != null && this.IgnoreFieldNames.Count > 0;
-        var commandInitializer = RepositoryHelper.BuildWithFilterFieldsCommandInitializer(this.DbContext, entityType, insertObjType, 1, hasOnlyFields, hasIgnoreFields)
-            as Action<IDataParameterCollection, StringBuilder, StringBuilder, DbContext, List<string>, List<string>, object>;
-        commandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.ValuesBuilder, this.DbContext, this.OnlyFieldNames, this.IgnoreFieldNames, insertObj);
+
+        var commandInitializer = RepositoryHelper.BuildWithFilterFieldsCommandInitializer(this.DbContext, entityType, insertObjType, 1, this.isNeedSplitShardingTables, hasOnlyFields, hasIgnoreFields);
+        if (this.isNeedSplitShardingTables)
+        {
+            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, StringBuilder, IDictionary<string, object>, DbContext, List<string>, List<string>, object>;
+            typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.ValuesBuilder, this.shardingDependOnValues, this.DbContext, this.OnlyFieldNames, this.IgnoreFieldNames, insertObj);
+        }
+        else
+        {
+            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, StringBuilder, DbContext, List<string>, List<string>, object>;
+            typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.ValuesBuilder, this.DbContext, this.OnlyFieldNames, this.IgnoreFieldNames, insertObj);
+        }
     }
     public virtual void VisitWithByField(object deferredSegmentValue)
     {
@@ -287,7 +304,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
         else
         {
-            var targetType = this.OrmProvider.MapDefaultType(memberMapper);
+            var targetType = memberMapper.MappedTargetType;
             var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext);
             fieldValue = valueGetter.Invoke(fieldValue);
         }

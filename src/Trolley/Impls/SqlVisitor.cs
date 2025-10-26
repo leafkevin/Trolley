@@ -228,16 +228,63 @@ public class SqlVisitor : ISqlVisitor
         }
     }
     /// <summary>
-    /// 设置批量插入、更新、删除操作时的分表名获取委托
+    /// 设置批量插入、更新操作时的分表名获取委托
     /// </summary>
-    /// <typeparam name="TParameter">插入参数类型</typeparam>
+    /// <typeparam name="TEntity">实体对象类型</typeparam>
     /// <param name="tableNameGetter"></param>
     /// <exception cref="ArgumentNullException"></exception>
-    public void UseTable<TParameter>(Func<string, TParameter, string> tableNameGetter)
+    public void UseTable<TEntity>(Expression<Func<TEntity, object>> dependonFieldValuesSelector)
     {
-        if (tableNameGetter == null)
-            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
-        this.Tables[0].ShardingTableGetter = tableNameGetter;
+        if (dependonFieldValuesSelector == null)
+            throw new ArgumentNullException(nameof(dependonFieldValuesSelector), "dependonFieldValuesSelector参数不能为空");
+
+        var lambdaExpr = dependonFieldValuesSelector as LambdaExpression;
+        var entityMapper = this.Tables[0].Mapper;
+        MemberMap memberMapper = null;
+        switch (lambdaExpr.Body.NodeType)
+        {
+            case ExpressionType.MemberAccess:
+                var memberExpr = lambdaExpr.Body as MemberExpression;
+                memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
+                fieldsAction.Invoke(memberMapper);
+                break;
+            case ExpressionType.New:
+                this.InitTableAlias(lambdaExpr);
+                var newExpr = lambdaExpr.Body as NewExpression;
+                for (int i = 0; i < newExpr.Arguments.Count; i++)
+                {
+                    var memberInfo = newExpr.Members[i];
+                    if (!entityMapper.TryGetMemberMap(memberInfo.Name, out memberMapper))
+                        continue;
+
+                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment
+                    {
+                        Expression = newExpr.Arguments[i],
+                        NativeDbType = memberMapper.NativeDbType,
+                        MappedTargetType = memberMapper.MappedTargetType,
+                        TypeHandler = memberMapper.TypeHandler
+                    });
+                    if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberInfo.Name)
+                        fieldsAction.Invoke(memberMapper);
+                }
+                break;
+            case ExpressionType.MemberInit:
+                this.InitTableAlias(lambdaExpr);
+                var memberInitExpr = lambdaExpr.Body as MemberInitExpression;
+                for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
+                {
+                    var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
+                    if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out memberMapper))
+                        continue;
+
+                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberAssignment.Expression });
+                    if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberAssignment.Member.Name)
+                        fieldsAction.Invoke(memberMapper);
+                }
+                break;
+        }
+
+        this.Tables[0].ShardingTableGetter = dependonFieldValuesSelector;
     }
     public void UseUnionShardingTable() => this.ShardingTableJointMark = "UNION";
     public virtual void UseTableSchema(bool isIncludeMany, string tableSchema)
@@ -481,6 +528,7 @@ public class SqlVisitor : ISqlVisitor
                 {
                     rightSegment.ExpectType = leftSegment.ExpectType;
                     rightSegment.NativeDbType = leftSegment.NativeDbType;
+                    rightSegment.MappedTargetType = leftSegment.MappedTargetType;
                     rightSegment.TypeHandler = leftSegment.TypeHandler;
                 }
 
@@ -634,6 +682,7 @@ public class SqlVisitor : ISqlVisitor
                     if (readerField.SegmentType.IsEnumType(out var underlyingType))
                         sqlSegment.ExpectType = underlyingType;
                     sqlSegment.NativeDbType = readerField.NativeDbType;
+                    sqlSegment.MappedTargetType = readerField.MappedTargetType;
                     sqlSegment.TypeHandler = readerField.TypeHandler;
                     sqlSegment.Body = fieldName;
                 }
@@ -649,6 +698,7 @@ public class SqlVisitor : ISqlVisitor
                     if (memberMapper.UnderlyingType.IsEnum)
                         sqlSegment.ExpectType = memberMapper.UnderlyingType;
                     sqlSegment.NativeDbType = memberMapper.NativeDbType;
+                    sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
                     sqlSegment.TypeHandler = memberMapper.TypeHandler;
                     //查询时，IsNeedAlias始终为true，新增、更新、删除时，引用联表操作时，才会为true
                     fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
@@ -883,6 +933,7 @@ public class SqlVisitor : ISqlVisitor
         {
             ifFalseSegment.ExpectType = ifTrueSegment.ExpectType;
             ifFalseSegment.NativeDbType = ifTrueSegment.NativeDbType;
+            ifFalseSegment.MappedTargetType = ifTrueSegment.MappedTargetType;
             ifFalseSegment.TypeHandler = ifTrueSegment.TypeHandler;
         }
         string leftArgument = this.GetQuotedValue(ifTrueSegment);
@@ -890,6 +941,7 @@ public class SqlVisitor : ISqlVisitor
         sqlSegment.IsFieldType = true;
         sqlSegment.ExpectType = ifTrueSegment.ExpectType;
         sqlSegment.NativeDbType = ifTrueSegment.NativeDbType;
+        sqlSegment.MappedTargetType = ifTrueSegment.MappedTargetType;
         sqlSegment.TypeHandler = ifFalseSegment.TypeHandler;
         sqlSegment.SegmentType = ifFalseSegment.SegmentType;
         return this.VisitDeferredBoolConditional(sqlSegment, conditionalExpr.IfTrue.Type == typeof(bool), leftArgument, rightArgument);
@@ -1941,7 +1993,6 @@ public class SqlVisitor : ISqlVisitor
                 dbParameters = this.NextDbParameters;
             }
             var parameterName = sqlSegment.ParameterName ?? this.OrmProvider.ParameterPrefix + this.UserParameterPrefix + dbParameters.Count.ToString();
-            if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
 
             if (sqlSegment.Value == null || sqlSegment.Value == DBNull.Value)
                 dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, DBNull.Value));
@@ -1968,7 +2019,7 @@ public class SqlVisitor : ISqlVisitor
                     }
                     if (sqlSegment.NativeDbType != null)
                     {
-                        var targetType = this.OrmProvider.MapDefaultType(sqlSegment.NativeDbType);
+                        var targetType = sqlSegment.MappedTargetType;
                         if (sqlSegment.SegmentType != targetType)
                         {
                             var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, this.DbContext);
@@ -2016,7 +2067,7 @@ public class SqlVisitor : ISqlVisitor
                 var targetType = sqlSegment.SegmentType;
                 if (sqlSegment.NativeDbType != null)
                 {
-                    targetType = this.OrmProvider.MapDefaultType(sqlSegment.NativeDbType);
+                    targetType = sqlSegment.MappedTargetType;
                     if (sqlSegment.SegmentType != targetType)
                     {
                         var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, this.DbContext);
@@ -2085,7 +2136,6 @@ public class SqlVisitor : ISqlVisitor
                 dbParameters = this.NextDbParameters;
             }
             var parameterName = this.OrmProvider.ParameterPrefix + this.UserParameterPrefix + dbParameters.Count.ToString();
-            if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
 
             if (elementValue == null || elementValue == DBNull.Value)
                 dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, DBNull.Value));
@@ -2113,7 +2163,7 @@ public class SqlVisitor : ISqlVisitor
                     }
                     if (nativeDbType != null)
                     {
-                        var targetType = this.OrmProvider.MapDefaultType(nativeDbType);
+                        var targetType = elementSegment.MappedTargetType;
                         if (segmentType != targetType)
                         {
                             var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext);
@@ -2146,7 +2196,7 @@ public class SqlVisitor : ISqlVisitor
                 var targetType = segmentType;
                 if (nativeDbType != null)
                 {
-                    targetType = this.OrmProvider.MapDefaultType(nativeDbType);
+                    targetType = elementSegment.MappedTargetType;
                     if (segmentType != targetType)
                     {
                         var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext);
@@ -2253,6 +2303,7 @@ public class SqlVisitor : ISqlVisitor
                     TargetMember = memberMapper.Member,
                     SegmentType = memberMapper.MemberType,
                     NativeDbType = memberMapper.NativeDbType,
+                    MappedTargetType = memberMapper.MappedTargetType,
                     TypeHandler = memberMapper.TypeHandler,
                     Body = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(memberMapper.FieldName)
                 });
@@ -2376,7 +2427,7 @@ public class SqlVisitor : ISqlVisitor
         foreach (var memberMapper in memberMappers)
         {
             (var refMemberMapper, _) = memberMapper;
-            var targetType = this.OrmProvider.MapDefaultType(refMemberMapper);
+            var targetType = refMemberMapper.MappedTargetType;
             result.Columns.Add(refMemberMapper.FieldName, targetType);
         }
         foreach (var entity in entities)
@@ -2407,7 +2458,7 @@ public class SqlVisitor : ISqlVisitor
                 continue;
 
             Func<object, object> valueGetter = null;
-            var targetType = this.OrmProvider.MapDefaultType(refMemberMapper);
+            var targetType = refMemberMapper.MappedTargetType;
             if (memberInfo == null) valueGetter = value => DBNull.Value;
             else
             {
@@ -2645,7 +2696,7 @@ public class SqlVisitor : ISqlVisitor
     {
         if (sqlSegment.HasField)
         {
-            var targetType = this.OrmProvider.MapDefaultType(sqlSegment.NativeDbType);
+            var targetType = sqlSegment.MappedTargetType;
             if (targetType != typeof(string))
             {
                 var enumValues = Enum.GetValues(sqlSegment.SegmentType);

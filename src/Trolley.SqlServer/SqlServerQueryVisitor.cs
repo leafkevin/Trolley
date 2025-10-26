@@ -10,9 +10,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
 {
     public string OutputSql { get; set; }
 
-    public SqlServerQueryVisitor(DbContext dbContext)
-        : base(dbContext) { }
-    public SqlServerQueryVisitor(DbContext dbContext, char tableAsStart, IDataParameterCollection dbParameters = null)
+    public SqlServerQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
         : base(dbContext, tableAsStart, dbParameters) { }
 
     public override string BuildSql(out List<SqlFieldSegment> readerFields)
@@ -404,7 +402,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
     {
         if (sqlSegment.HasField)
         {
-            var targetType = this.OrmProvider.MapDefaultType(sqlSegment.NativeDbType);
+            var targetType = sqlSegment.MappedTargetType;
             if (targetType != typeof(string))
             {
                 var enumValues = Enum.GetValues(sqlSegment.SegmentType);

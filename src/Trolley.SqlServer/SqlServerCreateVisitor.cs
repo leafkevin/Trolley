@@ -269,6 +269,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                     TargetMember = memberMapper.Member,
                     SegmentType = memberMapper.MemberType,
                     NativeDbType = memberMapper.NativeDbType,
+                    MappedTargetType = memberMapper.MappedTargetType,
                     TypeHandler = memberMapper.TypeHandler,
                     Body = memberMapper.FieldName
                 });
@@ -354,6 +355,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                         TargetMember = memberMapper.Member,
                         SegmentType = memberMapper.MemberType,
                         NativeDbType = memberMapper.NativeDbType,
+                        MappedTargetType = memberMapper.MappedTargetType,
                         TypeHandler = memberMapper.TypeHandler,
                         Body = memberMapper.FieldName
                     });
@@ -392,6 +394,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
             sqlSegment.SegmentType = memberMapper.MemberType;
             sqlSegment.FromMember = memberMapper.Member;
             sqlSegment.NativeDbType = memberMapper.NativeDbType;
+            sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
             sqlSegment.TypeHandler = memberMapper.TypeHandler;
             sqlSegment.Body = fieldName;
             return sqlSegment;

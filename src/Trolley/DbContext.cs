@@ -21,7 +21,6 @@ public sealed class DbContext
     public IOrmProvider OrmProvider => this.Database.OrmProvider;
     public IEntityMapProvider EntityMapProvider => this.Database.EntityMapProvider;
     public ITableShardingProvider TableShardingProvider => this.Database.TableShardingProvider;
-    public IFieldMapHandler FieldMapHandler => this.Database.FieldMapHandler;
     public DbInterceptors DbInterceptors { get; internal set; }
 
     public int CommandTimeout { get; internal set; }
@@ -42,7 +41,7 @@ public sealed class DbContext
         else
         {
             isNeedClose = true;
-            var connString = this.ConnectionString ?? this.Database.UseSelector();
+            var connString = this.ConnectionString ?? this.Database.Select();
             connection = this.CreateConnection(connString);
         }
         var dbCommand = this.OrmProvider.CreateCommand();
@@ -64,7 +63,7 @@ public sealed class DbContext
         else
         {
             isNeedClose = true;
-            var connString = this.ConnectionString ?? this.Database.UseSlaveSelector();
+            var connString = this.ConnectionString ?? this.Database.SelectSlave();
             connection = this.CreateConnection(connString);
         }
         dbCommand ??= this.OrmProvider.CreateCommand();
@@ -744,6 +743,7 @@ public sealed class DbContext
         if (isBulk)
         {
             var entities = insertObjs as IEnumerable;
+
             var commandExecutor = RepositoryHelper.BuildCreateBulkCommandExecutor(this, entityType, entities);
             connection.Open();
             result = commandExecutor.Invoke(this, command, entities, bulkCount);
@@ -1109,7 +1109,7 @@ public sealed class DbContext
     {
         if (this.Transaction != null)
             throw new Exception("上一个事务还没有完成，无法开启新事务");
-        this.Connection ??= this.CreateConnection(this.Database.UseSelector());
+        this.Connection ??= this.CreateConnection(this.Database.Select());
         this.Connection.Open();
         this.Transaction = this.Connection.BeginTransaction();
     }
@@ -1117,7 +1117,7 @@ public sealed class DbContext
     {
         if (this.Transaction != null)
             throw new Exception("上一个事务还没有完成，无法开启新事务");
-        this.Connection ??= this.CreateConnection(this.Database.UseSelector());
+        this.Connection ??= this.CreateConnection(this.Database.Select());
         await this.Connection.OpenAsync(cancellationToken);
         this.Transaction = await this.Connection.BeginTransactionAsync(cancellationToken);
     }
@@ -1254,20 +1254,15 @@ public sealed class DbContext
         builder.Clear();
         return result;
     }
-    public string GetShardingTableBy(CommandOperationType operationType, Type entityType, params object[] fieldValues)
+    public string GetShardingTableBy(Type entityType, params object[] fieldValues)
     {
         if (fieldValues == null || fieldValues.Length == 0)
             throw new ArgumentNullException(nameof(fieldValues), "参数fieldValues不能为null或是空元素");
         if (this.TableShardingProvider == null || !this.TableShardingProvider.TryGetTableSharding(entityType, out var shardingTableInfo))
-            throw new Exception($"实体表{entityType.FullName}没有配置分表，无需调用此方法");
+            throw new InvalidOperationException($"实体表{entityType.FullName}没有配置分表，无需调用此方法");
         if (!this.EntityMapProvider.TryGetEntityMap(entityType, out var entityMap))
-            throw new Exception($"实体表{entityType.FullName}没有配置映射关系，无法获取分表信息");
-        if (!shardingTableInfo.Rules.TryGetValue(operationType, out var rule))
-        {
-            var entityMapper = this.EntityMapProvider.GetEntityMap(entityType);
-            throw new InvalidOperationException($"实体表{entityType.FullName}没有为操作类型{operationType}配置分表规则，无法获取分表信息，原表名：{entityMapper.TableName}");
-        }
-        return rule.Invoke(entityMap.TableName, fieldValues) as string;
+            throw new InvalidOperationException($"实体表{entityType.FullName}没有配置映射关系，无法获取分表信息");
+        return shardingTableInfo.Rule.Invoke(entityMap.TableName, fieldValues) as string;
     }
     #endregion
 }

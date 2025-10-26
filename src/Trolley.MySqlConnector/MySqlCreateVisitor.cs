@@ -384,6 +384,7 @@ public class MySqlCreateVisitor : CreateVisitor
                 {
                     Expression = newExpr.Arguments[i],
                     NativeDbType = memberMapper.NativeDbType,
+                    MappedTargetType = memberMapper.MappedTargetType,
                     TypeHandler = memberMapper.TypeHandler
                 });
                 this.AddMemberElement(sqlSegment, memberMapper);
@@ -407,6 +408,7 @@ public class MySqlCreateVisitor : CreateVisitor
             {
                 Expression = memberAssignment.Expression,
                 NativeDbType = memberMapper.NativeDbType,
+                MappedTargetType = memberMapper.MappedTargetType,
                 TypeHandler = memberMapper.TypeHandler
             });
             this.AddMemberElement(sqlSegment, memberMapper);
@@ -455,14 +457,13 @@ public class MySqlCreateVisitor : CreateVisitor
         else if (sqlSegment.IsConstant || sqlSegment.IsVariable)
         {
             var parameterName = this.OrmProvider.ParameterPrefix + this.UserParameterPrefix + this.DbParameters.Count.ToString();
-            if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
 
             var dbFieldValue = sqlSegment.Value;
             if (memberMapper.TypeHandler != null)
                 dbFieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, dbFieldValue);
             else
             {
-                var targetType = this.OrmProvider.MapDefaultType(memberMapper);
+                var targetType = memberMapper.MappedTargetType;
                 var valueGetter = this.OrmProvider.GetParameterValueGetter(dbFieldValue.GetType(), targetType, false, this.DbContext);
                 dbFieldValue = valueGetter.Invoke(dbFieldValue);
             }
@@ -489,7 +490,6 @@ public class MySqlCreateVisitor : CreateVisitor
         var entityMapper = this.Tables[0].Mapper;
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
-        if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
         //在前面insert的时候，参数有可能已经添加过了，此处需要判断是否需要添加
         if (!this.DbParameters.Contains(parameterName))
         {
@@ -497,7 +497,7 @@ public class MySqlCreateVisitor : CreateVisitor
                 fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
             else
             {
-                var targetType = this.OrmProvider.MapDefaultType(memberMapper);
+                var targetType = memberMapper.MappedTargetType;
                 var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext);
                 fieldValue = valueGetter.Invoke(fieldValue);
             }
@@ -525,6 +525,7 @@ public class MySqlCreateVisitor : CreateVisitor
                     TargetMember = memberMapper.Member,
                     SegmentType = memberMapper.MemberType,
                     NativeDbType = memberMapper.NativeDbType,
+                    MappedTargetType = memberMapper.MappedTargetType,
                     TypeHandler = memberMapper.TypeHandler,
                     Body = memberMapper.FieldName
                 });
@@ -608,6 +609,7 @@ public class MySqlCreateVisitor : CreateVisitor
                         TargetMember = memberMapper.Member,
                         SegmentType = memberMapper.MemberType,
                         NativeDbType = memberMapper.NativeDbType,
+                        MappedTargetType = memberMapper.MappedTargetType,
                         TypeHandler = memberMapper.TypeHandler,
                         Body = memberMapper.FieldName
                     });

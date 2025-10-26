@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 
 namespace Trolley;
@@ -8,40 +10,59 @@ public class TheaDatabase
 {
     private int masterRoundRobin;
     private int slaveRoundRobin;
+    private ConcurrentDictionary<string, List<string>> masterSelectors;
+    private ConcurrentDictionary<string, List<string>> slaveSelectors;
     public string DbKey { get; internal set; }
     public List<string> ConnectionStrings { get; internal set; }
-    public Delegate ConnectionStringSelector { get; internal set; }
+    public Func<object[], string> ConnectionStringSelector { get; internal set; }
     public List<string> SlaveConnectionStrings { get; internal set; }
-    public Delegate SlaveConnectionStringSelector { get; internal set; }
+    public Func<object[], string> SlaveConnectionStringSelector { get; internal set; }
     public bool IsDefault { get; internal set; }
     public OrmProviderType OrmProviderType { get; internal set; }
     public IOrmProvider OrmProvider { get; internal set; }
     public IEntityMapProvider EntityMapProvider { get; internal set; }
     public ITableShardingProvider TableShardingProvider { get; internal set; }
 
-    public string UseSelector(params object[] connectionStringSelectorValues)
+
+    public void Use(params string[] connectionStrings)
+    {
+        if (connectionStrings == null || connectionStrings.Length == 0)
+            throw new ArgumentNullException(nameof(connectionStrings));
+        this.ConnectionStrings ??= new();
+        this.ConnectionStrings.AddRange(connectionStrings);
+    }
+    public void Use(string[] connectionStrings, Func<object[], string> connectionStringSelector)
+    {
+        this.Use(connectionStrings);
+        if (connectionStringSelector == null)
+            throw new ArgumentNullException(nameof(connectionStringSelector));
+        this.ConnectionStringSelector = connectionStringSelector;
+    }
+    public string Select(params object[] selectorValues)
     {
         if (this.ConnectionStringSelector == null)
-            throw new InvalidOperationException("ConnectionStringSelector委托未设置，无法选择主库连接串");
-        if (connectionStringSelectorValues != null && connectionStringSelectorValues.Length > 0)
-        {
-            if (connectionStringSelectorValues.Length != this.ConnectionStringSelector.Method.GetParameters().Length)
-                throw new ArgumentException("connectionStringSelectorValues参数个数与ConnectionStringSelector委托参数个数不匹配");
-            return this.ConnectionStringSelector.DynamicInvoke(connectionStringSelectorValues) as string;
-        }
-        return this.ConnectionStringSelector.DynamicInvoke() as string;
+            throw new InvalidOperationException("主库连接串选择器未设置");
+        return this.ConnectionStringSelector(selectorValues);
     }
-    public string UseSlaveSelector(params object[] slaveConnectionStringSelectorValues)
+    public void UseSlave(params string[] connectionStrings)
+    {
+        if (connectionStrings == null || connectionStrings.Length == 0)
+            throw new ArgumentNullException(nameof(connectionStrings));
+        this.SlaveConnectionStrings ??= new();
+        this.SlaveConnectionStrings.AddRange(connectionStrings);
+    }
+    public void UseSlave(string[] connectionStrings, Func<object[], string> connectionStringSelector)
+    {
+        this.UseSlave(connectionStrings);
+        if (connectionStringSelector == null)
+            throw new ArgumentNullException(nameof(connectionStringSelector));
+        this.SlaveConnectionStringSelector = connectionStringSelector;
+    }
+    public string SelectSlave(params object[] selectorValues)
     {
         if (this.SlaveConnectionStringSelector == null)
-            throw new InvalidOperationException("SlaveConnectionStringSelector委托未设置，无法选择从库连接串");
-        if (slaveConnectionStringSelectorValues != null && slaveConnectionStringSelectorValues.Length > 0)
-        {
-            if (slaveConnectionStringSelectorValues.Length != this.ConnectionStringSelector.Method.GetParameters().Length)
-                throw new ArgumentException("connectionStringSelectorValues参数个数与ConnectionStringSelector委托参数个数不匹配");
-            return this.SlaveConnectionStringSelector.DynamicInvoke(slaveConnectionStringSelectorValues) as string;
-        }
-        return this.SlaveConnectionStringSelector.DynamicInvoke() as string;
+            throw new InvalidOperationException("从库连接串选择器未设置");
+        return this.SlaveConnectionStringSelector(selectorValues);
     }
     public void UseOrmProvider(IOrmProvider ormProvider)
     {
