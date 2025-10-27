@@ -59,9 +59,9 @@ public static class Extensions
     public static string GetQuotedValue(this IOrmProvider ormProvider, object value)
         => ormProvider.GetQuotedValue(value.GetType(), value);
 
-    public static EntityMap GetEntityMap(this IEntityMapProvider mapProvider, Type entityType)
+    public static EntityMap GetEntityMap(this IEntityMapProvider entityMapProvider, Type entityType)
     {
-        if (!mapProvider.TryGetEntityMap(entityType, out var mapper))
+        if (!entityMapProvider.TryGetEntityMap(entityType, out var mapper))
             throw new Exception($"实体类型{entityType.FullName}没有配置映射，请在IModelConfiguration.OnModelCreating方法中配置映射");
         return mapper;
     }
