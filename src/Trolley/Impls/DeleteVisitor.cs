@@ -27,6 +27,8 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                 Mapper = this.MapProvider.GetEntityMap(entityType)
             }
         };
+        if (this.TryGetTableShardingInfo(entityType, TableShardingUsageMode.WriteOnly, out var tableShardingInfo))
+            this.Tables[0].TableShardingInfo = tableShardingInfo;
     }
     public virtual string BuildCommand(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {

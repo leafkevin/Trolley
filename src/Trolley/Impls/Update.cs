@@ -28,22 +28,22 @@ public class Update<TEntity> : IUpdate<TEntity>
     #region Sharding
     public virtual IUpdate<TEntity> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, false, tableNames);
         return this;
-    }
-    public virtual IUpdate<TEntity> UseTable(Expression<Func<TEntity, object>> dependonFieldValuesSelector)
-    {
-        this.Visitor.UseTable(dependonFieldValuesSelector);
-        return this;
-    }
+    }  
     public virtual IUpdate<TEntity> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
+        return this;
+    }
+    public virtual IUpdate<TEntity> UseTableByOthers(params object[] otherFieldValues)
+    {
+        this.Visitor.UseTableByOthers(TableShardingUsageMode.WriteOnly, otherFieldValues);
         return this;
     }
     public virtual IUpdate<TEntity> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     #endregion

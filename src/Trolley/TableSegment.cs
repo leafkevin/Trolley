@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Reflection;
 
 namespace Trolley;
@@ -123,13 +124,21 @@ public class TableSegment
     /// </summary>
     public Func<string, string, string, string> ShardingMapGetter { get; set; }
     /// <summary>
-    /// 插入和更新命令时，批量操作时获取分表名的委托
+    /// 在批量插入和更新命令中，并且未指定分表名场景，提供了除批量参数外的其他分表名依赖字段值，是否需要build分表名获取委托
     /// </summary>
-    public Delegate ShardingTableGetter { get; set; }
+    public bool IsNeedBuildShardingTableGetter { get; set; }
+    /// <summary>
+    /// 在批量插入和更新命令中，并且未指定分表名场景，提供的除批量参数外的其他分表名依赖字段值
+    /// </summary>
+    public object[] OtherShardingValues { get; set; }
     /// <summary>
     /// 是否IncludeMany表分表
     /// </summary>
     public bool IsIncludeManySharding { get; set; }
+    /// <summary>
+    /// 当前模式下分表信息
+    /// </summary>
+    public TableShardingInfo TableShardingInfo { get; set; }
 
     /// <summary>
     /// 生成一个自身引用的副本，主要用在cte表的自身引用

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -24,17 +25,17 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
     #region Sharding
     public virtual ICreate<TEntity> UseTable(string tableName)
     {
-        this.Visitor.UseTable(false, tableName);
+        this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, false, tableName);
         return this;
     }
     public virtual ICreate<TEntity> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
-    public virtual ICreate<TEntity> UseTable(Expression<Func<TEntity, object>> dependOnFieldValuesSelector)
+    public virtual ICreate<TEntity> UseTable(Expression<Func<TEntity, object[]>> valuesSelector)
     {
-        this.Visitor.UseTable(dependOnFieldValuesSelector);
+        this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, valuesSelector);
         return this;
     }
     #endregion

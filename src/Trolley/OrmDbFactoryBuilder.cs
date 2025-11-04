@@ -213,16 +213,6 @@ public sealed class OrmDatabaseBuilder
         this.database.UseEntityMapProvider(entityMapProvider);
         return this;
     }
-    public OrmDatabaseBuilder UseMapping(Action<ModelBuilder> mappingInitializer)
-    {
-        if (mappingInitializer == null)
-            throw new ArgumentNullException(nameof(mappingInitializer));
-
-        if (!this.dbFactory.TryGetEntityMapProvider(this.dbKey, out var entityMapProvider))
-            this.dbFactory.UseEntityMapProvider(this.dbKey, entityMapProvider = new EntityMapProvider());
-        mappingInitializer.Invoke(new ModelBuilder(entityMapProvider));
-        return this;
-    }
 
     public OrmDatabaseBuilder UseTableSharding(ITableShardingConfiguration configuration)
     {

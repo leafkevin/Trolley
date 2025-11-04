@@ -28,6 +28,12 @@ public static class RepositoryHelper
     private static readonly ConcurrentDictionary<int, object> deleteCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<int, object> deleteBulkCommandInitializerCache = new();
 
+    private static readonly ConcurrentDictionary<int, object> dictBulkCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, object> typedCreateCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, object> typedUpdateCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, object> typedCreateBulkCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, object> typedUpdateBulkCommandInitializerCache = new();
+
     private static readonly ConcurrentDictionary<int, object> createWithCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<int, object> createWithBulkCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<int, object> updateWithCommandInitializerCache = new();
@@ -938,48 +944,61 @@ public static class RepositoryHelper
             }
         });
     }
-    public static object BuildWithBulkFilterFieldsCommandInitializer(DbContext dbContext, Type entityType, Type parameterType, int commandType, bool hasOnlyFields, bool hasIgnoreFields)
+    public static object BuildTypedCreateBulkCommandInitializer(DbContext dbContext, Type entityType, Type parameterType, bool isNeedSplitSharding, bool hasOnlyFields, bool hasIgnoreFields)
     {
         var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, parameterType, hasOnlyFields, hasIgnoreFields);
-        var commandInitializerCache = commandType == 1 ? createWithBulkCommandInitializerCache : updateWithBulkCommandInitializerCache;
-        return commandInitializerCache.GetOrAdd(cacheKey, f =>
+        return createWithBulkCommandInitializerCache.GetOrAdd(cacheKey, f =>
         {
             var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
             var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
             var parameterExpr = Expression.Parameter(typeof(object), "parameter");
             var onlyFieldsExpr = Expression.Parameter(typeof(List<string>), "onlyFields");
             var ignoreFieldsExpr = Expression.Parameter(typeof(List<string>), "ignoreFields");
-            var valueFieldsExpr = Expression.Parameter(typeof(List<ValueFieldSegment>), "valueFields");
+            var valueSettersExpr = Expression.Parameter(typeof(List<Action<IDataParameterCollection, StringBuilder, object, string>>), "valueSetters");
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
 
-            bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(parameterType);
-            if (isDictionary) parameterType = typeof(IDictionary<string, object>);
             var typedParameterExpr = Expression.Variable(typeof(string), "typedParameterObj");
             var ormProviderExpr = Expression.Variable(typeof(IOrmProvider), "ormProvider");
             blockParameters.AddRange([typedParameterExpr, ormProviderExpr]);
             blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
             blockBodies.Add(Expression.Assign(ormProviderExpr, Expression.Property(dbContextExpr, nameof(DbContext.OrmProvider))));
 
+            ParameterExpression builderExpr = null;
             ParameterExpression keyFieldsExpr = null;
-            if (commandType == 2)
-                keyFieldsExpr = Expression.Parameter(typeof(List<ValueFieldSegment>), "keyFields");
+            if (commandType == 1)
+            {
+                builderExpr = Expression.Variable(typeof(StringBuilder), "fieldBuilder");
+                blockParameters.Add(builderExpr);
+                var constructor = typeof(StringBuilder).GetConstructor(Type.EmptyTypes);
+                var newExpr = Expression.New(constructor);
+                blockBodies.Add(Expression.Assign(builderExpr, newExpr));
+            }
+            else keyFieldsExpr = Expression.Parameter(typeof(List<ValueFieldSegment>), "keyFields");
 
+            MethodInfo methodInfo = null;
             var ormProvider = dbContext.OrmProvider;
             var entityMapper = dbContext.EntityMapProvider.GetEntityMap(entityType);
+            var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)]);
+            var concatMethodInfo = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string)]);
             var dictItemPropertyInfo = typeof(IDictionary<string, object>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
                 .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(string)).First();
 
-            MethodInfo methodInfo = null;
             var myBlockBodies = blockBodies;
-            if (hasOnlyFields || hasIgnoreFields || isDictionary)
+            if (hasOnlyFields || hasIgnoreFields)
                 myBlockBodies = new List<Expression>();
 
             var index = 0;
             foreach (var memberMapper in entityMapper.MemberMaps)
             {
-                if (memberMapper.IsKey || memberMapper.IsAutoIncrement || memberMapper.IsIgnore
-                    || memberMapper.IsNavigation || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
+                if (memberMapper.IsIgnore || memberMapper.IsAutoIncrement
+                    || memberMapper.IsNavigation || memberMapper.IsRowVersion)
+                    continue;
+                if (commandType == 1 && memberMapper.IsIgnoreInsert)
+                    continue;
+                if (commandType == 2 && memberMapper.IsIgnoreUpdate)
+                    continue;
+                if (!parameterType.TryGetMember(memberMapper.MemberName, out var memberInfo))
                     continue;
 
                 //if (!onlyFields.Constains(itemKey.ToLower())) continue;
@@ -999,30 +1018,69 @@ public static class RepositoryHelper
                     else isContainsExpr = isNotIgnoreExpr;
                     isNeedBlock = true;
                 }
-                MemberInfo memberInfo = null;
-                Expression itemKeyExpr = null;
-                if (isDictionary)
+
+                var builderLengthExpr = Expression.Property(builderExpr, nameof(StringBuilder.Length));
+                var greaterThenExpr = Expression.GreaterThan(builderLengthExpr, Expression.Constant(0));
+                var fieldNameExpr = Expression.Constant(ormProvider.GetFieldName(memberMapper.FieldName));
+                myBlockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, fieldNameExpr));
+
+
+                var vfBlockParameters = new List<ParameterExpression>();
+                var vfBlockBodies = new List<Expression>();
+                var vfDbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
+                var vfBuilderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
+                var vfParameterExpr = Expression.Parameter(typeof(object), "parameter");
+                var vfSuffixExpr = Expression.Parameter(typeof(string), "suffix");
+
+                var vfTypedParameterExpr = Expression.Variable(parameterType, "typedParameter");
+                var vfParameterNameExpr = Expression.Variable(parameterType, "parameterName");
+                vfBlockParameters.AddRange([vfTypedParameterExpr, vfParameterNameExpr]);
+                vfBlockBodies.Add(Expression.Assign(vfTypedParameterExpr, Expression.Convert(vfParameterExpr, parameterType)));
+                var vfGreaterThenExpr = Expression.GreaterThan(Expression.Property(vfBuilderExpr, nameof(StringBuilder.Length)), Expression.Constant(0));
+                vfBlockBodies.Add(Expression.IfThen(vfGreaterThenExpr, Expression.Call(vfBuilderExpr, appendMethodInfo, Expression.Constant(","))));
+
+                var myParameterNameExpr = Expression.Constant(ormProvider.ParameterPrefix + memberMapper.MemberName);
+                vfBlockBodies.Add(Expression.Assign(vfParameterNameExpr, Expression.Call(concatMethodInfo, myParameterNameExpr, vfSuffixExpr)));
+                vfBlockBodies.Add(Expression.Call(vfBuilderExpr, appendMethodInfo, vfParameterNameExpr));
+
+                var fieldValueExpr = Expression.Variable(typeof(object), $"{memberMapper.MemberName.ToCamel()}Value");
+                vfBlockParameters.Add(fieldValueExpr);
+                var myMemberValueExpr = Expression.PropertyOrField(vfTypedParameterExpr, memberMapper.MemberName);
+                Expression memberValueExpr = myMemberValueExpr;
+                var memberType = memberInfo.GetMemberType();
+                if (memberType != memberMapper.MemberType && memberType != memberMapper.UnderlyingType)
                 {
-                    methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.TryGetKeyIgnoreCase));
-                    itemKeyExpr = Expression.Variable(typeof(string).MakeByRefType(), "itemKey");
-                    var callExpr = Expression.Call(methodInfo, typedParameterExpr, lowerMemberNameExpr, itemKeyExpr);
-                    //实际应用程序中可能包含多次引用字典参数，每次引用包含的列数不一定一样，所以，每次都重新判断，获取值委托
-                    if (isNeedBlock) isContainsExpr = Expression.AndAlso(isContainsExpr, callExpr);
-                    else isContainsExpr = callExpr;
-                    isNeedBlock = true;
+                    var valueGetter = ormProvider.GetParameterValueGetter(memberType, memberMapper.UnderlyingType, !memberMapper.IsRequired, dbContext);
+                    memberValueExpr = Expression.Invoke(Expression.Constant(valueGetter), memberValueExpr);
                 }
-                else if (!parameterType.TryGetMember(memberMapper.MemberName, out memberInfo))
-                    continue;
-
-                var parameterName = ormProvider.ParameterPrefix + memberMapper.MemberName;
-                var parameterNameExpr = Expression.Constant(parameterName);
 
 
-                var vfParameterExpr = Expression.Parameter(typeof(object), "f");
-                var typedObjExpr = Expression.Convert(vfParameterExpr, parameterType);
-                Expression memberValueExpr = null;
-                if (isDictionary) memberValueExpr = Expression.Property(typedObjExpr, dictItemPropertyInfo, itemKeyExpr);
-                else memberValueExpr = Expression.PropertyOrField(typedObjExpr, memberInfo.Name);
+                Expression myFieldValueExpr = null;
+                if (memberMapper.TypeHandler != null)
+                {
+                    var typeHandlerMethodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
+                    var typeHandlerExpr = Expression.Constant(memberMapper.TypeHandler);
+                    myFieldValueExpr = Expression.Call(typeHandlerExpr, typeHandlerMethodInfo, ormProviderExpr, memberValueExpr);
+                }
+                else
+                {
+                    if (memberType == memberMapper.MappedTargetType) myFieldValueExpr = memberValueExpr;
+                    else
+                    {
+                        var valueGetter = ormProvider.GetParameterValueGetter(memberType, memberMapper.MappedTargetType, !memberMapper.IsRequired, dbContext);
+                        myFieldValueExpr = Expression.Invoke(Expression.Constant(valueGetter), memberValueExpr);
+                    }
+                }
+                blockBodies.Add(Expression.Assign(fieldValueExpr, myFieldValueExpr));
+
+                Expression nativeDbTypeExpr = Expression.Constant(memberMapper.NativeDbType);
+                if (nativeDbTypeExpr.Type != typeof(object))
+                    nativeDbTypeExpr = Expression.Convert(nativeDbTypeExpr, typeof(object));
+                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), [typeof(string), typeof(object), typeof(object)]);
+                var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
+                methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add));
+                myBlockBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
+
 
                 Expression bodyExpr = null;
                 if (memberMapper.TypeHandler != null)
@@ -1075,7 +1133,7 @@ public static class RepositoryHelper
 
                 if (commandType == 2 && memberMapper.IsKey)
                     myBlockBodies.Add(Expression.Call(keyFieldsExpr, methodInfo, newValueFieldExpr));
-                else myBlockBodies.Add(Expression.Call(valueFieldsExpr, methodInfo, newValueFieldExpr));
+                else myBlockBodies.Add(Expression.Call(valueSettersExpr, methodInfo, newValueFieldExpr));
 
                 if (isNeedBlock) blockBodies.Add(Expression.IfThen(isContainsExpr, Expression.Block(myBlockBodies)));
                 index++;
@@ -1083,9 +1141,9 @@ public static class RepositoryHelper
             if (index <= 0) throw new Exception($"没有找到{(commandType == 1 ? "插入" : "更新")}语句");
 
             if (commandType == 1) return Expression.Lambda<Action<IDataParameterCollection, List<ValueFieldSegment>, DbContext, List<string>, List<string>, object>>(
-                Expression.Block(blockParameters, blockBodies), dbParametersExpr, valueFieldsExpr, dbContextExpr, onlyFieldsExpr, ignoreFieldsExpr, parameterExpr).Compile();
+                Expression.Block(blockParameters, blockBodies), dbParametersExpr, valueSettersExpr, dbContextExpr, onlyFieldsExpr, ignoreFieldsExpr, parameterExpr).Compile();
             else return Expression.Lambda<Action<IDataParameterCollection, List<ValueFieldSegment>, List<ValueFieldSegment>, DbContext, List<string>, List<string>, object>>(
-                Expression.Block(blockParameters, blockBodies), dbParametersExpr, keyFieldsExpr, valueFieldsExpr, dbContextExpr, onlyFieldsExpr, ignoreFieldsExpr, parameterExpr).Compile();
+                Expression.Block(blockParameters, blockBodies), dbParametersExpr, keyFieldsExpr, valueSettersExpr, dbContextExpr, onlyFieldsExpr, ignoreFieldsExpr, parameterExpr).Compile();
         });
     }
     //public static Action<IDataParameterCollection, List<string>, DbContext, List<string>, List<string>, object> BuildUpdateWithCommandInitializer(DbContext dbContext, Type entityType, Type upateObjType, bool hasOnlyFields, bool hasIgnoreFields)
@@ -1227,34 +1285,50 @@ public static class RepositoryHelper
     //            Expression.Block(blockParameters, blockBodies), dbParametersExpr, updateFieldsExpr, dbContextExpr, onlyFieldsExpr, ignoreFieldsExpr, updateObjExpr).Compile();
     //    });
     //}
-    public static object BuildCommandInitializer(DbContext dbContext, Type entityType, Type parameterType, int commandType, bool isBulk)
+
+
+    public static object BuildDictBulkCommandInitializer(DbContext dbContext, Type entityType, int commandType, bool hasOnlyFields, bool hasIgnoreFields)
     {
-        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, parameterType);
-        var commandInitializerCache = isBulk ? updateBulkCommandInitializerCache : updateCommandInitializerCache;
-        return commandInitializerCache.GetOrAdd(cacheKey, f =>
+        var cacheKey = GetCacheKey(commandType, hasOnlyFields, hasIgnoreFields);
+        return dictBulkCommandInitializerCache.GetOrAdd(cacheKey, f =>
         {
-            var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
             var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
-            var parameterExpr = Expression.Parameter(typeof(object), "parameter");
-            var builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
+            var dictExpr = Expression.Parameter(typeof(IDictionary<string, object>), "dict");
+            var valueSettersExpr = Expression.Parameter(typeof(List<Action<IDataParameterCollection, StringBuilder, object, string>>), "valueSetters");
+
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
 
-            bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(parameterType);
-            if (isDictionary) parameterType = typeof(IDictionary<string, object>);
-            var typedParameterExpr = Expression.Variable(parameterType, "typedParameterObj");
-            var ormProviderExpr = Expression.Variable(typeof(IOrmProvider), "ormProvider");
-            blockParameters.AddRange([typedParameterExpr, ormProviderExpr]);
-            blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
-            blockBodies.Add(Expression.Assign(ormProviderExpr, Expression.Property(dbContextExpr, nameof(DbContext.OrmProvider))));
-
+            ParameterExpression onlyFieldsExpr = null;
+            ParameterExpression ignoreFieldsExpr = null;
+            ParameterExpression keySettersExpr = null;
             ParameterExpression fieldBuilderExpr = null;
-            ParameterExpression suffixExpr = null;
-            ParameterExpression valueFieldsExpr = null;
-            if (isBulk) suffixExpr = Expression.Parameter(typeof(StringBuilder), "suffixBuilder");
 
-            var ormProvider = dbContext.OrmProvider;
-            var entityMapper = dbContext.EntityMapProvider.GetEntityMap(entityType);
+            var ormProviderExpr = Expression.Variable(typeof(IOrmProvider), "ormProvider");
+            var enumeratorExpr = Expression.Variable(typeof(IEnumerator<KeyValuePair<string, object>>), "enumerator");
+            var itemKeyExpr = Expression.Variable(typeof(string), "itemKey");
+            var itemValueExpr = Expression.Variable(typeof(object), "itemValue");
+            var entityMapperExpr = Expression.Variable(typeof(EntityMap), "entityMapper");
+            var memberMapperExpr = Expression.Variable(typeof(MemberMap), "memberMapper");
+            var indexExpr = Expression.Variable(typeof(int), "index");
+            blockParameters.AddRange([ormProviderExpr, enumeratorExpr, itemKeyExpr, itemValueExpr, entityMapperExpr, memberMapperExpr, indexExpr]);
+
+            var hasFilterFields = hasOnlyFields || hasIgnoreFields;
+            if (hasFilterFields)
+            {
+                onlyFieldsExpr = Expression.Parameter(typeof(List<string>), "onlyFields");
+                ignoreFieldsExpr = Expression.Parameter(typeof(List<string>), "ignoreFields");
+            }
+            if (commandType == 1)
+            {
+                fieldBuilderExpr = Expression.Variable(typeof(StringBuilder), "fieldBuilder");
+                blockParameters.Add(fieldBuilderExpr);
+                var constructor = typeof(StringBuilder).GetConstructor([typeof(string)]);
+                var newExpr = Expression.New(constructor, Expression.Constant("("));
+                blockBodies.Add(Expression.Assign(fieldBuilderExpr, newExpr));
+            }
+            else keySettersExpr = Expression.Parameter(typeof(List<Action<object, string>>), "keySetters");
+
             MethodInfo methodInfo = null;
             var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)]);
             var concatMethodInfo = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string)]);
@@ -1262,323 +1336,398 @@ public static class RepositoryHelper
             var dictItemPropertyInfo = typeof(IDictionary<string, object>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
                 .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(string)).First();
 
+            methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.GetEntityMap), [typeof(EntityMapProvider), typeof(Type)]);
+            var entityMapProviderExpr = Expression.Property(dbContextExpr, nameof(DbContext.EntityMapProvider));
+            blockBodies.Add(Expression.Assign(ormProviderExpr, Expression.Property(dbContextExpr, nameof(DbContext.OrmProvider))));
+            blockBodies.Add(Expression.Assign(entityMapperExpr, Expression.Call(methodInfo, entityMapProviderExpr, Expression.Constant(entityType))));
+            blockBodies.Add(Expression.Assign(indexExpr, Expression.Constant(0)));
+
+            var breakLabel = Expression.Label();
+            var continueLabel = Expression.Label();
+
+            //var enumerator = dict.GetEnumerator();
+            methodInfo = typeof(IEnumerable<KeyValuePair<string, object>>).GetMethod("GetEnumerator");
+            blockBodies.Add(Expression.Assign(enumeratorExpr, Expression.Call(dictExpr, methodInfo)));
+
+            //if(!enumerator.MoveNext())
+            //  break;
+            var loopBodies = new List<Expression>();
+            methodInfo = typeof(IEnumerator).GetMethod(nameof(IEnumerator.MoveNext));
+            var ifFalseExpr = Expression.IsFalse(Expression.Call(enumeratorExpr, methodInfo));
+            loopBodies.Add(Expression.IfThen(ifFalseExpr, Expression.Break(breakLabel)));
+
+            //var itemKey = enumerator.Current.Key;
+            var currentExpr = Expression.Property(enumeratorExpr, nameof(IEnumerator.Current));
+            loopBodies.Add(Expression.Assign(itemKeyExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Key))));
+
+            //if(!entityMapper.TryGetMemberMap(itemKey, out var memberMapper)) continue;
+            methodInfo = typeof(EntityMap).GetMethod(nameof(EntityMap.TryGetMemberMap));
+            Expression isContinueExpr = Expression.IsFalse(Expression.Call(entityMapperExpr, methodInfo, itemKeyExpr, memberMapperExpr));
+            loopBodies.Add(Expression.IfThen(isContinueExpr, Expression.Continue(continueLabel)));
+
+            //if(memberMapper.IsIgnore || memberMapper.IsNavigation || memberMapper.IsRowVersion)
+            isContinueExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.IsIgnore));
+            isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsNavigation)));
+            isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsRowVersion)));
+
+            //|| memberMapper.IsIgnoreInsert || memberMapper.IsAutoIncrement
             if (commandType == 1)
             {
-                fieldBuilderExpr = Expression.Variable(typeof(StringBuilder), "fieldBuilder");
-                blockParameters.Add(fieldBuilderExpr);
-                if (isBulk)
-                {
-                    valueFieldsExpr = Expression.Variable(typeof(List<ValueFieldSegment>), "valueFields");
-                    blockParameters.Add(valueFieldsExpr);
-                }
-                var headSqlExpr = Expression.Constant($"INSERT INTO {ormProvider.GetTableName(entityMapper.TableName)} (");
-                blockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, headSqlExpr));
+                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsIgnoreInsert)));
+                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsAutoIncrement)));
+            }
+            //|| memberMapper.IsIgnoreUpdate
+            if (commandType == 2)
+                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsIgnoreUpdate)));
+
+            Expression lowerMemberNameExpr = null;
+            var toLowerMethodInfo = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes);
+            if (hasOnlyFields && hasIgnoreFields)
+            {
+                var lowerItemValueExpr = Expression.Parameter(typeof(string), "lowerMemberName");
+                blockParameters.Add(lowerItemValueExpr);
+                lowerMemberNameExpr = lowerItemValueExpr;
+                loopBodies.Add(Expression.Assign(lowerMemberNameExpr, Expression.Call(itemKeyExpr, toLowerMethodInfo)));
+            }
+            else lowerMemberNameExpr = Expression.Call(itemKeyExpr, toLowerMethodInfo);
+
+            //|| !onlyFields.Constains(itemKey.ToLower())
+            methodInfo = typeof(List<string>).GetMethod(nameof(List<string>.Contains), [typeof(string)]);
+            if (hasOnlyFields)
+            {
+                var isFalseExpr = Expression.IsFalse(Expression.Call(methodInfo, onlyFieldsExpr, lowerMemberNameExpr));
+                isContinueExpr = Expression.OrElse(isContinueExpr, isFalseExpr);
+            }
+            //|| ignoreFields.Constains(itemKey.ToLower()) 
+            if (hasIgnoreFields)
+                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Call(methodInfo, ignoreFieldsExpr, lowerMemberNameExpr));
+            loopBodies.Add(Expression.IfThen(isContinueExpr, Expression.Continue(continueLabel)));
+
+
+            //生成SQL语句部分
+            //builder.Append(ormProvider.GetFieldName(memberMapper.FieldName));
+            Expression fieldNameExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.FieldName));
+            methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetFieldName));
+            fieldNameExpr = Expression.Call(ormProviderExpr, methodInfo, fieldNameExpr);
+
+            var greaterThenExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0));
+            if (commandType == 1)
+            {
+                var addExpr = Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Constant(","));
+                loopBodies.Add(Expression.IfThen(greaterThenExpr, addExpr));
+                loopBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, fieldNameExpr));
             }
 
-            if (isDictionary)
+            //生成valueGetter委托
+            var vfParameterExpr = Expression.Parameter(typeof(object), "f");
+
+            var typeHandlerExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler));
+            var notNullExpr = Expression.NotEqual(typeHandlerExpr, Expression.Constant(null));
+            methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
+            var typeHandleValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, vfParameterExpr);
+
+            methodInfo = typeof(object).GetMethod(nameof(object.GetType));
+            var itemValueTypeExpr = Expression.Call(vfParameterExpr, methodInfo);
+            var targetTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.MappedTargetType));
+
+            methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetParameterValueGetter));
+            var myValueGetterExpr = Expression.Call(ormProviderExpr, methodInfo, itemValueTypeExpr, targetTypeExpr, Expression.Constant(false), dbContextExpr);
+            var myTypedValueExpr = Expression.Invoke(myValueGetterExpr, vfParameterExpr);
+
+            var dbNullExpr = Expression.Constant(DBNull.Value);
+            var isNullValueExpr = Expression.Equal(vfParameterExpr, Expression.Constant(null));
+            var typedValueExpr = Expression.Condition(isNullValueExpr, dbNullExpr, myTypedValueExpr, typeof(object));
+            var bodyExpr = Expression.Condition(notNullExpr, typeHandleValueExpr, typedValueExpr);
+            var valueGetterExpr = Expression.Lambda<Func<object, object>>(bodyExpr, vfParameterExpr);
+
+            //生成Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string> valueSetter委托
+
+            var valueSetterType = typeof(Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>);
+            var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
+            var builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
+            var typedParameterExpr = Expression.Parameter(typeof(IDictionary<string, object>), "typedParameter");
+            var suffixExpr = Expression.Parameter(typeof(string), "suffix");
+            var valueSettersParameters = new List<ParameterExpression>();
+            var valueSettersBodies = new List<Expression>();
+            var valueSettersBodies2 = new List<Expression>();
+            valueSettersBodies2.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(",")));
+
+            var parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
+            var fieldValueExpr = Expression.Variable(typeof(object), "fieldValue");
+            valueSettersParameters.AddRange([parameterNameExpr, fieldValueExpr]);
+
+            var parameterPrefixExpr = Expression.Property(ormProviderExpr, nameof(IOrmProvider.ParameterPrefix));
+            var memberNameExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.MemberName));
+            var myParameterNameExpr = Expression.Call(concat2MethodInfo, parameterPrefixExpr, memberNameExpr, suffixExpr);
+            valueSettersBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
+
+            if (commandType == 1)
+                valueSettersBodies.Add(Expression.Call(builderExpr, appendMethodInfo, parameterNameExpr));
+            else
             {
-                var enumeratorExpr = Expression.Variable(typeof(IEnumerator<KeyValuePair<string, object>>), "enumerator");
-                var itemKeyExpr = Expression.Variable(typeof(string), "itemKey");
-                var itemValueExpr = Expression.Variable(typeof(object), "itemValue");
-                var entityMapperExpr = Expression.Variable(typeof(EntityMap), "entityMapper");
-                var memberMapperExpr = Expression.Variable(typeof(MemberMap).MakeByRefType(), "memberMapper");
-                var parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
-                var indexExpr = Expression.Variable(typeof(int), "index");
+                var setSqlExpr = Expression.Call(concat2MethodInfo, fieldNameExpr, Expression.Constant("="), parameterNameExpr);
+                valueSettersBodies.Add(Expression.Call(builderExpr, appendMethodInfo, setSqlExpr));
+            }
 
-                blockParameters.AddRange([enumeratorExpr, itemKeyExpr, itemValueExpr, entityMapperExpr, memberMapperExpr, parameterNameExpr, indexExpr]);
-                blockBodies.Add(Expression.Assign(entityMapperExpr, Expression.Call(
-                    typeof(Extensions).GetMethod(nameof(Extensions.GetEntityMap), [typeof(EntityMapProvider), typeof(Type)]),
-                    Expression.Property(dbContextExpr, nameof(DbContext.EntityMapProvider)), Expression.Constant(entityType))));
-                blockBodies.Add(Expression.Assign(indexExpr, Expression.Constant(0)));
+            Expression myFieldValueExpr = Expression.Property(typedParameterExpr, dictItemPropertyInfo, itemKeyExpr);
+            valueSettersBodies.Add(Expression.Assign(fieldValueExpr, Expression.Invoke(valueGetterExpr, myFieldValueExpr)));
 
-                var breakLabel = Expression.Label();
-                var continueLabel = Expression.Label();
+            Expression nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
+            if (nativeDbTypeExpr.Type != typeof(object))
+                nativeDbTypeExpr = Expression.Convert(nativeDbTypeExpr, typeof(object));
+            methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), [typeof(string), typeof(object), typeof(object)]);
+            var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
+            methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add));
+            valueSettersBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
+            valueSettersBodies2.AddRange(valueSettersBodies);
 
-                //var enumerator = dict.GetEnumerator();
-                methodInfo = typeof(IEnumerable<KeyValuePair<string, object>>).GetMethod("GetEnumerator");
-                blockBodies.Add(Expression.Assign(enumeratorExpr, Expression.Call(typedParameterExpr, methodInfo)));
+            var valueSetterExpr = Expression.Lambda(Expression.Block(valueSettersParameters, valueSettersBodies),
+                dbParametersExpr, builderExpr, typedParameterExpr, suffixExpr);
+            var valueSetterExpr2 = Expression.Lambda(Expression.Block(valueSettersParameters, valueSettersBodies2),
+                dbParametersExpr, builderExpr, typedParameterExpr, suffixExpr);
 
-                //if(!enumerator.MoveNext())
-                //  break;
-                var loopBodies = new List<Expression>();
-                methodInfo = typeof(IEnumerator).GetMethod(nameof(IEnumerator.MoveNext));
-                var ifFalseExpr = Expression.IsFalse(Expression.Call(enumeratorExpr, methodInfo));
-                loopBodies.Add(Expression.IfThen(ifFalseExpr, Expression.Break(breakLabel)));
+            methodInfo = valueSettersExpr.Type.GetMethod("Add", [valueSetterType]);
+            greaterThenExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0));
+            var setValueSetterExpr = Expression.Call(valueSettersExpr, methodInfo, valueSetterExpr);
+            var setValueSetterExpr2 = Expression.Call(valueSettersExpr, methodInfo, valueSetterExpr2);
+            loopBodies.Add(Expression.IfThenElse(greaterThenExpr, setValueSetterExpr, setValueSetterExpr2));
+            loopBodies.Add(Expression.AddAssign(indexExpr, Expression.Constant(1)));
 
-                //var itemKey = enumerator.Current.Key;
-                var currentExpr = Expression.Property(enumeratorExpr, nameof(IEnumerator.Current));
-                loopBodies.Add(Expression.Assign(itemKeyExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Key))));
-
-                //if(!entityMapper.TryGetMemberMap(itemKey, out var memberMapper)) continue;
-                methodInfo = typeof(EntityMap).GetMethod(nameof(EntityMap.TryGetMemberMap));
-                Expression isContinueExpr = Expression.IsFalse(Expression.Call(entityMapperExpr, methodInfo, itemKeyExpr, memberMapperExpr));
-                loopBodies.Add(Expression.IfThen(isContinueExpr, Expression.Continue(continueLabel)));
-
-                //if(memberMapper.IsIgnore || memberMapper.IsNavigation || memberMapper.IsKey
-                isContinueExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.IsIgnore));
-                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsNavigation)));
-                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsKey)));
-
-                //|| memberMapper.IsIgnoreInsert || memberMapper.IsAutoIncrement
-                if (commandType == 1)
-                {
-                    isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsIgnoreInsert)));
-                    isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsAutoIncrement)));
-                }
-
-                //|| memberMapper.IsIgnoreUpdate
-                if (commandType == 2)
-                    isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsIgnoreUpdate)));
-
-                //|| memberMapper.IsRowVersion
-                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsRowVersion)));
-                loopBodies.Add(Expression.IfThen(isContinueExpr, Expression.Continue(continueLabel)));
-
-                var memberNameExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.MemberName));
-                //var fieldValue = enumerator.Current.Value;
-                loopBodies.Add(Expression.Assign(itemValueExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Value))));
-
-                //设置SQL语句部分
-                //builder.Append(ormProvider.GetFieldName(memberMapper.FieldName));
-                Expression fieldNameExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.FieldName));
-                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetFieldName));
-                fieldNameExpr = Expression.Call(ormProviderExpr, methodInfo, fieldNameExpr);
-                var myParameterNameExpr = Expression.Call(concatMethodInfo, Expression.Constant(ormProvider.ParameterPrefix), memberNameExpr);
-                loopBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
-
-                if (commandType == 1)
-                {
-                    var greaterThenExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0));
-                    if (isBulk)
-                    {
-                        var addExpr = Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Constant(","));
-                        loopBodies.Add(Expression.IfThen(greaterThenExpr, addExpr));
-                    }
-                    else
-                    {
-                        var addExpr1 = Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Constant(","));
-                        var addExpr2 = Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(","));
-                        loopBodies.Add(Expression.IfThen(greaterThenExpr, Expression.Block([addExpr1, addExpr2])));
-                        loopBodies.Add(Expression.Call(builderExpr, appendMethodInfo, parameterNameExpr));
-                    }
-                    loopBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, fieldNameExpr));
-                }
-                else
-                {
-                    var setSqlExpr = Expression.Call(concat2MethodInfo, fieldNameExpr, Expression.Constant("="), parameterNameExpr);
-                    loopBodies.Add(Expression.Call(builderExpr, appendMethodInfo, setSqlExpr));
-                }
-                if (isBulk) loopBodies.Add(Expression.Call(builderExpr, appendMethodInfo, suffixExpr));
-
-                //添加参数部分
-                var myItemValueExpr = itemValueExpr;
-                if (commandType == 1 && isBulk)
-                {
-                    var vfParameterExpr = Expression.Parameter(typeof(object), "f");
-                    myItemValueExpr = vfParameterExpr;
-                }
-                methodInfo = typeof(object).GetMethod(nameof(object.GetType));
-                var itemValueTypeExpr = Expression.Call(myItemValueExpr, methodInfo);
-                var targetTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.MappedTargetType));
-
-                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetParameterValueGetter));
-                var myValueGetterExpr = Expression.Call(ormProviderExpr, methodInfo, itemValueTypeExpr, targetTypeExpr, Expression.Constant(false), dbContextExpr);
-                var myTypedValueExpr = Expression.Invoke(myValueGetterExpr, myItemValueExpr);
-
-                var dbNullExpr = Expression.Constant(DBNull.Value);
-                var isNullValueExpr = Expression.Equal(myItemValueExpr, Expression.Constant(null));
-                var typedValueExpr = Expression.Condition(isNullValueExpr, dbNullExpr, myTypedValueExpr, typeof(object));
-
-                var typeHandlerExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler));
-                var notNullExpr = Expression.NotEqual(typeHandlerExpr, Expression.Constant(null));
-                methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
-                var typeHandleValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, myItemValueExpr);
-
-                ParameterExpression valueGetterExpr = null;
-                if (commandType == 1 && isBulk)
-                {
-                    valueGetterExpr = Expression.Variable(typeof(Func<object, object>));
-                    blockParameters.Add(valueGetterExpr);
-
-                    //构建值获取器
-                    var valueGetterBodies = new List<Expression>();
-                    var resultLabelExpr = Expression.Label(typeof(object));
-                    valueGetterBodies.Add(Expression.IfThen(isNullValueExpr, Expression.Return(resultLabelExpr, Expression.Constant(DBNull.Value))));
-                    valueGetterBodies.Add(Expression.IfThen(notNullExpr, Expression.Return(resultLabelExpr, typeHandleValueExpr)));
-                    valueGetterBodies.Add(Expression.Return(resultLabelExpr, myTypedValueExpr));
-                    valueGetterBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(object))));
-                    var bodyExpr = Expression.Block(valueGetterBodies);
-                    var valueGetterType = typeof(Action<object, object>);
-                    blockBodies.Add(Expression.Assign(valueGetterExpr, Expression.Lambda(valueGetterType, bodyExpr, myItemValueExpr)));
-                    //valueFields.Add(new ValueFieldSegment { MemberMapper=memberMapper, ValueGetter=valueGetter});
-                    var constructor = typeof(ValueFieldSegment).GetConstructor([typeof(MemberMap), typeof(Func<object, object>)]);
-                    var valueFieldExpr = Expression.New(constructor, memberMapperExpr, valueGetterExpr);
-                    methodInfo = typeof(List<ValueFieldSegment>).GetMethod(nameof(List<ValueFieldSegment>.Add));
-                    loopBodies.Add(Expression.Call(valueFieldsExpr, methodInfo, valueFieldExpr));
-                }
-                else
-                {
-                    var typedFieldValueExpr = Expression.Condition(notNullExpr, typeHandleValueExpr, typedValueExpr, typeof(object));
-                    var fieldValueExpr = Expression.Parameter(typeof(object));
-                    blockParameters.Add(fieldValueExpr);
-                    loopBodies.Add(Expression.Assign(fieldValueExpr, typedFieldValueExpr));
-
-                    var nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
-                    methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), [typeof(string), typeof(object), typeof(object)]);
-                    var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
-                    methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add));
-                    loopBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
-                }
-                loopBodies.Add(Expression.AddAssign(indexExpr, Expression.Constant(1)));
-                blockBodies.Add(Expression.Loop(Expression.Block(loopBodies), breakLabel, continueLabel));
-
-                if (commandType == 1)
-                {
-                    blockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Constant(") VALUES ")));
-
-                    if (isBulk)
-                    {
-                        var breakLabel2 = Expression.Label();
-                        var continueLabel2 = Expression.Label();
-                        var loopBodies2 = new List<Expression>();
-                        blockBodies.Add(Expression.Assign(indexExpr, Expression.Constant(0)));
-                        blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant("(")));
-
-                        var countExpr = Expression.Property(valueFieldsExpr, nameof(List<ValueFieldSegment>.Count));
-
-                        //for (int index = 0; index < valueFields.Count; index++)
-                        var greaterThanExpr = Expression.GreaterThanOrEqual(indexExpr, countExpr);
-                        loopBodies2.Add(Expression.IfThen(greaterThanExpr, Expression.Break(breakLabel)));
-
-                        greaterThanExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0));
-                        var addExpr2 = Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(","));
-                        loopBodies2.Add(Expression.IfThen(greaterThanExpr, addExpr2));
-
-                        var itemPropertyInfo = typeof(List<ValueFieldSegment>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
-                            .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(int)).First();
-                        var valueFiedExpr = Expression.Property(valueFieldsExpr, itemPropertyInfo, indexExpr);
-                        var myMemberMapperExpr = Expression.Property(valueFiedExpr, nameof(ValueFieldSegment.MemberMapper));
-                        var valueGetterExpr2 = Expression.Property(valueFiedExpr, nameof(ValueFieldSegment.ValueGetter));
-                        loopBodies2.Add(Expression.Assign(memberMapperExpr, myMemberMapperExpr));
-
-                        memberNameExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.MemberName));
-                        myParameterNameExpr = Expression.Call(concat2MethodInfo, Expression.Constant(ormProvider.ParameterPrefix), memberNameExpr, suffixExpr);
-                        loopBodies2.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
-                        loopBodies2.Add(Expression.Call(builderExpr, appendMethodInfo, parameterNameExpr));
-
-                        var fieldValueExpr = Expression.Invoke(valueGetterExpr2, typedParameterExpr);
-                        var nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
-                        methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), [typeof(string), typeof(object), typeof(object)]);
-                        var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
-                        methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add));
-                        loopBodies2.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
-                        loopBodies2.Add(Expression.AddAssign(indexExpr, Expression.Constant(1)));
-                        blockBodies.Add(Expression.Loop(Expression.Block(loopBodies2), breakLabel2, continueLabel2));
-                        blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(")")));
-                    }
-                }
+            if (commandType == 1)
+            {
+                methodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.ToString), Type.EmptyTypes);
+                var returnExpr = Expression.Call(fieldBuilderExpr, methodInfo);
+                var resultLabelExpr = Expression.Label(typeof(string));
+                blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
+                blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(string))));
+            }
+            if (hasFilterFields)
+            {
+                if (commandType == 1) return Expression.Lambda<Func<IDataParameterCollection, List<Action<IDataParameterCollection, StringBuilder, object, string>>, DbContext, List<string>, List<string>, IDictionary<string, object>, string>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, valueSettersExpr, dbContextExpr, onlyFieldsExpr, ignoreFieldsExpr, dictExpr).Compile();
+                else return Expression.Lambda<Action<IDataParameterCollection, List<Action<IDataParameterCollection, StringBuilder, object, string>>, DbContext, List<string>, List<string>, IDictionary<string, object>>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, valueSettersExpr, dbContextExpr, onlyFieldsExpr, ignoreFieldsExpr, dictExpr).Compile();
             }
             else
             {
-                var index = 0;
-                foreach (var memberMapper in entityMapper.MemberMaps)
-                {
-                    var lowerMemberNameExpr = Expression.Constant(memberMapper.MemberName.ToLower());
-                    if (!parameterType.TryGetMember(memberMapper.MemberName, out var memberInfo))
-                        continue;
-                    var memberValueExpr = Expression.PropertyOrField(typedParameterExpr, memberInfo.Name);
-                    var parameterName = ormProvider.ParameterPrefix + memberMapper.MemberName;
-                    var parameterNameExpr = Expression.Constant(parameterName);
-                    var memberNameExpr = Expression.Constant(memberMapper.MemberName);
-                    var memberType = memberInfo.GetMemberType();
-
-                    //shardingValues[memberMapper.MemberName] = memberValue;
-                    if (isSplitSharding && shardingMembers.Contains(memberMapper.MemberName))
-                    {
-                        Expression myMemberValueExpr = memberValueExpr;
-                        if (memberType != memberMapper.MemberType && memberType != memberMapper.UnderlyingType)
-                        {
-                            var valueGetter = ormProvider.GetParameterValueGetter(memberType, memberMapper.UnderlyingType, !memberMapper.IsRequired, dbContext);
-                            myMemberValueExpr = Expression.Invoke(Expression.Constant(valueGetter), memberValueExpr);
-                        }
-                        methodInfo = dictItemPropertyInfo.GetSetMethod();
-                        var setDependOnValueExpr = Expression.Call(shardingValuesExpr, methodInfo, memberNameExpr, myMemberValueExpr);
-                        blockBodies.Add(setDependOnValueExpr);
-                    }
-                    if (memberMapper.IsKey || memberMapper.IsAutoIncrement || memberMapper.IsIgnore
-                        || memberMapper.IsNavigation || memberMapper.IsRowVersion
-                        || (commandType == 1 && memberMapper.IsIgnoreInsert)
-                        || (commandType == 2 && memberMapper.IsIgnoreUpdate))
-                        continue;
-
-                    //if (!onlyFields.Constains(itemKey.ToLower())) continue;
-                    methodInfo = typeof(List<string>).GetMethod(nameof(List<string>.Contains), [typeof(string)]);
-                    var isOnlyExpr = Expression.Call(onlyFieldsExpr, methodInfo, lowerMemberNameExpr);
-                    var isNotIgnoreExpr = Expression.IsFalse(Expression.Call(ignoreFieldsExpr, methodInfo, lowerMemberNameExpr));
-
-                    bool isNeedBlock = false;
-                    Expression isContainsExpr = null;
-                    if (hasOnlyFields || hasIgnoreFields)
-                    {
-                        if (hasOnlyFields && hasIgnoreFields)
-                            isContainsExpr = Expression.AndAlso(isOnlyExpr, isNotIgnoreExpr);
-                        else if (hasOnlyFields && !hasIgnoreFields)
-                            isContainsExpr = isOnlyExpr;
-                        else isContainsExpr = isNotIgnoreExpr;
-                        isNeedBlock = true;
-                    }
-
-                    if (commandType == 1)
-                    {
-                        var builderLengthExpr = Expression.Property(fieldBuilderExpr, nameof(StringBuilder.Length));
-                        var greaterThenExpr = Expression.GreaterThan(builderLengthExpr, Expression.Constant(0));
-                        var addExpr1 = Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Constant(","));
-                        var addExpr2 = Expression.Call(valueBuilderExpr, appendMethodInfo, Expression.Constant(","));
-                        if (isNeedBlock) myBlockBodies.Add(Expression.IfThen(greaterThenExpr, Expression.Block(addExpr1, addExpr2)));
-                        else if (index > 0) myBlockBodies.AddRange([addExpr1, addExpr2]);
-                        var fieldNameExpr = Expression.Constant(ormProvider.GetFieldName(memberMapper.FieldName));
-                        myBlockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, fieldNameExpr));
-                        myBlockBodies.Add(Expression.Call(valueBuilderExpr, appendMethodInfo, parameterNameExpr));
-                    }
-                    else
-                    {
-                        var setSqlExpr = Expression.Constant($"{ormProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
-                        methodInfo = typeof(List<string>).GetMethod(nameof(List<string>.Add));
-                        myBlockBodies.Add(Expression.Call(updateFieldsExpr, methodInfo, setSqlExpr));
-                    }
-                    var fieldValueExpr = Expression.Variable(typeof(object), $"{memberMapper.MemberName.ToCamel()}Value");
-                    blockParameters.Add(fieldValueExpr);
-
-                    Expression myFieldValueExpr = null;
-                    if (memberMapper.TypeHandler != null)
-                    {
-                        var typeHandlerMethodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
-                        var typeHandlerExpr = Expression.Constant(memberMapper.TypeHandler);
-                        myFieldValueExpr = Expression.Call(typeHandlerExpr, typeHandlerMethodInfo, ormProviderExpr, memberValueExpr);
-                    }
-                    else
-                    {
-                        if (memberType == memberMapper.MappedTargetType) myFieldValueExpr = memberValueExpr;
-                        else
-                        {
-                            var valueGetter = ormProvider.GetParameterValueGetter(memberType, memberMapper.MappedTargetType, !memberMapper.IsRequired, dbContext);
-                            myFieldValueExpr = Expression.Invoke(Expression.Constant(valueGetter), memberValueExpr);
-                        }
-                    }
-                    blockBodies.Add(Expression.Assign(fieldValueExpr, myFieldValueExpr));
-
-                    Expression nativeDbTypeExpr = Expression.Constant(memberMapper.NativeDbType);
-                    if (nativeDbTypeExpr.Type != typeof(object))
-                        nativeDbTypeExpr = Expression.Convert(nativeDbTypeExpr, typeof(object));
-                    methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), [typeof(string), typeof(object), typeof(object)]);
-                    var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
-                    methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add));
-                    myBlockBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
-                    if (isNeedBlock) blockBodies.Add(Expression.IfThen(isContainsExpr, Expression.Block(myBlockBodies)));
-                    index++;
-                }
-                if (index <= 0) throw new Exception($"没有找到{(commandType == 1 ? "插入" : "更新")}语句");
+                if (commandType == 1) return Expression.Lambda<Func<IDataParameterCollection, List<Action<IDataParameterCollection, StringBuilder, object, string>>, DbContext, IDictionary<string, object>, string>>(
+                   Expression.Block(blockParameters, blockBodies), dbParametersExpr, valueSettersExpr, dbContextExpr, dictExpr).Compile();
+                else return Expression.Lambda<Action<IDataParameterCollection, List<Action<IDataParameterCollection, StringBuilder, object, string>>, DbContext, IDictionary<string, object>>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, valueSettersExpr, dbContextExpr, dictExpr).Compile();
             }
+        });
+    }
+
+    public static object BuildCreateTypedBulkCommandInitializer(DbContext dbContext, Type entityType, Type parameterType, int commandType, bool isVisitor, bool isSplitSharding, bool hasOnlyFields, bool hasIgnoreFields)
+    {
+        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, parameterType, isVisitor, isSplitSharding, hasOnlyFields, hasIgnoreFields);
+        var commandInitializerCache = commandType == 1 ? typedCreateBulkCommandInitializerCache : typedUpdateBulkCommandInitializerCache;
+        return commandInitializerCache.GetOrAdd(cacheKey, f =>
+        {
+            var valueSettersExpr = Expression.Parameter(typeof(List<Action<IDataParameterCollection, StringBuilder, object, string>>), "valueSetters");
+            var parameterExpr = Expression.Parameter(typeof(object), "parameter");
+            var suffixExpr = Expression.Parameter(typeof(StringBuilder), "suffix");
+            var blockParameters = new List<ParameterExpression>();
+            var blockBodies = new List<Expression>();
+
+            var typedParameterExpr = Expression.Variable(parameterType, "typedParameterObj");
+            blockParameters.Add(typedParameterExpr);
+            //var ormProviderExpr = Expression.Variable(typeof(IOrmProvider), "ormProvider");
+            //blockParameters.AddRange([typedParameterExpr, ormProviderExpr]);
+            blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
+            //blockBodies.Add(Expression.Assign(ormProviderExpr, Expression.Property(dbContextExpr, nameof(DbContext.OrmProvider))));
+
+            ParameterExpression onlyFieldsExpr = null;
+            ParameterExpression ignoreFieldsExpr = null;
+            ParameterExpression shardingValuesExpr = null;
+
+            var ormProvider = dbContext.OrmProvider;
+            var entityMapper = dbContext.EntityMapProvider.GetEntityMap(entityType);
+            var index = 0;
+            List<string> shardingMembers = null;
+            var myBlockBodies = blockBodies;
+
+            MethodInfo methodInfo = null;
+            var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)]);
+            var concatMethodInfo = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string)]);
+            var concat2MethodInfo = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string), typeof(string)]);
+            var dictItemPropertyInfo = typeof(IDictionary<string, object>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(string)).First();
+
+            var constructor = typeof(StringBuilder).GetConstructor(Type.EmptyTypes);
+            var newExpr = Expression.New(constructor);
+
+            var builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
+            blockParameters.Add(builderExpr);
+            blockBodies.Add(Expression.Assign(builderExpr, newExpr));
+
+            if (isSplitSharding)
+            {
+                shardingValuesExpr = Expression.Parameter(typeof(IDictionary<string, object>), "shardingValues");
+                var tableShardingProvider = dbContext.TableShardingProvider;
+                if (tableShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
+                    shardingMembers = tableShardingInfo.DependOnMembers;
+            }
+            var hasFilterFields = hasOnlyFields || hasIgnoreFields;
+            if (hasFilterFields)
+            {
+                onlyFieldsExpr = Expression.Parameter(typeof(List<string>), "onlyFields");
+                ignoreFieldsExpr = Expression.Parameter(typeof(List<string>), "ignoreFields");
+                myBlockBodies = new List<Expression>();
+            }
+
+            foreach (var memberMapper in entityMapper.MemberMaps)
+            {
+                var lowerMemberNameExpr = Expression.Constant(memberMapper.MemberName.ToLower());
+                if (!parameterType.TryGetMember(memberMapper.MemberName, out var memberInfo))
+                    continue;
+
+                var memberType = memberInfo.GetMemberType();
+                Expression memberValueExpr = null;
+                var myMemberValueExpr = Expression.PropertyOrField(typedParameterExpr, memberInfo.Name);
+                var parameterName = ormProvider.ParameterPrefix + memberMapper.MemberName;
+                var parameterNameExpr = Expression.Constant(parameterName);
+                var memberNameExpr = Expression.Constant(memberMapper.MemberName);
+
+                //shardingValues[memberMapper.MemberName] = memberValue;
+                if (isSplitSharding && shardingMembers.Contains(memberMapper.MemberName))
+                {
+                    memberValueExpr = Expression.Variable(memberType, $"{memberMapper.MemberName}Value");
+                    blockBodies.Add(Expression.Assign(memberValueExpr, myMemberValueExpr));
+
+                    if (memberType != memberMapper.MemberType && memberType != memberMapper.UnderlyingType)
+                    {
+                        var valueGetter = ormProvider.GetParameterValueGetter(memberType, memberMapper.UnderlyingType, !memberMapper.IsRequired, dbContext);
+                        blockBodies.Add(Expression.Assign(memberValueExpr, Expression.Invoke(Expression.Constant(valueGetter), memberValueExpr)));
+                    }
+
+                    methodInfo = dictItemPropertyInfo.GetSetMethod();
+                    var setDependOnValueExpr = Expression.Call(shardingValuesExpr, methodInfo, memberNameExpr, memberValueExpr);
+                    blockBodies.Add(setDependOnValueExpr);
+                }
+                if (memberMapper.IsIgnore || memberMapper.IsAutoIncrement || memberMapper.IsNavigation
+                || memberMapper.IsRowVersion || memberMapper.IsIgnoreInsert)
+                    continue;
+
+                //if (!onlyFields.Constains(itemKey.ToLower())) continue;
+                methodInfo = typeof(List<string>).GetMethod(nameof(List<string>.Contains), [typeof(string)]);
+                var isOnlyExpr = Expression.Call(onlyFieldsExpr, methodInfo, lowerMemberNameExpr);
+                var isNotIgnoreExpr = Expression.IsFalse(Expression.Call(ignoreFieldsExpr, methodInfo, lowerMemberNameExpr));
+
+                bool isNeedBlock = false;
+                Expression isContainsExpr = null;
+                if (hasOnlyFields || hasIgnoreFields)
+                {
+                    if (hasOnlyFields && hasIgnoreFields)
+                        isContainsExpr = Expression.AndAlso(isOnlyExpr, isNotIgnoreExpr);
+                    else if (hasOnlyFields && !hasIgnoreFields)
+                        isContainsExpr = isOnlyExpr;
+                    else isContainsExpr = isNotIgnoreExpr;
+                    isNeedBlock = true;
+                }
+                if (memberValueExpr == null)
+                {
+                    memberValueExpr = myMemberValueExpr;
+                    if (memberType != memberMapper.MemberType && memberType != memberMapper.UnderlyingType)
+                    {
+                        var valueGetter = ormProvider.GetParameterValueGetter(memberType, memberMapper.UnderlyingType, !memberMapper.IsRequired, dbContext);
+                        memberValueExpr = Expression.Invoke(Expression.Constant(valueGetter), memberValueExpr);
+                    }
+                }
+
+                var builderLengthExpr = Expression.Property(builderExpr, nameof(StringBuilder.Length));
+                var greaterThenExpr = Expression.GreaterThan(builderLengthExpr, Expression.Constant(0));
+                var fieldNameExpr = Expression.Constant(ormProvider.GetFieldName(memberMapper.FieldName));
+                myBlockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, fieldNameExpr));
+
+
+                var vfBlockParameters = new List<ParameterExpression>();
+                var vfBlockBodies = new List<Expression>();
+                var vfParameterExpr = Expression.Parameter(typeof(object), "f");
+                var vfDbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
+                var vfBuilderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
+                var vfSuffixExpr = Expression.Parameter(typeof(string), "suffix");
+
+                var vfTypedParameterExpr = Expression.Variable(parameterType, "typedParameter");
+                vfBlockParameters.Add(vfTypedParameterExpr);
+                vfBlockBodies.Add(Expression.Assign(vfTypedParameterExpr, Expression.Convert(vfParameterExpr, parameterType)));
+                var vfGreaterThenExpr = Expression.GreaterThan(Expression.Property(vfBuilderExpr, nameof(StringBuilder.Length)), Expression.Constant(0));
+                vfBlockBodies.Add(Expression.IfThen(vfGreaterThenExpr, Expression.Call(vfBuilderExpr, appendMethodInfo, Expression.Constant(","))));
+                vfBlockBodies.Add(Expression.Call(vfBuilderExpr, appendMethodInfo, parameterNameExpr));
+                vfBlockBodies.Add(Expression.Call(vfBuilderExpr, appendMethodInfo, vfSuffixExpr));
+
+                var fieldValueExpr = Expression.Variable(typeof(object), $"{memberMapper.MemberName.ToCamel()}Value");
+                blockParameters.Add(fieldValueExpr);
+
+                Expression myFieldValueExpr = null;
+                if (memberMapper.TypeHandler != null)
+                {
+                    var typeHandlerMethodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
+                    var typeHandlerExpr = Expression.Constant(memberMapper.TypeHandler);
+                    myFieldValueExpr = Expression.Call(typeHandlerExpr, typeHandlerMethodInfo, ormProviderExpr, memberValueExpr);
+                }
+                else
+                {
+                    if (memberType == memberMapper.MappedTargetType) myFieldValueExpr = memberValueExpr;
+                    else
+                    {
+                        var valueGetter = ormProvider.GetParameterValueGetter(memberType, memberMapper.MappedTargetType, !memberMapper.IsRequired, dbContext);
+                        myFieldValueExpr = Expression.Invoke(Expression.Constant(valueGetter), memberValueExpr);
+                    }
+                }
+                blockBodies.Add(Expression.Assign(fieldValueExpr, myFieldValueExpr));
+
+                Expression nativeDbTypeExpr = Expression.Constant(memberMapper.NativeDbType);
+                if (nativeDbTypeExpr.Type != typeof(object))
+                    nativeDbTypeExpr = Expression.Convert(nativeDbTypeExpr, typeof(object));
+                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), [typeof(string), typeof(object), typeof(object)]);
+                var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
+                methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add));
+                myBlockBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
+
+
+
+
+
+
+                var addExpr1 = Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Constant(","));
+                var addExpr2 = Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(","));
+                if (isNeedBlock) myBlockBodies.Add(Expression.IfThen(greaterThenExpr, Expression.Block(addExpr1, addExpr2)));
+                else if (index > 0) myBlockBodies.AddRange([addExpr1, addExpr2]);
+
+                var fieldValueExpr = Expression.Variable(typeof(object), $"{memberMapper.MemberName.ToCamel()}Value");
+                blockParameters.Add(fieldValueExpr);
+
+                Expression myFieldValueExpr = null;
+                if (memberMapper.TypeHandler != null)
+                {
+                    var typeHandlerMethodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
+                    var typeHandlerExpr = Expression.Constant(memberMapper.TypeHandler);
+                    myFieldValueExpr = Expression.Call(typeHandlerExpr, typeHandlerMethodInfo, ormProviderExpr, memberValueExpr);
+                }
+                else
+                {
+                    if (memberType == memberMapper.MappedTargetType) myFieldValueExpr = memberValueExpr;
+                    else
+                    {
+                        var valueGetter = ormProvider.GetParameterValueGetter(memberType, memberMapper.MappedTargetType, !memberMapper.IsRequired, dbContext);
+                        myFieldValueExpr = Expression.Invoke(Expression.Constant(valueGetter), memberValueExpr);
+                    }
+                }
+                blockBodies.Add(Expression.Assign(fieldValueExpr, myFieldValueExpr));
+
+                Expression nativeDbTypeExpr = Expression.Constant(memberMapper.NativeDbType);
+                if (nativeDbTypeExpr.Type != typeof(object))
+                    nativeDbTypeExpr = Expression.Convert(nativeDbTypeExpr, typeof(object));
+                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), [typeof(string), typeof(object), typeof(object)]);
+                var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
+                methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add));
+                myBlockBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
+                if (isNeedBlock) blockBodies.Add(Expression.IfThen(isContainsExpr, Expression.Block(myBlockBodies)));
+                index++;
+            }
+            if (index <= 0) throw new Exception($"没有找到{(commandType == 1 ? "插入" : "更新")}语句");
+
 
             methodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.ToString), Type.EmptyTypes);
             Expression returnExpr = null;
@@ -2406,367 +2555,367 @@ public static class RepositoryHelper
     //    };
     //}
 
-    //public static object BuildFieldsSqlParametersPart(DbContext dbContext, Type entityType, Type parametersType, int commandType, int sqlType, int keyType, bool isFunc, bool isBulk, bool isUpdateRowVersion, List<string> onlyFieldNames, List<string> ignoreFieldNames, string headSql = null, string tailSql = null)
-    //{
-    //    //commandType 1:Insert Field, 2:Insert Value, 3:Insert Update Set 4:Update Set
-    //    //sqlType 0:None 1:Sql And Parameters 2:Only Sql 3:Only Parameters
-    //    //keyType 0:None 1:Use Keys 2:Ignore Keys      
-    //    var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
-    //    var parametersExpr = Expression.Parameter(typeof(object), "parameters");
+    public static object BuildFieldsSqlParametersPart(DbContext dbContext, Type entityType, Type parametersType, int commandType, int sqlType, int keyType, bool isFunc, bool isBulk, bool isUpdateRowVersion, List<string> onlyFieldNames, List<string> ignoreFieldNames, string headSql = null, string tailSql = null)
+    {
+        //commandType 1:Insert Field, 2:Insert Value, 3:Insert Update Set 4:Update Set
+        //sqlType 1:Sql And Parameters 2:Only Sql 3:Only Parameters
+        //keyType 0:None 1:Use Keys 2:Ignore Keys      
+        var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
+        var parametersExpr = Expression.Parameter(typeof(object), "parameters");
 
-    //    ParameterExpression dbParametersExpr = null;
-    //    ParameterExpression builderExpr = null;
-    //    ParameterExpression suffixExpr = null;
-    //    ParameterExpression ormProviderExpr = null;
-    //    ParameterExpression parameterNameExpr = null;
-    //    ParameterExpression typedParametersExpr = null;
-    //    var blockParameters = new List<ParameterExpression>();
-    //    var blockBodies = new List<Expression>();
+        ParameterExpression dbParametersExpr = null;
+        ParameterExpression builderExpr = null;
+        ParameterExpression suffixExpr = null;
+        ParameterExpression ormProviderExpr = null;
+        ParameterExpression parameterNameExpr = null;
+        ParameterExpression typedParametersExpr = null;
+        var blockParameters = new List<ParameterExpression>();
+        var blockBodies = new List<Expression>();
 
-    //    bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(parametersType);
-    //    var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)]);
-    //    var concatMethodInfo = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string)]);
-    //    MethodInfo methodInfo = null;
+        bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(parametersType);
+        var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)]);
+        var concatMethodInfo = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string)]);
+        MethodInfo methodInfo = null;
 
-    //    if (commandType > 1 && sqlType != 2)
-    //        dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
+        if (commandType > 1 && sqlType != 2)
+            dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
 
-    //    if (isDictionary || commandType > 1 && sqlType != 2)
-    //    {
-    //        if (isDictionary) parametersType = typeof(IDictionary<string, object>);
-    //        ormProviderExpr = Expression.Variable(typeof(IOrmProvider), "ormProvider");
-    //        typedParametersExpr = Expression.Variable(parametersType, isDictionary ? "dict" : "typedParameters");
-    //        blockParameters.AddRange([ormProviderExpr, typedParametersExpr]);
-    //        blockBodies.Add(Expression.Assign(ormProviderExpr, Expression.Property(dbContextExpr, nameof(DbContext.OrmProvider))));
-    //        blockBodies.Add(Expression.Assign(typedParametersExpr, Expression.Convert(parametersExpr, parametersType)));
-    //    }
-    //    if (isFunc)
-    //    {
-    //        builderExpr = Expression.Variable(typeof(StringBuilder), "builder");
-    //        blockParameters.Add(builderExpr);
-    //        var constructorInfo = typeof(StringBuilder).GetConstructor(Type.EmptyTypes);
-    //        blockBodies.Add(Expression.Assign(builderExpr, Expression.New(constructorInfo)));
-    //    }
-    //    else if (sqlType != 3) builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
-    //    if (commandType > 1 && isBulk)
-    //    {
-    //        suffixExpr = Expression.Parameter(typeof(string), "suffix");
-    //        parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
-    //        blockParameters.Add(parameterNameExpr);
-    //    }
+        if (isDictionary || commandType > 1 && sqlType != 2)
+        {
+            if (isDictionary) parametersType = typeof(IDictionary<string, object>);
+            ormProviderExpr = Expression.Variable(typeof(IOrmProvider), "ormProvider");
+            typedParametersExpr = Expression.Variable(parametersType, isDictionary ? "dict" : "typedParameters");
+            blockParameters.AddRange([ormProviderExpr, typedParametersExpr]);
+            blockBodies.Add(Expression.Assign(ormProviderExpr, Expression.Property(dbContextExpr, nameof(DbContext.OrmProvider))));
+            blockBodies.Add(Expression.Assign(typedParametersExpr, Expression.Convert(parametersExpr, parametersType)));
+        }
+        if (isFunc)
+        {
+            builderExpr = Expression.Variable(typeof(StringBuilder), "builder");
+            blockParameters.Add(builderExpr);
+            var constructorInfo = typeof(StringBuilder).GetConstructor(Type.EmptyTypes);
+            blockBodies.Add(Expression.Assign(builderExpr, Expression.New(constructorInfo)));
+        }
+        else if (sqlType != 3) builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
+        if (commandType > 1 && isBulk)
+        {
+            suffixExpr = Expression.Parameter(typeof(string), "suffix");
+            parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
+            blockParameters.Add(parameterNameExpr);
+        }
 
-    //    if (sqlType != 3 && !string.IsNullOrEmpty(headSql))
-    //        blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(headSql)));
+        if (sqlType != 3 && !string.IsNullOrEmpty(headSql))
+            blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(headSql)));
 
-    //    ParameterExpression entityMapperExpr = null;
-    //    ParameterExpression memberMapperExpr = null;
-    //    MethodInfo containsKeyMethodInfo = null;
-    //    PropertyInfo dictItemPropertyInfo = null;
-    //    var ormProvider = dbContext.OrmProvider;
+        ParameterExpression entityMapperExpr = null;
+        ParameterExpression memberMapperExpr = null;
+        MethodInfo containsKeyMethodInfo = null;
+        PropertyInfo dictItemPropertyInfo = null;
+        var ormProvider = dbContext.OrmProvider;
 
-    //    if (isDictionary)
-    //    {
-    //        entityMapperExpr = Expression.Variable(typeof(EntityMap), "entityMapper");
-    //        memberMapperExpr = Expression.Variable(typeof(MemberMap), "memberMapper");
-    //        blockParameters.AddRange([entityMapperExpr, memberMapperExpr]);
+        if (isDictionary)
+        {
+            entityMapperExpr = Expression.Variable(typeof(EntityMap), "entityMapper");
+            memberMapperExpr = Expression.Variable(typeof(MemberMap), "memberMapper");
+            blockParameters.AddRange([entityMapperExpr, memberMapperExpr]);
 
-    //        containsKeyMethodInfo = typeof(IDictionary<string, object>).GetMethod(nameof(IDictionary<string, object>.ContainsKey));
-    //        dictItemPropertyInfo = typeof(IDictionary<string, object>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
-    //            .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(string)).First();
+            containsKeyMethodInfo = typeof(IDictionary<string, object>).GetMethod(nameof(IDictionary<string, object>.ContainsKey));
+            dictItemPropertyInfo = typeof(IDictionary<string, object>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(string)).First();
 
-    //        var mapProviderExpr = Expression.Property(dbContextExpr, nameof(DbContext.MapProvider));
-    //        methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.GetEntityMap), [typeof(EntityMapProvider), typeof(Type)]);
-    //        blockBodies.Add(Expression.Assign(entityMapperExpr, Expression.Call(methodInfo, mapProviderExpr, Expression.Constant(entityType))));
-    //    }
+            var mapProviderExpr = Expression.Property(dbContextExpr, nameof(DbContext.EntityMapProvider));
+            methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.GetEntityMap), [typeof(EntityMapProvider), typeof(Type)]);
+            blockBodies.Add(Expression.Assign(entityMapperExpr, Expression.Call(methodInfo, mapProviderExpr, Expression.Constant(entityType))));
+        }
 
-    //    if (isDictionary && keyType != 1)
-    //    {
-    //        var indexExpr = Expression.Variable(typeof(int), "index");
-    //        var enumeratorExpr = Expression.Variable(typeof(IEnumerator<KeyValuePair<string, object>>), "enumerator");
-    //        var itemKeyExpr = Expression.Variable(typeof(string), "itemKey");
-    //        var itemValueExpr = Expression.Variable(typeof(object), "itemValue");
-    //        var concatMethodInfo2 = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string), typeof(string)]);
+        if (isDictionary && keyType != 1)
+        {
+            var indexExpr = Expression.Variable(typeof(int), "index");
+            var enumeratorExpr = Expression.Variable(typeof(IEnumerator<KeyValuePair<string, object>>), "enumerator");
+            var itemKeyExpr = Expression.Variable(typeof(string), "itemKey");
+            var itemValueExpr = Expression.Variable(typeof(object), "itemValue");
+            var concatMethodInfo2 = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string), typeof(string)]);
 
-    //        blockParameters.AddRange([indexExpr, enumeratorExpr, itemKeyExpr, itemValueExpr]);
-    //        var breakLabel = Expression.Label();
-    //        var continueLabel = Expression.Label();
+            blockParameters.AddRange([indexExpr, enumeratorExpr, itemKeyExpr, itemValueExpr]);
+            var breakLabel = Expression.Label();
+            var continueLabel = Expression.Label();
 
-    //        //var index = 0;
-    //        //var enumerator = dict.GetEnumerator();
-    //        blockBodies.Add(Expression.Assign(indexExpr, Expression.Constant(0)));
-    //        methodInfo = typeof(IEnumerable<KeyValuePair<string, object>>).GetMethod("GetEnumerator");
-    //        blockBodies.Add(Expression.Assign(enumeratorExpr, Expression.Call(typedParametersExpr, methodInfo)));
+            //var index = 0;
+            //var enumerator = dict.GetEnumerator();
+            blockBodies.Add(Expression.Assign(indexExpr, Expression.Constant(0)));
+            methodInfo = typeof(IEnumerable<KeyValuePair<string, object>>).GetMethod("GetEnumerator");
+            blockBodies.Add(Expression.Assign(enumeratorExpr, Expression.Call(typedParametersExpr, methodInfo)));
 
-    //        //if(!enumerator.MoveNext())
-    //        //  break;
-    //        var loopBodies = new List<Expression>();
-    //        methodInfo = typeof(IEnumerator).GetMethod(nameof(IEnumerator.MoveNext));
-    //        var ifFalseExpr = Expression.IsFalse(Expression.Call(enumeratorExpr, methodInfo));
-    //        loopBodies.Add(Expression.IfThen(ifFalseExpr, Expression.Break(breakLabel)));
+            //if(!enumerator.MoveNext())
+            //  break;
+            var loopBodies = new List<Expression>();
+            methodInfo = typeof(IEnumerator).GetMethod(nameof(IEnumerator.MoveNext));
+            var ifFalseExpr = Expression.IsFalse(Expression.Call(enumeratorExpr, methodInfo));
+            loopBodies.Add(Expression.IfThen(ifFalseExpr, Expression.Break(breakLabel)));
 
-    //        //var itemKey = enumerator.Current.Key;
-    //        //var fieldValue = enumerator.Current.Value;          
-    //        var currentExpr = Expression.Property(enumeratorExpr, nameof(IEnumerator.Current));
-    //        loopBodies.Add(Expression.Assign(itemKeyExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Key))));
+            //var itemKey = enumerator.Current.Key;
+            //var fieldValue = enumerator.Current.Value;          
+            var currentExpr = Expression.Property(enumeratorExpr, nameof(IEnumerator.Current));
+            loopBodies.Add(Expression.Assign(itemKeyExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Key))));
 
-    //        //if(!entityMapper.ContainsMemberMap(itemKey)) continue;
-    //        methodInfo = typeof(EntityMap).GetMethod(nameof(EntityMap.ContainsMemberMap));
-    //        Expression isContinueExpr = Expression.IsFalse(Expression.Call(entityMapperExpr, methodInfo, itemKeyExpr));
-    //        loopBodies.Add(Expression.IfThen(isContinueExpr, Expression.Continue(continueLabel)));
+            //if(!entityMapper.ContainsMemberMap(itemKey)) continue;
+            methodInfo = typeof(EntityMap).GetMethod(nameof(EntityMap.ContainsMemberMap));
+            Expression isContinueExpr = Expression.IsFalse(Expression.Call(entityMapperExpr, methodInfo, itemKeyExpr));
+            loopBodies.Add(Expression.IfThen(isContinueExpr, Expression.Continue(continueLabel)));
 
-    //        //var memberMapper = entityMapper.GetMemberMap(itemKey);
-    //        methodInfo = typeof(EntityMap).GetMethod(nameof(EntityMap.GetMemberMap));
-    //        loopBodies.Add(Expression.Assign(memberMapperExpr, Expression.Call(entityMapperExpr, methodInfo, itemKeyExpr)));
-    //        //|| memberMapper.IsIgnore || memberMapper.IsNavigation || memberMapper.IsKey
-    //        isContinueExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.IsIgnore));
-    //        isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsNavigation)));
-    //        if (keyType == 2)
-    //            isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsKey)));
+            //var memberMapper = entityMapper.GetMemberMap(itemKey);
+            methodInfo = typeof(EntityMap).GetMethod(nameof(EntityMap.GetMemberMap));
+            loopBodies.Add(Expression.Assign(memberMapperExpr, Expression.Call(entityMapperExpr, methodInfo, itemKeyExpr)));
+            //|| memberMapper.IsIgnore || memberMapper.IsNavigation || memberMapper.IsKey
+            isContinueExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.IsIgnore));
+            isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsNavigation)));
+            if (keyType == 2)
+                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsKey)));
 
-    //        //|| memberMapper.IsIgnoreInsert || memberMapper.IsAutoIncrement
-    //        if (commandType < 3)
-    //        {
-    //            isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsIgnoreInsert)));
-    //            isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsAutoIncrement)));
-    //        }
-    //        //|| memberMapper.IsIgnoreUpdate
-    //        if (commandType > 2)
-    //            isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsIgnoreUpdate)));
-    //        //|| memberMapper.IsRowVersion
-    //        if (!isUpdateRowVersion)
-    //            isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsRowVersion)));
+            //|| memberMapper.IsIgnoreInsert || memberMapper.IsAutoIncrement
+            if (commandType < 3)
+            {
+                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsIgnoreInsert)));
+                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsAutoIncrement)));
+            }
+            //|| memberMapper.IsIgnoreUpdate
+            if (commandType > 2)
+                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsIgnoreUpdate)));
+            //|| memberMapper.IsRowVersion
+            if (!isUpdateRowVersion)
+                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsRowVersion)));
 
-    //        var lowerItemKeyExpr = Expression.Call(itemKeyExpr, typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes));
-    //        //|| !onlyFields.Constains(itemKey.ToLower())
-    //        if (onlyFieldNames != null)
-    //        {
-    //            var initExprs = onlyFieldNames.Select(f => Expression.Constant(f, typeof(string)));
-    //            var onlyFieldsExpr = Expression.NewArrayInit(typeof(string), initExprs);
-    //            methodInfo = typeof(Enumerable).GetMethod(nameof(Enumerable.Contains), [typeof(string)]);
-    //            var isFalseExpr = Expression.IsFalse(Expression.Call(methodInfo, onlyFieldsExpr, lowerItemKeyExpr));
-    //            isContinueExpr = Expression.OrElse(isContinueExpr, isFalseExpr);
-    //        }
-    //        //|| ignoreFields.Constains(itemKey.ToLower()) 
-    //        if (ignoreFieldNames != null)
-    //        {
-    //            var initExprs = ignoreFieldNames.Select(f => Expression.Constant(f, typeof(string)));
-    //            var ignoreFieldsExpr = Expression.NewArrayInit(typeof(string), initExprs);
-    //            methodInfo = typeof(Enumerable).GetMethod(nameof(Enumerable.Contains), [typeof(string)]);
-    //            isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Call(methodInfo, ignoreFieldsExpr, lowerItemKeyExpr));
-    //        }
-    //        loopBodies.Add(Expression.IfThen(isContinueExpr, Expression.Continue(continueLabel)));
+            var lowerItemKeyExpr = Expression.Call(itemKeyExpr, typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes));
+            //|| !onlyFields.Constains(itemKey.ToLower())
+            if (onlyFieldNames != null)
+            {
+                var initExprs = onlyFieldNames.Select(f => Expression.Constant(f, typeof(string)));
+                var onlyFieldsExpr = Expression.NewArrayInit(typeof(string), initExprs);
+                methodInfo = typeof(Enumerable).GetMethod(nameof(Enumerable.Contains), [typeof(string)]);
+                var isFalseExpr = Expression.IsFalse(Expression.Call(methodInfo, onlyFieldsExpr, lowerItemKeyExpr));
+                isContinueExpr = Expression.OrElse(isContinueExpr, isFalseExpr);
+            }
+            //|| ignoreFields.Constains(itemKey.ToLower()) 
+            if (ignoreFieldNames != null)
+            {
+                var initExprs = ignoreFieldNames.Select(f => Expression.Constant(f, typeof(string)));
+                var ignoreFieldsExpr = Expression.NewArrayInit(typeof(string), initExprs);
+                methodInfo = typeof(Enumerable).GetMethod(nameof(Enumerable.Contains), [typeof(string)]);
+                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Call(methodInfo, ignoreFieldsExpr, lowerItemKeyExpr));
+            }
+            loopBodies.Add(Expression.IfThen(isContinueExpr, Expression.Continue(continueLabel)));
 
-    //        //var parameterName = ormProvider.ParameterPrefix + memberMapper.MemberName + suffix;
-    //        Expression myParameterNameExpr = Expression.Constant(ormProvider.ParameterPrefix);
-    //        if (commandType > 1)
-    //        {
-    //            var memberNameExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.MemberName));
-    //            if (isBulk)
-    //            {
-    //                myParameterNameExpr = Expression.Call(concatMethodInfo2, myParameterNameExpr, memberNameExpr, suffixExpr);
-    //                loopBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
-    //                myParameterNameExpr = parameterNameExpr;
-    //            }
-    //            else myParameterNameExpr = Expression.Call(concatMethodInfo, myParameterNameExpr, memberNameExpr);
-    //        }
-    //        //生成SQL
-    //        if (sqlType < 3)
-    //        {
-    //            //if(index > 0) builder.Append(",");
-    //            var greaterThenExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0));
-    //            var callExpr = Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(","));
-    //            loopBodies.Add(Expression.IfThen(greaterThenExpr, callExpr));
+            //var parameterName = ormProvider.ParameterPrefix + memberMapper.MemberName + suffix;
+            Expression myParameterNameExpr = Expression.Constant(ormProvider.ParameterPrefix);
+            if (commandType > 1)
+            {
+                var memberNameExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.MemberName));
+                if (isBulk)
+                {
+                    myParameterNameExpr = Expression.Call(concatMethodInfo2, myParameterNameExpr, memberNameExpr, suffixExpr);
+                    loopBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
+                    myParameterNameExpr = parameterNameExpr;
+                }
+                else myParameterNameExpr = Expression.Call(concatMethodInfo, myParameterNameExpr, memberNameExpr);
+            }
+            //生成SQL
+            if (sqlType < 3)
+            {
+                //if(index > 0) builder.Append(",");
+                var greaterThenExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0));
+                var callExpr = Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(","));
+                loopBodies.Add(Expression.IfThen(greaterThenExpr, callExpr));
 
-    //            //builder.Append($"{ormProvider.GetFieldName(memberMapper.FieldName)");
-    //            //builder.Append(parameterName);
-    //            //builder.Append($"{ormProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+                //builder.Append($"{ormProvider.GetFieldName(memberMapper.FieldName)");
+                //builder.Append(parameterName);
+                //builder.Append($"{ormProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
 
-    //            Expression contentExpr = null;
-    //            Expression fieldNameExpr = null;
+                Expression contentExpr = null;
+                Expression fieldNameExpr = null;
 
-    //            if (commandType == 2) contentExpr = myParameterNameExpr;
-    //            else
-    //            {
-    //                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetFieldName));
-    //                fieldNameExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.FieldName));
-    //                fieldNameExpr = Expression.Call(ormProviderExpr, methodInfo, fieldNameExpr);
+                if (commandType == 2) contentExpr = myParameterNameExpr;
+                else
+                {
+                    methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetFieldName));
+                    fieldNameExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.FieldName));
+                    fieldNameExpr = Expression.Call(ormProviderExpr, methodInfo, fieldNameExpr);
 
-    //                if (commandType == 1) contentExpr = fieldNameExpr;
-    //                else contentExpr = Expression.Call(concatMethodInfo2, fieldNameExpr, Expression.Constant("="), myParameterNameExpr);
-    //            }
-    //            loopBodies.Add(Expression.Call(builderExpr, appendMethodInfo, contentExpr));
-    //        }
-    //        //生成参数
-    //        if (commandType > 1 && sqlType != 2)
-    //        {
-    //            loopBodies.Add(Expression.Assign(itemValueExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Value))));
-    //            AddValueParameter(dbContext, dbContextExpr, dbParametersExpr, ormProviderExpr, myParameterNameExpr, itemValueExpr, memberMapperExpr, loopBodies);
-    //        }
+                    if (commandType == 1) contentExpr = fieldNameExpr;
+                    else contentExpr = Expression.Call(concatMethodInfo2, fieldNameExpr, Expression.Constant("="), myParameterNameExpr);
+                }
+                loopBodies.Add(Expression.Call(builderExpr, appendMethodInfo, contentExpr));
+            }
+            //生成参数
+            if (commandType > 1 && sqlType != 2)
+            {
+                loopBodies.Add(Expression.Assign(itemValueExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Value))));
+                AddValueParameter(dbContext, dbContextExpr, dbParametersExpr, ormProviderExpr, myParameterNameExpr, itemValueExpr, memberMapperExpr, loopBodies);
+            }
 
-    //        //index++;
-    //        loopBodies.Add(Expression.AddAssign(indexExpr, Expression.Constant(1)));
-    //        blockBodies.Add(Expression.Loop(Expression.Block(loopBodies), breakLabel, continueLabel));
-    //    }
-    //    else
-    //    {
-    //        var entityMapper = dbContext.MapProvider.GetEntityMap(entityType);
-    //        var filterMemberMaps = keyType == 1 ? entityMapper.KeyMembers : entityMapper.MemberMaps;
-    //        Dictionary<string, MemberInfo> targetMemberInfos = null;
+            //index++;
+            loopBodies.Add(Expression.AddAssign(indexExpr, Expression.Constant(1)));
+            blockBodies.Add(Expression.Loop(Expression.Block(loopBodies), breakLabel, continueLabel));
+        }
+        else
+        {
+            var entityMapper = dbContext.MapProvider.GetEntityMap(entityType);
+            var filterMemberMaps = keyType == 1 ? entityMapper.KeyMembers : entityMapper.MemberMaps;
+            Dictionary<string, MemberInfo> targetMemberInfos = null;
 
-    //        if (!isDictionary)
-    //        {
-    //            targetMemberInfos = parametersType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-    //                .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field)
-    //                .ToDictionary(f => f.Name.ToLower(), f => f);
-    //        }
-    //        var index = 0;
-    //        foreach (var memberMapper in filterMemberMaps)
-    //        {
-    //            ParameterExpression valueTupleExpr = null;
-    //            MemberInfo targetMemberInfo = null;
-    //            var lowerMemberName = memberMapper.MemberName.ToLower();
-    //            if (keyType == 1 && isDictionary)
-    //            {
-    //                //var tuple = dict.ContainsLowerKey(targetMemberInfo.Name.ToLower());
-    //                //if(!tuple.Item1)
-    //                //  throw new KeyNotFoundException($"字典参数中{parametersType.FullName}缺少Key:{memberMapper.MemberName}的成员");
-    //                valueTupleExpr = Expression.Variable(typeof(ValueTuple<bool, object>), $"{memberMapper.MemberName.ToCamel()}Tuple");
-    //                blockParameters.Add(valueTupleExpr);
-    //                var lowerMemberNameExpr = Expression.Constant(lowerMemberName);
-    //                methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.TryGetValueIgnoreCase));
-    //                var containsLowerKeyExpr = Expression.Call(methodInfo, typedParametersExpr, lowerMemberNameExpr);
-    //                blockBodies.Add(Expression.Assign(valueTupleExpr, containsLowerKeyExpr));
-    //                var exception = new KeyNotFoundException($"字典参数中{parametersType.FullName}缺少Key:{memberMapper.MemberName}的成员");
-    //                var isContainsKeyExpr = Expression.Field(valueTupleExpr, "Item1");
-    //                blockBodies.Add(Expression.IfThen(Expression.IsFalse(isContainsKeyExpr), Expression.Throw(Expression.Constant(exception))));
-    //            }
-    //            //忽略大小写
-    //            else if (!targetMemberInfos.TryGetValue(lowerMemberName, out targetMemberInfo))
-    //            {
-    //                if (keyType == 1) throw new KeyNotFoundException($"参数类型{parametersType.FullName}缺少{memberMapper.MemberName}的成员");
-    //                else continue;
-    //            }
+            if (!isDictionary)
+            {
+                targetMemberInfos = parametersType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                    .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field)
+                    .ToDictionary(f => f.Name.ToLower(), f => f);
+            }
+            var index = 0;
+            foreach (var memberMapper in filterMemberMaps)
+            {
+                ParameterExpression valueTupleExpr = null;
+                MemberInfo targetMemberInfo = null;
+                var lowerMemberName = memberMapper.MemberName.ToLower();
+                if (keyType == 1 && isDictionary)
+                {
+                    //var tuple = dict.ContainsLowerKey(targetMemberInfo.Name.ToLower());
+                    //if(!tuple.Item1)
+                    //  throw new KeyNotFoundException($"字典参数中{parametersType.FullName}缺少Key:{memberMapper.MemberName}的成员");
+                    valueTupleExpr = Expression.Variable(typeof(ValueTuple<bool, object>), $"{memberMapper.MemberName.ToCamel()}Tuple");
+                    blockParameters.Add(valueTupleExpr);
+                    var lowerMemberNameExpr = Expression.Constant(lowerMemberName);
+                    methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.TryGetValueIgnoreCase));
+                    var containsLowerKeyExpr = Expression.Call(methodInfo, typedParametersExpr, lowerMemberNameExpr);
+                    blockBodies.Add(Expression.Assign(valueTupleExpr, containsLowerKeyExpr));
+                    var exception = new KeyNotFoundException($"字典参数中{parametersType.FullName}缺少Key:{memberMapper.MemberName}的成员");
+                    var isContainsKeyExpr = Expression.Field(valueTupleExpr, "Item1");
+                    blockBodies.Add(Expression.IfThen(Expression.IsFalse(isContainsKeyExpr), Expression.Throw(Expression.Constant(exception))));
+                }
+                //忽略大小写
+                else if (!targetMemberInfos.TryGetValue(lowerMemberName, out targetMemberInfo))
+                {
+                    if (keyType == 1) throw new KeyNotFoundException($"参数类型{parametersType.FullName}缺少{memberMapper.MemberName}的成员");
+                    else continue;
+                }
 
-    //            if (memberMapper.IsIgnore || memberMapper.IsNavigation || (keyType == 2 && memberMapper.IsKey))
-    //                continue;
-    //            if (onlyFieldNames != null && !onlyFieldNames.Contains(lowerMemberName))
-    //                continue;
-    //            if (ignoreFieldNames != null && ignoreFieldNames.Contains(lowerMemberName))
-    //                continue;
-    //            if (!isUpdateRowVersion && memberMapper.IsRowVersion)
-    //                continue;
-    //            //Insert
-    //            if (commandType < 3 && (memberMapper.IsIgnoreInsert || memberMapper.IsAutoIncrement))
-    //                continue;
-    //            //Update
-    //            if (commandType > 2 && memberMapper.IsIgnoreUpdate)
-    //                continue;
+                if (memberMapper.IsIgnore || memberMapper.IsNavigation || (keyType == 2 && memberMapper.IsKey))
+                    continue;
+                if (onlyFieldNames != null && !onlyFieldNames.Contains(lowerMemberName))
+                    continue;
+                if (ignoreFieldNames != null && ignoreFieldNames.Contains(lowerMemberName))
+                    continue;
+                if (!isUpdateRowVersion && memberMapper.IsRowVersion)
+                    continue;
+                //Insert
+                if (commandType < 3 && (memberMapper.IsIgnoreInsert || memberMapper.IsAutoIncrement))
+                    continue;
+                //Update
+                if (commandType > 2 && memberMapper.IsIgnoreUpdate)
+                    continue;
 
-    //            var parameterName = ormProvider.ParameterPrefix + (commandType == 3 ? "p" : "") + memberMapper.MemberName;
-    //            Expression myParameterNameExpr = Expression.Constant(parameterName);
-    //            if (commandType > 1 && isBulk)
-    //            {
-    //                myParameterNameExpr = Expression.Call(concatMethodInfo, myParameterNameExpr, suffixExpr);
-    //                blockBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
-    //                myParameterNameExpr = parameterNameExpr;
-    //            }
-    //            //生成SQL
-    //            if (sqlType != 3)
-    //            {
-    //                if (index > 0) blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(",")));
-    //                Expression contentExpr = null;
-    //                switch (commandType)
-    //                {
-    //                    case 1: contentExpr = Expression.Constant($"{ormProvider.GetFieldName(memberMapper.FieldName)}"); break;
-    //                    case 2: contentExpr = myParameterNameExpr; break;
-    //                    case 3:
-    //                    case 4:
-    //                        contentExpr = Expression.Constant($"{ormProvider.GetFieldName(memberMapper.FieldName)}=");
-    //                        contentExpr = Expression.Call(concatMethodInfo, contentExpr, myParameterNameExpr);
-    //                        break;
-    //                }
-    //                blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, contentExpr));
-    //            }
-    //            //生成参数
-    //            if (commandType > 1 && sqlType != 2)
-    //            {
-    //                if (isDictionary)
-    //                {
-    //                    var fieldValueExpr = Expression.Field(valueTupleExpr, "Item2");
-    //                    AddValueParameter(dbContext, dbContextExpr, dbParametersExpr, ormProviderExpr, myParameterNameExpr, fieldValueExpr, memberMapperExpr, blockBodies);
-    //                }
-    //                else
-    //                {
-    //                    var fieldValueType = targetMemberInfo.GetMemberType();
-    //                    Expression fieldValueExpr = Expression.PropertyOrField(typedParametersExpr, memberMapper.MemberName);
-    //                    AddValueParameter(dbContext, dbParametersExpr, ormProviderExpr, myParameterNameExpr, fieldValueType, fieldValueExpr, memberMapper, blockBodies);
-    //                }
-    //            }
-    //            index++;
-    //        }
-    //        if (index <= 0)
-    //            throw new Exception($"没有找到{(commandType == 4 ? "更新" : "插入")}语句");
-    //    }
+                var parameterName = ormProvider.ParameterPrefix + (commandType == 3 ? "p" : "") + memberMapper.MemberName;
+                Expression myParameterNameExpr = Expression.Constant(parameterName);
+                if (commandType > 1 && isBulk)
+                {
+                    myParameterNameExpr = Expression.Call(concatMethodInfo, myParameterNameExpr, suffixExpr);
+                    blockBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
+                    myParameterNameExpr = parameterNameExpr;
+                }
+                //生成SQL
+                if (sqlType != 3)
+                {
+                    if (index > 0) blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(",")));
+                    Expression contentExpr = null;
+                    switch (commandType)
+                    {
+                        case 1: contentExpr = Expression.Constant($"{ormProvider.GetFieldName(memberMapper.FieldName)}"); break;
+                        case 2: contentExpr = myParameterNameExpr; break;
+                        case 3:
+                        case 4:
+                            contentExpr = Expression.Constant($"{ormProvider.GetFieldName(memberMapper.FieldName)}=");
+                            contentExpr = Expression.Call(concatMethodInfo, contentExpr, myParameterNameExpr);
+                            break;
+                    }
+                    blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, contentExpr));
+                }
+                //生成参数
+                if (commandType > 1 && sqlType != 2)
+                {
+                    if (isDictionary)
+                    {
+                        var fieldValueExpr = Expression.Field(valueTupleExpr, "Item2");
+                        AddValueParameter(dbContext, dbContextExpr, dbParametersExpr, ormProviderExpr, myParameterNameExpr, fieldValueExpr, memberMapperExpr, blockBodies);
+                    }
+                    else
+                    {
+                        var fieldValueType = targetMemberInfo.GetMemberType();
+                        Expression fieldValueExpr = Expression.PropertyOrField(typedParametersExpr, memberMapper.MemberName);
+                        AddValueParameter(dbContext, dbParametersExpr, ormProviderExpr, myParameterNameExpr, fieldValueType, fieldValueExpr, memberMapper, blockBodies);
+                    }
+                }
+                index++;
+            }
+            if (index <= 0)
+                throw new Exception($"没有找到{(commandType == 4 ? "更新" : "插入")}语句");
+        }
 
-    //    if (sqlType != 3 && !string.IsNullOrEmpty(tailSql))
-    //        blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(tailSql)));
+        if (sqlType != 3 && !string.IsNullOrEmpty(tailSql))
+            blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(tailSql)));
 
-    //    if (isFunc)
-    //    {
-    //        methodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.ToString), Type.EmptyTypes);
-    //        var returnExpr = Expression.Call(builderExpr, methodInfo);
-    //        var resultLabelExpr = Expression.Label(typeof(string));
-    //        blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
-    //        blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(string))));
+        if (isFunc)
+        {
+            methodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.ToString), Type.EmptyTypes);
+            var returnExpr = Expression.Call(builderExpr, methodInfo);
+            var resultLabelExpr = Expression.Label(typeof(string));
+            blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
+            blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(string))));
 
-    //        if (commandType == 1) return Expression.Lambda<Func<DbContext, object, string>>(
-    //            Expression.Block(blockParameters, blockBodies), dbContextExpr, parametersExpr).Compile();
-    //        else
-    //        {
-    //            if (sqlType == 2)
-    //            {
-    //                if (isBulk) return Expression.Lambda<Func<DbContext, object, string, string>>(
-    //                    Expression.Block(blockParameters, blockBodies), dbContextExpr, parametersExpr, suffixExpr).Compile();
-    //                else return Expression.Lambda<Func<DbContext, object, string>>(
-    //                    Expression.Block(blockParameters, blockBodies), dbContextExpr, parametersExpr).Compile();
-    //            }
-    //            else
-    //            {
-    //                if (isBulk) return Expression.Lambda<Func<IDataParameterCollection, DbContext, object, string, string>>(
-    //                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, parametersExpr, suffixExpr).Compile();
-    //                else return Expression.Lambda<Func<IDataParameterCollection, DbContext, object, string>>(
-    //                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, parametersExpr).Compile();
-    //            }
-    //        }
-    //    }
-    //    else
-    //    {
-    //        if (commandType == 1) return Expression.Lambda<Action<StringBuilder, DbContext, object>>(
-    //            Expression.Block(blockParameters, blockBodies), builderExpr, dbContextExpr, parametersExpr).Compile();
-    //        else
-    //        {
-    //            switch (sqlType)
-    //            {
-    //                case 1:
-    //                    if (isBulk) return Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, object, string>>(
-    //                        Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, dbContextExpr, parametersExpr, suffixExpr).Compile();
-    //                    else return Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, object>>(
-    //                        Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, dbContextExpr, parametersExpr).Compile();
-    //                case 2:
-    //                    if (isBulk) return Expression.Lambda<Action<StringBuilder, DbContext, object, string>>(
-    //                        Expression.Block(blockParameters, blockBodies), builderExpr, dbContextExpr, parametersExpr, suffixExpr).Compile();
-    //                    else return Expression.Lambda<Action<StringBuilder, DbContext, object>>(
-    //                        Expression.Block(blockParameters, blockBodies), builderExpr, dbContextExpr, parametersExpr).Compile();
-    //                case 3:
-    //                    if (isBulk) return Expression.Lambda<Action<IDataParameterCollection, DbContext, object, string>>(
-    //                        Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, parametersExpr, suffixExpr).Compile();
-    //                    else return Expression.Lambda<Action<IDataParameterCollection, DbContext, object>>(
-    //                        Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, parametersExpr).Compile();
-    //                default: throw new NotSupportedException("不支持的场景");
-    //            }
-    //        }
-    //    }
-    //}
+            if (commandType == 1) return Expression.Lambda<Func<DbContext, object, string>>(
+                Expression.Block(blockParameters, blockBodies), dbContextExpr, parametersExpr).Compile();
+            else
+            {
+                if (sqlType == 2)
+                {
+                    if (isBulk) return Expression.Lambda<Func<DbContext, object, string, string>>(
+                        Expression.Block(blockParameters, blockBodies), dbContextExpr, parametersExpr, suffixExpr).Compile();
+                    else return Expression.Lambda<Func<DbContext, object, string>>(
+                        Expression.Block(blockParameters, blockBodies), dbContextExpr, parametersExpr).Compile();
+                }
+                else
+                {
+                    if (isBulk) return Expression.Lambda<Func<IDataParameterCollection, DbContext, object, string, string>>(
+                        Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, parametersExpr, suffixExpr).Compile();
+                    else return Expression.Lambda<Func<IDataParameterCollection, DbContext, object, string>>(
+                        Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, parametersExpr).Compile();
+                }
+            }
+        }
+        else
+        {
+            if (commandType == 1) return Expression.Lambda<Action<StringBuilder, DbContext, object>>(
+                Expression.Block(blockParameters, blockBodies), builderExpr, dbContextExpr, parametersExpr).Compile();
+            else
+            {
+                switch (sqlType)
+                {
+                    case 1:
+                        if (isBulk) return Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, object, string>>(
+                            Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, dbContextExpr, parametersExpr, suffixExpr).Compile();
+                        else return Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, object>>(
+                            Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, dbContextExpr, parametersExpr).Compile();
+                    case 2:
+                        if (isBulk) return Expression.Lambda<Action<StringBuilder, DbContext, object, string>>(
+                            Expression.Block(blockParameters, blockBodies), builderExpr, dbContextExpr, parametersExpr, suffixExpr).Compile();
+                        else return Expression.Lambda<Action<StringBuilder, DbContext, object>>(
+                            Expression.Block(blockParameters, blockBodies), builderExpr, dbContextExpr, parametersExpr).Compile();
+                    case 3:
+                        if (isBulk) return Expression.Lambda<Action<IDataParameterCollection, DbContext, object, string>>(
+                            Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, parametersExpr, suffixExpr).Compile();
+                        else return Expression.Lambda<Action<IDataParameterCollection, DbContext, object>>(
+                            Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, parametersExpr).Compile();
+                    default: throw new NotSupportedException("不支持的场景");
+                }
+            }
+        }
+    }
 
 
     //public static Action<DbContext, ITheaCommand, object> BuildCreateCommandInitializer(DbContext dbContext, Type entityType, object insertObj, bool isReturnIdentity)
@@ -2997,62 +3146,62 @@ public static class RepositoryHelper
     //    });
     //}
 
-    //public static object BuildUpdateCommandInitializer(DbContext dbContext, Type entityType, Type updateObjType, bool isBulk, bool isUpdateRowVersion)
-    //{
-    //    var ormProvider = dbContext.OrmProvider;
-    //    var cacheKey = GetCacheKey(ormProvider.OrmProviderType, dbContext.MapProvider, entityType, updateObjType, isBulk);
-    //    var cache = isBulk ? updateBulkCommandInitializerCache : updateCommandInitializerCache;
-    //    return cache.GetOrAdd(cacheKey, f =>
-    //    {
-    //        var entityMapper = dbContext.MapProvider.GetEntityMap(entityType);
-    //        var headSql = $"UPDATE {ormProvider.GetTableName(entityMapper.TableName)} SET ";
-    //        var isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(updateObjType);
-    //        object commandInitializer = null;
-    //        if (isBulk)
-    //        {
-    //            var fieldsSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 1, 2, false, isBulk, isUpdateRowVersion, null, null, headSql) as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-    //            var whereSqlSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 1, false, true, true, isBulk, " WHERE ") as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-    //            Action<IDataParameterCollection, StringBuilder, DbContext, object, string> typedCommandInitializer = (dbParameters, builder, dbContext, updateObj, suffix) =>
-    //            {
-    //                fieldsSqlSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
-    //                whereSqlSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
-    //            };
-    //            commandInitializer = typedCommandInitializer;
-    //        }
-    //        else
-    //        {
-    //            Func<IDataParameterCollection, DbContext, object, string> typedCommandInitializer = null;
-    //            if (isDictionary)
-    //            {
-    //                var fieldsSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 1, 2, false, isBulk, isUpdateRowVersion, null, null, headSql) as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
-    //                var whereSqlSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 1, false, true, true, isBulk, " WHERE ") as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
-    //                typedCommandInitializer = (dbParameters, dbContext, updateObj) =>
-    //                {
-    //                    var builder = new StringBuilder();
-    //                    fieldsSqlSetter.Invoke(dbParameters, builder, dbContext, updateObj);
-    //                    whereSqlSetter.Invoke(dbParameters, builder, dbContext, updateObj);
-    //                    return builder.ToString();
-    //                };
-    //            }
-    //            else
-    //            {
-    //                var fieldsSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 2, 2, true, false, isUpdateRowVersion, null, null, headSql) as Func<DbContext, object, string>;
-    //                var fieldsParameterSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 3, 0, false, false, isUpdateRowVersion, null, null, headSql) as Action<IDataParameterCollection, DbContext, object>;
-    //                var whereSqlSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 2, true, true, true, isBulk, " WHERE ") as Func<DbContext, object, string>;
-    //                var whereParameterSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 3, false, true, true, isBulk) as Action<IDataParameterCollection, DbContext, object>;
-    //                var sql = fieldsSqlSetter.Invoke(dbContext, null) + whereSqlSetter.Invoke(dbContext, null);
-    //                typedCommandInitializer = (dbParameters, dbContext, updateObj) =>
-    //                {
-    //                    fieldsParameterSetter.Invoke(dbParameters, dbContext, updateObj);
-    //                    whereParameterSetter.Invoke(dbParameters, dbContext, updateObj);
-    //                    return sql;
-    //                };
-    //            }
-    //            commandInitializer = typedCommandInitializer;
-    //        }
-    //        return commandInitializer;
-    //    });
-    //}
+    public static object BuildUpdateCommandInitializer(DbContext dbContext, Type entityType, Type updateObjType, bool isBulk)
+    {
+        var ormProvider = dbContext.OrmProvider;
+        var cacheKey = GetCacheKey(ormProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, updateObjType, isBulk);
+        var cache = isBulk ? updateBulkCommandInitializerCache : updateCommandInitializerCache;
+        return cache.GetOrAdd(cacheKey, f =>
+        {
+            var entityMapper = dbContext.EntityMapProvider.GetEntityMap(entityType);
+            var headSql = $"UPDATE {ormProvider.GetTableName(entityMapper.TableName)} SET ";
+            var isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(updateObjType);
+            object commandInitializer = null;
+            if (isBulk)
+            {
+                var fieldsSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 1, 2, false, isBulk, isUpdateRowVersion, null, null, headSql) as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+                var whereSqlSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 1, false, true, true, isBulk, " WHERE ") as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+                Action<IDataParameterCollection, StringBuilder, DbContext, object, string> typedCommandInitializer = (dbParameters, builder, dbContext, updateObj, suffix) =>
+                {
+                    fieldsSqlSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
+                    whereSqlSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
+                };
+                commandInitializer = typedCommandInitializer;
+            }
+            else
+            {
+                Func<IDataParameterCollection, DbContext, object, string> typedCommandInitializer = null;
+                if (isDictionary)
+                {
+                    var fieldsSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 1, 2, false, isBulk, isUpdateRowVersion, null, null, headSql) as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
+                    var whereSqlSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 1, false, true, true, isBulk, " WHERE ") as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
+                    typedCommandInitializer = (dbParameters, dbContext, updateObj) =>
+                    {
+                        var builder = new StringBuilder();
+                        fieldsSqlSetter.Invoke(dbParameters, builder, dbContext, updateObj);
+                        whereSqlSetter.Invoke(dbParameters, builder, dbContext, updateObj);
+                        return builder.ToString();
+                    };
+                }
+                else
+                {
+                    var fieldsSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 2, 2, true, false, isUpdateRowVersion, null, null, headSql) as Func<DbContext, object, string>;
+                    var fieldsParameterSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 3, 0, false, false, isUpdateRowVersion, null, null, headSql) as Action<IDataParameterCollection, DbContext, object>;
+                    var whereSqlSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 2, true, true, true, isBulk, " WHERE ") as Func<DbContext, object, string>;
+                    var whereParameterSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 3, false, true, true, isBulk) as Action<IDataParameterCollection, DbContext, object>;
+                    var sql = fieldsSqlSetter.Invoke(dbContext, null) + whereSqlSetter.Invoke(dbContext, null);
+                    typedCommandInitializer = (dbParameters, dbContext, updateObj) =>
+                    {
+                        fieldsParameterSetter.Invoke(dbParameters, dbContext, updateObj);
+                        whereParameterSetter.Invoke(dbParameters, dbContext, updateObj);
+                        return sql;
+                    };
+                }
+                commandInitializer = typedCommandInitializer;
+            }
+            return commandInitializer;
+        });
+    }
     //public static object BuildUpdateSetWithSqlParametersPart(DbContext dbContext, Type entityType, Type updateObjType, List<string> onlyFieldNames, List<string> ignoreFieldNames, bool isUpdateRowVersion)
     //{
     //    //单个对象，有可能会有join操作，会有添加别名的可能，多命令执行时会有suffix情况
@@ -3553,7 +3702,7 @@ public static class RepositoryHelper
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
 
         var readerField = readerFields[0];
-        var visitor = new ReplaceParameterVisitor();
+        var visitor = new ReplaceMemberVisitor();
         var bodyExpr = visitor.Visit(readerField.DeferredExpression);
 
         var fieldType = reader.GetFieldType(0);
@@ -3661,7 +3810,7 @@ public static class RepositoryHelper
                         Expression executeExpr = null;
                         if (readerField.Fields != null && readerField.Fields.Count > 0)
                         {
-                            var visitor = new ReplaceParameterVisitor();
+                            var visitor = new ReplaceMemberVisitor();
                             bodyExpr = visitor.Visit(readerField.DeferredExpression);
                             var argsExprs = new List<Expression>();
                             while (index < endIndex)

@@ -2213,7 +2213,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                     }
                 }
             }
-            if (typeHandler == null) throw new Exception($"不存在类型{fieldType.FullName}->{targetType.FullName}转换TypeHandler");
+            if (typeHandler == null) throw new Exception($"不存在类型{fieldType.FullName}->{targetType.FullName}转换的TypeHandler");
             return typeHandler;
         });
     }

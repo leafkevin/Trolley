@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -13,6 +14,7 @@ public class SqlVisitor : ISqlVisitor
 {
     private bool isDisposed;
     private static MethodInfo IsNullMethodInfo = typeof(Sql).GetMethods().Where(f => f.Name == nameof(Sql.IsNull) && f.GetParameters().Length == 2).First();
+    private static ConcurrentDictionary<int, Func<object, object[], string>> shardingTableNameGetters = new();
 
     public DbContext DbContext { get; set; }
     public string DbKey => this.DbContext.DbKey;
@@ -91,12 +93,15 @@ public class SqlVisitor : ISqlVisitor
     public string UnionSql { get; set; }
 
 
-    public void UseTable(bool isIncludeMany, params string[] tableNames)
+    public void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames)
     {
         if (tableNames == null || tableNames.Length == 0)
             throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
 
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
+        if (!this.TryGetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
+            return;
+
         //多个分表，才当作分表处理
         tableSegment.IsSharding = true;
         tableSegment.IsIncludeManySharding = isIncludeMany;
@@ -121,14 +126,14 @@ public class SqlVisitor : ISqlVisitor
             tableSegment.Body = tableNames[0];
         }
     }
-    public void UseTableByRange(bool isIncludeMany, object[] fieldValues)
+    public void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues)
     {
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
-        if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out var shardingTableInfo))
-            throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表，无需调用此方法");
-        if (shardingTableInfo.RangleRule == null) throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表范围规则，不能使用此方法");
+        if (!this.TryGetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
+            return;
+
         var origTableName = tableSegment.Mapper.TableName;
-        var tableNames = shardingTableInfo.RangleRule.Invoke(origTableName, fieldValues);
+        var tableNames = tableShardingInfo.RangleRule.Invoke(origTableName, fieldValues);
         if (tableNames == null || tableNames.Count == 0)
             throw new Exception($"没有搜索到满足条件的{tableSegment.Mapper.TableName}分表");
         this.ShardingTables ??= new();
@@ -156,16 +161,16 @@ public class SqlVisitor : ISqlVisitor
         //范围分表，都当作多分表处理，方便后续表映射
         this.IsNeedFormatShardingTables = true;
     }
-    public void UseTableMap(bool isIncludeMany, Func<string, string, string, string> tableNameGetter)
+    public void UseTableMap(TableShardingUsageMode usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter)
     {
         if (tableNameGetter == null)
             throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
-
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
-        if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out var shardingTable))
-            throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表，不能使用此方法");
+
+        if (!this.TryGetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
+            return;
         if (this.ShardingTables == null || !this.ShardingTables.Exists(f => f.ShardingType == ShardingTableType.MultiTable))
-            throw new NotSupportedException("不存在多分表的实体表，不能使用此方法，可使用UseTable、UseTableBy方法设置分表");
+            throw new NotSupportedException("不存在多分表的实体表，无法配置多分表映射，使用UseTable、UseTableBy方法后存在多分表后，才能使用本方法配置多分表映射");
 
         tableSegment.IsSharding = true;
         tableSegment.IsIncludeManySharding = isIncludeMany;
@@ -178,23 +183,20 @@ public class SqlVisitor : ISqlVisitor
         }
         this.IsNeedFormatShardingTables = true;
     }
-    public void UseTableBy(bool isIncludeMany, params object[] fieldValues)
+    public void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues)
     {
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
-        if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out var shardingTableInfo))
-            throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表，不能使用此方法");
+        if (!this.TryGetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
+            return;
         if (fieldValues == null)
-            throw new ArgumentNullException($"实体{tableSegment.EntityType.FullName}表有配置分表规则依赖，字段值fieldValues不可为null");
+            throw new ArgumentNullException($"字段值fieldValues不可为null");
+        if (tableShardingInfo.Rule.Method.GetParameters().Length != fieldValues.Length)
+            throw new Exception($"实体{tableSegment.EntityType.FullName}表有配置分表规则依赖字段个数与提供的字段值fieldValues个数不一致");
 
         tableSegment.IsSharding = true;
         tableSegment.IsIncludeManySharding = isIncludeMany;
         var origTableName = tableSegment.Mapper.TableName;
-        for (int i = 0; i < fieldValues.Length; i++)
-        {
-            if (fieldValues[i] == null)
-                throw new ArgumentNullException($"实体{tableSegment.EntityType.FullName}表有配置分表规则依赖，字段值fieldValues[{i}]不可为null");
-        }
-        var tableName = shardingTableInfo.Rule.Invoke(origTableName, fieldValues) as string;
+        var tableName = tableShardingInfo.Rule.Invoke(origTableName, fieldValues) as string;
 
         //单个分表，直接设置body表名，当作不分表处理
         if (!string.IsNullOrEmpty(tableSegment.Body))
@@ -227,64 +229,117 @@ public class SqlVisitor : ISqlVisitor
             tableSegment.Body = tableName;
         }
     }
-    /// <summary>
-    /// 设置批量插入、更新操作时的分表名获取委托
-    /// </summary>
-    /// <typeparam name="TEntity">实体对象类型</typeparam>
-    /// <param name="tableNameGetter"></param>
-    /// <exception cref="ArgumentNullException"></exception>
-    public void UseTable<TEntity>(Expression<Func<TEntity, object>> dependonFieldValuesSelector)
+    public void UseTableByOthers(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] otherFieldValues)
     {
-        if (dependonFieldValuesSelector == null)
-            throw new ArgumentNullException(nameof(dependonFieldValuesSelector), "dependonFieldValuesSelector参数不能为空");
+        var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
+        if (!this.TryGetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
+            return;
+        if (otherFieldValues == null)
+            throw new ArgumentNullException($"字段值otherFieldValues不可为null");
 
-        var lambdaExpr = dependonFieldValuesSelector as LambdaExpression;
-        var entityMapper = this.Tables[0].Mapper;
-        MemberMap memberMapper = null;
-        switch (lambdaExpr.Body.NodeType)
+        tableSegment.IsIncludeManySharding = isIncludeMany;
+        tableSegment.IsNeedBuildShardingTableGetter = otherFieldValues.Length != tableShardingInfo.DependOnMembers.Count;
+        tableSegment.OtherShardingValues = otherFieldValues;
+    }
+    public Func<object, object[], string> BuildTableShardingSelector(TableSegment tableSegment, Type parameterType)
+    {
+        var entityType = tableSegment.EntityType;
+        var entityMapProvider = this.DbContext.EntityMapProvider;
+        var cacheKey = RepositoryHelper.GetCacheKey([entityMapProvider, tableSegment.TableShardingInfo, entityType, parameterType]);
+        return shardingTableNameGetters.GetOrAdd(cacheKey, f =>
         {
-            case ExpressionType.MemberAccess:
-                var memberExpr = lambdaExpr.Body as MemberExpression;
-                memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
-                fieldsAction.Invoke(memberMapper);
-                break;
-            case ExpressionType.New:
-                this.InitTableAlias(lambdaExpr);
-                var newExpr = lambdaExpr.Body as NewExpression;
-                for (int i = 0; i < newExpr.Arguments.Count; i++)
+            if (typeof(IDictionary<string, object>).IsAssignableFrom(parameterType))
+            {
+                return (parameter, otherValues) =>
                 {
-                    var memberInfo = newExpr.Members[i];
-                    if (!entityMapper.TryGetMemberMap(memberInfo.Name, out memberMapper))
-                        continue;
-
-                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment
+                    var dict = parameter as IDictionary<string, object>;
+                    var ruleParameterValues = new List<object>();
+                    var index = 0;
+                    foreach (var memberName in tableSegment.TableShardingInfo.DependOnMembers)
                     {
-                        Expression = newExpr.Arguments[i],
-                        NativeDbType = memberMapper.NativeDbType,
-                        MappedTargetType = memberMapper.MappedTargetType,
-                        TypeHandler = memberMapper.TypeHandler
-                    });
-                    if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberInfo.Name)
-                        fieldsAction.Invoke(memberMapper);
-                }
-                break;
-            case ExpressionType.MemberInit:
-                this.InitTableAlias(lambdaExpr);
-                var memberInitExpr = lambdaExpr.Body as MemberInitExpression;
-                for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
+                        //这里假设字典参数值与实体成员类型一致，或是对获取分表名无影响的类型
+                        if (dict.TryGetKeyIgnoreCase(memberName, out var itemKey))
+                            ruleParameterValues.Add(dict[itemKey]);
+                        else
+                        {
+                            ruleParameterValues.Add(otherValues[index]);
+                            index++;
+                        }
+                    }
+                    return tableSegment.TableShardingInfo.Rule.Invoke(tableSegment.Mapper.TableName, ruleParameterValues.ToArray());
+                };
+            }
+            var parameterExpr = Expression.Parameter(typeof(object), "f");
+            var otherParametersExpr = Expression.Parameter(typeof(object[]), "others");
+            var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
+            var blockParameters = new List<Expression>() { typedParameterExpr };
+            var blockBodies = new List<Expression>();
+
+            var entityMapper = entityMapProvider.GetEntityMap(entityType);
+            blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
+            var memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
+
+            var index = 0;
+            var ruleParameterExprs = new List<Expression>();
+            foreach (var memberName in tableSegment.TableShardingInfo.DependOnMembers)
+            {
+                var memberInfo = memberInfos.Find(f => f.Name == memberName);
+                if (memberInfo != null)
                 {
-                    var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-                    if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out memberMapper))
-                        continue;
-
-                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberAssignment.Expression });
-                    if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberAssignment.Member.Name)
-                        fieldsAction.Invoke(memberMapper);
+                    var memberMapper = entityMapper.GetMemberMap(memberName);
+                    var memberType = memberInfo.GetMemberType();
+                    var memberValueExpr = Expression.PropertyOrField(typedParameterExpr, memberName);
+                    //这里假设参数值与实体成员类型一致，或是对获取分表名无影响的类型
+                    //if (memberType != memberMapper.MemberType || memberType != memberMapper.UnderlyingType)
+                    //{
+                    //    var methodInfo = typeof(Convert).GetMethod(nameof(Convert.ChangeType), [typeof(object), typeof(Type)]);
+                    //    memberValueExpr = Expression.Call(methodInfo, memberValueExpr, Expression.Constant(memberMapper.UnderlyingType));
+                    //}
+                    ruleParameterExprs.Add(memberValueExpr);
                 }
-                break;
+                else
+                {
+                    ruleParameterExprs.Add(Expression.ArrayIndex(otherParametersExpr, Expression.Constant(index)));
+                    index++;
+                }
+            }
+            var ruleExpr = Expression.Constant(tableSegment.TableShardingInfo.Rule);
+            var orgNameExpr = Expression.Constant(tableSegment.Mapper.TableName);
+            var ruleParametersExpr = Expression.NewArrayInit(typeof(object[]), ruleParameterExprs);
+            var bodyExpr = Expression.Invoke(ruleExpr, [orgNameExpr, ruleParametersExpr]);
+            return Expression.Lambda<Func<object, object[], string>>(bodyExpr, parameterExpr, otherParametersExpr).Compile();
+        });
+    }
+    public bool TryGetTableShardingInfo(TableSegment tableSegment, TableShardingUsageMode usageMode, out TableShardingInfo tableShardingInfo)
+    {
+        if (tableSegment.TableShardingInfo != null)
+        {
+            tableShardingInfo = tableSegment.TableShardingInfo;
+            return true;
         }
-
-        this.Tables[0].ShardingTableGetter = dependonFieldValuesSelector;
+        if (this.ShardingProvider == null)
+            throw new Exception("当前系统没有配置任何分表信息");
+        var entityType = tableSegment.EntityType;
+        if (!this.ShardingProvider.TryGetTableSharding(entityType, out tableShardingInfo))
+        {
+            var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(entityType);
+            throw new Exception($"实体表{entityType.FullName}没有配置分表，原表名：{entityMapper?.TableName}");
+        }
+        if (tableShardingInfo.UsageMode != TableShardingUsageMode.Default || tableShardingInfo.UsageMode != usageMode)
+            throw new Exception($"实体表{entityType.FullName}的分表规则无法应用于当前操作，当前配置的应用范围为：TableShardingUsageMode.{tableShardingInfo.UsageMode}");
+        tableSegment.TableShardingInfo = tableShardingInfo;
+        return true;
+    }
+    public bool TryGetTableShardingInfo(Type entityType, TableShardingUsageMode usageMode, out TableShardingInfo tableShardingInfo)
+    {
+        tableShardingInfo = null;
+        if (this.ShardingProvider == null)
+            return false;
+        if (this.ShardingProvider.TryGetTableSharding(entityType, out tableShardingInfo)
+           && (tableShardingInfo.UsageMode == TableShardingUsageMode.Default || tableShardingInfo.UsageMode == usageMode))
+            return true;
+        return false;
     }
     public void UseUnionShardingTable() => this.ShardingTableJointMark = "UNION";
     public virtual void UseTableSchema(bool isIncludeMany, string tableSchema)
@@ -2739,6 +2794,60 @@ public class SqlVisitor : ISqlVisitor
             else throw new NotSupportedException($"不支持的表达式解析:{myExpr}->MemberExpression");
         }
         return myExpr.NodeType == ExpressionType.MemberAccess;
+    }
+    public Dictionary<string, List<object>> SplitShardingParameters(Type paramterType, IEnumerable parameters, Dictionary<string, object> shardingValues)
+    {
+        var result = new Dictionary<string, List<object>>();
+        var tableSegment = this.Tables[0];
+        var origTableName = tableSegment.Mapper.TableName;
+        var tableShardingInfo = tableSegment.TableShardingInfo;
+
+        if (tableShardingInfo.DependOnMembers == null || tableShardingInfo.DependOnMembers.Count == 0)
+            throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，但未指定分表名，也未指定依赖的成员，无法确定分表，原表名：{origTableName}");
+
+        object[] myShardingValues = null;
+        if (tableSegment.IsNeedBuildShardingTableGetter)
+            myShardingValues = tableSegment.OtherShardingValues;
+        else
+        {
+            if (shardingValues.Count > 0)
+            {
+                var otherShardingValues = new List<object>();
+                foreach (var memberName in tableShardingInfo.DependOnMembers)
+                {
+                    if (shardingValues.TryGetValue(memberName, out var shardingValue))
+                        otherShardingValues.Add(shardingValue);
+                }
+                myShardingValues = otherShardingValues.ToArray();
+            }
+        }
+        var tableNameGetter = this.BuildTableShardingSelector(tableSegment, paramterType);
+        foreach (var insertObj in parameters)
+        {
+            var tableName = tableNameGetter.Invoke(insertObj, myShardingValues);
+            if (string.IsNullOrEmpty(tableName))
+            {
+                var jsonTypeHandler = this.OrmProvider.GetTypeHandler(typeof(JsonTypeHandler));
+                throw new InvalidOperationException($"手动设置的分表名获取委托无法获取分表名，原表名：{origTableName}，当前参数：{jsonTypeHandler.ToFieldValue(this.OrmProvider, insertObj)}");
+            }
+            if (!result.TryGetValue(tableName, out var myParameters))
+                result.Add(tableName, myParameters = new List<object>());
+            myParameters.Add(insertObj);
+        }
+
+        foreach (var insertObj in parameters)
+        {
+            var tableName = tableNameGetter.Invoke(insertObj, myShardingValues);
+            if (string.IsNullOrEmpty(tableName))
+            {
+                var jsonTypeHandler = this.OrmProvider.GetTypeHandler(typeof(JsonTypeHandler));
+                throw new InvalidOperationException($"分表规则无法获取分表名，原表名：{origTableName}，当前参数：{jsonTypeHandler.ToFieldValue(this.OrmProvider, insertObj)}");
+            }
+            if (!result.TryGetValue(tableName, out var myParameters))
+                result.Add(tableName, myParameters = new List<object>());
+            myParameters.Add(insertObj);
+        }
+        return result;
     }
     public virtual void Dispose()
     {

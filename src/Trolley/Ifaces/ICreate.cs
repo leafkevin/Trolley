@@ -33,12 +33,12 @@ public interface ICreate<TEntity>
     /// <returns>返回插入对象</returns>
     ICreate<TEntity> UseTable(string tableName);
     /// <summary>
-    /// 手动指定<typeparamref name="TEntity"/>表分表依赖字段值获取委托，返回的字段值对象用于确定分表名，字段值对象中的顺序与配置的依赖字段顺序一致，自动插入到多个分表中，只用于批量场景。
-    /// 如：.UseTable(f =&gt; new { TenantId = 125, f.CreatedAt })，Trolley会自动搜索所有插入参数中的包含名为CreatedAt的属性值，125是租户ID，根据租户ID+CreatedAt时间确定分表名
+    /// 手动指定分表规则依赖的批量插入参数(WithBulk方法中的参数)外的其他参数值，Trolley会自动结合otherFieldValues和批量插入参数(WithBulk方法中的参数)中分表依赖字段值确定分表名，otherFieldValues字段值数组中的顺序与配置的依赖字段(批量插入参数中的依赖字段除外)顺序一致，自插入到多个分表中，此方法只能用于批量场景。
+    /// 如：假如分表规则根据租户ID+CreatedAt时间确定分表名，.UseTableByOthers([125])，125是租户ID，批量插入参数(WithBulk方法中的参数)中包含CreatedAt时间字段值
     /// </summary>
-    /// <param name="dependOnFieldValuesSelector">分表依赖字段值获取委托</param>
-    /// <returns>返回插入对象</returns>
-    ICreate<TEntity> UseTable(Expression<Func<TEntity, object>> dependOnFieldValuesSelector);
+    /// <param name="otherFieldValues">分表依赖字段值获取委托</param>
+    /// <returns>返回更新对象</returns>
+    ICreate<TEntity> UseTableByOthers(params object[] otherFieldValues);
     /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="TEntity"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>

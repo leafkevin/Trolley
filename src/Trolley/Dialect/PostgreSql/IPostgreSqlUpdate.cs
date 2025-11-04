@@ -15,51 +15,24 @@ public interface IPostgreSqlUpdate<TEntity> : IUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new IPostgreSqlUpdate<TEntity> UseTable(params string[] tableNames);
     /// <summary>
-    /// 手动指定<typeparamref name="TEntity"/>表分表依赖字段值获取委托，返回的字段值对象用于确定分表名，字段值对象中的顺序与配置的依赖字段顺序一致，自动更新到多个分表中，只用于批量场景。
-    /// 如：.UseTable(f =&gt; new { TenantId = 125, f.CreatedAt })，Trolley会自动搜索所有更新参数中的包含名为CreatedAt的属性值，125是租户ID，根据租户ID+CreatedAt时间确定分表名
-    /// </summary>
-    /// <param name="dependOnFieldValuesSelector">分表依赖字段值获取委托</param>
-    /// <returns>返回更新对象</returns>
-    new IPostgreSqlUpdate<TEntity> UseTable(Expression<Func<TEntity, object>> dependOnFieldValuesSelector);
-    /// <summary>
-    /// 手动设置分表名获取委托，只适用于批量更新场景，通常是根据某1个或多个字段值来确定分表名，执行时会根据实体字段的值自动更新对应的分表中
-    /// </summary>
-    /// <typeparam name="TUpdateObj">更新的实体类型</typeparam>
-    /// <param name="tableNameGetter">分表名获取委托</param>
-    /// <exception cref="ArgumentNullException"></exception>
-    new IPostgreSqlUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter);
-    /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="TEntity"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回更新对象</returns>
     new IPostgreSqlUpdate<TEntity> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定<typeparamref name="TEntity"/>表分表名，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)，//时间分表，最近一周的订单
+    /// 手动指定分表规则依赖的批量更新参数(SetBulk方法中的参数)外的其他参数值，Trolley会自动结合otherFieldValues和批量更新参数中分表依赖字段值确定分表名，otherFieldValues字段值数组中的顺序与配置的依赖字段(批量更新参数中的依赖字段除外)顺序一致，自动更新到多个分表中，此方法只能用于批量场景。
+    /// 如：假如分表规则根据租户ID+CreatedAt时间确定分表名，.UseTableByOthers([125])，125是租户ID，批量更新参数(SetBulk方法中的参数)中包含CreatedAt时间字段值
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="otherFieldValues">分表依赖字段值获取委托</param>
     /// <returns>返回更新对象</returns>
-    new IPostgreSqlUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue);
+    new IPostgreSqlUpdate<TEntity> UseTableByOthers(params object[] otherFieldValues);
     /// <summary>
-    /// 根据1个固定字段值和1个字段范围值，手动指定<typeparamref name="TEntity"/>表分表名，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1最近一周的订单
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="TEntity"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="beginField2Value">字段2范围起始值</param>
-    /// <param name="endField2Value">字段2范围结束值</param>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
     /// <returns>返回更新对象</returns>
-    new IPostgreSqlUpdate<TEntity> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
-    /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定<typeparamref name="TEntity"/>表分表名，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// .UseTableByRange(1, 6, DateTime.Now.AddDays(-7), DateTime.Now)//商户+产品+时间分表，商户1，产品6，最近一周的订单
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="beginField3Value">字段3开始起始值</param>
-    /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回更新对象</returns>
-    new IPostgreSqlUpdate<TEntity> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
+    new IPostgreSqlUpdate<TEntity> UseTableByRange(params object[] fieldValues);
     #endregion
 
     #region Set

@@ -20,9 +20,9 @@ public interface ICreateVisitor : IDisposable
     IQueryVisitor CreateQueryVisitor(char? tableAsStart = null);
     string BuildSql(out List<SqlFieldSegment> readerFields);
 
-    void UseTable(bool isIncludeMany, params string[] tableNames);
-    void UseTable<TEntity>(Expression<Func<TEntity, object>> dependOnFieldValuesSelector);
-    void UseTableBy(bool isIncludeMany, params object[] fieldValues);
+    void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
+    void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
+    void UseTableByOthers(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] otherFieldValues);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
     void WithBy(object insertObj);

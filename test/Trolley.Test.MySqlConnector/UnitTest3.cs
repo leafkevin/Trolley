@@ -547,6 +547,26 @@ public class UnitTest3 : UnitTestBase
         }
     }
     [Fact]
+    public void Update_Set_Expression()
+    {
+        this.Initialize(1);
+        var repository = this.dbFactory.Create();
+        var sql = repository.Update<Order>()
+            .Set(f => new
+            {
+                TotalAmount = f.TotalAmount + 200.56,
+                OrderNo = f.OrderNo + "-111",
+            })
+            .Where(f => f.Id == "1")
+          .ToSql(out var dbParameters);
+        Assert.Equal("UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@p0,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1", sql);
+        Assert.NotNull(dbParameters);
+        Assert.Equal("@p0", dbParameters[0].ParameterName);
+        Assert.Equal(200.56, (double)dbParameters[0].Value);
+        Assert.Equal("@Products", dbParameters[1].ParameterName);
+        Assert.True((string)dbParameters[1].Value == JsonSerializer.Serialize(new List<int> { 1, 2, 3 }));
+    }
+    [Fact]
     public void Update_Set_MethodCall()
     {
         this.Initialize(1);

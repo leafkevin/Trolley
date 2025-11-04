@@ -14,8 +14,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 {
     protected List<CommandSegment> deferredSegments = new();
     protected bool isNeedSplitShardingTables = false;
-    protected TableShardingInfo tableShardingInfo = null;
-    protected Dictionary<string, object> shardingDependOnValues = null;
+    protected Dictionary<string, object> shardingValues = null;
 
     public List<string> OnlyFieldNames { get; set; }
     public List<string> IgnoreFieldNames { get; set; }
@@ -40,6 +39,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 Mapper = this.MapProvider.GetEntityMap(entityType)
             }
         };
+        if (this.TryGetTableShardingInfo(entityType, TableShardingUsageMode.WriteOnly, out var tableShardingInfo))
+            this.Tables[0].TableShardingInfo = tableShardingInfo;
     }
     public virtual string BuildCommand(DbContext dbContext, ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
@@ -433,10 +434,15 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             Value = (updateObjs, bulkCount)
         });
         var tableSegment = this.Tables[0];
-        this.isNeedSplitShardingTables = this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out this.tableShardingInfo)
-            && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null && this.tableShardingInfo.UsageMode != TableShardingUsageMode.ReadOnly;
-        if (this.isNeedSplitShardingTables && (this.tableShardingInfo.DependOnMembers == null || this.tableShardingInfo.DependOnMembers.Count == 0))
-            throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，但未指定分表名，也未指定依赖成员，无法确定分表，原表名：{tableSegment.Mapper.TableName}");
+        var tableShardingInfo = tableSegment.TableShardingInfo;
+        if (tableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingValuesSelectorExpression == null)
+            this.isNeedSplitShardingTables = true;
+        if (this.isNeedSplitShardingTables)
+        {
+            if (tableShardingInfo.DependOnMembers == null || tableShardingInfo.DependOnMembers.Count == 0)
+                throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，但未指定分表名，也未指定依赖成员，无法确定分表，可以使用方法UseTable/UseTableBy/UseTableByRange指定分表名，或是配置分表依赖字段，并设置依赖字段值，原表名：{tableSegment.Mapper.TableName}");
+            this.shardingValues = new();
+        }
     }
     public virtual void WhereWith(object whereObj)
     {
@@ -545,7 +551,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (this.isNeedSplitShardingTables)
         {
             var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, List<string>, IDictionary<string, object>, DbContext, List<string>, List<string>, object>;
-            typedCommandInitializer.Invoke(this.DbParameters, this.UpdateFields, this.shardingDependOnValues, this.DbContext, this.OnlyFieldNames, this.IgnoreFieldNames, updateObj);
+            typedCommandInitializer.Invoke(this.DbParameters, this.UpdateFields, this.shardingValues, this.DbContext, this.OnlyFieldNames, this.IgnoreFieldNames, updateObj);
         }
         else
         {
@@ -769,7 +775,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         }
         var fieldValue = isEntity ? memberMapper.Member.Evaluate(memberValue) : memberValue;
         if (this.isNeedSplitShardingTables && this.tableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
-            this.shardingDependOnValues[memberMapper.MemberName] = fieldValue;
+            this.shardingValues[memberMapper.MemberName] = fieldValue;
 
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
         if (memberMapper.TypeHandler != null)
@@ -794,7 +800,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         {
             var fieldValue = sqlSegment.Value;
             if (this.isNeedSplitShardingTables && this.tableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
-                this.shardingDependOnValues[memberMapper.MemberName] = sqlSegment.Value;
+                this.shardingValues[memberMapper.MemberName] = sqlSegment.Value;
 
             var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
             if (memberMapper.TypeHandler != null)
@@ -815,9 +821,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var origTableName = this.Tables[0].Mapper.TableName;
 
         //优先使用本次设置的分表名获取委托来获取分表名
-        if (this.Tables[0].ShardingTableGetter != null)
+        if (this.Tables[0].ShardingValuesSelectorExpression != null)
         {
-            var tableNameGetter = this.Tables[0].ShardingTableGetter;
+            var tableNameGetter = this.Tables[0].ShardingValuesSelectorExpression;
             foreach (var updateObj in updateObjs)
             {
                 var tableName = tableNameGetter.DynamicInvoke(updateObj) as string;
@@ -840,7 +846,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             var fieldValueGetters = new List<Func<object, object>>();
             foreach (var memberName in tableShardingInfo.DependOnMembers)
             {
-                if (this.shardingDependOnValues.ContainsKey(memberName))
+                if (this.shardingValues.ContainsKey(memberName))
                     throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，依赖的成员{memberName}在所有更新值中，没有找到，无法确定分表，原表名：{origTableName}");
             }
             Func<object, string> tableNameGetter = insertObj =>

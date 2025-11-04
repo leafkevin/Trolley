@@ -273,16 +273,8 @@ public class MySqlCreateVisitor : CreateVisitor
         var updateObjType = updateObj.GetType();
         this.UpdateBuilder ??= new();
         var setFieldsSetter = RepositoryHelper.BuildFieldsSqlParametersPart(this.DbContext, entityType, updateObjType, 3, 1, 0, false, this.IsMultiple, false, this.OnlyFieldNames, this.IgnoreFieldNames);
-        if (this.IsMultiple)
-        {
-            var typedSetFieldsSetter = setFieldsSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-            typedSetFieldsSetter.Invoke(this.DbParameters, this.UpdateBuilder, this.DbContext, updateObj, $"_m{this.CommandIndex}");
-        }
-        else
-        {
-            var typedSetFieldsSetter = setFieldsSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
-            typedSetFieldsSetter.Invoke(this.DbParameters, this.UpdateBuilder, this.DbContext, updateObj);
-        }
+        var typedSetFieldsSetter = setFieldsSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
+        typedSetFieldsSetter.Invoke(this.DbParameters, this.UpdateBuilder, this.DbContext, updateObj);
     }
     public void VisitSetExpression(LambdaExpression lambdaExpr)
     {

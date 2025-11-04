@@ -20,11 +20,11 @@ public interface IUpdateVisitor : IDisposable
 
     string BuildCommand(DbContext dbContext, ITheaCommand command, out List<SqlFieldSegment> readerFields);
 
-    void UseTable(bool isIncludeMany, params string[] tableNames);
-    void UseTableByRange(bool isIncludeMany, object[] fieldValues);
-    void UseTable<TEntity>(Expression<Func<TEntity, object>> dependonFieldValuesSelector);
-    void UseTableMap(bool isIncludeMany, Func<string, string, string, string> tableNameGetter);
-    void UseTableBy(bool isIncludeMany, params object[] fieldValues);
+    void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
+    void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
+    void UseTableMap(TableShardingUsageMode usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter);
+    void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
+    void UseTableByOthers(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] otherFieldValues);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
     void Join(string joinType, Type entityType, Expression joinOn);

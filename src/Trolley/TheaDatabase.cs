@@ -14,9 +14,9 @@ public class TheaDatabase
     private ConcurrentDictionary<string, List<string>> slaveSelectors;
     public string DbKey { get; internal set; }
     public List<string> ConnectionStrings { get; internal set; }
-    public Func<object[], string> ConnectionStringSelector { get; internal set; }
+    public Delegate ConnectionStringSelector { get; internal set; }
     public List<string> SlaveConnectionStrings { get; internal set; }
-    public Func<object[], string> SlaveConnectionStringSelector { get; internal set; }
+    public Delegate SlaveConnectionStringSelector { get; internal set; }
     public bool IsDefault { get; internal set; }
     public OrmProviderType OrmProviderType { get; internal set; }
     public IOrmProvider OrmProvider { get; internal set; }
@@ -42,7 +42,7 @@ public class TheaDatabase
     {
         if (this.ConnectionStringSelector == null)
             throw new InvalidOperationException("主库连接串选择器未设置");
-        return this.ConnectionStringSelector(selectorValues);
+        return this.ConnectionStringSelector.DynamicInvoke(selectorValues) as string;
     }
     public void UseSlave(params string[] connectionStrings)
     {
@@ -62,7 +62,7 @@ public class TheaDatabase
     {
         if (this.SlaveConnectionStringSelector == null)
             throw new InvalidOperationException("从库连接串选择器未设置");
-        return this.SlaveConnectionStringSelector(selectorValues);
+        return this.SlaveConnectionStringSelector.DynamicInvoke(selectorValues) as string;
     }
     public void UseOrmProvider(IOrmProvider ormProvider)
     {

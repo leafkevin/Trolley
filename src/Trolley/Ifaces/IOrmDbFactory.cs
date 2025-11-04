@@ -74,7 +74,6 @@ public interface IOrmDbFactory
 
     void UseTypeHandler(ITypeHandler typeHandler);
 
-    TRepository Create<TRepository>(params object[] dbKeySelectorValues) where TRepository : class, IRepository;
-    TRepository CreateRepository<TRepository>(string dbKey) where TRepository : class, IRepository;
+    IRepository CreateRepository(string dbKey);
     void Build();
 }
