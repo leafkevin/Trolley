@@ -36,6 +36,11 @@ public class Update<TEntity> : IUpdate<TEntity>
         this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
+    public virtual IUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
+    {
+        this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, tableNameGetter);
+        return this;
+    }
     public virtual IUpdate<TEntity> UseTableByOthers(params object[] otherFieldValues)
     {
         this.Visitor.UseTableByOthers(TableShardingUsageMode.WriteOnly, otherFieldValues);

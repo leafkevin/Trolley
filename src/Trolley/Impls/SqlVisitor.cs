@@ -229,12 +229,24 @@ public class SqlVisitor : ISqlVisitor
             tableSegment.Body = tableName;
         }
     }
+    /// <summary>
+    /// 设置批量插入、更新、删除操作时的分表名获取委托
+    /// </summary>
+    /// <typeparam name="TParameter">插入参数类型</typeparam>
+    /// <param name="tableNameGetter"></param>
+    /// <exception cref="ArgumentNullException"></exception>
+    public void UseTable<TParameter>(TableShardingUsageMode usageMode, Func<string, TParameter, string> tableNameGetter)
+    {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
+        this.Tables[0].ShardingTableGetter = tableNameGetter;
+    }
     public void UseTableByOthers(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] otherFieldValues)
     {
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         if (!this.TryGetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
             return;
-        if (otherFieldValues == null)
+        if (otherFieldValues == null || otherFieldValues.Length == 0)
             throw new ArgumentNullException($"字段值otherFieldValues不可为null");
 
         tableSegment.IsIncludeManySharding = isIncludeMany;
@@ -248,26 +260,28 @@ public class SqlVisitor : ISqlVisitor
         var cacheKey = RepositoryHelper.GetCacheKey([entityMapProvider, tableSegment.TableShardingInfo, entityType, parameterType]);
         return shardingTableNameGetters.GetOrAdd(cacheKey, f =>
         {
+            //字典尽力不要使用此方法，性能较差
             if (typeof(IDictionary<string, object>).IsAssignableFrom(parameterType))
             {
-                return (parameter, otherValues) =>
-                {
-                    var dict = parameter as IDictionary<string, object>;
-                    var ruleParameterValues = new List<object>();
-                    var index = 0;
-                    foreach (var memberName in tableSegment.TableShardingInfo.DependOnMembers)
-                    {
-                        //这里假设字典参数值与实体成员类型一致，或是对获取分表名无影响的类型
-                        if (dict.TryGetKeyIgnoreCase(memberName, out var itemKey))
-                            ruleParameterValues.Add(dict[itemKey]);
-                        else
-                        {
-                            ruleParameterValues.Add(otherValues[index]);
-                            index++;
-                        }
-                    }
-                    return tableSegment.TableShardingInfo.Rule.Invoke(tableSegment.Mapper.TableName, ruleParameterValues.ToArray());
-                };
+                throw new NotSupportedException("使用字典类型参数时，请使用.UseTable<TParameter>(Func<string, TParameter, string> tableNameGetter)方法性能高");
+                //return (parameter, otherValues) =>
+                //{
+                //    var dict = parameter as IDictionary<string, object>;
+                //    var ruleParameterValues = new List<object>();
+                //    var index = 0;
+                //    foreach (var memberName in tableSegment.TableShardingInfo.DependOnMembers)
+                //    {
+                //        //这里假设字典参数值与实体成员类型一致，或是对获取分表名无影响的类型
+                //        if (dict.TryGetKeyIgnoreCase(memberName, out var itemKey))
+                //            ruleParameterValues.Add(dict[itemKey]);
+                //        else
+                //        {
+                //            ruleParameterValues.Add(otherValues[index]);
+                //            index++;
+                //        }
+                //    }
+                //    return tableSegment.TableShardingInfo.Rule.Invoke(tableSegment.Mapper.TableName, ruleParameterValues.ToArray());
+                //};
             }
             var parameterExpr = Expression.Parameter(typeof(object), "f");
             var otherParametersExpr = Expression.Parameter(typeof(object[]), "others");
@@ -2797,10 +2811,11 @@ public class SqlVisitor : ISqlVisitor
     }
     public Dictionary<string, List<object>> SplitShardingParameters(Type paramterType, IEnumerable parameters, Dictionary<string, object> shardingValues)
     {
-        var result = new Dictionary<string, List<object>>();
         var tableSegment = this.Tables[0];
         var origTableName = tableSegment.Mapper.TableName;
         var tableShardingInfo = tableSegment.TableShardingInfo;
+        if (typeof(IDictionary<string, object>).IsAssignableFrom(paramterType))
+            throw new NotSupportedException($"字典类型参数请使用.UseTable<TParameter>(Func<string, TParameter, string> tableNameGetter)方法获取分表，原表名：{origTableName}");
 
         if (tableShardingInfo.DependOnMembers == null || tableShardingInfo.DependOnMembers.Count == 0)
             throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，但未指定分表名，也未指定依赖的成员，无法确定分表，原表名：{origTableName}");
@@ -2821,31 +2836,19 @@ public class SqlVisitor : ISqlVisitor
                 myShardingValues = otherShardingValues.ToArray();
             }
         }
+        var result = new Dictionary<string, List<object>>();
         var tableNameGetter = this.BuildTableShardingSelector(tableSegment, paramterType);
-        foreach (var insertObj in parameters)
+        foreach (var parameter in parameters)
         {
-            var tableName = tableNameGetter.Invoke(insertObj, myShardingValues);
+            var tableName = tableNameGetter.Invoke(parameter, myShardingValues);
             if (string.IsNullOrEmpty(tableName))
             {
                 var jsonTypeHandler = this.OrmProvider.GetTypeHandler(typeof(JsonTypeHandler));
-                throw new InvalidOperationException($"手动设置的分表名获取委托无法获取分表名，原表名：{origTableName}，当前参数：{jsonTypeHandler.ToFieldValue(this.OrmProvider, insertObj)}");
+                throw new InvalidOperationException($"分表规则无法获取分表名，原表名：{origTableName}，当前参数：{jsonTypeHandler.ToFieldValue(this.OrmProvider, parameter)}");
             }
             if (!result.TryGetValue(tableName, out var myParameters))
                 result.Add(tableName, myParameters = new List<object>());
-            myParameters.Add(insertObj);
-        }
-
-        foreach (var insertObj in parameters)
-        {
-            var tableName = tableNameGetter.Invoke(insertObj, myShardingValues);
-            if (string.IsNullOrEmpty(tableName))
-            {
-                var jsonTypeHandler = this.OrmProvider.GetTypeHandler(typeof(JsonTypeHandler));
-                throw new InvalidOperationException($"分表规则无法获取分表名，原表名：{origTableName}，当前参数：{jsonTypeHandler.ToFieldValue(this.OrmProvider, insertObj)}");
-            }
-            if (!result.TryGetValue(tableName, out var myParameters))
-                result.Add(tableName, myParameters = new List<object>());
-            myParameters.Add(insertObj);
+            myParameters.Add(parameter);
         }
         return result;
     }

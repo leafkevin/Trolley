@@ -13,6 +13,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     protected List<CommandSegment> deferredSegments = new();
     protected bool isNeedSplitShardingTables = false;
     protected Dictionary<string, object> shardingValues = null;
+    protected bool hasOnlyFields = false;
+    protected bool hasIgnoreFields = false;
 
     public StringBuilder FieldsBuilder { get; set; } = new();
     public StringBuilder ValuesBuilder { get; set; }
@@ -188,9 +190,43 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             builder.Append(fixedFieldsSql);
             builder.Append(fixedValuesSql);
         };
+        if (this.deferredSegments.Count > 1)
+        {
+            this.DbParameters = new TheaDbParameterCollection();
+            for (int i = 1; i < this.deferredSegments.Count; i++)
+            {
+                var deferredSegment = this.deferredSegments[i];
+                switch (deferredSegment.Type)
+                {
+                    case "WithBy":
+                        this.VisitWithBy(deferredSegment.Value);
+                        break;
+                    case "WithByField":
+                        this.VisitWithByField(deferredSegment.Value);
+                        break;
+                    default: throw new NotSupportedException("批量插入后，只支持WithBy/IgnoreFields/OnlyFields操作");
+                }
+            }
+            fixedFieldsSql += "," + this.FieldsBuilder.ToString();
+            fixedValuesSql += this.ValuesBuilder.ToString() + ",";
 
-        var hasOnlyFields = this.OnlyFieldNames != null && this.OnlyFieldNames.Count > 0;
-        var hasIgnoreFields = this.IgnoreFieldNames != null && this.IgnoreFieldNames.Count > 0;
+            if (this.DbParameters.Count > 0)
+            {
+                fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
+                firstSqlSetter = (dbParameters, builder, tableName) =>
+                {
+                    builder.Append(headSql);
+                    builder.Append(this.OrmProvider.GetTableName(tableName));
+                    builder.Append(fixedFieldsSql);
+                    builder.Append(fixedValuesSql);
+                    fixedDbParameters.ForEach(f => dbParameters.Add(f));
+                };
+            }
+        }
+
+        this.hasOnlyFields = this.OnlyFieldNames != null && this.OnlyFieldNames.Count > 0;
+        this.hasIgnoreFields = this.IgnoreFieldNames != null && this.IgnoreFieldNames.Count > 0;
+
         var valueSetters = new List<Action<IDataParameterCollection, StringBuilder, object, string>>();
         if (firstInsertObj is IDictionary<string, object> dict)
         {
@@ -206,39 +242,48 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 if (hasOnlyFields && !this.OnlyFieldNames.Contains(lowerMemberName) || hasIgnoreFields && this.IgnoreFieldNames.Contains(lowerMemberName))
                     continue;
 
-                if (index > 0) fieldBuilder.Append(',');
-                fieldBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
-                Func<object, object> valueGetter = null;
+                if (index > 0)
+                {
+                    this.FieldsBuilder.Append(',');
+                    this.FieldsBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
+                }
+                Func<IDictionary<string, object>, object> valueGetter = null;
                 if (memberMapper.TypeHandler != null)
-                    valueGetter = fieldValue => memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
+                    valueGetter = insertObj => memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, insertObj[key]);
                 else
                 {
                     var targetType = memberMapper.MappedTargetType;
-                    valueGetter = fieldValue =>
+                    var fieldValueType = dict[key].GetType();
+                    //使用闭包，避免每次获取Type类型
+                    valueGetter = insertObj =>
                     {
-                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext);
-                        return valueGetter.Invoke(fieldValue);
+                        var fieldValue = insertObj[key];
+                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext);
+                        return myValueGetter.Invoke(fieldValue);
                     };
                 }
 
                 Action<IDataParameterCollection, StringBuilder, object, string> valueSetter = null;
-                valueSetter = (dbParameters, builder, insertObj, suffix) =>
-                {
-                    var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
-                    builder.Append(parameterName);
-                    var myDict = insertObj as IDictionary<string, object>;
-                    var fieldValue = valueGetter.Invoke(myDict[key]);
-                    dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
-                };
                 if (index > 0)
                 {
                     valueSetter = (dbParameters, builder, insertObj, suffix) =>
                     {
-                        builder.Append(',');
+                        var myDict = insertObj as IDictionary<string, object>;
+                        var fieldValue = valueGetter.Invoke(myDict);
                         var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
                         builder.Append(parameterName);
+                        dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                    };
+                }
+                else
+                {
+                    valueSetter = (dbParameters, builder, insertObj, suffix) =>
+                    {
                         var myDict = insertObj as IDictionary<string, object>;
-                        var fieldValue = valueGetter.Invoke(myDict[key]);
+                        var fieldValue = valueGetter.Invoke(myDict);
+                        var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
+                        builder.Append(',');
+                        builder.Append(parameterName);
                         dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                     };
                 }
@@ -322,39 +367,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     dbParameters.Add(this.OrmProvider.CreateParameter(myParameterName, valueFieldSegment.MemberMapper.NativeDbType, fieldValue));
                 }
             };
-        if (this.deferredSegments.Count > 1)
-        {
-            this.DbParameters = new TheaDbParameterCollection();
-            for (int i = 1; i < this.deferredSegments.Count; i++)
-            {
-                var deferredSegment = this.deferredSegments[i];
-                switch (deferredSegment.Type)
-                {
-                    case "WithBy":
-                        this.VisitWithBy(deferredSegment.Value);
-                        break;
-                    case "WithByField":
-                        this.VisitWithByField(deferredSegment.Value);
-                        break;
-                    default: throw new NotSupportedException("批量插入后，只支持WithBy/IgnoreFields/OnlyFields操作");
-                }
-            }
-            fixedFieldsSql += "," + this.FieldsBuilder.ToString();
-            fixedValuesSql += this.ValuesBuilder.ToString() + ",";
 
-            if (this.DbParameters.Count > 0)
-            {
-                fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
-                firstSqlSetter = (dbParameters, builder, tableName) =>
-                {
-                    builder.Append(headSql);
-                    builder.Append(this.OrmProvider.GetTableName(tableName));
-                    builder.Append(fixedFieldsSql);
-                    builder.Append(fixedValuesSql);
-                    fixedDbParameters.ForEach(f => dbParameters.Add(f));
-                };
-            }
-        }
 
         var shardingType = ShardingTableType.None;
         object shardingTables = tableSegment.Mapper.TableName;
@@ -564,7 +577,72 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         else tableName = this.OrmProvider.GetTableName(tableName);
         return tableName;
     }
+    public virtual void BuildDictCommandIntializer(bool hasOnlyFields, bool hasIgnoreFields)
+    {
+        var valueSetters = new List<Action<IDataParameterCollection, StringBuilder, object, string>>();
+        var entityType = this.Tables[0].EntityType;
+        var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(entityType);
 
+        Action<IDataParameterCollection, StringBuilder, object, string> dictCommandInitializer = (dbParameters, fieldBuilder, insertObj, suffix) =>
+        {
+            int index = 0;
+            var dict = insertObj as IDictionary<string, object>;
+            foreach (var key in dict.Keys)
+            {
+                if (!entityMapper.TryGetMemberMap(key, out var memberMapper) || memberMapper.IsIgnore
+                   || memberMapper.IsAutoIncrement || memberMapper.IsNavigation || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
+                    continue;
+                var lowerMemberName = memberMapper.MemberName.ToLower();
+                if (hasOnlyFields && !this.OnlyFieldNames.Contains(lowerMemberName))
+                    continue;
+                if (hasIgnoreFields && this.IgnoreFieldNames.Contains(lowerMemberName))
+                    continue;
+
+                if (index > 0) fieldBuilder.Append(',');
+                fieldBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
+                Func<object, object> valueGetter = null;
+                if (memberMapper.TypeHandler != null)
+                    valueGetter = fieldValue => memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
+                else
+                {
+                    var targetType = memberMapper.MappedTargetType;
+                    var fieldValueType = dict[key].GetType();
+                    //使用闭包，避免每次获取Type类型
+                    valueGetter = fieldValue =>
+                    {
+                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext);
+                        return valueGetter.Invoke(fieldValue);
+                    };
+                }
+
+                Action<IDataParameterCollection, StringBuilder, object, string> valueSetter = null;
+                valueSetter = (dbParameters, builder, insertObj, suffix) =>
+                {
+                    var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
+                    builder.Append(parameterName);
+                    var myDict = insertObj as IDictionary<string, object>;
+                    var fieldValue = valueGetter.Invoke(myDict[key]);
+                    dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                };
+                if (index > 0)
+                {
+                    valueSetter = (dbParameters, builder, insertObj, suffix) =>
+                    {
+                        builder.Append(',');
+                        var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
+                        builder.Append(parameterName);
+                        var myDict = insertObj as IDictionary<string, object>;
+                        var fieldValue = valueGetter.Invoke(myDict[key]);
+                        dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                    };
+                }
+                valueSetters.Add(valueSetter);
+                index++;
+            }
+        };
+
+
+    }
 
 
     public override void Dispose()

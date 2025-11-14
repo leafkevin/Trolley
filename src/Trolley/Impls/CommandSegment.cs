@@ -8,7 +8,7 @@ public struct CommandSegment
     public string Type { get; set; }
     public object Value { get; set; }
 }
-class ValueFieldSegment
+struct ValueFieldSegment
 {
     public MemberMap MemberMapper { get; set; }
     public Func<object, object> ValueGetter { get; set; }

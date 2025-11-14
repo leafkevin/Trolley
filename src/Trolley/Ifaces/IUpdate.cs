@@ -32,6 +32,14 @@ public interface IUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdate<TEntity> UseTableBy(params object[] fieldValues);
     /// <summary>
+    /// 手动指定分表名获取委托，执行委托获取分表名，在批量更新场景，更新对象的值自动更新对应分表中，此方法只适用批量场景。
+    /// 第一个参数是原始表名，第二个参数是更新的实体对象，返回值是分表名，如：.UseTable((tableName, updateObj) =&gt; $"{tableName}_{updateObj.CreatedAt:yyyyMM}")
+    /// </summary>
+    /// <typeparam name="TUpdateObj">更新的实体类型</typeparam>
+    /// <param name="tableNameGetter">分表名获取委托</param>
+    /// <returns>返回插入对象</returns>
+    IUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter);
+    /// <summary>
     /// 手动指定分表规则依赖的批量更新参数(SetBulk方法中的参数)外的其他参数值，Trolley会自动结合otherFieldValues和批量更新参数中分表依赖字段值确定分表名，otherFieldValues字段值数组中的顺序与配置的依赖字段(批量更新参数中的依赖字段除外)顺序一致，自动更新到多个分表中，此方法只能用于批量场景。
     /// 如：假如分表规则根据租户ID+CreatedAt时间确定分表名，.UseTableByOthers([125])，125是租户ID，批量更新参数(SetBulk方法中的参数)中包含CreatedAt时间字段值
     /// </summary>

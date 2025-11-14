@@ -22,6 +22,7 @@ public interface ICreateVisitor : IDisposable
 
     void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
     void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
+    void UseTable<TParameter>(TableShardingUsageMode usageMode, Func<string, TParameter, string> tableNameGetter);
     void UseTableByOthers(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] otherFieldValues);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 

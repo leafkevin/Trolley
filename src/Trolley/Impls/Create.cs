@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Net.Http.Headers;
-using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,9 +31,14 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
         this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
-    public virtual ICreate<TEntity> UseTable(Expression<Func<TEntity, object[]>> valuesSelector)
+    public virtual ICreate<TEntity> UseTable<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter)
     {
-        this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, valuesSelector);
+        this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, tableNameGetter);
+        return this;
+    }
+    public virtual ICreate<TEntity> UseTableByOthers(params object[] otherFieldValues)
+    {
+        this.Visitor.UseTableByOthers(TableShardingUsageMode.WriteOnly, false, otherFieldValues);
         return this;
     }
     #endregion
