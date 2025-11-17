@@ -4,7 +4,7 @@ namespace Trolley;
 
 public interface ITypeHandler
 {
-    object Parse(IOrmProvider ormProvider, Type targetType, object value);
-    object ToFieldValue(IOrmProvider ormProvider, object value);
-    string GetQuotedValue(IOrmProvider ormProvider, object value);
+    object Parse(Type targetType, object value);
+    object ToFieldValue(object value);
+    string GetQuotedValue(object value);
 }

@@ -114,6 +114,6 @@ public class TableShardingBuilder<TEntity>
         this.shardingTableInfo.RangleRule = tableNamesGetter;
         return this;
     }
-    public void Apply(TableShardingUsageMode usageMode = TableShardingUsageMode.Default)
+    public void UseMode(TableShardingUsageMode usageMode = TableShardingUsageMode.Default)
         => this.shardingTableInfo.UsageMode = usageMode;
 }

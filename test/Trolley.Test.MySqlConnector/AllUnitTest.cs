@@ -2422,9 +2422,9 @@ public class AllUnitTest : UnitTestBase
         Assert.Equal("@BuyerSource", parameters[6].ParameterName);
         Assert.True(parameters[6].Value is DBNull);
         Assert.Equal("@Products", parameters[8].ParameterName);
-        Assert.True((string)parameters[8].Value == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2 }).ToString());
+        Assert.True((string)parameters[8].Value == new JsonTypeHandler().ToFieldValue(new List<int> { 1, 2 }).ToString());
         Assert.Equal("@Disputes", parameters[9].ParameterName);
-        Assert.True((string)parameters[9].Value == new JsonTypeHandler().ToFieldValue(null, dispute).ToString());
+        Assert.True((string)parameters[9].Value == new JsonTypeHandler().ToFieldValue(dispute).ToString());
 
         repository.BeginTransaction();
         repository.Delete<Order>("4");
@@ -2450,8 +2450,8 @@ public class AllUnitTest : UnitTestBase
         repository.Commit();
         Assert.NotEmpty(order.Products);
         Assert.NotNull(order.Disputes);
-        Assert.True(new JsonTypeHandler().ToFieldValue(null, order.Products).ToString() == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2 }).ToString());
-        Assert.True(new JsonTypeHandler().ToFieldValue(null, order.Disputes).ToString() == new JsonTypeHandler().ToFieldValue(null, dispute).ToString());
+        Assert.True(new JsonTypeHandler().ToFieldValue(order.Products).ToString() == new JsonTypeHandler().ToFieldValue(new List<int> { 1, 2 }).ToString());
+        Assert.True(new JsonTypeHandler().ToFieldValue(order.Disputes).ToString() == new JsonTypeHandler().ToFieldValue(dispute).ToString());
     }
     [Fact]
     public void Insert_Enum_Fields()
@@ -2782,7 +2782,7 @@ public class AllUnitTest : UnitTestBase
         await repository.CommitAsync();
         Assert.Equal(2, count);
         Assert.Equal(order.TotalAmount, oldOrder.TotalAmount + 600);
-        Assert.True(new JsonTypeHandler().ToFieldValue(null, order.Products).ToString() == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2 }).ToString());
+        Assert.True(new JsonTypeHandler().ToFieldValue(order.Products).ToString() == new JsonTypeHandler().ToFieldValue(new List<int> { 1, 2 }).ToString());
     }
     [Fact]
     public async Task Insert_Returning()
@@ -6008,9 +6008,9 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         Assert.Equal("@p0", dbParameters[0].ParameterName);
         Assert.True((double)dbParameters[0].Value == this.CalcAmount(updateObj.TotalAmount + increasedAmount, 3));
         Assert.Equal("@p1", dbParameters[1].ParameterName);
-        Assert.True((string)dbParameters[1].Value == new JsonTypeHandler().ToFieldValue(null, this.GetProducts()).ToString());
+        Assert.True((string)dbParameters[1].Value == new JsonTypeHandler().ToFieldValue(this.GetProducts()).ToString());
         Assert.Equal("@p2", dbParameters[2].ParameterName);
-        Assert.True((string)dbParameters[2].Value == new JsonTypeHandler().ToFieldValue(null, updateObj.Disputes).ToString());
+        Assert.True((string)dbParameters[2].Value == new JsonTypeHandler().ToFieldValue(updateObj.Disputes).ToString());
         Assert.Equal("@kId", dbParameters[3].ParameterName);
         Assert.True((string)dbParameters[3].Value == updateObj.Id);
 
@@ -6685,7 +6685,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         Assert.Equal(200.56, (double)parameters[0].Value);
         Assert.Equal("@Products", parameters[1].ParameterName);
         Assert.True(parameters[1].Value.GetType() == typeof(string));
-        Assert.True((string)parameters[1].Value == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2, 3 }).ToString());
+        Assert.True((string)parameters[1].Value == new JsonTypeHandler().ToFieldValue(new List<int> { 1, 2, 3 }).ToString());
 
         var sql1 = repository.Update<User>()
             .Set(new { Gender = Gender.Male })

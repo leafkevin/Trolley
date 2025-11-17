@@ -14,7 +14,7 @@ public class SqlVisitor : ISqlVisitor
 {
     private bool isDisposed;
     private static MethodInfo IsNullMethodInfo = typeof(Sql).GetMethods().Where(f => f.Name == nameof(Sql.IsNull) && f.GetParameters().Length == 2).First();
-    private static ConcurrentDictionary<int, Func<object, object[], string>> shardingTableNameGetters = new();
+
 
     public DbContext DbContext { get; set; }
     public string DbKey => this.DbContext.DbKey;
@@ -241,89 +241,19 @@ public class SqlVisitor : ISqlVisitor
             throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
         this.Tables[0].ShardingTableGetter = tableNameGetter;
     }
-    public void UseTableByOthers(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] otherFieldValues)
+    public void UseTableByOthers(TableShardingUsageMode usageMode, params object[] otherFieldValues)
     {
-        var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
+        var tableSegment = this.Tables[0];
         if (!this.TryGetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
             return;
         if (otherFieldValues == null || otherFieldValues.Length == 0)
             throw new ArgumentNullException($"字段值otherFieldValues不可为null");
 
-        tableSegment.IsIncludeManySharding = isIncludeMany;
-        tableSegment.IsNeedBuildShardingTableGetter = otherFieldValues.Length != tableShardingInfo.DependOnMembers.Count;
+        tableSegment.IsIncludeManySharding = false;
         tableSegment.OtherShardingValues = otherFieldValues;
-    }
-    public Func<object, object[], string> BuildTableShardingSelector(TableSegment tableSegment, Type parameterType)
-    {
-        var entityType = tableSegment.EntityType;
-        var entityMapProvider = this.DbContext.EntityMapProvider;
-        var cacheKey = RepositoryHelper.GetCacheKey([entityMapProvider, tableSegment.TableShardingInfo, entityType, parameterType]);
-        return shardingTableNameGetters.GetOrAdd(cacheKey, f =>
-        {
-            //字典尽力不要使用此方法，性能较差
-            if (typeof(IDictionary<string, object>).IsAssignableFrom(parameterType))
-            {
-                throw new NotSupportedException("使用字典类型参数时，请使用.UseTable<TParameter>(Func<string, TParameter, string> tableNameGetter)方法性能高");
-                //return (parameter, otherValues) =>
-                //{
-                //    var dict = parameter as IDictionary<string, object>;
-                //    var ruleParameterValues = new List<object>();
-                //    var index = 0;
-                //    foreach (var memberName in tableSegment.TableShardingInfo.DependOnMembers)
-                //    {
-                //        //这里假设字典参数值与实体成员类型一致，或是对获取分表名无影响的类型
-                //        if (dict.TryGetKeyIgnoreCase(memberName, out var itemKey))
-                //            ruleParameterValues.Add(dict[itemKey]);
-                //        else
-                //        {
-                //            ruleParameterValues.Add(otherValues[index]);
-                //            index++;
-                //        }
-                //    }
-                //    return tableSegment.TableShardingInfo.Rule.Invoke(tableSegment.Mapper.TableName, ruleParameterValues.ToArray());
-                //};
-            }
-            var parameterExpr = Expression.Parameter(typeof(object), "f");
-            var otherParametersExpr = Expression.Parameter(typeof(object[]), "others");
-            var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
-            var blockParameters = new List<Expression>() { typedParameterExpr };
-            var blockBodies = new List<Expression>();
-
-            var entityMapper = entityMapProvider.GetEntityMap(entityType);
-            blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
-            var memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
-
-            var index = 0;
-            var ruleParameterExprs = new List<Expression>();
-            foreach (var memberName in tableSegment.TableShardingInfo.DependOnMembers)
-            {
-                var memberInfo = memberInfos.Find(f => f.Name == memberName);
-                if (memberInfo != null)
-                {
-                    var memberMapper = entityMapper.GetMemberMap(memberName);
-                    var memberType = memberInfo.GetMemberType();
-                    var memberValueExpr = Expression.PropertyOrField(typedParameterExpr, memberName);
-                    //这里假设参数值与实体成员类型一致，或是对获取分表名无影响的类型
-                    //if (memberType != memberMapper.MemberType || memberType != memberMapper.UnderlyingType)
-                    //{
-                    //    var methodInfo = typeof(Convert).GetMethod(nameof(Convert.ChangeType), [typeof(object), typeof(Type)]);
-                    //    memberValueExpr = Expression.Call(methodInfo, memberValueExpr, Expression.Constant(memberMapper.UnderlyingType));
-                    //}
-                    ruleParameterExprs.Add(memberValueExpr);
-                }
-                else
-                {
-                    ruleParameterExprs.Add(Expression.ArrayIndex(otherParametersExpr, Expression.Constant(index)));
-                    index++;
-                }
-            }
-            var ruleExpr = Expression.Constant(tableSegment.TableShardingInfo.Rule);
-            var orgNameExpr = Expression.Constant(tableSegment.Mapper.TableName);
-            var ruleParametersExpr = Expression.NewArrayInit(typeof(object[]), ruleParameterExprs);
-            var bodyExpr = Expression.Invoke(ruleExpr, [orgNameExpr, ruleParametersExpr]);
-            return Expression.Lambda<Func<object, object[], string>>(bodyExpr, parameterExpr, otherParametersExpr).Compile();
-        });
+        if (otherFieldValues.Length == tableShardingInfo.DependOnMembers.Count)
+            throw new Exception("如果提供了所有分表委托参数，请使用方法UseTableBy");
+        tableSegment.IsUseOtherValuesTableSharding = true;
     }
     public bool TryGetTableShardingInfo(TableSegment tableSegment, TableShardingUsageMode usageMode, out TableShardingInfo tableShardingInfo)
     {
@@ -2072,7 +2002,7 @@ public class SqlVisitor : ISqlVisitor
                 {
                     //枚举类型或是有强制转换时，要取sqlSegment.ExpectType值
                     //常量、方法调用、计算表达式时，sqlSegment.FromMember没有值，只能取Expression.Type值
-                    dbFieldValue = sqlSegment.TypeHandler.ToFieldValue(this.OrmProvider, dbFieldValue);
+                    dbFieldValue = sqlSegment.TypeHandler.ToFieldValue(dbFieldValue);
                     if (sqlSegment.NativeDbType != null)
                         dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, sqlSegment.NativeDbType, dbFieldValue));
                     else dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, dbFieldValue));
@@ -2123,7 +2053,7 @@ public class SqlVisitor : ISqlVisitor
             }
             string body = null;
             if (sqlSegment.TypeHandler != null)
-                body = sqlSegment.TypeHandler.GetQuotedValue(this.OrmProvider, dbFieldValue);
+                body = sqlSegment.TypeHandler.GetQuotedValue(dbFieldValue);
             else
             {
                 if (sqlSegment.ExpectType != null && sqlSegment.SegmentType != sqlSegment.ExpectType)
@@ -2179,7 +2109,7 @@ public class SqlVisitor : ISqlVisitor
         var expectType = typeof(TValue);
         var dbFieldValue = sqlSegment.Value;
         if (sqlSegment.TypeHandler != null)
-            dbFieldValue = sqlSegment.TypeHandler.ToFieldValue(this.OrmProvider, dbFieldValue);
+            dbFieldValue = sqlSegment.TypeHandler.ToFieldValue(dbFieldValue);
         else
         {
             if (expectType.IsEnum && !sqlSegment.SegmentType.IsEnum)
@@ -2218,7 +2148,7 @@ public class SqlVisitor : ISqlVisitor
 
                 if (typeHandler != null)
                 {
-                    dbFieldValue = typeHandler.ToFieldValue(this.OrmProvider, dbFieldValue);
+                    dbFieldValue = typeHandler.ToFieldValue(dbFieldValue);
                     if (nativeDbType != null)
                         dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, nativeDbType, dbFieldValue));
                     else dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, dbFieldValue));
@@ -2254,7 +2184,7 @@ public class SqlVisitor : ISqlVisitor
             var typeHandler = elementSegment.TypeHandler;
 
             if (typeHandler != null)
-                return typeHandler.GetQuotedValue(this.OrmProvider, dbFieldValue);
+                return typeHandler.GetQuotedValue(dbFieldValue);
             else
             {
                 if (expectType != null && segmentType != expectType)
@@ -2536,7 +2466,7 @@ public class SqlVisitor : ISqlVisitor
                     valueGetter = value =>
                     {
                         var fieldValue = memberInfo.Evaluate(value);
-                        return refMemberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
+                        return refMemberMapper.TypeHandler.ToFieldValue(fieldValue);
                     };
                 }
                 else
@@ -2817,40 +2747,38 @@ public class SqlVisitor : ISqlVisitor
         if (typeof(IDictionary<string, object>).IsAssignableFrom(paramterType))
             throw new NotSupportedException($"字典类型参数请使用.UseTable<TParameter>(Func<string, TParameter, string> tableNameGetter)方法获取分表，原表名：{origTableName}");
 
-        if (tableShardingInfo.DependOnMembers == null || tableShardingInfo.DependOnMembers.Count == 0)
-            throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，但未指定分表名，也未指定依赖的成员，无法确定分表，原表名：{origTableName}");
-
         object[] myShardingValues = null;
-        if (tableSegment.IsNeedBuildShardingTableGetter)
+        if (tableSegment.IsUseOtherValuesTableSharding)
             myShardingValues = tableSegment.OtherShardingValues;
-        else
-        {
-            if (shardingValues.Count > 0)
-            {
-                var otherShardingValues = new List<object>();
-                foreach (var memberName in tableShardingInfo.DependOnMembers)
-                {
-                    if (shardingValues.TryGetValue(memberName, out var shardingValue))
-                        otherShardingValues.Add(shardingValue);
-                }
-                myShardingValues = otherShardingValues.ToArray();
-            }
-        }
+        else if (shardingValues.Count > 0)
+            myShardingValues = this.GetShardingValues(tableShardingInfo, shardingValues);
+
         var result = new Dictionary<string, List<object>>();
-        var tableNameGetter = this.BuildTableShardingSelector(tableSegment, paramterType);
+        var tableNameGetter = RepositoryHelper.BuildBulkShardingTableNameGetter(this.DbContext, tableSegment.EntityType, paramterType);
         foreach (var parameter in parameters)
         {
             var tableName = tableNameGetter.Invoke(parameter, myShardingValues);
             if (string.IsNullOrEmpty(tableName))
             {
                 var jsonTypeHandler = this.OrmProvider.GetTypeHandler(typeof(JsonTypeHandler));
-                throw new InvalidOperationException($"分表规则无法获取分表名，原表名：{origTableName}，当前参数：{jsonTypeHandler.ToFieldValue(this.OrmProvider, parameter)}");
+                throw new InvalidOperationException($"分表规则无法获取分表名，原表名：{origTableName}，当前参数：{jsonTypeHandler.ToFieldValue(parameter)}");
             }
             if (!result.TryGetValue(tableName, out var myParameters))
                 result.Add(tableName, myParameters = new List<object>());
             myParameters.Add(parameter);
         }
         return result;
+    }
+    public object[] GetShardingValues(TableShardingInfo tableShardingInfo, IDictionary<string, object> shardingValues)
+    {
+        var result = new List<object>();
+        foreach (var memberName in tableShardingInfo.DependOnMembers)
+        {
+            if (!shardingValues.TryGetValue(memberName, out var fieldValue))
+                continue;
+            result.Add(fieldValue);
+        }
+        return result.ToArray();
     }
     public virtual void Dispose()
     {

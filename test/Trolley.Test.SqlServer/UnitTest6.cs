@@ -1679,7 +1679,7 @@ public class UnitTest6 : UnitTestBase
         Assert.True(result3.Id == parameter.Id);
         Assert.True(result3.TotalAmount == parameter.TotalAmount);
         var jsonTypeHandler = new JsonTypeHandler();
-        Assert.True(jsonTypeHandler.ToFieldValue(null, result3.Products).ToString() == "[1,2,3]");
+        Assert.True(jsonTypeHandler.ToFieldValue(result3.Products).ToString() == "[1,2,3]");
     }
     [Fact]
     public async Task Update_SetBulk_Output()

@@ -452,7 +452,7 @@ public class MySqlCreateVisitor : CreateVisitor
 
             var dbFieldValue = sqlSegment.Value;
             if (memberMapper.TypeHandler != null)
-                dbFieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, dbFieldValue);
+                dbFieldValue = memberMapper.TypeHandler.ToFieldValue(dbFieldValue);
             else
             {
                 var targetType = memberMapper.MappedTargetType;
@@ -486,7 +486,7 @@ public class MySqlCreateVisitor : CreateVisitor
         if (!this.DbParameters.Contains(parameterName))
         {
             if (memberMapper.TypeHandler != null)
-                fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
+                fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
             else
             {
                 var targetType = memberMapper.MappedTargetType;

@@ -1204,9 +1204,9 @@ public class UnitTest1 : UnitTestBase
         Assert.True(parameters[3].Value is DBNull);
         Assert.True(parameters[6].Value is DBNull);
         Assert.Equal("@Products", parameters[8].ParameterName);
-        Assert.True((string)parameters[8].Value == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2 }).ToString());
+        Assert.True((string)parameters[8].Value == new JsonTypeHandler().ToFieldValue(new List<int> { 1, 2 }).ToString());
         Assert.Equal("@Disputes", parameters[9].ParameterName);
-        Assert.True((string)parameters[9].Value == new JsonTypeHandler().ToFieldValue(null, dispute).ToString());
+        Assert.True((string)parameters[9].Value == new JsonTypeHandler().ToFieldValue(dispute).ToString());
 
         repository.BeginTransaction();
         repository.Delete<Order>("4");
@@ -1232,8 +1232,8 @@ public class UnitTest1 : UnitTestBase
         repository.Commit();
         Assert.NotEmpty(order.Products);
         Assert.NotNull(order.Disputes);
-        Assert.True(new JsonTypeHandler().ToFieldValue(null, order.Products).ToString() == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2 }).ToString());
-        Assert.True(new JsonTypeHandler().ToFieldValue(null, order.Disputes).ToString() == new JsonTypeHandler().ToFieldValue(null, dispute).ToString());
+        Assert.True(new JsonTypeHandler().ToFieldValue(order.Products).ToString() == new JsonTypeHandler().ToFieldValue(new List<int> { 1, 2 }).ToString());
+        Assert.True(new JsonTypeHandler().ToFieldValue(order.Disputes).ToString() == new JsonTypeHandler().ToFieldValue(dispute).ToString());
     }
     [Fact]
     public void Insert_Enum_Fields()
@@ -1507,7 +1507,7 @@ public class UnitTest1 : UnitTestBase
         Assert.Equal(500, order.TotalAmount);
         Assert.Equal(1, count1);
         Assert.Equal(600, order1.TotalAmount);
-        Assert.True(new JsonTypeHandler().ToFieldValue(null, order.Products).ToString() == new JsonTypeHandler().ToFieldValue(null, products).ToString());
+        Assert.True(new JsonTypeHandler().ToFieldValue(order.Products).ToString() == new JsonTypeHandler().ToFieldValue(products).ToString());
 
         buyerSource = UserSourceType.Taobao;
         var sql2 = repository.Create<Order>()
@@ -1649,7 +1649,7 @@ public class UnitTest1 : UnitTestBase
         await repository.CommitAsync();
         Assert.Equal(1, count);
         Assert.Equal(order.TotalAmount + 500, updatedOrder.TotalAmount);
-        Assert.True(new JsonTypeHandler().ToFieldValue(null, updatedOrder.Products).ToString() == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2 }).ToString());
+        Assert.True(new JsonTypeHandler().ToFieldValue(updatedOrder.Products).ToString() == new JsonTypeHandler().ToFieldValue(new List<int> { 1, 2 }).ToString());
     }
     [Fact]
     public async Task Insert_WithBulk_OnDuplicateKeyUpdate()

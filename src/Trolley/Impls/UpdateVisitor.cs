@@ -779,7 +779,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
         if (memberMapper.TypeHandler != null)
-            fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
+            fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
         else
         {
             var targetType = memberMapper.MappedTargetType;
@@ -804,7 +804,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
             var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
             if (memberMapper.TypeHandler != null)
-                fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
+                fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
             else
             {
                 var targetType = memberMapper.MappedTargetType;
@@ -830,7 +830,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 if (string.IsNullOrEmpty(tableName))
                 {
                     var jsonTypeHandler = this.OrmProvider.GetTypeHandler(typeof(JsonTypeHandler));
-                    throw new InvalidOperationException($"手动设置的分表名获取委托无法获取分表名，原表名：{origTableName}，当前参数：{jsonTypeHandler.ToFieldValue(this.OrmProvider, updateObj)}");
+                    throw new InvalidOperationException($"手动设置的分表名获取委托无法获取分表名，原表名：{origTableName}，当前参数：{jsonTypeHandler.ToFieldValue(updateObj)}");
                 }
                 if (!result.TryGetValue(tableName, out var myParameters))
                     result.Add(tableName, myParameters = new List<object>());
@@ -861,7 +861,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             {
                 var tableName = tableNameGetter.Invoke(insertObj);
                 if (string.IsNullOrEmpty(tableName))
-                    throw new InvalidOperationException($"分表规则无法获取分表名，原表名：{origTableName}，当前参数：{this.DbContext.JsonTypeHandler.ToFieldValue(this.OrmProvider, insertObj)}");
+                    throw new InvalidOperationException($"分表规则无法获取分表名，原表名：{origTableName}，当前参数：{this.DbContext.JsonTypeHandler.ToFieldValue(insertObj)}");
                 if (!result.TryGetValue(tableName, out var myParameters))
                     result.Add(tableName, myParameters = new List<object>());
                 myParameters.Add(insertObj);

@@ -269,7 +269,7 @@ public class WhereUnitTest : UnitTestBase
         var userIds = users.Select(t => t.Id).Distinct().ToList();
         Assert.Equal(parameters.Count, userIds.Count);
         var userIdValues = parameters.Select(f => f.Value).ToList();
-        Assert.Equal(new JsonTypeHandler().ToFieldValue(null, userIdValues), new JsonTypeHandler().ToFieldValue(null, userIds));
+        Assert.Equal(new JsonTypeHandler().ToFieldValue(userIdValues), new JsonTypeHandler().ToFieldValue(userIds));
 
         var result = await repository.From<Order>()
             .Where(f => users.Select(t => t.Id).ToList().Contains(f.BuyerId))

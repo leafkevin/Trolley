@@ -126,7 +126,7 @@ public class TableSegment
     /// <summary>
     /// 在批量插入和更新命令中，并且未指定分表名场景，提供了除批量参数外的其他分表名依赖字段值，是否需要build分表名获取委托
     /// </summary>
-    public bool IsNeedBuildShardingTableGetter { get; set; }
+    public bool IsUseOtherValuesTableSharding { get; set; }
     /// <summary>
     /// 在批量插入和更新命令中，获取分表名委托
     /// </summary>

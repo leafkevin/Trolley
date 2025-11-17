@@ -731,7 +731,28 @@ public sealed class DbContext
     #endregion
 
     #region Create
-    public int Create<TEntity>(object insertObjs, int bulkCount = 500)
+    public int Create<TEntity>(object insertObj)
+    {
+        if (insertObj == null)
+            throw new ArgumentNullException(nameof(insertObj));
+
+        int result = 0;
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
+        if (insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>)
+            throw new NotSupportedException("只支持单个实体插入");
+
+        var entityType = typeof(TEntity);
+        var parameterType = insertObj.GetType();
+        var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this, entityType, parameterType, 1, false, null, null);
+        commandInitializer.Invoke(this, command, insertObjs);
+        connection.Open();
+        result = command.ExecuteNonQuery(CommandSqlType.Insert);
+
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public int Create<TEntity>(IEnumerable insertObjs, int bulkCount = 500)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));

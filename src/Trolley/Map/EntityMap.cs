@@ -108,7 +108,7 @@ public class EntityMap
             if (!this.IsNullable)
                 this.UnderlyingType = this.EntityType;
         }
-        var memberInfos = this.GetMembers(this.EntityType);
+        var memberInfos = RepositoryHelper.GetMembers(this.EntityType);
         foreach (var memberInfo in memberInfos)
         {
             if (!this.TryGetMemberMap(memberInfo.Name, out var memberMapper))
@@ -177,7 +177,7 @@ public class EntityMap
             if (!mapper.IsNullable)
                 mapper.UnderlyingType = entityType;
         }
-        var memberInfos = this.GetMembers(entityType);
+        var memberInfos = RepositoryHelper.GetMembers(entityType);
         if (memberInfos != null && memberInfos.Count > 0)
         {
             foreach (var memberInfo in memberInfos)
@@ -194,6 +194,4 @@ public class EntityMap
         fieldName = fieldName.ToLower();
         this.fieldMaps.TryAdd(fieldName, mapper);
     }
-    private List<MemberInfo> GetMembers(Type entityType) => entityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-        .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
 }

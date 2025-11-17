@@ -2136,7 +2136,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //PostgreSql时，DistinctOnFields中的ReaderField也是这个场景
         if (readerField.IsConstant || readerField.IsVariable || readerField.HasParameter
             || readerField.IsExpression || readerField.IsMethodCall) return true;
-        return !this.DbContext.FieldMapHandler.IsCanMap(readerField.FromMember, readerField.TargetMember);
+        return !this.DbContext..IsCanMap(readerField.FromMember, readerField.TargetMember);
     }
     public virtual void Clear(bool isClearReaderFields = false)
     {

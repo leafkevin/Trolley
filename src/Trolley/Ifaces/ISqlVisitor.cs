@@ -17,7 +17,7 @@ public interface ISqlVisitor : IDisposable
     void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
     void UseTableMap(TableShardingUsageMode usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter);
     void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
-    void UseTableByOthers(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] otherFieldValues);
+    void UseTableByOthers(TableShardingUsageMode usageMode, params object[] otherFieldValues);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
     SqlFieldSegment VisitAndDeferred(SqlFieldSegment sqlSegment);

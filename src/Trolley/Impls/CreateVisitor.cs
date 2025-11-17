@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Net.Http;
+using System.Reflection;
 using System.Text;
 
 namespace Trolley;
@@ -46,12 +49,23 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         string sql = null;
         readerFields = null;
         this.IsReturnIdentity = isReturnIdentity;
+        var tableSegment = this.Tables[0];
+
+        this.hasOnlyFields = this.OnlyFieldNames != null && this.OnlyFieldNames.Count > 0;
+        this.hasIgnoreFields = this.IgnoreFieldNames != null && this.IgnoreFieldNames.Count > 0;
         if (this.ActionMode == ActionMode.Bulk)
             sql = this.BuildBulkSql(command, out readerFields);
         else
         {
             this.DbParameters ??= command.Parameters;
             this.ValuesBuilder = new();
+            if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding)
+            {
+                this.isNeedSplitShardingTables = true;
+                this.shardingValues = new();
+            }
+            //    throw new NotSupportedException($"实体表{tableSegment.EntityType.FullName}已设置分表，但未指定分表，请使用方法UseTable/UseTableBy指定分表，原始表：{tableSegment.Mapper.TableName}");
+
             foreach (var deferredSegment in this.deferredSegments)
             {
                 switch (deferredSegment.Type)
@@ -144,7 +158,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 var tableParameters = tabledInsertObjs[tableName];
                 foreach (var insertObj in tableParameters)
                 {
-                    loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index);
+                    loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
                     index++;
                 }
             }
@@ -154,14 +168,14 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             firstSqlSetter.Invoke(command.Parameters, builder, shardingTables as string);
             foreach (var insertObj in insertObjs)
             {
-                loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index);
+                loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
                 index++;
             }
         }
         return builder.ToString();
     }
     public virtual (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
-        Action<IDataParameterCollection, StringBuilder, DbContext, object, int>, string, List<SqlFieldSegment>) BuildWithBulk()
+        Action<IDataParameterCollection, StringBuilder, object, string>, string, List<SqlFieldSegment>) BuildWithBulk()
     {
         (var insertObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
 
@@ -192,6 +206,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         };
         if (this.deferredSegments.Count > 1)
         {
+            if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding
+                && tableSegment.ShardingTableGetter == null && tableSegment.OtherShardingValues == null)
+            {
+                this.isNeedSplitShardingTables = true;
+                this.shardingValues = new();
+            }
             this.DbParameters = new TheaDbParameterCollection();
             for (int i = 1; i < this.deferredSegments.Count; i++)
             {
@@ -224,150 +244,11 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             }
         }
 
-        this.hasOnlyFields = this.OnlyFieldNames != null && this.OnlyFieldNames.Count > 0;
-        this.hasIgnoreFields = this.IgnoreFieldNames != null && this.IgnoreFieldNames.Count > 0;
-
-        var valueSetters = new List<Action<IDataParameterCollection, StringBuilder, object, string>>();
+        var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(entityType);
+        Action<IDataParameterCollection, StringBuilder, object, string> loopSqlSetter = null;
         if (firstInsertObj is IDictionary<string, object> dict)
-        {
-            var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(entityType);
-            var fieldBuilder = new StringBuilder("(");
-            int index = 0;
-            foreach (var key in dict.Keys)
-            {
-                if (!entityMapper.TryGetMemberMap(key, out var memberMapper) || memberMapper.IsIgnore
-                   || memberMapper.IsAutoIncrement || memberMapper.IsNavigation || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
-                    continue;
-                var lowerMemberName = memberMapper.MemberName.ToLower();
-                if (hasOnlyFields && !this.OnlyFieldNames.Contains(lowerMemberName) || hasIgnoreFields && this.IgnoreFieldNames.Contains(lowerMemberName))
-                    continue;
-
-                if (index > 0)
-                {
-                    this.FieldsBuilder.Append(',');
-                    this.FieldsBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
-                }
-                Func<IDictionary<string, object>, object> valueGetter = null;
-                if (memberMapper.TypeHandler != null)
-                    valueGetter = insertObj => memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, insertObj[key]);
-                else
-                {
-                    var targetType = memberMapper.MappedTargetType;
-                    var fieldValueType = dict[key].GetType();
-                    //使用闭包，避免每次获取Type类型
-                    valueGetter = insertObj =>
-                    {
-                        var fieldValue = insertObj[key];
-                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext);
-                        return myValueGetter.Invoke(fieldValue);
-                    };
-                }
-
-                Action<IDataParameterCollection, StringBuilder, object, string> valueSetter = null;
-                if (index > 0)
-                {
-                    valueSetter = (dbParameters, builder, insertObj, suffix) =>
-                    {
-                        var myDict = insertObj as IDictionary<string, object>;
-                        var fieldValue = valueGetter.Invoke(myDict);
-                        var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
-                        builder.Append(parameterName);
-                        dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
-                    };
-                }
-                else
-                {
-                    valueSetter = (dbParameters, builder, insertObj, suffix) =>
-                    {
-                        var myDict = insertObj as IDictionary<string, object>;
-                        var fieldValue = valueGetter.Invoke(myDict);
-                        var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
-                        builder.Append(',');
-                        builder.Append(parameterName);
-                        dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
-                    };
-                }
-                valueSetters.Add(valueSetter);
-                index++;
-            }
-        }
-        var valueFieldsInitializer = RepositoryHelper.BuildWithBulkFilterFieldsCommandInitializer(this.DbContext, entityType, insertObjType, 1, hasOnlyFields, hasIgnoreFields)
-            as Action<IDataParameterCollection, List<ValueFieldSegment>, DbContext, List<string>, List<string>, object>;
-        valueFieldsInitializer.Invoke(this.DbParameters, valueFieldSegments, this.DbContext, this.OnlyFieldNames, this.IgnoreFieldNames, firstInsertObj);
-
-
-        Func<DbContext, List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>>, Type, List<string>, List<string>, object, string> valueSetterFunc = null;
-        valueSetterFunc = (dbContext, valueSetters, entityType, onlyFields, ignoreFields, parameter) =>
-        {
-            var ormProvider = dbContext.OrmProvider;
-            var entityMapper = dbContext.EntityMapProvider.GetEntityMap(entityType);
-            var typedParameter = parameter as IDictionary<string, object>;
-            var fieldBuilder = new StringBuilder("(");
-            int index = 0;
-            foreach (var key in typedParameter.Keys)
-            {
-                if (!entityMapper.TryGetMemberMap(key, out var memberMapper) || memberMapper.IsIgnore
-                   || memberMapper.IsAutoIncrement || memberMapper.IsNavigation || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
-                    continue;
-                var lowerMemberName = memberMapper.MemberName.ToLower();
-                if (hasOnlyFields && !onlyFields.Contains(lowerMemberName) || hasIgnoreFields && ignoreFields.Contains(lowerMemberName))
-                    continue;
-
-                if (index > 0) fieldBuilder.Append(',');
-                fieldBuilder.Append(ormProvider.GetFieldName(memberMapper.FieldName));
-                Func<object, object> valueGetter = null;
-                if (memberMapper.TypeHandler != null)
-                    valueGetter = fieldValue => memberMapper.TypeHandler.ToFieldValue(ormProvider, fieldValue);
-                else
-                {
-                    var targetType = memberMapper.MappedTargetType;
-                    valueGetter = fieldValue =>
-                    {
-                        var myValueGetter = ormProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext);
-                        return valueGetter.Invoke(fieldValue);
-                    };
-                }
-
-                Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string> valueSetter = null;
-                valueSetter = (dbParameters, builder, insertObj, suffix) =>
-                {
-                    var parameterName = $"{ormProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
-                    builder.Append(parameterName);
-                    var fieldValue = valueGetter.Invoke(insertObj[key]);
-                    dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
-                };
-                if (index > 0)
-                {
-                    valueSetter = (dbParameters, builder, insertObj, suffix) =>
-                    {
-                        builder.Append(',');
-                        var parameterName = $"{ormProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
-                        builder.Append(parameterName);
-                        var fieldValue = valueGetter.Invoke(insertObj[key]);
-                        dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
-                    };
-                }
-                valueSetters.Add(valueSetter);
-                index++;
-            }
-            return fieldBuilder.ToString();
-        };
-
-
-        Action<IDataParameterCollection, StringBuilder, DbContext, object, int> loopSqlSetter = (dbParameters, builder, dbContext, insertObj, index) =>
-            {
-                if (index > 0) builder.Append(',');
-                for (int i = 0; i < valueFieldSegments.Count; i++)
-                {
-                    if (i > 0) builder.Append(',');
-                    var valueFieldSegment = valueFieldSegments[i];
-                    var myParameterName = this.OrmProvider.ParameterPrefix + valueFieldSegment.MemberMapper.MemberName + index.ToString();
-                    builder.Append(myParameterName);
-                    var fieldValue = valueFieldSegment.ValueGetter.Invoke(insertObj);
-                    dbParameters.Add(this.OrmProvider.CreateParameter(myParameterName, valueFieldSegment.MemberMapper.NativeDbType, fieldValue));
-                }
-            };
-
+            loopSqlSetter = this.BuildDictBulkCommandInitializer(entityMapper, dict);
+        else loopSqlSetter = this.BuildTypedBulkCommandInitializer(entityMapper, insertObjType);
 
         var shardingType = ShardingTableType.None;
         object shardingTables = tableSegment.Mapper.TableName;
@@ -396,60 +277,58 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
         var insertObjType = insertObj.GetType();
-        var hasOnlyFields = this.OnlyFieldNames != null && this.OnlyFieldNames.Count > 0;
-        var hasIgnoreFields = this.IgnoreFieldNames != null && this.IgnoreFieldNames.Count > 0;
         if (insertObj is IDictionary<string, object> dict)
         {
             var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(entityType);
-            var fieldBuilder = new StringBuilder("(");
             int index = 0;
             foreach (var key in dict.Keys)
             {
-                if (!entityMapper.TryGetMemberMap(key, out var memberMapper) || memberMapper.IsIgnore
-                   || memberMapper.IsAutoIncrement || memberMapper.IsNavigation || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
+                if (!entityMapper.TryGetMemberMap(key, out var memberMapper))
                     continue;
-                var lowerMemberName = memberMapper.MemberName.ToLower();
-                if (hasOnlyFields && !this.OnlyFieldNames.Contains(lowerMemberName) || hasIgnoreFields && this.IgnoreFieldNames.Contains(lowerMemberName))
-                    continue;
-
-                if (index > 0) fieldBuilder.Append(',');
-                fieldBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
-                Func<object, object> valueGetter = null;
-                if (memberMapper.TypeHandler != null)
-                    valueGetter = fieldValue => memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
-                else
-                {
-                    var targetType = memberMapper.MappedTargetType;
-                    valueGetter = fieldValue =>
-                    {
-                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext);
-                        return valueGetter.Invoke(fieldValue);
-                    };
-                }
                 var fieldValue = dict[key];
                 if (this.isNeedSplitShardingTables && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
                     this.shardingValues[memberMapper.MemberName] = fieldValue;
-                var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
-                fieldValue = valueGetter.Invoke(fieldValue);
-                this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NavigationType, fieldValue));
+
+                if (memberMapper.IsIgnore || memberMapper.IsAutoIncrement || memberMapper.IsNavigation
+                    || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
+                    continue;
+                var lowerMemberName = memberMapper.MemberName.ToLower();
+                if (this.hasOnlyFields && !this.OnlyFieldNames.Contains(lowerMemberName)
+                    || this.hasIgnoreFields && this.IgnoreFieldNames.Contains(lowerMemberName))
+                    continue;
+
+                if (index > 0) this.FieldsBuilder.Append(',');
+                this.FieldsBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
+                if (memberMapper.TypeHandler != null)
+                    fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
+                else
+                {
+                    var targetType = memberMapper.MappedTargetType;
+                    var fieldValueType = dict[key].GetType();
+                    if (fieldValueType != targetType)
+                    {
+                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext);
+                        fieldValue = myValueGetter.Invoke(fieldValue);
+                    }
+                }
+                var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}";
+                this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                 index++;
             }
         }
         else
         {
-
-        }
-
-        var commandInitializer = RepositoryHelper.BuildWithFilterFieldsCommandInitializer(this.DbContext, entityType, insertObjType, 1, this.isNeedSplitShardingTables, hasOnlyFields, hasIgnoreFields);
-        if (this.isNeedSplitShardingTables)
-        {
-            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, StringBuilder, IDictionary<string, object>, DbContext, List<string>, List<string>, object>;
-            typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.ValuesBuilder, this.shardingDependOnValues, this.DbContext, this.OnlyFieldNames, this.IgnoreFieldNames, insertObj);
-        }
-        else
-        {
-            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, StringBuilder, DbContext, List<string>, List<string>, object>;
-            typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.ValuesBuilder, this.DbContext, this.OnlyFieldNames, this.IgnoreFieldNames, insertObj);
+            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this.DbContext, entityType, insertObjType, 1, false, this.isNeedSplitShardingTables, this.OnlyFieldNames, this.IgnoreFieldNames);
+            if (this.isNeedSplitShardingTables)
+            {
+                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, StringBuilder, IDictionary<string, object>, DbContext, object>;
+                typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.ValuesBuilder, this.shardingValues, this.DbContext, insertObj);
+            }
+            else
+            {
+                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, StringBuilder, DbContext, object>;
+                typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.ValuesBuilder, this.DbContext, insertObj);
+            }
         }
     }
     public virtual void VisitWithByField(object deferredSegmentValue)
@@ -465,7 +344,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             throw new NotSupportedException($"当前字段{memberMapper.FieldName}为RowVersion类型，不允许插入");
 
         if (memberMapper.TypeHandler != null)
-            fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
+            fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
         else
         {
             var targetType = memberMapper.MappedTargetType;
@@ -538,38 +417,14 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 tableName = tableSegment.Body;
             else
             {
-                if (tableSegment.ShardingValuesSelectorExpression == null)
-                {
-                    if (tableSegment.TableShardingInfo.DependOnMembers == null || tableSegment.TableShardingInfo.DependOnMembers.Count == 0)
-                        throw new InvalidOperationException($"实体表{entityType.FullName}已设置分表，但未指定分表名，也未指定依赖成员，无法确定分表，原表名：{tableName}");
-                    this.shardingValues = new();
-                }
-                //未设置，就要根据依赖字段确定分表
-                var fieldValues = new List<object>();
-                foreach (var dependOnMember in tableShardingInfo.DependOnMembers)
-                {
-                    for (int i = 0; i < this.deferredSegments.Count; i++)
-                    {
-                        var deferredSegment = this.deferredSegments[i];
-                        switch (deferredSegment.Type)
-                        {
-                            case "WithBy":
-                                var insertObj = deferredSegment.Value;
-                                var insertObjType = insertObj.GetType();
-                                if (RepositoryHelper.TryGetMemberGetter(insertObjType, dependOnMember.ToLower(), insertObj, out var memberGetter))
-                                    fieldValues.Add(memberGetter.Invoke(insertObj));
-                                break;
-                            case "WithByField":
-                                (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegment.Value;
-                                var lambdaExpr = fieldSelector as LambdaExpression;
-                                var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;
-                                if (memberExpr.Member.Name == dependOnMember)
-                                    fieldValues.Add(fieldValue);
-                                break;
-                        }
-                    }
-                }
-                tableName = tableShardingInfo.Rule.Invoke(tableName, fieldValues.ToArray()) as string;
+                var memberInfos = tableSegment.TableShardingInfo.DependOnMembers;
+                if (memberInfos == null || memberInfos.Count == 0)
+                    throw new InvalidOperationException($"实体表{entityType.FullName}已设置分表，但未指定分表名，也未指定依赖成员，无法确定分表，原表名：{tableName}");
+                if (this.shardingValues == null || this.shardingValues.Count <= 0 || this.shardingValues.Count != memberInfos.Count)
+                    throw new InvalidOperationException($"实体表{entityType.FullName}已设置分表，但未指定分表名，已配置依赖成员，但未完全提供依赖成员值，无法确定分表，原表名：{tableName}");
+
+                var fieldValues = this.GetShardingValues(tableSegment.TableShardingInfo, this.shardingValues);
+                tableName = tableSegment.TableShardingInfo.Rule.Invoke(tableName, fieldValues.ToArray()) as string;
             }
         }
         if (!string.IsNullOrEmpty(tableSegment.TableSchema))
@@ -577,74 +432,139 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         else tableName = this.OrmProvider.GetTableName(tableName);
         return tableName;
     }
-    public virtual void BuildDictCommandIntializer(bool hasOnlyFields, bool hasIgnoreFields)
+    public Action<IDataParameterCollection, StringBuilder, object, string> BuildDictBulkCommandInitializer(EntityMap entityMapper, IDictionary<string, object> dict)
     {
-        var valueSetters = new List<Action<IDataParameterCollection, StringBuilder, object, string>>();
-        var entityType = this.Tables[0].EntityType;
-        var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(entityType);
-
-        Action<IDataParameterCollection, StringBuilder, object, string> dictCommandInitializer = (dbParameters, fieldBuilder, insertObj, suffix) =>
+        var valueSetters = new List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>>();
+        int index = 0;
+        foreach (var key in dict.Keys)
         {
-            int index = 0;
-            var dict = insertObj as IDictionary<string, object>;
-            foreach (var key in dict.Keys)
+            if (!entityMapper.TryGetMemberMap(key, out var memberMapper) || memberMapper.IsIgnore
+               || memberMapper.IsAutoIncrement || memberMapper.IsNavigation || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
+                continue;
+            var lowerMemberName = memberMapper.MemberName.ToLower();
+            if (this.hasOnlyFields && !this.OnlyFieldNames.Contains(lowerMemberName)
+                || this.hasIgnoreFields && this.IgnoreFieldNames.Contains(lowerMemberName))
+                continue;
+
+            if (index > 0)
             {
-                if (!entityMapper.TryGetMemberMap(key, out var memberMapper) || memberMapper.IsIgnore
-                   || memberMapper.IsAutoIncrement || memberMapper.IsNavigation || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
-                    continue;
-                var lowerMemberName = memberMapper.MemberName.ToLower();
-                if (hasOnlyFields && !this.OnlyFieldNames.Contains(lowerMemberName))
-                    continue;
-                if (hasIgnoreFields && this.IgnoreFieldNames.Contains(lowerMemberName))
-                    continue;
-
-                if (index > 0) fieldBuilder.Append(',');
-                fieldBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
-                Func<object, object> valueGetter = null;
-                if (memberMapper.TypeHandler != null)
-                    valueGetter = fieldValue => memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
-                else
+                this.FieldsBuilder.Append(',');
+                this.FieldsBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
+            }
+            Func<IDictionary<string, object>, object> valueGetter = null;
+            if (memberMapper.TypeHandler != null)
+                valueGetter = insertObj => memberMapper.TypeHandler.ToFieldValue(insertObj[key]);
+            else
+            {
+                var targetType = memberMapper.MappedTargetType;
+                var fieldValueType = dict[key].GetType();
+                if (fieldValueType.ToUnderlyingType() != memberMapper.UnderlyingType)
                 {
-                    var targetType = memberMapper.MappedTargetType;
-                    var fieldValueType = dict[key].GetType();
-                    //使用闭包，避免每次获取Type类型
-                    valueGetter = fieldValue =>
-                    {
-                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext);
-                        return valueGetter.Invoke(fieldValue);
-                    };
+                    var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext);
+                    valueGetter = insertObj => myValueGetter.Invoke(insertObj[key]);
                 }
+                else valueGetter = insertObj => insertObj[key];
+            }
 
-                Action<IDataParameterCollection, StringBuilder, object, string> valueSetter = null;
+            Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string> valueSetter = null;
+            if (index > 0)
+            {
                 valueSetter = (dbParameters, builder, insertObj, suffix) =>
                 {
+                    var fieldValue = valueGetter.Invoke(insertObj);
                     var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
                     builder.Append(parameterName);
-                    var myDict = insertObj as IDictionary<string, object>;
-                    var fieldValue = valueGetter.Invoke(myDict[key]);
                     dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                 };
-                if (index > 0)
-                {
-                    valueSetter = (dbParameters, builder, insertObj, suffix) =>
-                    {
-                        builder.Append(',');
-                        var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
-                        builder.Append(parameterName);
-                        var myDict = insertObj as IDictionary<string, object>;
-                        var fieldValue = valueGetter.Invoke(myDict[key]);
-                        dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
-                    };
-                }
-                valueSetters.Add(valueSetter);
-                index++;
             }
+            else
+            {
+                valueSetter = (dbParameters, builder, insertObj, suffix) =>
+                {
+                    var fieldValue = valueGetter.Invoke(insertObj);
+                    var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
+                    builder.Append(',');
+                    builder.Append(parameterName);
+                    dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                };
+            }
+            valueSetters.Add(valueSetter);
+            index++;
+        }
+        return (dbParameters, builder, insertObj, suffix) =>
+        {
+            var typedInsertObj = insertObj as IDictionary<string, object>;
+            foreach (var valueSetter in valueSetters)
+                valueSetter.Invoke(dbParameters, builder, typedInsertObj, suffix);
         };
-
-
     }
+    public Action<IDataParameterCollection, StringBuilder, object, string> BuildTypedBulkCommandInitializer(EntityMap entityMapper, Type insertObjType)
+    {
+        var valueSetters = new List<Action<IDataParameterCollection, StringBuilder, object, string>>();
+        var memberInfos = RepositoryHelper.GetMembers(insertObjType);
+        int index = 0;
+        foreach (var memberInfo in memberInfos)
+        {
+            if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper) || memberMapper.IsIgnore
+               || memberMapper.IsAutoIncrement || memberMapper.IsNavigation || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
+                continue;
+            var lowerMemberName = memberMapper.MemberName.ToLower();
+            if (this.hasOnlyFields && !this.OnlyFieldNames.Contains(lowerMemberName)
+                || this.hasIgnoreFields && this.IgnoreFieldNames.Contains(lowerMemberName))
+                continue;
 
+            if (index > 0)
+            {
+                this.FieldsBuilder.Append(',');
+                this.FieldsBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
+            }
+            Func<object, object> valueGetter = null;
+            if (memberMapper.TypeHandler != null)
+                valueGetter = insertObj => memberMapper.TypeHandler.ToFieldValue(memberInfo.Evaluate(insertObj));
+            else
+            {
+                var targetType = memberMapper.MappedTargetType;
+                var fieldValueType = memberInfo.GetMemberType();
+                if (fieldValueType.ToUnderlyingType() != memberMapper.UnderlyingType)
+                {
+                    var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext);
+                    valueGetter = insertObj => myValueGetter.Invoke(memberInfo.Evaluate(insertObj));
+                }
+                else valueGetter = insertObj => memberInfo.Evaluate(insertObj);
+            }
 
+            Action<IDataParameterCollection, StringBuilder, object, string> valueSetter = null;
+            if (index > 0)
+            {
+                valueSetter = (dbParameters, builder, insertObj, suffix) =>
+                {
+                    var fieldValue = valueGetter.Invoke(insertObj);
+                    var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
+                    builder.Append(parameterName);
+                    dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                };
+            }
+            else
+            {
+                valueSetter = (dbParameters, builder, insertObj, suffix) =>
+                {
+                    var fieldValue = valueGetter.Invoke(insertObj);
+                    var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
+                    builder.Append(',');
+                    builder.Append(parameterName);
+                    dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                };
+            }
+            valueSetters.Add(valueSetter);
+            index++;
+        }
+        return (dbParameters, builder, insertObj, suffix) =>
+        {
+            var typedInsertObj = insertObj as IDictionary<string, object>;
+            foreach (var valueSetter in valueSetters)
+                valueSetter.Invoke(dbParameters, builder, typedInsertObj, suffix);
+        };
+    }
     public override void Dispose()
     {
         base.Dispose();
