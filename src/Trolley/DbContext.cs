@@ -736,10 +736,35 @@ public sealed class DbContext
         if (insertObj == null)
             throw new ArgumentNullException(nameof(insertObj));
 
-        int result = 0;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         var entityType = typeof(TEntity);
-        if (insertObj is IDictionary<string, object> dict)
+        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(entityType, insertObj, false);
+
+        connection.Open();
+        var result = command.ExecuteNonQuery(CommandSqlType.Insert);
+
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public async Task<int> CreateAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default)
+    {
+        if (insertObj == null)
+            throw new ArgumentNullException(nameof(insertObj));
+
+        var entityType = typeof(TEntity);
+        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(entityType, insertObj, false);
+
+        await connection.OpenAsync(cancellationToken);
+        var result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
+
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
+    }
+    private (bool, ITheaConnection, ITheaCommand) CreateInsertCommand(Type entityType, object insertObjSample, bool hasIdentity)
+    {
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
+        if (insertObjSample is IDictionary<string, object> dict)
         {
             var entityMapper = this.EntityMapProvider.GetEntityMap(entityType);
             int index = 0;
@@ -769,7 +794,7 @@ public sealed class DbContext
                     var fieldValueType = fieldValue.GetType();
                     if (fieldValueType != targetType)
                     {
-                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext);
+                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this);
                         fieldValue = myValueGetter.Invoke(fieldValue);
                     }
                 }
@@ -777,78 +802,218 @@ public sealed class DbContext
                 index++;
             }
             command.CommandText = $"INSERT INTO {this.OrmProvider.GetTableName(entityMapper.TableName)} ({fieldsBuilder.ToString()}) VALUES ({valuesBuilder.ToString()})";
+            if (hasIdentity)
+            {
+                var keyFieldName = this.OrmProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName);
+                command.CommandText += this.OrmProvider.GetIdentitySql(keyFieldName);
+            }
         }
         else
         {
-            if (insertObj is IEnumerable && insertObj is not string)
-                throw new NotSupportedException("只支持单实体插入");
+            if (insertObjSample is IEnumerable && insertObjSample is not string)
+                throw new NotSupportedException("此方法只支持单条数据插入");
 
-            var parameterType = insertObj.GetType();
-            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this, entityType, parameterType, 1, true, false, null, null)
+            var parameterType = insertObjSample.GetType();
+            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this, entityType, parameterType, 1, true, false, hasIdentity, null, null)
                 as Func<IDataParameterCollection, DbContext, object, string>;
-            command.CommandText = commandInitializer.Invoke(command.Parameters, this, insertObj);
+            command.CommandText = commandInitializer.Invoke(command.Parameters, this, insertObjSample);
         }
-        connection.Open();
-        result = command.ExecuteNonQuery(CommandSqlType.Insert);
-
-        command.Dispose();
-        if (isNeedClose) connection.Close();
-        return result;
+        return (isNeedClose, connection, command);
     }
+
     public int Create<TEntity>(IEnumerable insertObjs, int bulkCount)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
+        if (bulkCount <= 0)
+            throw new ArgumentOutOfRangeException("bulkCount必须大于0");
 
         int result = 0;
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        bool isBulk = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
+        object firstInsertObj = null;
+        foreach (var insertObj in insertObjs)
+        {
+            if (insertObj == null) throw new ArgumentNullException(nameof(insertObj));
+            firstInsertObj = insertObj;
+            break;
+        }
         var entityType = typeof(TEntity);
-        if (!isBulk)
-            throw new NotSupportedException("只支持批量实体插入");
+        var insertObjType = firstInsertObj.GetType();
+        (var headSql, var commandInitializer) = this.CreateBulkCommandInitializer(command, entityType, insertObjType, firstInsertObj);
 
-        var entities = insertObjs as IEnumerable;
-        var commandExecutor = RepositoryHelper.BuildCreateBulkCommandExecutor(this, entityType, entities);
         connection.Open();
-        result = commandExecutor.Invoke(this, command, entities, bulkCount);
+        var index = 0;
+        var builder = new StringBuilder(headSql);
+        foreach (var insertObj in insertObjs)
+        {
+            if (index > 0) builder.Append(',');
+            commandInitializer.Invoke(command.Parameters, builder, this, insertObj, index.ToString());
+            index++;
+
+            if (index >= bulkCount)
+            {
+                command.CommandText = builder.ToString();
+                result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                builder.Clear();
+                command.Parameters.Clear();
+                builder.Append(headSql);
+                index = 0;
+            }
+        }
+        if (index > 0)
+        {
+            command.CommandText = builder.ToString();
+            result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+            builder.Clear();
+            command.Parameters.Clear();
+        }
 
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<int> CreateAsync<TEntity>(object insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
+    public async Task<int> CreateAsync<TEntity>(IEnumerable insertObjs, int bulkCount, CancellationToken cancellationToken = default)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
+        if (bulkCount <= 0)
+            throw new ArgumentOutOfRangeException("bulkCount必须大于0");
 
         int result = 0;
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        bool isBulk = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
-        var entityType = typeof(TEntity);
-        if (isBulk)
+        object firstInsertObj = null;
+        foreach (var insertObj in insertObjs)
         {
-            var entities = insertObjs as IEnumerable;
-            var commandExecutor = RepositoryHelper.BuildCreateBulkAsyncCommandExecutor(this, entityType, entities);
-            await connection.OpenAsync(cancellationToken);
-            result = await commandExecutor.Invoke(this, command, entities, bulkCount, cancellationToken);
+            if (insertObj == null) throw new ArgumentNullException(nameof(insertObj));
+            firstInsertObj = insertObj;
+            break;
         }
-        else
+        var entityType = typeof(TEntity);
+        var insertObjType = firstInsertObj.GetType();
+        (var headSql, var commandInitializer) = this.CreateBulkCommandInitializer(command, entityType, insertObjType, firstInsertObj);
+
+        await connection.OpenAsync(cancellationToken);
+        var index = 0;
+        var builder = new StringBuilder(headSql);
+        foreach (var insertObj in insertObjs)
         {
-            var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(this, entityType, insertObjs, false);
-            commandInitializer.Invoke(this, command, insertObjs);
-            await connection.OpenAsync(cancellationToken);
-            result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
+            if (index > 0) builder.Append(',');
+            commandInitializer.Invoke(command.Parameters, builder, this, insertObj, index.ToString());
+            index++;
+
+            if (index >= bulkCount)
+            {
+                command.CommandText = builder.ToString();
+                result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                builder.Clear();
+                command.Parameters.Clear();
+                builder.Append(headSql);
+                index = 0;
+            }
+        }
+        if (index > 0)
+        {
+            command.CommandText = builder.ToString();
+            result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+            builder.Clear();
+            command.Parameters.Clear();
         }
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;
     }
+    private (string, Action<IDataParameterCollection, StringBuilder, DbContext, object, string>) CreateBulkCommandInitializer(
+        ITheaCommand command, Type entityType, Type insertObjType, object insertObjSample)
+    {
+        string headSql = null;
+        Action<IDataParameterCollection, StringBuilder, DbContext, object, string> commandInitializer = null;
+        var entityMapper = this.EntityMapProvider.GetEntityMap(entityType);
+        if (insertObjType.IsAssignableFrom(typeof(IDictionary<string, object>)))
+        {
+            int index = 0;
+            var builder = new StringBuilder();
+            var valueSetters = new List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>>();
+            builder.Append($"INSERT INTO {this.OrmProvider.GetTableName(entityMapper.TableName)} (");
+            var dict = insertObjSample as IDictionary<string, object>;
+            foreach (var key in dict.Keys)
+            {
+                if (!entityMapper.TryGetMemberMap(key, out var memberMapper))
+                    continue;
+                if (memberMapper.IsIgnore || memberMapper.IsAutoIncrement
+                    || memberMapper.IsNavigation || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
+                    continue;
+
+                if (index > 0)
+                {
+                    builder.Append(',');
+                    builder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
+                }
+                Func<IDictionary<string, object>, object> valueGetter = null;
+                if (memberMapper.TypeHandler != null)
+                    valueGetter = insertObj => memberMapper.TypeHandler.ToFieldValue(insertObj[key]);
+                else
+                {
+                    var targetType = memberMapper.MappedTargetType;
+                    var fieldValueType = dict[key].GetType();
+                    if (fieldValueType.ToUnderlyingType() != targetType)
+                    {
+                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext);
+                        valueGetter = insertObj => myValueGetter.Invoke(insertObj[key]);
+                    }
+                    else valueGetter = insertObj => insertObj[key];
+                }
+
+                Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string> valueSetter = null;
+                if (index > 0)
+                {
+                    valueSetter = (dbParameters, builder, insertObj, suffix) =>
+                    {
+                        var fieldValue = valueGetter.Invoke(insertObj);
+                        var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
+                        builder.Append(parameterName);
+                        dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                    };
+                }
+                else
+                {
+                    valueSetter = (dbParameters, builder, insertObj, suffix) =>
+                    {
+                        var fieldValue = valueGetter.Invoke(insertObj);
+                        var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
+                        builder.Append(',');
+                        builder.Append(parameterName);
+                        dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                    };
+                }
+                valueSetters.Add(valueSetter);
+                index++;
+            }
+            builder.Append(") VALUES ");
+            headSql = builder.ToString();
+            builder.Clear();
+            commandInitializer = (dbParameters, builder, dbContext, insertObj, suffix) =>
+            {
+                var dictObj = insertObj as IDictionary<string, object>;
+                builder.Append('(');
+                foreach (var valueSetter in valueSetters)
+                    valueSetter.Invoke(dbParameters, builder, dictObj, suffix);
+                builder.Append(')');
+            };
+        }
+        else
+        {
+            (var fieldsSql, commandInitializer) = ((string, Action<IDataParameterCollection, StringBuilder, DbContext, object, string>))
+                RepositoryHelper.BuildTypedBulkCommandInitializer(this, entityType, insertObjType, 1, null, null);
+            headSql = $"INSERT INTO {this.OrmProvider.GetTableName(entityMapper.TableName)} ({fieldsSql}) VALUES ";
+        }
+        return (headSql, commandInitializer);
+    }
 
     public TResult CreateIdentity<TEntity, TResult>(object insertObj)
     {
         TResult result = default;
-        (var isNeedClose, var connection, var command) = this.CreateSingleInsertCommand(typeof(TEntity), insertObj);
+        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(typeof(TEntity), insertObj, true);
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
@@ -863,7 +1028,7 @@ public sealed class DbContext
     public async Task<TResult> CreateIdentityAsync<TEntity, TResult>(object insertObj, CancellationToken cancellationToken = default)
     {
         TResult result = default;
-        (var isNeedClose, var connection, var command) = this.CreateSingleInsertCommand(typeof(TEntity), insertObj);
+        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(typeof(TEntity), insertObj, true);
 
         await connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
@@ -874,18 +1039,6 @@ public sealed class DbContext
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;
-    }
-    private (bool, ITheaConnection, ITheaCommand) CreateSingleInsertCommand(Type entityType, object insertObj)
-    {
-        if (insertObj == null)
-            throw new ArgumentNullException(nameof(insertObj));
-        bool isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
-        if (isBulk) throw new NotSupportedException("此方法只支持单条数据插入，不支持批量插入返回Identity");
-
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(this, entityType, insertObj, true);
-        commandInitializer.Invoke(this, command, insertObj);
-        return (isNeedClose, connection, command);
     }
 
     public TResult CreateIdentity<TResult>(ICreateVisitor visitor)

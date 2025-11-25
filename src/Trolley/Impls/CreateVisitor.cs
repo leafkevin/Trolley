@@ -460,7 +460,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             {
                 var targetType = memberMapper.MappedTargetType;
                 var fieldValueType = dict[key].GetType();
-                if (fieldValueType.ToUnderlyingType() != memberMapper.UnderlyingType)
+                if (fieldValueType.ToUnderlyingType() != targetType)
                 {
                     var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext);
                     valueGetter = insertObj => myValueGetter.Invoke(insertObj[key]);
