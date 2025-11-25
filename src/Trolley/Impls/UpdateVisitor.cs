@@ -2,10 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
-using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 
 namespace Trolley;
@@ -15,6 +13,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     protected List<CommandSegment> deferredSegments = new();
     protected bool isNeedSplitShardingTables = false;
     protected Dictionary<string, object> shardingValues = null;
+    protected bool hasOnlyFields = false;
+    protected bool hasIgnoreFields = false;
 
     public List<string> OnlyFieldNames { get; set; }
     public List<string> IgnoreFieldNames { get; set; }
@@ -46,6 +46,11 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     {
         string sql = null;
         readerFields = null;
+        var tableSegment = this.Tables[0];
+
+        this.hasOnlyFields = this.OnlyFieldNames != null && this.OnlyFieldNames.Count > 0;
+        this.hasIgnoreFields = this.IgnoreFieldNames != null && this.IgnoreFieldNames.Count > 0;
+
         var builder = new StringBuilder();
         switch (this.ActionMode)
         {
@@ -208,7 +213,56 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         builder.Clear();
         return sql;
     }
-    public virtual (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>, Action<IDataParameterCollection, StringBuilder, string, object, int>, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
+    public virtual string BuildBulkSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
+    {
+        //多命令查询或是ToSql才会走到此分支
+        //多语句执行，一次性不分批次
+        (var shardingType, var shardingTables, var updateObjs, _, var fixedSqlSetter,
+            var loopSqlSetter, readerFields) = this.BuildWithBulk(command);
+        var builder = new StringBuilder();
+
+        int index = 0; 
+        fixedSqlSetter?.Invoke(command.Parameters);
+        if (shardingType == ShardingTableType.SplitTables)
+        {
+            var tabledUpdateObjs = shardingTables as Dictionary<string, List<object>>;
+            foreach (var tableName in tabledUpdateObjs.Keys)
+            {
+                var tableParameters = tabledUpdateObjs[tableName];
+                foreach (var updateObj in tableParameters)
+                {
+                    loopSqlSetter.Invoke(command.Parameters, builder, tableName, updateObj, index);
+                    index++;
+                }
+            }
+        }
+        else
+        {
+            foreach (var updateObj in updateObjs)
+            {
+                switch (shardingType)
+                {
+                    case ShardingTableType.None:
+                    case ShardingTableType.SingleTable:
+                        loopSqlSetter.Invoke(command.Parameters, builder, shardingTables as string, updateObj, index);
+                        break;
+                    case ShardingTableType.MultiTable:
+                    case ShardingTableType.ShardingTableMap:
+                        var tableNames = shardingTables as List<string>;
+                        foreach (var tableName in tableNames)
+                        {
+                            loopSqlSetter.Invoke(command.Parameters, builder, tableName, updateObj, index);
+                        }
+                        break;
+                }
+                index++;
+            }
+        } 
+        return builder.ToString();
+    }
+
+    public virtual (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>,
+        Action<IDataParameterCollection, StringBuilder, string, object, int>, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
     {
         (var updateObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
 
@@ -223,8 +277,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
-        var hasOnlyFields = this.OnlyFieldNames != null && this.OnlyFieldNames.Count > 0;
-        var hasIgnoreFields = this.IgnoreFieldNames != null && this.IgnoreFieldNames.Count > 0;
+
         var valueFieldSegments = new List<ValueFieldSegment>();
         var keyFieldSegments = new List<ValueFieldSegment>();
 
@@ -239,8 +292,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (this.deferredSegments.Count > 1)
         {
             var tempDbParameters = new TheaDbParameterCollection();
-            this.DbParameters = tempDbParameters;
-            //先解析其他sql，生成固定sql
+            this.DbParameters = tempDbParameters; 
             for (int i = 1; i < this.deferredSegments.Count; i++)
             {
                 var deferredSegment = this.deferredSegments[i];
@@ -544,8 +596,63 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var entityType = this.Tables[0].Mapper.EntityType;
         var updateObjType = updateObj.GetType();
         //单独更新多个字段，通过一个多字段实体类型，都当作单个实体类型处理
-        var hasOnlyFields = this.OnlyFieldNames != null && this.OnlyFieldNames.Count > 0;
-        var hasIgnoreFields = this.IgnoreFieldNames != null && this.IgnoreFieldNames.Count > 0;
+
+
+
+        if (updateObj is IDictionary<string, object> dict)
+        {
+            var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(entityType);
+            int index = 0;
+            foreach (var key in dict.Keys)
+            {
+                if (!entityMapper.TryGetMemberMap(key, out var memberMapper))
+                    continue;
+                var fieldValue = dict[key];
+                if (this.isNeedSplitShardingTables && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
+                    this.shardingValues[memberMapper.MemberName] = fieldValue;
+
+                if (memberMapper.IsIgnore || memberMapper.IsAutoIncrement || memberMapper.IsNavigation
+                    || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
+                    continue;
+                var lowerMemberName = memberMapper.MemberName.ToLower();
+                if (this.hasOnlyFields && !this.OnlyFieldNames.Contains(lowerMemberName)
+                    || this.hasIgnoreFields && this.IgnoreFieldNames.Contains(lowerMemberName))
+                    continue;
+
+                if (index > 0) this.FieldsBuilder.Append(',');
+                this.FieldsBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
+                if (memberMapper.TypeHandler != null)
+                    fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
+                else
+                {
+                    var targetType = memberMapper.MappedTargetType;
+                    var fieldValueType = dict[key].GetType();
+                    if (fieldValueType != targetType)
+                    {
+                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext);
+                        fieldValue = myValueGetter.Invoke(fieldValue);
+                    }
+                }
+                var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}";
+                this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                index++;
+            }
+        }
+        else
+        {
+            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this.DbContext, entityType, insertObjType, 1, false, this.isNeedSplitShardingTables, this.OnlyFieldNames, this.IgnoreFieldNames);
+            if (this.isNeedSplitShardingTables)
+            {
+                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, StringBuilder, IDictionary<string, object>, DbContext, object>;
+                typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.ValuesBuilder, this.shardingValues, this.DbContext, insertObj);
+            }
+            else
+            {
+                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, StringBuilder, DbContext, object>;
+                typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.ValuesBuilder, this.DbContext, insertObj);
+            }
+        }
+
 
         var commandInitializer = RepositoryHelper.BuildWithFilterFieldsCommandInitializer(this.DbContext, entityType, updateObjType, 2, this.isNeedSplitShardingTables, hasOnlyFields, hasIgnoreFields);
         if (this.isNeedSplitShardingTables)

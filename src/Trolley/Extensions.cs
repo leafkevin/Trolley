@@ -294,7 +294,7 @@ public static class Extensions
             {
                 var typeHandler = readerFields[0].TypeHandler;
                 if (typeHandler != null)
-                    return reader => typeHandler.Parse(dbContext.OrmProvider, readerFields[0].SegmentType, reader.GetValue(0));
+                    return reader => typeHandler.Parse(readerFields[0].SegmentType, reader.GetValue(0));
                 else
                 {
                     var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(entityType, fieldType, dbContext);
@@ -440,17 +440,17 @@ public static class Extensions
     //    }
     //    return isContainsKey;
     //}
-    public static bool ContainsIgnoreCase(this List<string> values, string lowerValue, out string value)
+    public static bool TryFind(this List<MemberInfo> memberInfos, string lowerMemberName, out MemberInfo memberInfo)
     {
-        foreach (var myValue in values)
+        foreach (var myMemberInfo in memberInfos)
         {
-            if (string.Equals(myValue, lowerValue, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(myMemberInfo.Name, lowerMemberName, StringComparison.OrdinalIgnoreCase))
             {
-                value = myValue;
+                memberInfo = myMemberInfo;
                 return true;
             }
         }
-        value = null;
+        memberInfo = null;
         return false;
     }
     internal static void CopyTo(this IDataParameterCollection dbParameters, IDataParameterCollection other)

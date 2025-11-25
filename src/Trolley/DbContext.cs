@@ -738,13 +738,56 @@ public sealed class DbContext
 
         int result = 0;
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        if (insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>)
-            throw new NotSupportedException("只支持单个实体插入");
-
         var entityType = typeof(TEntity);
-        var parameterType = insertObj.GetType();
-        var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this, entityType, parameterType, 1, false, null, null);
-        commandInitializer.Invoke(this, command, insertObjs);
+        if (insertObj is IDictionary<string, object> dict)
+        {
+            var entityMapper = this.EntityMapProvider.GetEntityMap(entityType);
+            int index = 0;
+            var fieldsBuilder = new StringBuilder();
+            var valuesBuilder = new StringBuilder();
+            foreach (var key in dict.Keys)
+            {
+                if (!entityMapper.TryGetMemberMap(key, out var memberMapper) || memberMapper.IsIgnore
+                    || memberMapper.IsAutoIncrement || memberMapper.IsNavigation
+                    || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
+                    continue;
+
+                var fieldValue = dict[key];
+                var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}";
+                if (index > 0)
+                {
+                    fieldsBuilder.Append(',');
+                    valuesBuilder.Append(',');
+                }
+                fieldsBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
+                valuesBuilder.Append(parameterName);
+                if (memberMapper.TypeHandler != null)
+                    fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
+                else
+                {
+                    var targetType = memberMapper.MappedTargetType;
+                    var fieldValueType = fieldValue.GetType();
+                    if (fieldValueType != targetType)
+                    {
+                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext);
+                        fieldValue = myValueGetter.Invoke(fieldValue);
+                    }
+                }
+                command.Parameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                index++;
+            }
+            command.CommandText = $"INSERT INTO {this.OrmProvider.GetTableName(entityMapper.TableName)} ({fieldsBuilder.ToString()}) VALUES ({valuesBuilder.ToString()})";
+        }
+        else
+        {
+            if (insertObj is IEnumerable && insertObj is not string)
+                throw new NotSupportedException("只支持单实体插入");
+
+            var parameterType = insertObj.GetType();
+            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this, entityType, parameterType, 1, true, false, null, null)
+                as Func<IDataParameterCollection, DbContext, object, string>;
+            command.CommandText = commandInitializer.Invoke(command.Parameters, this, insertObj);
+        }
         connection.Open();
         result = command.ExecuteNonQuery(CommandSqlType.Insert);
 
@@ -752,7 +795,7 @@ public sealed class DbContext
         if (isNeedClose) connection.Close();
         return result;
     }
-    public int Create<TEntity>(IEnumerable insertObjs, int bulkCount = 500)
+    public int Create<TEntity>(IEnumerable insertObjs, int bulkCount)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
@@ -761,21 +804,13 @@ public sealed class DbContext
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         bool isBulk = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
         var entityType = typeof(TEntity);
-        if (isBulk)
-        {
-            var entities = insertObjs as IEnumerable;
+        if (!isBulk)
+            throw new NotSupportedException("只支持批量实体插入");
 
-            var commandExecutor = RepositoryHelper.BuildCreateBulkCommandExecutor(this, entityType, entities);
-            connection.Open();
-            result = commandExecutor.Invoke(this, command, entities, bulkCount);
-        }
-        else
-        {
-            var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(this, entityType, insertObjs, false);
-            commandInitializer.Invoke(this, command, insertObjs);
-            connection.Open();
-            result = command.ExecuteNonQuery(CommandSqlType.Insert);
-        }
+        var entities = insertObjs as IEnumerable;
+        var commandExecutor = RepositoryHelper.BuildCreateBulkCommandExecutor(this, entityType, entities);
+        connection.Open();
+        result = commandExecutor.Invoke(this, command, entities, bulkCount);
 
         command.Dispose();
         if (isNeedClose) connection.Close();

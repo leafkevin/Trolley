@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -1748,21 +1747,21 @@ public class SqlVisitor : ISqlVisitor
                     entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
                     var parameterInfos = methodInfo.GetParameters();
                     var tableNames = this.Evaluate<string[]>(callExpr.Arguments[0]);
-                    queryVisitor.UseTable(false, tableNames);
+                    queryVisitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
                     break;
                 case "UseTableMap":
                     var tableNameMapGetter = this.Evaluate<Func<string, string, string, string>>(callExpr.Arguments[0]);
-                    queryVisitor.UseTableMap(false, tableNameMapGetter);
+                    queryVisitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameMapGetter);
                     break;
                 case "UseTableBy":
                     fieldValues = (object[])this.Evaluate(callExpr.Arguments[0]);
                     entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
-                    queryVisitor.UseTableBy(false, fieldValues);
+                    queryVisitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
                     break;
                 case "UseTableByRange":
                     fieldValues = (object[])this.Evaluate(callExpr.Arguments[0]);
                     entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
-                    queryVisitor.UseTableByRange(false, fieldValues);
+                    queryVisitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
                     break;
                 case "UseTableSchema":
                     queryVisitor.UseTableSchema(false, this.Evaluate<string>(callExpr.Arguments[0]));

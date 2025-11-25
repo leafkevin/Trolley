@@ -30,7 +30,7 @@ public interface ICreateVisitor : IDisposable
     void WithByField(Expression fieldSelector, object fieldValue);
     void WithBulk(IEnumerable insertObjs, int bulkCount);
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
-        Action<IDataParameterCollection, StringBuilder, object, string>, string, List<SqlFieldSegment>) BuildWithBulk();
+        Action<IDataParameterCollection, StringBuilder, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command);
     void IgnoreFields(string[] fieldNames);
     void IgnoreFields(Expression fieldsSelector);
     void OnlyFields(string[] fieldNames);

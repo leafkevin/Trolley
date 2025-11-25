@@ -78,8 +78,10 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                         break;
                 }
             }
-            sql = this.BuildSql(out readerFields);
+            sql = this.BuildSql(out readerFields);          
         }
+        this.FieldsBuilder.Clear();
+        this.ValuesBuilder.Clear();
         return sql;
     }
     public virtual string BuildSql(out List<SqlFieldSegment> readerFields)
@@ -94,9 +96,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 throw new NotSupportedException($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
             var keyFieldName = this.OrmProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName);
             sql += this.OrmProvider.GetIdentitySql(keyFieldName);
-        }
-        this.FieldsBuilder.Clear();
-        this.ValuesBuilder.Clear();
+        }      
         return sql;
     }
     public virtual void WithBy(object insertObj)
@@ -145,7 +145,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         //多命令查询或是ToSql才会走到此分支
         //多语句执行，一次性不分批次
         (var shardingType, var shardingTables, var insertObjs, _, var firstSqlSetter,
-            var loopSqlSetter, var tailSql, readerFields) = this.BuildWithBulk();
+            var loopSqlSetter, var tailSql, readerFields) = this.BuildWithBulk(command);
         var builder = new StringBuilder();
 
         int index = 0;
@@ -175,7 +175,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         return builder.ToString();
     }
     public virtual (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
-        Action<IDataParameterCollection, StringBuilder, object, string>, string, List<SqlFieldSegment>) BuildWithBulk()
+        Action<IDataParameterCollection, StringBuilder, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
     {
         (var insertObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
 
@@ -212,7 +212,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 this.isNeedSplitShardingTables = true;
                 this.shardingValues = new();
             }
-            this.DbParameters = new TheaDbParameterCollection();
+            var tempDbParameters = new TheaDbParameterCollection();
+            this.DbParameters = tempDbParameters;
             for (int i = 1; i < this.deferredSegments.Count; i++)
             {
                 var deferredSegment = this.deferredSegments[i];
@@ -232,7 +233,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
 
             if (this.DbParameters.Count > 0)
             {
-                fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
+                fixedDbParameters = tempDbParameters.ToList();
                 firstSqlSetter = (dbParameters, builder, tableName) =>
                 {
                     builder.Append(headSql);
@@ -242,6 +243,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     fixedDbParameters.ForEach(f => dbParameters.Add(f));
                 };
             }
+            this.DbParameters = command.Parameters;
         }
 
         var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(entityType);
