@@ -780,19 +780,18 @@ public static class RepositoryHelper
             }
             if (index <= 0) throw new Exception($"没有找到{(commandType == 1 ? "插入" : "更新")}语句");
 
-            if (commandType == 1 && hasIdentity)
-            {
-                var keyFieldName = ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName);
-                var tailSql = ormProvider.GetIdentitySql(ormProvider.GetFieldName(keyFieldName));
-                blockBodies.Add(Expression.Call(valueBuilderExpr, appendMethodInfo, Expression.Constant(tailSql)));
-            }
-
             if (isFunc)
             {
                 methodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.ToString), Type.EmptyTypes);
                 if (commandType == 1)
                 {
                     blockBodies.Add(Expression.Call(valueBuilderExpr, appendMethodInfo, Expression.Constant(")")));
+                    if (hasIdentity)
+                    {
+                        var keyFieldName = ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName);
+                        var tailSql = ormProvider.GetIdentitySql(ormProvider.GetFieldName(keyFieldName));
+                        blockBodies.Add(Expression.Call(valueBuilderExpr, appendMethodInfo, Expression.Constant(tailSql)));
+                    }
                     blockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Call(valueBuilderExpr, methodInfo)));
                 }
                 else blockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Call(valueBuilderExpr, methodInfo)));

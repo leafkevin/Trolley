@@ -64,8 +64,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 this.isNeedSplitShardingTables = true;
                 this.shardingValues = new();
             }
-            //    throw new NotSupportedException($"实体表{tableSegment.EntityType.FullName}已设置分表，但未指定分表，请使用方法UseTable/UseTableBy指定分表，原始表：{tableSegment.Mapper.TableName}");
-
             foreach (var deferredSegment in this.deferredSegments)
             {
                 switch (deferredSegment.Type)
@@ -78,7 +76,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                         break;
                 }
             }
-            sql = this.BuildSql(out readerFields);          
+            sql = this.BuildSql(out readerFields);
         }
         this.FieldsBuilder.Clear();
         this.ValuesBuilder.Clear();
@@ -96,7 +94,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 throw new NotSupportedException($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
             var keyFieldName = this.OrmProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName);
             sql += this.OrmProvider.GetIdentitySql(keyFieldName);
-        }      
+        }
         return sql;
     }
     public virtual void WithBy(object insertObj)
@@ -291,13 +289,17 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 if (this.isNeedSplitShardingTables && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
                     this.shardingValues[memberMapper.MemberName] = fieldValue;
 
-                if (memberMapper.IsIgnore || memberMapper.IsAutoIncrement || memberMapper.IsNavigation
-                    || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
+                if (memberMapper.IsIgnore || memberMapper.IsAutoIncrement
+                    || memberMapper.IsNavigation || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
                     continue;
-                var lowerMemberName = memberMapper.MemberName.ToLower();
-                if (this.hasOnlyFields && !this.OnlyFieldNames.Contains(lowerMemberName)
-                    || this.hasIgnoreFields && this.IgnoreFieldNames.Contains(lowerMemberName))
-                    continue;
+
+                if (this.hasOnlyFields || this.hasOnlyFields)
+                {
+                    var lowerMemberName = memberMapper.MemberName.ToLower();
+                    if (this.hasOnlyFields && !this.OnlyFieldNames.Contains(lowerMemberName)
+                        || this.hasIgnoreFields && this.IgnoreFieldNames.Contains(lowerMemberName))
+                        continue;
+                }
 
                 if (index > 0) this.FieldsBuilder.Append(',');
                 this.FieldsBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
@@ -320,7 +322,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         }
         else
         {
-            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this.DbContext, entityType, insertObjType, 1, false, this.isNeedSplitShardingTables, this.OnlyFieldNames, this.IgnoreFieldNames);
+            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this.DbContext, entityType, insertObjType, 1, false, this.isNeedSplitShardingTables, false, this.OnlyFieldNames, this.IgnoreFieldNames);
             if (this.isNeedSplitShardingTables)
             {
                 var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, StringBuilder, IDictionary<string, object>, DbContext, object>;
@@ -443,10 +445,13 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             if (!entityMapper.TryGetMemberMap(key, out var memberMapper) || memberMapper.IsIgnore
                || memberMapper.IsAutoIncrement || memberMapper.IsNavigation || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
                 continue;
-            var lowerMemberName = memberMapper.MemberName.ToLower();
-            if (this.hasOnlyFields && !this.OnlyFieldNames.Contains(lowerMemberName)
-                || this.hasIgnoreFields && this.IgnoreFieldNames.Contains(lowerMemberName))
-                continue;
+            if (this.hasOnlyFields || this.hasIgnoreFields)
+            {
+                var lowerMemberName = memberMapper.MemberName.ToLower();
+                if (this.hasOnlyFields && !this.OnlyFieldNames.Contains(lowerMemberName)
+                    || this.hasIgnoreFields && this.IgnoreFieldNames.Contains(lowerMemberName))
+                    continue;
+            }
 
             if (index > 0)
             {

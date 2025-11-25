@@ -47,7 +47,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         string sql = null;
         readerFields = null;
         var tableSegment = this.Tables[0];
-
         this.hasOnlyFields = this.OnlyFieldNames != null && this.OnlyFieldNames.Count > 0;
         this.hasIgnoreFields = this.IgnoreFieldNames != null && this.IgnoreFieldNames.Count > 0;
 
@@ -221,7 +220,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             var loopSqlSetter, readerFields) = this.BuildWithBulk(command);
         var builder = new StringBuilder();
 
-        int index = 0; 
+        int index = 0;
         fixedSqlSetter?.Invoke(command.Parameters);
         if (shardingType == ShardingTableType.SplitTables)
         {
@@ -257,7 +256,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 }
                 index++;
             }
-        } 
+        }
         return builder.ToString();
     }
 
@@ -292,7 +291,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (this.deferredSegments.Count > 1)
         {
             var tempDbParameters = new TheaDbParameterCollection();
-            this.DbParameters = tempDbParameters; 
+            this.DbParameters = tempDbParameters;
             for (int i = 1; i < this.deferredSegments.Count; i++)
             {
                 var deferredSegment = this.deferredSegments[i];
