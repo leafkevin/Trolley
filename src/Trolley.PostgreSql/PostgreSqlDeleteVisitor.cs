@@ -156,7 +156,7 @@ public class PostgreSqlDeleteVisitor : DeleteVisitor
                     builder.Append("DELETE FROM ");
                     builder.Append(this.OrmProvider.GetTableName(tableNames[i]));
                     builder.Append(" WHERE ");
-                    builder.Append(this.WhereSql);
+                    builder.Append(this.WhereBuilder);
                     if (!string.IsNullOrEmpty(this.OutputSql))
                         builder.Append(this.OutputSql);
                 }
@@ -164,7 +164,7 @@ public class PostgreSqlDeleteVisitor : DeleteVisitor
             else
             {
                 var tableName = this.Tables[0].Body ?? this.Tables[0].Mapper.TableName;
-                builder.Append($"DELETE FROM {this.OrmProvider.GetTableName(tableName)} WHERE {this.WhereSql}");
+                builder.Append($"DELETE FROM {this.OrmProvider.GetTableName(tableName)} WHERE {this.WhereBuilder}");
                 if (!string.IsNullOrEmpty(this.OutputSql))
                     builder.Append(this.OutputSql);
             }

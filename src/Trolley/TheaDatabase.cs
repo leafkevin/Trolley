@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 
 namespace Trolley;
@@ -10,8 +8,6 @@ public class TheaDatabase
 {
     private int masterRoundRobin;
     private int slaveRoundRobin;
-    private ConcurrentDictionary<string, List<string>> masterSelectors;
-    private ConcurrentDictionary<string, List<string>> slaveSelectors;
     public string DbKey { get; internal set; }
     public List<string> ConnectionStrings { get; internal set; }
     public Delegate ConnectionStringSelector { get; internal set; }
@@ -109,8 +105,7 @@ public class TheaDatabase
                             index = 0;
                         }
                     }
-                    index %= this.ConnectionStrings.Count;
-                    return this.ConnectionStrings[index];
+                    return this.ConnectionStrings[index %= this.ConnectionStrings.Count];
                 };
             }
         }
@@ -138,8 +133,7 @@ public class TheaDatabase
                         index = 0;
                     }
                 }
-                index %= this.SlaveConnectionStrings.Count;
-                return this.SlaveConnectionStrings[index];
+                return this.SlaveConnectionStrings[index %= this.SlaveConnectionStrings.Count];
             };
         }
     }

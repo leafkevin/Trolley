@@ -21,7 +21,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public ActionMode ActionMode { get; set; }
     public bool IsFrom { get; set; }
     public bool IsJoin { get; set; }
-    public List<string> UpdateFields { get; set; }
+    public StringBuilder UpdateFields { get; set; }
     public string FixedSql { get; set; }
     public bool HasWhere { get; protected set; }
 
@@ -42,7 +42,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (this.TryGetTableShardingInfo(entityType, TableShardingUsageMode.WriteOnly, out var tableShardingInfo))
             this.Tables[0].TableShardingInfo = tableShardingInfo;
     }
-    public virtual string BuildCommand(DbContext dbContext, ITheaCommand command, out List<SqlFieldSegment> readerFields)
+    public virtual string BuildCommand(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
         string sql = null;
         readerFields = null;
@@ -56,7 +56,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             case ActionMode.Bulk:
                 {
                     //此SQL只能用在多命令查询时和返回ToSql两个场景
-                    (var shardingType, var shardingTables, var updateObjs, var bulkCount, var fixedSqlSetter, var loopSqlSetter, _) = this.BuildWithBulk(command);
+                    (var shardingType, var shardingTables, var updateObjs, _, var fixedSqlSetter, var loopSqlSetter, _) = this.BuildWithBulk(command);
                     int index = 0;
                     fixedSqlSetter?.Invoke(command.Parameters);
                     if (shardingType == ShardingTableType.SplitTables)
@@ -109,7 +109,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                                 this.VisitSet(deferredSegment.Value as Expression);
                                 break;
                             case "SetFrom":
-                                this.IsNeedTableAlias = true;
                                 this.VisitSet(deferredSegment.Value as Expression);
                                 break;
                             case "SetField":
@@ -119,7 +118,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                                 this.VisitSetWith(deferredSegment.Value);
                                 break;
                             case "SetFromField":
-                                this.IsNeedTableAlias = true;
                                 this.VisitSetFromField(deferredSegment.Value);
                                 break;
                             case "Where":
@@ -164,10 +162,10 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                             index++;
                         }
                     }
-                    if (!string.IsNullOrEmpty(this.WhereSql))
+                    if (this.WhereBuilder != null && this.WhereBuilder.Length > 0)
                     {
                         builder.Append(" WHERE ");
-                        builder.Append(this.WhereSql);
+                        builder.Append(this.WhereBuilder);
                     }
                     sql = builder.ToString();
                     builder.Clear();
@@ -330,8 +328,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             if (this.UpdateFields.Count > 0)
             {
                 fixedHeadSql = $"SET {string.Join(",", this.UpdateFields)},";
-                if (!string.IsNullOrEmpty(this.WhereSql))
-                    fixedTailSql = $" AND {this.WhereSql};";
+                if (!string.IsNullOrEmpty(this.WhereBuilder))
+                    fixedTailSql = $" AND {this.WhereBuilder};";
             }
             this.DbParameters = command.Parameters;
         }
@@ -556,7 +554,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.Tables?.Clear();
         this.TableAliases?.Clear();
         this.ReaderFields?.Clear();
-        this.WhereSql = null;
+        this.WhereBuilder = null;
         this.IsFromQuery = false;
         this.TableAsStart = 'a';
         this.IsNeedTableAlias = false;
@@ -687,7 +685,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     {
                         var newLambdaExpr = Expression.Lambda(argumentExpr, lambdaExpr.Parameters.ToList());
                         (var sql, _, _) = this.VisitFromQuery(newLambdaExpr);
-                        this.UpdateFields.Add($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
+                        this.UpdateFields.Append($"{this.Tables[0].AliasName}.{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
                     }
                     else
                     {
@@ -714,7 +712,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     {
                         var newLambdaExpr = Expression.Lambda(argumentExpr, lambdaExpr.Parameters.ToList());
                         (var sql, _, _) = this.VisitFromQuery(newLambdaExpr);
-                        this.UpdateFields.Add($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
+                        this.UpdateFields.Append($"{this.Tables[0].AliasName}.{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
                     }
                     else
                     {
@@ -743,7 +741,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
         this.InitTableAlias(valueSelector as LambdaExpression);
         (var sql, _, _) = this.VisitFromQuery(valueSelector as LambdaExpression);
-        this.UpdateFields.Add($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
+        this.UpdateFields.Append($"{this.Tables[0].AliasName}.{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
     }
     public virtual void VisitWhereWith(object whereObj)
     {
@@ -752,22 +750,25 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var whereSqlSetter = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjType, true, false, true)
             as Func<IDataParameterCollection, DbContext, object, string>;
         var conditionSql = whereSqlSetter.Invoke(this.DbParameters, this.DbContext, whereObj);
-        if (string.IsNullOrEmpty(this.WhereSql))
+
+        this.WhereBuilder ??= new();
+        if (this.WhereBuilder.Length > 0)
         {
-            this.WhereSql = conditionSql;
-            this.LastWhereOperationType = OperationType.None;
+            if (this.LastWhereOperationType == OperationType.Or)
+                this.WhereBuilder.Append($"({this.WhereBuilder})");
+            this.WhereBuilder.Append(" AND " + conditionSql);
+            this.LastWhereOperationType = OperationType.And;
         }
         else
         {
-            if (this.LastWhereOperationType == OperationType.Or)
-                this.WhereSql = $"({this.WhereSql})";
-            this.WhereSql += " AND " + conditionSql;
-            this.LastWhereOperationType = OperationType.And;
+            this.WhereBuilder.Append(conditionSql);
+            this.LastWhereOperationType = OperationType.None;
         }
     }
     public virtual void VisitWhere(Expression whereExpr)
     {
-        if (!string.IsNullOrEmpty(this.WhereSql))
+        this.WhereBuilder ??= new();
+        if (this.WhereBuilder.Length > 0)
         {
             this.VisitAnd(whereExpr);
             return;
@@ -776,7 +777,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
         this.LastWhereOperationType = OperationType.None;
-        this.WhereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
+        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
+        this.WhereBuilder.Append(conditionSql);
         this.LastWhereOperationType = operationType;
         this.IsWhere = false;
     }
@@ -786,19 +788,19 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
         var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        if (string.IsNullOrEmpty(this.WhereSql))
+        if (this.WhereBuilder.Length > 0)
         {
-            this.WhereSql = conditionSql;
-            this.LastWhereOperationType = operationType;
+            if (this.LastWhereOperationType == OperationType.Or)
+                this.WhereBuilder.Append($"({this.WhereBuilder})");
+            if (operationType == OperationType.Or)
+                conditionSql = $"({conditionSql})";
+            this.WhereBuilder.Append(" AND " + conditionSql);
+            this.LastWhereOperationType = OperationType.And;
         }
         else
         {
-            if (this.LastWhereOperationType == OperationType.Or)
-                this.WhereSql = $"({this.WhereSql})";
-            if (operationType == OperationType.Or)
-                conditionSql = $"({conditionSql})";
-            this.WhereSql += " AND " + conditionSql;
-            this.LastWhereOperationType = OperationType.And;
+            this.WhereBuilder.Append(conditionSql);
+            this.LastWhereOperationType = operationType;
         }
         this.IsWhere = false;
     }
@@ -808,19 +810,20 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
         var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        if (string.IsNullOrEmpty(this.WhereSql))
+
+        if (this.WhereBuilder.Length > 0)
         {
-            this.WhereSql = conditionSql;
-            this.LastWhereOperationType = operationType;
+            if (this.LastWhereOperationType == OperationType.And)
+                this.WhereBuilder.Append($"({this.WhereBuilder})");
+            if (operationType == OperationType.And)
+                conditionSql = $"({conditionSql})";
+            this.WhereBuilder.Append(" OR " + conditionSql);
+            this.LastWhereOperationType = OperationType.Or;
         }
         else
         {
-            if (this.LastWhereOperationType == OperationType.And)
-                this.WhereSql = $"({this.WhereSql})";
-            if (operationType == OperationType.And)
-                conditionSql = $"({conditionSql})";
-            this.WhereSql += " OR " + conditionSql;
-            this.LastWhereOperationType = OperationType.Or;
+            this.WhereBuilder.Append(conditionSql);
+            this.LastWhereOperationType = operationType;
         }
         this.IsWhere = false;
     }

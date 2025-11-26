@@ -119,7 +119,7 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                             index++;
                         }
                     }
-                    string whereSql = this.WhereSql;
+                    string whereSql = this.WhereBuilder;
                     if (this.IsJoin)
                     {
                         builder.Append(" FROM ");
@@ -136,10 +136,10 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                             builder.Append($"{tableName} {tableSegment.AliasName}");
                             whereBuildr.Append(tableSegment.OnExpr);
                         }
-                        if (!string.IsNullOrEmpty(this.WhereSql))
+                        if (!string.IsNullOrEmpty(this.WhereBuilder))
                         {
                             whereBuildr.Append(" AND ");
-                            whereBuildr.Append(this.WhereSql);
+                            whereBuildr.Append(this.WhereBuilder);
                         }
                         whereSql = whereBuildr.ToString();
                     }

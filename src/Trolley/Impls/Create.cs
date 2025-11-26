@@ -138,21 +138,21 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
         {
             case ActionMode.Bulk:
                 {
-                    var builder = new StringBuilder();
-                    (var isNeetSplit, var tableName, var tabledInsertObjs, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk();
+                    (var shardingType, var shardingTables, var insertObjs, var bulkCount, var firstSqlSetter,
+                        var loopSqlSetter, _, var readerFields) = this.Visitor.BuildWithBulk(command);
 
-                    int count = 0, index = 0;
-                    void executor(string tableName, IEnumerable insertObjs)
+                    int index = 0;
+                    var builder = new StringBuilder();
+                    void TabledExecute(string tableName, IEnumerable insertObjs)
                     {
                         foreach (var insertObj in insertObjs)
                         {
-                            loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index);
+                            loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
                             index++;
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
-                                count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                                result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
                                 builder.Clear();
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
@@ -161,23 +161,26 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                         }
                     }
                     connection.Open();
-                    if (isNeetSplit)
+                    if (shardingType == ShardingTableType.SplitTables)
                     {
-                        foreach (var tabledInsertObj in tabledInsertObjs)
+                        var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
+                        foreach (var tableName in tabledInsertObjs.Keys)
                         {
-                            firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                            executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                            var tableParameters = tabledInsertObjs[tableName];
+                            TabledExecute(tableName, tableParameters);
                         }
                     }
                     else
                     {
+                        var tableName = shardingTables as string;
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                        executor(tableName, insertObjs);
+                        TabledExecute(tableName, insertObjs);
                     }
                     if (index > 0)
                     {
                         command.CommandText = builder.ToString();
-                        count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                        result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
                     }
                     builder.Clear();
                 }
@@ -204,21 +207,21 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
         {
             case ActionMode.Bulk:
                 {
-                    var builder = new StringBuilder();
-                    (var isNeetSplit, var tableName, var tabledInsertObjs, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk();
+                    (var shardingType, var shardingTables, var insertObjs, var bulkCount, var firstSqlSetter,
+                        var loopSqlSetter, _, var readerFields) = this.Visitor.BuildWithBulk(command);
 
-                    int count = 0, index = 0;
-                    async Task executor(string tableName, IEnumerable insertObjs, CancellationToken cancellationToken)
+                    int index = 0;
+                    var builder = new StringBuilder();
+                    async Task TabledExecute(string tableName, IEnumerable insertObjs, CancellationToken cancellationToken)
                     {
                         foreach (var insertObj in insertObjs)
                         {
-                            loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index);
+                            loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
                             index++;
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
-                                count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                                result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
                                 builder.Clear();
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
@@ -227,23 +230,26 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                         }
                     }
                     await connection.OpenAsync(cancellationToken);
-                    if (isNeetSplit)
+                    if (shardingType == ShardingTableType.SplitTables)
                     {
-                        foreach (var tabledInsertObj in tabledInsertObjs)
+                        var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
+                        foreach (var tableName in tabledInsertObjs.Keys)
                         {
-                            firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                            await executor(tabledInsertObj.Key, tabledInsertObj.Value, cancellationToken);
+                            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                            var tableParameters = tabledInsertObjs[tableName];
+                            await TabledExecute(tableName, tableParameters, cancellationToken);
                         }
                     }
                     else
                     {
+                        var tableName = shardingTables as string;
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                        await executor(tableName, insertObjs, cancellationToken);
+                        await TabledExecute(tableName, insertObjs, cancellationToken);
                     }
                     if (index > 0)
                     {
                         command.CommandText = builder.ToString();
-                        count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                        result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
                     }
                     builder.Clear();
                 }

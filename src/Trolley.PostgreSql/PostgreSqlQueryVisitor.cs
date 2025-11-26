@@ -136,9 +136,9 @@ public class PostgreSqlQueryVisitor : QueryVisitor
 
         builder.Clear();
         string whereSql = null;
-        if (!string.IsNullOrEmpty(this.WhereSql))
+        if (!string.IsNullOrEmpty(this.WhereBuilder))
         {
-            whereSql = $" WHERE {this.WhereSql}";
+            whereSql = $" WHERE {this.WhereBuilder}";
             builder.Append(whereSql);
         }
         //有多分表还有Group By操作，每个分表语句中做Group By操作，Union All语句后，还要再做Group By操作
@@ -339,8 +339,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         else selectSql = builder.ToString();
 
         builder.Clear();
-        if (!string.IsNullOrEmpty(this.WhereSql))
-            builder.Append($" WHERE {this.WhereSql}");
+        if (!string.IsNullOrEmpty(this.WhereBuilder))
+            builder.Append($" WHERE {this.WhereBuilder}");
 
         if (!string.IsNullOrEmpty(this.GroupBySql))
             builder.Append($" GROUP BY {this.GroupBySql}");

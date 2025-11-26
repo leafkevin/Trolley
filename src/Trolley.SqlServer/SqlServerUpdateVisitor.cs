@@ -169,10 +169,10 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     }
                     if (!string.IsNullOrEmpty(this.OutputSql))
                         builder.Append(this.OutputSql);
-                    if (!string.IsNullOrEmpty(this.WhereSql))
+                    if (!string.IsNullOrEmpty(this.WhereBuilder))
                     {
                         builder.Append(" WHERE ");
-                        builder.Append(this.WhereSql);
+                        builder.Append(this.WhereBuilder);
                     }
                     sql = builder.ToString();
                     builder.Clear();

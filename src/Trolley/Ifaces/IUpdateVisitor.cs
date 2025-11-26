@@ -18,7 +18,7 @@ public interface IUpdateVisitor : IDisposable
     List<TableSegment> Tables { get; }
     List<TableSegment> ShardingTables { get; set; }
 
-    string BuildCommand(DbContext dbContext, ITheaCommand command, out List<SqlFieldSegment> readerFields);
+    string BuildCommand(ITheaCommand command, out List<SqlFieldSegment> readerFields);
 
     void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
     void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues);

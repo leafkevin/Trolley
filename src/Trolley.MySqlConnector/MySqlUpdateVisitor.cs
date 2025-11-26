@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,8 +9,9 @@ namespace Trolley.MySqlConnector;
 public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
 {
     private MySqlProvider dialectProvider => this.OrmProvider as MySqlProvider;
-    public MySqlUpdateVisitor(DbContext dbContext, char tableAsStart = 'a')
-        : base(dbContext, tableAsStart) { }
+
+    public MySqlUpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
+        : base(entityType, dbContext, tableAsStart) { }
 
     public override void UseTableSchema(bool isIncludeMany, string tableSchema)
     {

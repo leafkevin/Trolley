@@ -18,8 +18,8 @@ public class MySqlCreateVisitor : CreateVisitor
     public string FromSql { get; set; }
     public string OutputSql { get; set; }
 
-    public MySqlCreateVisitor(DbContext dbContext, char tableAsStart = 'a')
-        : base(dbContext, tableAsStart) { }
+    public MySqlCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
+        : base(entityType, dbContext, tableAsStart) { }
 
     public override string BuildCommand(ITheaCommand command, bool isReturnIdentity, out List<SqlFieldSegment> readerFields)
     {

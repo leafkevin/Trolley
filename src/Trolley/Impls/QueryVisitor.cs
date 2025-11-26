@@ -162,9 +162,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         builder.Clear();
         string whereSql = null;
-        if (!string.IsNullOrEmpty(this.WhereSql))
+        if (!string.IsNullOrEmpty(this.WhereBuilder))
         {
-            whereSql = $" WHERE {this.WhereSql}";
+            whereSql = $" WHERE {this.WhereBuilder}";
             builder.Append(whereSql);
         }
         //有多分表还有Group By操作，每个分表语句中做Group By操作，Union All语句后，还要再做Group By操作
@@ -360,8 +360,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else selectSql = builder.ToString();
 
         builder.Clear();
-        if (!string.IsNullOrEmpty(this.WhereSql))
-            builder.Append($" WHERE {this.WhereSql}");
+        if (!string.IsNullOrEmpty(this.WhereBuilder))
+            builder.Append($" WHERE {this.WhereBuilder}");
 
         if (!string.IsNullOrEmpty(this.GroupBySql))
             builder.Append($" GROUP BY {this.GroupBySql}");
@@ -1118,7 +1118,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void Where(Expression whereExpr)
     {
         //为了兼容，Where条件中的Exists，多个表联合查询时，有Where+Exists的场景
-        if (!string.IsNullOrEmpty(this.WhereSql))
+        this.WhereBuilder ??= new();
+        if (this.WhereBuilder.Length > 0)
         {
             this.And(whereExpr);
             return;
@@ -1128,7 +1129,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
         //不能更改LastWhereOperationType，如果是引用已有子查询，LastWhereOperationType是有值的
-        this.WhereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
+        this.WhereBuilder.Append(this.VisitConditionExpr(lambdaExpr.Body, out var operationType));
         this.LastWhereOperationType = operationType;
         this.IsWhere = false;
     }
@@ -1139,19 +1140,19 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
         var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        if (string.IsNullOrEmpty(this.WhereSql))
+        if (this.WhereBuilder.Length > 0)
         {
-            this.WhereSql = conditionSql;
-            this.LastWhereOperationType = operationType;
+            if (this.LastWhereOperationType == OperationType.Or)
+                this.WhereBuilder.Append($"({this.WhereBuilder})");
+            if (operationType == OperationType.Or)
+                conditionSql = $"({conditionSql})";
+            this.WhereBuilder.Append(" AND " + conditionSql);
+            this.LastWhereOperationType = OperationType.And;
         }
         else
         {
-            if (this.LastWhereOperationType == OperationType.Or)
-                this.WhereSql = $"({this.WhereSql})";
-            if (operationType == OperationType.Or)
-                conditionSql = $"({conditionSql})";
-            this.WhereSql += " AND " + conditionSql;
-            this.LastWhereOperationType = OperationType.And;
+            this.WhereBuilder.Append(conditionSql);
+            this.LastWhereOperationType = operationType;
         }
         this.IsWhere = false;
     }
@@ -1162,19 +1163,19 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
         var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        if (string.IsNullOrEmpty(this.WhereSql))
+        if (this.WhereBuilder.Length > 0)
         {
-            this.WhereSql = conditionSql;
-            this.LastWhereOperationType = operationType;
+            if (this.LastWhereOperationType == OperationType.And)
+                this.WhereBuilder.Append($"({this.WhereBuilder})");
+            if (operationType == OperationType.And)
+                conditionSql = $"({conditionSql})";
+            this.WhereBuilder.Append(" OR " + conditionSql);
+            this.LastWhereOperationType = OperationType.Or;
         }
         else
         {
-            if (this.LastWhereOperationType == OperationType.And)
-                this.WhereSql = $"({this.WhereSql})";
-            if (operationType == OperationType.And)
-                conditionSql = $"({conditionSql})";
-            this.WhereSql += " OR " + conditionSql;
-            this.LastWhereOperationType = OperationType.Or;
+            this.WhereBuilder.Append(conditionSql);
+            this.LastWhereOperationType = operationType;
         }
         this.IsWhere = false;
     }
@@ -2142,7 +2143,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         if (isClearReaderFields)
             this.ReaderFields = null;
-        this.WhereSql = null;
+        this.WhereBuilder = null;
         this.TableAsStart = 'a';
 
         this.offset = null;
@@ -2169,7 +2170,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var queryVisitor = visitor as QueryVisitor;
         queryVisitor.RefTableAliases = this.RefTableAliases;
         queryVisitor.IsNeedTableAlias = this.IsNeedTableAlias;
-        queryVisitor.WhereSql = this.WhereSql;
+        queryVisitor.WhereBuilder = this.WhereBuilder;
         queryVisitor.LastWhereOperationType = this.LastWhereOperationType;
         queryVisitor.IncludeTables = this.IncludeTables;
         queryVisitor.RefQueries = this.RefQueries;

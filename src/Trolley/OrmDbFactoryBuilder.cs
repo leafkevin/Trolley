@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Net.Http.Headers;
 
 namespace Trolley;
 
@@ -178,7 +177,7 @@ public sealed class OrmDatabaseBuilder
         this.dbKey = database.DbKey;
     }
     /// <summary>
-    /// 设置主库连接串，可1个或多个主库连接串，多个主库时，未设置连接串选择器，则默认使用轮询方式选择连接串
+    /// 设置1个或多个主库连接串，多个主库时，使用轮询方式选择连接串，适用于多分库场景
     /// </summary>
     /// <param name="connectionStrings"></param>
     /// <returns></returns>
@@ -187,16 +186,33 @@ public sealed class OrmDatabaseBuilder
         this.database.Use(connectionStrings);
         return this;
     }
+    /// <summary>
+    /// 设置1个或多个主库连接串，同时设置连接串选择器，适用于多分库、多租户、多租户分库场景
+    /// </summary>
+    /// <param name="connectionStrings"></param>
+    /// <param name="connectionStringSelector"></param>
+    /// <returns></returns>
     public OrmDatabaseBuilder Use(string[] connectionStrings, Func<object[], string> connectionStringSelector)
     {
         this.database.Use(connectionStrings, connectionStringSelector);
         return this;
     }
+    /// <summary>
+    /// 设置1个或多个从库连接串，多个从库时，使用轮询方式选择连接串，适用于多从库场景
+    /// </summary>
+    /// <param name="connectionStrings"></param>
+    /// <returns></returns>
     public OrmDatabaseBuilder UseSlave(params string[] connectionStrings)
     {
         this.database.UseSlave(connectionStrings);
         return this;
     }
+    /// <summary>
+    /// 设置1个或多个从库连接串，同时设置连接串选择器，适用于多从库、多租户多从库分库场景
+    /// </summary>
+    /// <param name="connectionStrings"></param>
+    /// <param name="connectionStringSelector"></param>
+    /// <returns></returns>
     public OrmDatabaseBuilder UseSlave(string[] connectionStrings, Func<object[], string> connectionStringSelector)
     {
         this.database.Use(connectionStrings, connectionStringSelector);

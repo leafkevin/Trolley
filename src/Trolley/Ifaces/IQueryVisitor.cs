@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,8 +11,7 @@ namespace Trolley;
 
 public interface IQueryVisitor : ICloneable, IDisposable
 {
-    string DbKey { get; }
-    string WhereSql { get; }
+    StringBuilder WhereBuilder { get; }
     List<TableSegment> Tables { get; set; }
     List<TableSegment> IncludeTables { get; set; }
     Dictionary<string, TableSegment> TableAliases { get; }

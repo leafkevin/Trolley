@@ -265,9 +265,12 @@ public class Repository : IRepository
 
     #region Create
     public virtual ICreate<TEntity> Create<TEntity>() => this.OrmProvider.NewCreate<TEntity>(this.DbContext);
-    public virtual int Create<TEntity>(object insertObjs, int bulkCount = 500)
+    public virtual int Create<TEntity>(object insertObj) => this.DbContext.Create<TEntity>(insertObj);
+    public virtual int Create<TEntity>(IEnumerable insertObjs, int bulkCount)
         => this.DbContext.Create<TEntity>(insertObjs, bulkCount);
-    public virtual async Task<int> CreateAsync<TEntity>(object insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
+    public virtual async Task<int> CreateAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default)
+        => await this.DbContext.CreateAsync<TEntity>(insertObj, cancellationToken);
+    public virtual async Task<int> CreateAsync<TEntity>(IEnumerable insertObjs, int bulkCount, CancellationToken cancellationToken = default)
         => await this.DbContext.CreateAsync<TEntity>(insertObjs, bulkCount, cancellationToken);
     public virtual int CreateIdentity<TEntity>(object insertObj) => this.DbContext.CreateIdentity<TEntity, int>(insertObj);
     public virtual async Task<int> CreateIdentityAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default)

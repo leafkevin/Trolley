@@ -81,17 +81,17 @@ public interface IRepository
 
     #region ShardingDatabase
     /// <summary>
-    /// 强制使用主库查询数据，根据选择器依赖参数值确定主库，适用于类似多主库，多租户库、多租户多主库等带有水平分库模式场景，需要提供选择器依赖参数值，如：租户Id、租户Id+游戏ID...等分库。不传任何值，适用于多主库，则默认使用轮询选择主库
+    /// 强制使用主库查询数据，根据选择器依赖参数值确定主库，适用于多主库，多租户、多租户多主库等场景，需要提供连接串选择器依赖参数值，如：租户Id、租户Id+游戏ID...等分库，不传任何值，适用于多主库，则默认使用轮询选择主库
     /// </summary>
     /// <param name="selectorValues">选择器依赖参数值，参数值要与设置的选择器参数相同，多主库场景，可为null，使用轮询选择主库</param>
     /// <returns></returns>
     IRepository UseMaster(params object[] selectorValues);
     /// <summary>
-    /// 强制使用从库查询数据，根据选择器依赖参数值确定从库，适用于类似多从库，多租户多从库等带有水平分库模式场景，需要提供选择器依赖参数值，如：租户Id、租户Id+游戏ID...等分库。不传任何值，适用于多从库，则默认使用轮询选择从库
+    /// 强制使用从库查询数据，根据选择器依赖参数值确定从库，适用于多从库，多租户多从库等场景，需要提供连接串选择器依赖参数值，如：租户Id、租户Id+游戏ID...等分库，不传任何值，适用于多从库，则默认使用轮询选择从库
     /// </summary>
     /// <param name="selectorValues">选择器依赖参数值，参数值要与设置的选择器参数相同，多从库场景，可为null，使用轮询选择从库</param>
     /// <returns></returns>
-    IRepository UseSlave(params object[] fieldValues);
+    IRepository UseSlave(params object[] selectorValues);
     #endregion
 
     #region From

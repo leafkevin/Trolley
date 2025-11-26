@@ -134,7 +134,7 @@ public class SqlServerDeleteVisitor : DeleteVisitor
                     builder.Append(this.OrmProvider.GetTableName(tableNames[i]));
                     if (isOutputSql) builder.Append(this.OutputSql);
                     builder.Append(" WHERE ");
-                    builder.Append(this.WhereSql);
+                    builder.Append(this.WhereBuilder);
                 }
             }
             else
@@ -143,7 +143,7 @@ public class SqlServerDeleteVisitor : DeleteVisitor
                 builder.Append($"DELETE FROM {this.OrmProvider.GetTableName(tableName)}");
                 if (isOutputSql) builder.Append(this.OutputSql);
                 builder.Append(" WHERE ");
-                builder.Append(this.WhereSql);
+                builder.Append(this.WhereBuilder);
             }
             sql = builder.ToString();
         }

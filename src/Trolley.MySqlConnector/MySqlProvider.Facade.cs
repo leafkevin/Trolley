@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using System;
+using System.Data;
 
 namespace Trolley.MySqlConnector;
 
@@ -47,8 +48,8 @@ partial class MySqlProvider
     }
     public override ICreated<TEntity> NewCreated<TEntity>(DbContext dbContext, ICreateVisitor visitor)
         => new MySqlCreated<TEntity>(dbContext, visitor);
-    public override ICreateVisitor NewCreateVisitor(DbContext dbContext, char tableAsStart = 'a')
-        => new MySqlCreateVisitor(dbContext, tableAsStart);
+    public override ICreateVisitor NewCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
+        => new MySqlCreateVisitor(entityType, dbContext, tableAsStart);
     public override IUpdate<TEntity> NewUpdate<TEntity>(DbContext dbContext) => new MySqlUpdate<TEntity>(dbContext);
     public override IContinuedUpdate<TEntity> NewContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor)
         => new MySqlContinuedUpdate<TEntity>(dbContext, visitor);
@@ -59,8 +60,8 @@ partial class MySqlProvider
     public override IDelete<TEntity> NewDelete<TEntity>(DbContext dbContext)
         => new MySqlDelete<TEntity>(dbContext);
 
-    public override IUpdateVisitor NewUpdateVisitor(DbContext dbContext, char tableAsStart = 'a')
-        => new MySqlUpdateVisitor(dbContext, tableAsStart);
-    public override IDeleteVisitor NewDeleteVisitor(DbContext dbContext, char tableAsStart = 'a')
-        => new MySqlDeleteVisitor(dbContext, tableAsStart);
+    public override IUpdateVisitor NewUpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
+        => new MySqlUpdateVisitor(entityType, dbContext, tableAsStart);
+    public override IDeleteVisitor NewDeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
+        => new MySqlDeleteVisitor(entityType, dbContext, tableAsStart);
 }

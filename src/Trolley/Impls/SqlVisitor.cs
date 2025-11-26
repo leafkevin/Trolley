@@ -49,7 +49,7 @@ public class SqlVisitor : ISqlVisitor
     public bool IsNeedTableAlias { get; set; }
     public List<SqlFieldSegment> ReaderFields { get; set; }
 
-    public string WhereSql { get; set; }
+    public StringBuilder WhereBuilder { get; set; }
     public OperationType LastWhereOperationType { get; set; } = OperationType.None;
 
     public List<TableSegment> IncludeTables { get; set; }
@@ -2789,7 +2789,7 @@ public class SqlVisitor : ISqlVisitor
         this.TableAliases = null;
         this.RefTableAliases = null;
         this.ReaderFields = null;
-        this.WhereSql = null;
+        this.WhereBuilder = null;
         this.IncludeTables = null;
 
         //设置null，不能清空，以免给返回的参数丢失
