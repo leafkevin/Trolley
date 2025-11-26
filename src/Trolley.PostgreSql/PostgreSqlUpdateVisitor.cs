@@ -63,7 +63,7 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                 break;
             case ActionMode.Single:
                 {
-                    this.UpdateFields = new();
+                    this.FieldsBuilder = new();
                     this.DbParameters ??= command.Parameters;
                     foreach (var deferredSegment in this.deferredSegments)
                     {
@@ -110,9 +110,9 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
 
                     int index = 0;
                     builder.Append("SET ");
-                    if (this.UpdateFields.Count > 0)
+                    if (this.FieldsBuilder.Count > 0)
                     {
-                        foreach (var setField in this.UpdateFields)
+                        foreach (var setField in this.FieldsBuilder)
                         {
                             if (index > 0) builder.Append(',');
                             builder.Append(setField);
@@ -206,7 +206,7 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
         {
             this.DbParameters = new TheaDbParameterCollection();
             //先解析其他sql，生成固定sql
-            this.UpdateFields = new();
+            this.FieldsBuilder = new();
             for (int i = 1; i < this.deferredSegments.Count; i++)
             {
                 var deferredSegment = this.deferredSegments[i];
@@ -230,9 +230,9 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     default: throw new NotSupportedException("SetBulk操作后，只支持Set/IgnoreFields/OnlyFields/Returning操作");
                 }
             }
-            if (this.UpdateFields.Count > 0)
+            if (this.FieldsBuilder.Count > 0)
             {
-                foreach (var setField in this.UpdateFields)
+                foreach (var setField in this.FieldsBuilder)
                 {
                     if (index > 0) builder.Append(',');
                     builder.Append(setField);
@@ -244,7 +244,7 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             if (this.DbParameters.Count > 0)
                 fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
             this.DbParameters = command.Parameters;
-            this.UpdateFields.Clear();
+            this.FieldsBuilder.Clear();
             builder.Clear();
         }
         //多命令查询时，第二次以后，DbParameters有值，不能再赋值

@@ -282,9 +282,12 @@ public class Repository : IRepository
 
     #region Update
     public virtual IUpdate<TEntity> Update<TEntity>() => this.OrmProvider.NewUpdate<TEntity>(this.DbContext);
-    public virtual int Update<TEntity>(object updateObjs, int bulkCount = 500)
+    public virtual int Update<TEntity>(object updateObj) => this.DbContext.Update<TEntity>(updateObj);
+    public virtual async Task<int> UpdateAsync<TEntity>(object updateObj, CancellationToken cancellationToken = default)
+        => await this.DbContext.UpdateAsync<TEntity>(updateObj, cancellationToken);
+    public virtual int Update<TEntity>(IEnumerable updateObjs, int bulkCount)
         => this.DbContext.Update<TEntity>(updateObjs, bulkCount);
-    public virtual async Task<int> UpdateAsync<TEntity>(object updateObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
+    public virtual async Task<int> UpdateAsync<TEntity>(IEnumerable updateObjs, int bulkCount, CancellationToken cancellationToken = default)
         => await this.DbContext.UpdateAsync<TEntity>(updateObjs, bulkCount, cancellationToken);
     #endregion
 

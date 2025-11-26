@@ -19,6 +19,9 @@ public interface IUpdateVisitor : IDisposable
     List<TableSegment> ShardingTables { get; set; }
 
     string BuildCommand(ITheaCommand command, out List<SqlFieldSegment> readerFields);
+    string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields);
+    (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>, Action<IDataParameterCollection,
+        StringBuilder, DbContext, string, object, string>, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command);
 
     void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
     void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
@@ -39,7 +42,6 @@ public interface IUpdateVisitor : IDisposable
     void OnlyFields(params string[] fieldNames);
     void OnlyFields(Expression fieldsSelector);
     void SetBulk(IEnumerable updateObjs, int bulkCount);
-    (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>, Action<IDataParameterCollection, StringBuilder, string, object, int>, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command);
 
     void WhereWith(object whereObj);
     void Where(Expression whereExpr);

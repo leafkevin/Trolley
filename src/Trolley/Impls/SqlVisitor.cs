@@ -91,7 +91,6 @@ public class SqlVisitor : ISqlVisitor
     public object RefFrom { get; set; }
     public string UnionSql { get; set; }
 
-
     public void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames)
     {
         if (tableNames == null || tableNames.Length == 0)
@@ -2738,6 +2737,7 @@ public class SqlVisitor : ISqlVisitor
         }
         return myExpr.NodeType == ExpressionType.MemberAccess;
     }
+
     public Dictionary<string, List<object>> SplitShardingParameters(Type paramterType, IEnumerable parameters, Dictionary<string, object> shardingValues)
     {
         var tableSegment = this.Tables[0];

@@ -15,10 +15,14 @@ public interface ICreateVisitor : IDisposable
     ITableShardingProvider ShardingProvider { get; }
     ActionMode ActionMode { get; set; }
     List<TableSegment> Tables { get; }
+    bool IsReturnIdentity { get; set; }
 
-    string BuildCommand(ITheaCommand command, bool isReturnIdentity, out List<SqlFieldSegment> readerFields);
+    string BuildCommand(ITheaCommand command, out List<SqlFieldSegment> readerFields);
+    string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields);
+    (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
+        Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command);
+
     IQueryVisitor CreateQueryVisitor(char? tableAsStart = null);
-    string BuildSql(out List<SqlFieldSegment> readerFields);
 
     void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
     void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
@@ -29,8 +33,6 @@ public interface ICreateVisitor : IDisposable
     void WithBy(object insertObj);
     void WithByField(Expression fieldSelector, object fieldValue);
     void WithBulk(IEnumerable insertObjs, int bulkCount);
-    (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
-        Action<IDataParameterCollection, StringBuilder, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command);
     void IgnoreFields(string[] fieldNames);
     void IgnoreFields(Expression fieldsSelector);
     void OnlyFields(string[] fieldNames);

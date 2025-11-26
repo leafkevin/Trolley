@@ -1022,7 +1022,8 @@ public sealed class DbContext
     {
         TResult result = default;
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        command.CommandText = visitor.BuildCommand(command, true, out _);
+        visitor.IsReturnIdentity = true;
+        command.CommandText = visitor.BuildCommand(command, out _);
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
@@ -1039,7 +1040,8 @@ public sealed class DbContext
     {
         TResult result = default;
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        command.CommandText = visitor.BuildCommand(command, true, out _);
+        visitor.IsReturnIdentity = true;
+        command.CommandText = visitor.BuildCommand(command, out _);
 
         await connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
@@ -1057,7 +1059,7 @@ public sealed class DbContext
     {
         TResult result = default;
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        command.CommandText = visitor.BuildCommand(command, false, out var readerFields);
+        command.CommandText = visitor.BuildCommand(command, out var readerFields);
 
         connection.Open();
         using var reader = command.ExecuteReader(CommandSqlType.Insert, CommandBehavior.SequentialAccess);
@@ -1075,7 +1077,7 @@ public sealed class DbContext
     {
         TResult result = default;
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        command.CommandText = visitor.BuildCommand(command, false, out var readerFields);
+        command.CommandText = visitor.BuildCommand(command, out var readerFields);
 
         await connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Insert, CommandBehavior.SequentialAccess, cancellationToken);

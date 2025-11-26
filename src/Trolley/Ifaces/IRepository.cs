@@ -577,8 +577,7 @@ public interface IRepository
     /// <returns>返回插入对象</returns>
     ICreate<TEntity> Create<TEntity>();
     /// <summary>
-    /// 使用插入对象部分字段插入，可单条也可多条数据插入，自动增长栏位，不需要传入，多条可分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，
-    /// 支持分表，在分表的情况下，会根据分表依赖的字段把数据自动插入到指定的分表中，如果插入的参数未包含分表的字段则会抛出异常，如：
+    /// 单条数据插入，自动增长栏位不需要传入，不支持分表
     /// <code>
     /// repository.Create&lt;User&gt;(new
     /// {
@@ -587,20 +586,15 @@ public interface IRepository
     ///     UpdatedAt = DateTime.Now,
     ///     UpdatedBy = 1
     /// });
-    /// repository.Create&lt;Product&gt;(new []{ new { ... }, new { ... }, new { ... });
-    /// SQL:
-    /// INSERT INTO `sys_user` (`Name`,`Age`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@UpdatedAt,@UpdatedBy)
-    /// INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
+    /// SQL: INSERT INTO `sys_user` (`Name`,`Age`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@UpdatedAt,@UpdatedBy)
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObjs">插入对象，可以是匿名对象、实体对象、字典，也可以是这些类型的IEnumerable类型，如：new { Value1 = 1, Value2 = "xxx" } 或 new Order{ ... }</param>
-    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
+    /// <param name="insertObj">插入对象，可以是匿名对象、实体对象、字典</param>
     /// <returns>返回插入行数</returns>
-    int Create<TEntity>(object insertObjs, int bulkCount = 500);
+    int Create<TEntity>(object insertObj);
     /// <summary>
-    /// 使用插入对象部分字段插入，可单条也可多条数据插入，自动增长栏位，不需要传入，多条可分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，
-    /// 支持分表，在分表的情况下，会根据分表依赖的字段把数据自动插入到指定的分表中，如果插入的参数未包含分表的字段则会抛出异常，如：
+    /// 单条数据插入，自动增长栏位不需要传入，不支持分表
     /// <code>
     /// await repository.CreateAsync&lt;User&gt;(new
     /// {
@@ -609,18 +603,40 @@ public interface IRepository
     ///     UpdatedAt = DateTime.Now,
     ///     UpdatedBy = 1
     /// });
-    /// await repository.CreateAsync&lt;Product&gt;(new []{ new { ... }, new { ... }, new { ... });
-    /// SQL:
-    /// INSERT INTO `sys_user` (`Name`,`Age`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@UpdatedAt,@UpdatedBy)
-    /// INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
+    /// SQL: INSERT INTO `sys_user` (`Name`,`Age`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@UpdatedAt,@UpdatedBy)
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObjs">插入对象，可以是匿名对象、实体对象、字典，也可以是这些类型的IEnumerable类型，如：new { Value1 = 1, Value2 = "xxx" } 或 new Order{ ... }</param>
-    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
+    /// <param name="insertObj">插入对象，可以是匿名对象、实体对象、字典</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回插入行数</returns>
-    Task<int> CreateAsync<TEntity>(object insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default);
+    Task<int> CreateAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 多条数据插入，自动增长栏位不需要传入，分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，不支持分表
+    /// <code>
+    /// repository.Create&lt;Product&gt;(new []{ new { ... }, new { ... }, new { ... });
+    /// SQL: INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="insertObjs">插入对象，可以是匿名对象、实体对象、字典等类型的IEnumerable类型，如：数组、列表、集合等</param>
+    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值</param>
+    /// <returns>返回插入行数</returns>
+    int Create<TEntity>(IEnumerable insertObjs, int bulkCount);
+    /// <summary>
+    /// 多条数据插入，自动增长栏位不需要传入，分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，不支持分表
+    /// <code>
+    /// repository.Create&lt;Product&gt;(new []{ new { ... }, new { ... }, new { ... });
+    /// SQL: INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="insertObjs">插入对象，可以是匿名对象、实体对象、字典等类型的IEnumerable类型，如：数组、列表、集合等</param>
+    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回插入行数</returns>
+    Task<int> CreateAsync<TEntity>(IEnumerable insertObjs, int bulkCount, CancellationToken cancellationToken = default);
+
     /// <summary>
     ///  使用插入对象部分字段插入，并返回自增长ID，自动增长栏位，不需要传入，支持分表，在分表的情况下，会根据分表依赖的字段把数据自动插入到指定的分表中，如果插入的参数未包含分表的字段则会抛出异常
     /// </summary>
@@ -661,34 +677,49 @@ public interface IRepository
     /// <returns>返回更新对象</returns>
     IUpdate<TEntity> Update<TEntity>();
     /// <summary>
-    /// 使用更新对象updateObjs部分字段By主键更新，updateObjs对象内除主键字段外所有与当前实体表TEntity名称相同的栏位都将参与更新，updateObjs对象必须包含主键字段，可单条也可多条数据更新，
-    /// 多条可分批次完成，每次更新bulkCount条数，不支持分表，如：
+    /// 单条数据更新，updateObj对象内除主键字段外与实体同名属性参与更新，必须包含主键字段，不支持分表，如：
     /// <code>
     /// repository.Update&lt;User&gt;(new { Id = 1, Name = "kevin"});
-    /// repository.Update&lt;User&gt;(new [] { new { Id = 1, Name = "kevin"}, new { Id = 2, Name = "cindy"} }, 200);
-    /// SQL: 
-    /// UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@Id
-    /// UPDATE `sys_user` SET `Name`=@Name0 WHERE `Id`=@Id0;UPDATE `sys_user` SET `Name`=@Name1 WHERE `Id`=@Id1
+    /// SQL: UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@Id
     /// </code>
     /// </summary>
-    /// <param name="updateObjs">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新</param>
-    /// <returns>返回更新对象</returns> 
-    int Update<TEntity>(object updateObjs, int bulkCount = 500);
+    /// <param name="updateObj">更新对象，可以是匿名对象、实体对象、字典</param>
+    /// <returns>返回更新行数</returns> 
+    int Update<TEntity>(object updateObj);
     /// <summary>
-    /// 使用更新对象updateObj部分字段By主键更新，updateObj对象内除主键字段外所有与当前实体表TEntity名称相同的栏位都将参与更新，updateObj对象必须包含主键字段，可单条也可多条数据更新，
-    /// 多条可分批次完成，每次更新bulkCount条数，不支持分表，如：
+    /// 单条数据更新，updateObj对象内除主键字段外与实体同名属性参与更新，必须包含主键字段，不支持分表，如：
     /// <code>
-    /// repository.UpdateAsync&lt;User&gt;(new { Id = 1, Name = "kevin", SourceType = DBNull.Value});
-    /// repository.UpdateAsync&lt;User&gt;(new [] { new { Id = 1, Name = "kevin"}, new { Id = 2, Name = "cindy"} }, 200);
-    /// SQL: 
-    /// UPDATE `sys_user` SET `Name`=@Name,SourceType=@SourceType WHERE `Id`=@Id
-    /// UPDATE `sys_user` SET `Name`=@Name0 WHERE `Id`=@Id0;UPDATE `sys_user` SET `Name`=@Name1 WHERE `Id`=@Id1
+    /// repository.Update&lt;User&gt;(new { Id = 1, Name = "kevin"});
+    /// SQL: UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@Id
     /// </code>
     /// </summary>
-    /// <param name="updateObjs">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新</param>
+    /// <param name="updateObj">更新对象，可以是匿名对象、实体对象、字典</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回更新行数</returns>
-    Task<int> UpdateAsync<TEntity>(object updateObjs, int bulkCount = 500, CancellationToken cancellationToken = default);
+    Task<int> UpdateAsync<TEntity>(object updateObj, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 多条数据更新，updateObjs单条对象内除主键字段外与实体同名属性参与更新，必须包含主键字段，分批次完成更新，每次更新bulkCount条数据，不支持分表，如：
+    /// <code>
+    /// repository.UpdateAsync&lt;User&gt;(new [] { new { Id = 1, Name = "kevin"}, new { Id = 2, Name = "cindy"} }, 200);
+    /// SQL: UPDATE `sys_user` SET `Name`=@Name0 WHERE `Id`=@Id0;UPDATE `sys_user` SET `Name`=@Name1 WHERE `Id`=@Id1
+    /// </code>
+    /// </summary>
+    /// <param name="updateObjs">更新对象，可以是匿名对象、实体对象、字典等类型的IEnumerable类型，如：数组、列表、集合等</param>
+    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值</param>
+    /// <returns>返回更新行数</returns> 
+    int Update<TEntity>(IEnumerable updateObjs, int bulkCount);
+    /// <summary>
+    /// 多条数据更新，updateObjs单条对象内除主键字段外与实体同名属性参与更新，必须包含主键字段，分批次完成更新，每次更新bulkCount条数据，不支持分表，如：
+    /// <code>
+    /// repository.UpdateAsync&lt;User&gt;(new [] { new { Id = 1, Name = "kevin"}, new { Id = 2, Name = "cindy"} }, 200);
+    /// SQL: UPDATE `sys_user` SET `Name`=@Name0 WHERE `Id`=@Id0;UPDATE `sys_user` SET `Name`=@Name1 WHERE `Id`=@Id1
+    /// </code>
+    /// </summary>
+    /// <param name="updateObjs">更新对象，可以是匿名对象、实体对象、字典等类型的IEnumerable类型，如：数组、列表、集合等</param>
+    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回更新行数</returns>
+    Task<int> UpdateAsync<TEntity>(IEnumerable updateObjs, int bulkCount, CancellationToken cancellationToken = default);
     #endregion
 
     #region Delete

@@ -18,7 +18,6 @@ public static class RepositoryHelper
     private static readonly ConcurrentDictionary<Type, List<MemberInfo>> typeMemberInfos = new();
     private static readonly ConcurrentDictionary<int, Func<object, object>> memberGetterCache = new();
     private static readonly ConcurrentDictionary<int, Action<object, object>> memberSetterCache = new();
-    private static readonly ConcurrentDictionary<int, List<BulkCommandParametersCache>> typedBulkCommandParametersCache = new();
 
 
     private static readonly ConcurrentDictionary<int, Func<IDictionary<string, object>, string>> shardingTableNameGetters = new();
@@ -53,13 +52,9 @@ public static class RepositoryHelper
     private static readonly ConcurrentDictionary<int, object> createValuesSqlParametersCache = new();
     private static readonly ConcurrentDictionary<int, object> createBulkValuesSqlParametersCache = new();
 
-
     private static readonly ConcurrentDictionary<int, object> updateCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<int, object> updateBulkCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<int, object> whereCommandInitializerCache = new();
-
-
-
 
     private static readonly ConcurrentDictionary<int, Delegate> readerDeserializerGetters = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerDeserializerAsyncGetters = new();
@@ -603,6 +598,7 @@ public static class RepositoryHelper
         return commandInitializerCache.GetOrAdd(cacheKey, f =>
         {
             var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
+            var fieldBuilderExpr = Expression.Variable(typeof(StringBuilder), "fieldBuilder");
             var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
             var parameterExpr = Expression.Parameter(typeof(object), "parameter");
             var blockParameters = new List<ParameterExpression>();
@@ -614,9 +610,7 @@ public static class RepositoryHelper
             blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
             blockBodies.Add(Expression.Assign(ormProviderExpr, Expression.Property(dbContextExpr, nameof(DbContext.OrmProvider))));
 
-            ParameterExpression fieldBuilderExpr = null;
             ParameterExpression valueBuilderExpr = null;
-            ParameterExpression updateFieldsExpr = null;
             ParameterExpression shardingValuesExpr = null;
 
             List<string> shardingMembers = null;
@@ -633,7 +627,6 @@ public static class RepositoryHelper
             {
                 if (isFunc)
                 {
-                    fieldBuilderExpr = Expression.Variable(typeof(StringBuilder), "fieldBuilder");
                     valueBuilderExpr = Expression.Variable(typeof(StringBuilder), "valueBuilder");
                     blockParameters.AddRange([fieldBuilderExpr, valueBuilderExpr]);
                     var constructor = typeof(StringBuilder).GetConstructor(Type.EmptyTypes);
@@ -644,28 +637,17 @@ public static class RepositoryHelper
                     blockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Constant(headSql)));
                     blockBodies.Add(Expression.Call(valueBuilderExpr, appendMethodInfo, Expression.Constant(") VALUES (")));
                 }
-                else
-                {
-                    fieldBuilderExpr = Expression.Parameter(typeof(StringBuilder), "fieldBuilder");
-                    valueBuilderExpr = Expression.Parameter(typeof(StringBuilder), "valueBuilder");
-                }
+                else valueBuilderExpr = Expression.Parameter(typeof(StringBuilder), "valueBuilder");
             }
-            else
+            else if (isFunc)
             {
-                if (isFunc)
-                {
-                    fieldBuilderExpr = Expression.Variable(typeof(StringBuilder), "updateBuilder");
-                    fieldBuilderExpr = Expression.Variable(typeof(StringBuilder), "whereBuilder");
-                    blockParameters.AddRange([fieldBuilderExpr, valueBuilderExpr]);
-                    var constructor = typeof(StringBuilder).GetConstructor(Type.EmptyTypes);
-                    blockBodies.Add(Expression.Assign(fieldBuilderExpr, Expression.New(constructor)));
-                    blockBodies.Add(Expression.Assign(valueBuilderExpr, Expression.New(constructor)));
+                blockParameters.Add(valueBuilderExpr);
+                var constructor = typeof(StringBuilder).GetConstructor(Type.EmptyTypes);
+                blockBodies.Add(Expression.Assign(valueBuilderExpr, Expression.New(constructor)));
 
-                    var headSql = $"UPDATE {ormProvider.GetTableName(entityMapper.TableName)} SET ";
-                    blockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Constant(headSql)));
-                    blockBodies.Add(Expression.Call(valueBuilderExpr, appendMethodInfo, Expression.Constant(" WHERE ")));
-                }
-                else updateFieldsExpr = Expression.Parameter(typeof(List<string>), "updateFields");
+                var headSql = $"UPDATE {ormProvider.GetTableName(entityMapper.TableName)} SET ";
+                blockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Constant(headSql)));
+                blockBodies.Add(Expression.Call(valueBuilderExpr, appendMethodInfo, Expression.Constant(" WHERE ")));
             }
 
             if (isSplitSharding)
@@ -675,10 +657,10 @@ public static class RepositoryHelper
                     throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}未配置分表信息，原表名：{entityMapper.TableName}");
                 shardingMembers = tableShardingInfo.DependOnMembers;
             }
-
-            var index = 0;
+            int index = 0, whereIndex = 0;
             var targetMemberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                 .Where(f => (f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field)).ToList();
+
             foreach (var memberMapper in entityMapper.MemberMaps)
             {
                 if (!targetMemberInfos.TryFind(memberMapper.MemberName, out var memberInfo))
@@ -714,14 +696,22 @@ public static class RepositoryHelper
                     continue;
                 if (hasIgnoreFields && ignoreFields.Contains(memberMapper.MemberName.ToLower()))
                     continue;
+
                 if (commandType == 1)
                 {
                     var addExpr1 = Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Constant(","));
                     var addExpr2 = Expression.Call(valueBuilderExpr, appendMethodInfo, Expression.Constant(","));
                     if (index > 0) blockBodies.AddRange([addExpr1, addExpr2]);
+                    else
+                    {
+                        var lengthExpr = Expression.Property(fieldBuilderExpr, nameof(StringBuilder.Length));
+                        var greaterExpr = Expression.GreaterThan(lengthExpr, Expression.Constant(0));
+                        blockBodies.Add(Expression.IfThen(greaterExpr, Expression.Block([addExpr1, addExpr2])));
+                    }
                     var fieldNameExpr = Expression.Constant(ormProvider.GetFieldName(memberMapper.FieldName));
                     blockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, fieldNameExpr));
                     blockBodies.Add(Expression.Call(valueBuilderExpr, appendMethodInfo, parameterNameExpr));
+                    index++;
                 }
                 else
                 {
@@ -730,19 +720,29 @@ public static class RepositoryHelper
                     {
                         if (memberMapper.IsKey)
                         {
-                            if (index > 0) blockBodies.Add(Expression.Call(valueBuilderExpr, appendMethodInfo, Expression.Constant(" AND ")));
+                            if (whereIndex > 0) blockBodies.Add(Expression.Call(valueBuilderExpr, appendMethodInfo, Expression.Constant(" AND ")));
                             blockBodies.Add(Expression.Call(valueBuilderExpr, appendMethodInfo, setSqlExpr));
+                            whereIndex++;
                         }
                         else
                         {
                             if (index > 0) blockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Constant(",")));
                             blockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, setSqlExpr));
+                            index++;
                         }
                     }
                     else
                     {
-                        methodInfo = typeof(List<string>).GetMethod(nameof(List<string>.Add));
-                        blockBodies.Add(Expression.Call(updateFieldsExpr, methodInfo, setSqlExpr));
+                        var addExpr = Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Constant(","));
+                        if (index > 0) blockBodies.Add(addExpr);
+                        else
+                        {
+                            var lengthExpr = Expression.Property(fieldBuilderExpr, nameof(StringBuilder.Length));
+                            var greaterExpr = Expression.GreaterThan(lengthExpr, Expression.Constant(0));
+                            blockBodies.Add(Expression.IfThen(greaterExpr, addExpr));
+                        }
+                        blockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, setSqlExpr));
+                        index++;
                     }
                 }
                 var fieldValueExpr = Expression.Variable(typeof(object), $"{memberMapper.MemberName.ToCamel()}Value");
@@ -776,7 +776,6 @@ public static class RepositoryHelper
                 var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
                 methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add));
                 blockBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
-                index++;
             }
             if (index <= 0) throw new Exception($"没有找到{(commandType == 1 ? "插入" : "更新")}语句");
 
@@ -806,8 +805,8 @@ public static class RepositoryHelper
             {
                 if (commandType == 1) return Expression.Lambda<Action<IDataParameterCollection, StringBuilder, StringBuilder, IDictionary<string, object>, DbContext, object>>(
                     Expression.Block(blockParameters, blockBodies), dbParametersExpr, fieldBuilderExpr, valueBuilderExpr, shardingValuesExpr, dbContextExpr, parameterExpr).Compile();
-                else return Expression.Lambda<Action<IDataParameterCollection, List<string>, IDictionary<string, object>, DbContext, object>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, updateFieldsExpr, shardingValuesExpr, dbContextExpr, parameterExpr).Compile();
+                else return Expression.Lambda<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, DbContext, object>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, fieldBuilderExpr, shardingValuesExpr, dbContextExpr, parameterExpr).Compile();
             }
             else
             {
@@ -815,8 +814,8 @@ public static class RepositoryHelper
                     Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, parameterExpr).Compile();
                 if (commandType == 1) return Expression.Lambda<Action<IDataParameterCollection, StringBuilder, StringBuilder, DbContext, object>>(
                     Expression.Block(blockParameters, blockBodies), dbParametersExpr, fieldBuilderExpr, valueBuilderExpr, dbContextExpr, parameterExpr).Compile();
-                else return Expression.Lambda<Action<IDataParameterCollection, List<string>, DbContext, object>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, updateFieldsExpr, dbContextExpr, parameterExpr).Compile();
+                else return Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, object>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, fieldBuilderExpr, dbContextExpr, parameterExpr).Compile();
             }
         });
     }
@@ -1444,14 +1443,9 @@ public static class RepositoryHelper
             {
                 int index = 0;
                 var builder = new StringBuilder();
-                foreach (var memberMapper in entityMapper.MemberMaps)
+                foreach (var memberInfo in targetMemberInfos)
                 {
-                    if (!targetMemberInfos.TryFind(memberMapper.MemberName, out var memberInfo))
-                        continue;
-                    if (memberMapper.IsAutoIncrement || memberMapper.IsIgnore
-                        || memberMapper.IsNavigation || memberMapper.IsRowVersion
-                        || memberMapper.IsIgnoreInsert)
-                        continue;
+                    var memberMapper = entityMapper.GetMemberMap(memberInfo.Name);
                     if (index > 0) builder.Append(',');
                     builder.Append(ormProvider.GetFieldName(memberMapper.FieldName));
                     index++;
@@ -3207,13 +3201,6 @@ public static class RepositoryHelper
         return typeMemberInfos.GetOrAdd(entityType, f => entityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
             .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList());
     }
-
-    //public static Func<object, object[], string> BuildBulkShardingTableNameGetter(Type entityType, string memberName)
-    //{
-    //    shardingTableGetters
-    //    var members = GetMembers(entityType);
-    //    return members.FirstOrDefault(f => string.Equals(f.Name, memberName, StringComparison.OrdinalIgnoreCase));
-    //}
     public static Func<object, object[], string> BuildBulkShardingTableNameGetter(DbContext dbContext, Type entityType, Type parameterType)
     {
         var entityMapProvider = dbContext.EntityMapProvider;
