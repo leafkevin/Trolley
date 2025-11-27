@@ -1411,6 +1411,8 @@ public static class RepositoryHelper
             var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
             var parameterExpr = Expression.Parameter(typeof(object), "parameter");
             var suffixExpr = Expression.Parameter(typeof(string), "suffix");
+            var headSqlExpr = Expression.Parameter(typeof(string), "headSql");
+            var tailSqlExpr = Expression.Parameter(typeof(string), "tailSql");
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
 
@@ -1422,7 +1424,7 @@ public static class RepositoryHelper
 
             var targetMemberInfos = new List<MemberInfo>();
             var memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                .Where(f => (f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field)).ToList();
+                .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
             var ormProvider = dbContext.OrmProvider;
             var entityMapper = dbContext.EntityMapProvider.GetEntityMap(entityType);
             var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)]);
@@ -1455,11 +1457,12 @@ public static class RepositoryHelper
 
             RepositoryHelper.AddTypedCommandInitializer(dbContext, entityType, parameterType, commandType, targetMemberInfos,
                 dbContextExpr, dbParametersExpr, builderExpr, ormProviderExpr, typedParameterExpr, suffixExpr, blockParameters, blockBodies);
+            blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, tailSqlExpr));
 
-            if (commandType == 1) return (headSql, Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>>(
-                Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, dbContextExpr, parameterExpr, suffixExpr).Compile());
-            return Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, object, string>>(
-                Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, dbContextExpr, parameterExpr, suffixExpr).Compile();
+            if (commandType == 1) return (headSql, Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, string, string, object, string>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, dbContextExpr, headSqlExpr, tailSqlExpr, parameterExpr, suffixExpr).Compile());
+            else return Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, string, string, string, object, string>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, dbContextExpr, headSqlExpr, tailSqlExpr, parameterExpr, suffixExpr).Compile();
         });
     }
 

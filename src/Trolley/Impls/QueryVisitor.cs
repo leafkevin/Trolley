@@ -162,9 +162,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         builder.Clear();
         string whereSql = null;
-        if (!string.IsNullOrEmpty(this.WhereBuilder))
+        if (this.WhereBuilder != null && this.WhereBuilder.Length > 0)
         {
-            whereSql = $" WHERE {this.WhereBuilder}";
+            whereSql = $" WHERE {this.WhereBuilder.ToString()}";
             builder.Append(whereSql);
         }
         //有多分表还有Group By操作，每个分表语句中做Group By操作，Union All语句后，还要再做Group By操作
@@ -208,9 +208,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        //if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql)
-        //    || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue || this.HasAggFields))
-        //    this.IsNeedUnionShardingTables = true;
+        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql)
+            || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue || this.HasAggFields))
+            this.IsNeedUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
         bool isNeedWrap = ((this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
@@ -360,8 +360,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else selectSql = builder.ToString();
 
         builder.Clear();
-        if (!string.IsNullOrEmpty(this.WhereBuilder))
-            builder.Append($" WHERE {this.WhereBuilder}");
+        if (this.WhereBuilder != null && this.WhereBuilder.Length > 0)
+            builder.Append($" WHERE {this.WhereBuilder.ToString()}");
 
         if (!string.IsNullOrEmpty(this.GroupBySql))
             builder.Append($" GROUP BY {this.GroupBySql}");
@@ -2137,7 +2137,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //PostgreSql时，DistinctOnFields中的ReaderField也是这个场景
         if (readerField.IsConstant || readerField.IsVariable || readerField.HasParameter
             || readerField.IsExpression || readerField.IsMethodCall) return true;
-        return !this.DbContext..IsCanMap(readerField.FromMember, readerField.TargetMember);
+        return !Extensions.IsCanMapTo(this.DbContext.EntityMapProvider, readerField.FromMember, readerField.TargetMember);
     }
     public virtual void Clear(bool isClearReaderFields = false)
     {

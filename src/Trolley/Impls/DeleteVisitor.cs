@@ -33,8 +33,9 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     public virtual string BuildCommand(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
         string sql = null;
-        this.DbParameters ??= command.Parameters;
         readerFields = null;
+        this.DbParameters = command.Parameters;
+
         if (this.IsWhereKeys)
         {
             var entityType = this.Tables[0].EntityType;
@@ -321,7 +322,8 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     }
     public virtual void VisitWhere(Expression whereExpr)
     {
-        if (!string.IsNullOrEmpty(this.WhereBuilder))
+        this.WhereBuilder ??= new();
+        if (this.WhereBuilder.Length > 0)
         {
             this.VisitAnd(whereExpr);
             return;
@@ -329,7 +331,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.LastWhereOperationType = OperationType.None;
-        this.WhereBuilder = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
+        this.WhereBuilder.Append(this.VisitConditionExpr(lambdaExpr.Body, out var operationType));
         this.LastWhereOperationType = operationType;
         this.IsWhere = false;
     }
@@ -338,20 +340,21 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        if (string.IsNullOrEmpty(this.WhereBuilder))
+        if (this.WhereBuilder.Length > 0)
         {
-            this.WhereBuilder = conditionSql;
-            this.LastWhereOperationType = operationType;
+            if (this.LastWhereOperationType == OperationType.Or)
+                this.WhereBuilder.Append($"({this.WhereBuilder})");
+            if (operationType == OperationType.Or)
+                conditionSql = $"({conditionSql})";
+            this.WhereBuilder.Append(" AND " + conditionSql);
+            this.LastWhereOperationType = OperationType.And;
         }
         else
         {
-            if (this.LastWhereOperationType == OperationType.Or)
-                this.WhereBuilder = $"({this.WhereBuilder})";
-            if (operationType == OperationType.Or)
-                conditionSql = $"({conditionSql})";
-            this.WhereBuilder += " AND " + conditionSql;
-            this.LastWhereOperationType = OperationType.And;
+            this.WhereBuilder.Append(conditionSql);
+            this.LastWhereOperationType = operationType;
         }
+
         this.IsWhere = false;
     }
     public virtual void VisitOr(Expression whereExpr)
@@ -359,19 +362,20 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        if (string.IsNullOrEmpty(this.WhereBuilder))
+
+        if (this.WhereBuilder.Length > 0)
         {
-            this.WhereBuilder = conditionSql;
-            this.LastWhereOperationType = operationType;
+            if (this.LastWhereOperationType == OperationType.And)
+                this.WhereBuilder.Append($"({this.WhereBuilder})");
+            if (operationType == OperationType.And)
+                conditionSql = $"({conditionSql})";
+            this.WhereBuilder.Append(" OR " + conditionSql);
+            this.LastWhereOperationType = OperationType.Or;
         }
         else
         {
-            if (this.LastWhereOperationType == OperationType.And)
-                this.WhereBuilder = $"({this.WhereBuilder})";
-            if (operationType == OperationType.And)
-                conditionSql = $"({conditionSql})";
-            this.WhereBuilder += " OR " + conditionSql;
-            this.LastWhereOperationType = OperationType.Or;
+            this.WhereBuilder.Append(conditionSql);
+            this.LastWhereOperationType = operationType;
         }
         this.IsWhere = false;
     }

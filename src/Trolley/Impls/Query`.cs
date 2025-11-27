@@ -16,22 +16,22 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
     #region Sharding
     public virtual IQuery<T1, T2> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2> UseUnionShardingTable()
@@ -317,22 +317,22 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
     #region Sharding
     public virtual IQuery<T1, T2, T3> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3> UseUnionShardingTable()
@@ -618,22 +618,22 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4> UseUnionShardingTable()
@@ -919,22 +919,22 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5> UseUnionShardingTable()
@@ -1220,22 +1220,22 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6> UseUnionShardingTable()
@@ -1521,22 +1521,22 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> UseUnionShardingTable()
@@ -1822,22 +1822,22 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseUnionShardingTable()
@@ -2123,22 +2123,22 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseUnionShardingTable()
@@ -2424,22 +2424,22 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseUnionShardingTable()
@@ -2725,22 +2725,22 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseUnionShardingTable()
@@ -3026,22 +3026,22 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseUnionShardingTable()
@@ -3327,22 +3327,22 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseUnionShardingTable()
@@ -3628,22 +3628,22 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseUnionShardingTable()
@@ -3929,22 +3929,22 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseUnionShardingTable()
@@ -4230,22 +4230,22 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseUnionShardingTable()

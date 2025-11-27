@@ -75,6 +75,12 @@ public class SqlVisitor : ISqlVisitor
     public bool IsNeedUnionShardingTables { get; set; }
     public bool IsNeedFormatShardingTables { get; set; }
     public bool IsManyShardingTables { get; set; }
+
+
+    public bool IsNeedSplitShardingTables { get; set; }
+    public Dictionary<string, object> ShardingValues { get; set; }
+
+
     public string AggFieldAlias { get; set; }
     /// <summary>
     /// 分页查询的Count操作，是否需要全部字段Count
@@ -97,7 +103,7 @@ public class SqlVisitor : ISqlVisitor
             throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
 
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
-        if (!this.TryGetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
+        if (!this.TrySetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
             return;
 
         //多个分表，才当作分表处理
@@ -127,7 +133,7 @@ public class SqlVisitor : ISqlVisitor
     public void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues)
     {
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
-        if (!this.TryGetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
+        if (!this.TrySetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
             return;
 
         var origTableName = tableSegment.Mapper.TableName;
@@ -165,7 +171,7 @@ public class SqlVisitor : ISqlVisitor
             throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
 
-        if (!this.TryGetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
+        if (!this.TrySetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
             return;
         if (this.ShardingTables == null || !this.ShardingTables.Exists(f => f.ShardingType == ShardingTableType.MultiTable))
             throw new NotSupportedException("不存在多分表的实体表，无法配置多分表映射，使用UseTable、UseTableBy方法后存在多分表后，才能使用本方法配置多分表映射");
@@ -184,7 +190,7 @@ public class SqlVisitor : ISqlVisitor
     public void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues)
     {
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
-        if (!this.TryGetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
+        if (!this.TrySetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
             return;
         if (fieldValues == null)
             throw new ArgumentNullException($"字段值fieldValues不可为null");
@@ -242,7 +248,7 @@ public class SqlVisitor : ISqlVisitor
     public void UseTableByOthers(TableShardingUsageMode usageMode, params object[] otherFieldValues)
     {
         var tableSegment = this.Tables[0];
-        if (!this.TryGetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
+        if (!this.TrySetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
             return;
         if (otherFieldValues == null || otherFieldValues.Length == 0)
             throw new ArgumentNullException($"字段值otherFieldValues不可为null");
@@ -253,7 +259,7 @@ public class SqlVisitor : ISqlVisitor
             throw new Exception("如果提供了所有分表委托参数，请使用方法UseTableBy");
         tableSegment.IsUseOtherValuesTableSharding = true;
     }
-    public bool TryGetTableShardingInfo(TableSegment tableSegment, TableShardingUsageMode usageMode, out TableShardingInfo tableShardingInfo)
+    public bool TrySetTableShardingInfo(TableSegment tableSegment, TableShardingUsageMode usageMode, out TableShardingInfo tableShardingInfo)
     {
         if (tableSegment.TableShardingInfo != null)
         {
@@ -2485,22 +2491,35 @@ public class SqlVisitor : ISqlVisitor
     public string GetTableName(TableSegment tableSegment)
     {
         string tableName = null;
-        if (tableSegment.IsSharding)
+        if (tableSegment.TableShardingInfo != null)
         {
-            //当单个ShardingTables时，只有一个分表的情况下，会移除ShardingTables中的表，存在多个分表的表时，不做移除
-            if (tableSegment.ShardingType > ShardingTableType.SingleTable
-                && (tableSegment.TableType == TableType.Entity || tableSegment.TableType == TableType.Include))
-                tableName = $"__SHARDING_{tableSegment.ShardingId}_{tableSegment.Mapper.TableName}";
-            //单个明确分表或是有分表的子查询
-            else tableName = tableSegment.Body;
+            if (tableSegment.IsSharding)
+            {
+                //当单个ShardingTables时，只有一个分表的情况下，会移除ShardingTables中的表，存在多个分表的表时，不做移除
+                if (tableSegment.ShardingType > ShardingTableType.SingleTable
+                    && (tableSegment.TableType == TableType.Entity || tableSegment.TableType == TableType.Include))
+                    tableName = $"__SHARDING_{tableSegment.ShardingId}_{tableSegment.Mapper.TableName}";
+                //单个明确分表或是有分表的子查询
+                else tableName = tableSegment.Body;
+            }
+            else
+            {
+                var memberInfos = tableSegment.TableShardingInfo.DependOnMembers;
+                if (memberInfos == null || memberInfos.Count == 0)
+                    throw new InvalidOperationException($"实体表{tableSegment.EntityType.FullName}已设置分表，但未指定分表名，也未指定依赖成员，无法确定分表，原表名：{tableName}");
+                if (this.ShardingValues == null || this.ShardingValues.Count <= 0 || this.ShardingValues.Count != memberInfos.Count)
+                    throw new InvalidOperationException($"实体表{tableSegment.EntityType.FullName}已设置分表，但未指定分表名，已配置依赖成员，但未完全提供依赖成员值，无法确定分表，原表名：{tableName}");
+
+                var fieldValues = this.GetShardingValues(tableSegment.TableShardingInfo, this.ShardingValues);
+                tableName = tableSegment.TableShardingInfo.Rule.Invoke(tableName, fieldValues.ToArray());
+            }
         }
-        //子查询场景，tableSegment.Body有值
         else tableName = tableSegment.Body ?? tableSegment.Mapper.TableName;
+
         if (tableSegment.TableType != TableType.FromQuery)
         {
-            //支持TableSchema
             if (!string.IsNullOrEmpty(tableSegment.TableSchema))
-                tableName = this.OrmProvider.GetTableName(tableSegment.TableSchema) + "." + this.OrmProvider.GetTableName(tableName);
+                tableName = $"{this.OrmProvider.GetTableName(tableSegment.TableSchema)}.{this.OrmProvider.GetTableName(tableName)}";
             else tableName = this.OrmProvider.GetTableName(tableName);
         }
         return tableName;

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -43,17 +42,17 @@ public class FromCommand<TEntity, T> : FromCommand, IFromCommand<TEntity, T>
     #region Sharding
     public virtual IFromCommand<TEntity, T> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, false, tableNames);
         return this;
     }
     public virtual IFromCommand<TEntity, T> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IFromCommand<TEntity, T> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IFromCommand<TEntity, T> UseUnionShardingTable()
@@ -349,22 +348,22 @@ public class FromCommand<TEntity, T1, T2> : FromCommand, IFromCommand<TEntity, T
     #region Sharding
     public virtual IFromCommand<TEntity, T1, T2> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, false, tableNames);
         return this;
     }
     public virtual IFromCommand<TEntity, T1, T2> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.WriteOnly, false, tableNameGetter);
         return this;
     }
     public virtual IFromCommand<TEntity, T1, T2> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IFromCommand<TEntity, T1, T2> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IFromCommand<TEntity, T1, T2> UseUnionShardingTable()
@@ -381,6 +380,7 @@ public class FromCommand<TEntity, T1, T2> : FromCommand, IFromCommand<TEntity, T
         return this;
     }
     #endregion
+
     #region WithTable
     public virtual IFromCommand<TEntity, T1, T2, TOther> WithTable<TOther>()
     {
@@ -599,22 +599,22 @@ public class FromCommand<TEntity, T1, T2, T3> : FromCommand, IFromCommand<TEntit
     #region Sharding
     public virtual IFromCommand<TEntity, T1, T2, T3> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, false, tableNames);
         return this;
     }
     public virtual IFromCommand<TEntity, T1, T2, T3> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.WriteOnly, false, tableNameGetter);
         return this;
     }
     public virtual IFromCommand<TEntity, T1, T2, T3> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IFromCommand<TEntity, T1, T2, T3> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IFromCommand<TEntity, T1, T2, T3> UseUnionShardingTable()
@@ -631,6 +631,7 @@ public class FromCommand<TEntity, T1, T2, T3> : FromCommand, IFromCommand<TEntit
         return this;
     }
     #endregion
+
     #region WithTable
     public virtual IFromCommand<TEntity, T1, T2, T3, TOther> WithTable<TOther>()
     {
@@ -849,22 +850,22 @@ public class FromCommand<TEntity, T1, T2, T3, T4> : FromCommand, IFromCommand<TE
     #region Sharding
     public virtual IFromCommand<TEntity, T1, T2, T3, T4> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, false, tableNames);
         return this;
     }
     public virtual IFromCommand<TEntity, T1, T2, T3, T4> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.WriteOnly, false, tableNameGetter);
         return this;
     }
     public virtual IFromCommand<TEntity, T1, T2, T3, T4> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IFromCommand<TEntity, T1, T2, T3, T4> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IFromCommand<TEntity, T1, T2, T3, T4> UseUnionShardingTable()
@@ -881,6 +882,7 @@ public class FromCommand<TEntity, T1, T2, T3, T4> : FromCommand, IFromCommand<TE
         return this;
     }
     #endregion
+
     #region WithTable
     public virtual IFromCommand<TEntity, T1, T2, T3, T4, TOther> WithTable<TOther>()
     {
@@ -1099,22 +1101,22 @@ public class FromCommand<TEntity, T1, T2, T3, T4, T5> : FromCommand, IFromComman
     #region Sharding
     public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, false, tableNames);
         return this;
     }
     public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.WriteOnly, false, tableNameGetter);
         return this;
     }
     public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5> UseUnionShardingTable()
@@ -1131,6 +1133,7 @@ public class FromCommand<TEntity, T1, T2, T3, T4, T5> : FromCommand, IFromComman
         return this;
     }
     #endregion
+
     #region WithTable
     public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5, TOther> WithTable<TOther>()
     {
@@ -1349,22 +1352,22 @@ public class FromCommand<TEntity, T1, T2, T3, T4, T5, T6> : FromCommand, IFromCo
     #region Sharding
     public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5, T6> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, false, tableNames);
         return this;
     }
     public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5, T6> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.WriteOnly, false, tableNameGetter);
         return this;
     }
     public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5, T6> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5, T6> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5, T6> UseUnionShardingTable()

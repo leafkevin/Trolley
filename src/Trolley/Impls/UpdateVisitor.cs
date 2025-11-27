@@ -11,8 +11,6 @@ namespace Trolley;
 public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 {
     protected List<CommandSegment> deferredSegments = new();
-    protected bool isNeedSplitShardingTables = false;
-    protected Dictionary<string, object> shardingValues = null;
     protected bool hasOnlyFields = false;
     protected bool hasIgnoreFields = false;
 
@@ -129,6 +127,12 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
         if (this.deferredSegments.Count > 1)
         {
+            if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding
+                && tableSegment.ShardingTableGetter == null && !tableSegment.IsUseOtherValuesTableSharding)
+            {
+                this.IsNeedSplitShardingTables = true;
+                this.ShardingValues = new();
+            }
             var tempDbParameters = new TheaDbParameterCollection();
             this.DbParameters = tempDbParameters;
             for (int i = 1; i < this.deferredSegments.Count; i++)
@@ -220,7 +224,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(updateObjType, updateObjs, this.shardingValues);
+                shardingTables = this.SplitShardingParameters(updateObjType, updateObjs, this.ShardingValues);
             }
         }
         return (shardingType, shardingTables, updateObjs, bulkCount, firstSqlSetter, loopSqlSetter, null);
@@ -230,8 +234,13 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         readerFields = null;
         this.FieldsBuilder = new();
         this.DbParameters = command.Parameters;
+        var tableSegment = this.Tables[0];
+        if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding)
+        {
+            this.IsNeedSplitShardingTables = true;
+            this.ShardingValues = new();
+        }
 
-        var builder = new StringBuilder();
         foreach (var deferredSegment in this.deferredSegments)
         {
             switch (deferredSegment.Type)
@@ -266,22 +275,19 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             }
         }
 
-        var aliasName = this.Tables[0].AliasName;
-        if (this.IsNeedTableAlias)
-            builder.Append($"{aliasName} ");
-
+        var builder = new StringBuilder($"UPDATE {this.GetTableName(tableSegment)}");
+        if (this.IsNeedTableAlias) builder.Append($" {this.Tables[0].AliasName}");
         if (this.IsJoin)
         {
             for (var i = 1; i < this.Tables.Count; i++)
             {
-                var tableSegment = this.Tables[i];
-                var tableName = this.GetTableName(tableSegment);
-                builder.Append($"{tableSegment.JoinType} {tableName} {tableSegment.AliasName}");
-                builder.Append($" ON {tableSegment.OnExpr} ");
+                var myTableSegment = this.Tables[i];
+                var tableName = this.GetTableName(myTableSegment);
+                builder.Append($" {myTableSegment.JoinType} {tableName} {myTableSegment.AliasName} ON {myTableSegment.OnExpr}");
             }
         }
 
-        builder.Append("SET ");
+        builder.Append(" SET ");
         builder.Append(this.FieldsBuilder.ToString());
         if (this.WhereBuilder != null && this.WhereBuilder.Length > 0)
         {
@@ -289,42 +295,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             builder.Append(this.WhereBuilder);
         }
         var sql = builder.ToString();
+        if (this.ShardingTables != null && this.ShardingTables.Count > 0)
+            sql = this.DbContext.BuildShardingTablesSqlByFormat(this, sql, ";");
         builder.Clear();
-
-        if (this.IsJoin)
-        {
-            builder.Append($"UPDATE {this.GetTableName(this.Tables[0])} {sql}");
-            sql = builder.ToString();
-            if (this.ShardingTables != null && this.ShardingTables.Count > 0)
-                sql = this.DbContext.BuildShardingTablesSqlByFormat(this, sql, ";");
-        }
-        else
-        {
-            Action<string> headSqlSetter = null;
-            //处理有tableSchema的场景
-            var tableSchema = this.Tables[0].TableSchema;
-            if (!string.IsNullOrEmpty(tableSchema))
-                headSqlSetter = tableName => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableSchema + "." + tableName)} ");
-            else headSqlSetter = tableName => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableName)} ");
-
-            if (this.ShardingTables != null && this.ShardingTables.Count > 0)
-            {
-                var tableNames = this.ShardingTables[0].TableNames;
-                for (int i = 0; i < tableNames.Count; i++)
-                {
-                    if (i > 0) builder.Append(';');
-                    headSqlSetter.Invoke(tableNames[i]);
-                    builder.Append(sql);
-                }
-            }
-            else
-            {
-                var tableName = this.Tables[0].Mapper.TableName;
-                headSqlSetter.Invoke(this.Tables[0].Body ?? tableName);
-                builder.Append(sql);
-            }
-            sql = builder.ToString();
-        }
         return sql;
     }
     public virtual void Join(string joinType, Type entityType, Expression joinOn)
@@ -417,16 +390,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             Type = "SetBulk",
             Value = (updateObjs, bulkCount)
         });
-        var tableSegment = this.Tables[0];
-        var tableShardingInfo = tableSegment.TableShardingInfo;
-        if (tableShardingInfo != null && !tableSegment.IsSharding && tableSegment.IsUseOtherValuesTableSharding && tableSegment.ShardingTableGetter == null)
-            this.isNeedSplitShardingTables = true;
-        if (this.isNeedSplitShardingTables)
-        {
-            if (tableShardingInfo.DependOnMembers == null || tableShardingInfo.DependOnMembers.Count == 0)
-                throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}已设置分表，但未指定分表名，也未指定依赖成员，无法确定分表，可以使用方法UseTable/UseTableBy/UseTableByRange指定分表名，或是配置分表依赖字段，并设置依赖字段值，原表名：{tableSegment.Mapper.TableName}");
-            this.shardingValues = new();
-        }
     }
     public virtual void WhereWith(object whereObj)
     {
@@ -538,8 +501,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     continue;
 
                 var fieldValue = dict[key];
-                if (this.isNeedSplitShardingTables && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
-                    this.shardingValues[memberMapper.MemberName] = fieldValue;
+                if (this.IsNeedSplitShardingTables && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
+                    this.ShardingValues[memberMapper.MemberName] = fieldValue;
 
                 if (memberMapper.IsIgnore || memberMapper.IsAutoIncrement || memberMapper.IsNavigation
                     || memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion)
@@ -574,11 +537,11 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         }
         else
         {
-            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this.DbContext, entityType, updateObjType, 2, false, this.isNeedSplitShardingTables, false, this.OnlyFieldNames, this.IgnoreFieldNames);
-            if (this.isNeedSplitShardingTables)
+            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this.DbContext, entityType, updateObjType, 2, false, this.IsNeedSplitShardingTables, false, this.OnlyFieldNames, this.IgnoreFieldNames);
+            if (this.IsNeedSplitShardingTables)
             {
                 var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, DbContext, object>;
-                typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.shardingValues, this.DbContext, updateObj);
+                typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.ShardingValues, this.DbContext, updateObj);
             }
             else
             {
@@ -808,8 +771,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             return;
         }
         var fieldValue = isEntity ? memberMapper.Member.Evaluate(memberValue) : memberValue;
-        if (this.isNeedSplitShardingTables && this.Tables[0].TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
-            this.shardingValues[memberMapper.MemberName] = fieldValue;
+        if (this.IsNeedSplitShardingTables && this.Tables[0].TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
+            this.ShardingValues[memberMapper.MemberName] = fieldValue;
 
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
         if (memberMapper.TypeHandler != null)
@@ -834,8 +797,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (sqlSegment.IsConstant || sqlSegment.IsVariable)
         {
             var fieldValue = sqlSegment.Value;
-            if (this.isNeedSplitShardingTables && this.Tables[0].TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
-                this.shardingValues[memberMapper.MemberName] = sqlSegment.Value;
+            if (this.IsNeedSplitShardingTables && this.Tables[0].TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
+                this.ShardingValues[memberMapper.MemberName] = sqlSegment.Value;
 
             var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
             if (memberMapper.TypeHandler != null)
@@ -938,7 +901,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         }
         return (valueSetters, whereSetters);
     }
-
     public virtual void InitTableAlias(LambdaExpression lambdaExpr)
     {
         this.TableAliases.Clear();

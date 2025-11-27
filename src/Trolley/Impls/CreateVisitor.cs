@@ -11,8 +11,6 @@ namespace Trolley;
 public class CreateVisitor : SqlVisitor, ICreateVisitor
 {
     protected List<CommandSegment> deferredSegments = new();
-    protected bool isNeedSplitShardingTables = false;
-    protected Dictionary<string, object> shardingValues = null;
     protected bool hasOnlyFields = false;
     protected bool hasIgnoreFields = false;
 
@@ -51,7 +49,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         switch (this.ActionMode)
         {
             case ActionMode.Bulk:
-                (var shardingType, var shardingTables, var insertObjs, _, var firstSqlSetter,
+                (var shardingType, var shardingTables, var insertObjs, _, var sqlSegment,
                     var loopSqlSetter, var tailSql, readerFields) = this.BuildWithBulk(command);
 
                 int index = 0;
@@ -61,7 +59,10 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
                     foreach (var tableName in tabledInsertObjs.Keys)
                     {
-                        firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                        sqlSegment.FixedDbParameters.ForEach(f => command.Parameters.Add(f));
+                        builder.Append(sqlSegment.HeadSql);
+                        builder.Append(this.OrmProvider.GetTableName(tableName));
+                        builder.Append(sqlSegment.FixedFieldsSql);
                         var tableParameters = tabledInsertObjs[tableName];
                         foreach (var insertObj in tableParameters)
                         {
@@ -97,8 +98,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var tableSegment = this.Tables[0];
         if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding)
         {
-            this.isNeedSplitShardingTables = true;
-            this.shardingValues = new();
+            this.IsNeedSplitShardingTables = true;
+            this.ShardingValues = new();
         }
         foreach (var deferredSegment in this.deferredSegments)
         {
@@ -113,7 +114,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             }
         }
 
-        var tableName = this.GetTableName();
+        var tableName = this.GetTableName(tableSegment);
         var sql = $"INSERT INTO {tableName} ({this.FieldsBuilder}) VALUES ({this.ValuesBuilder})";
         if (this.IsReturnIdentity)
         {
@@ -166,8 +167,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual void OnlyFields(Expression fieldsSelector)
         => this.OnlyFieldNames = this.VisitFields(fieldsSelector);
-    public virtual (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
-        Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
+    public virtual (ShardingTableType, object, IEnumerable, int, BulkSqlSegment,
+        Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
     {
         (var insertObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
 
@@ -179,30 +180,19 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             insertObjType = insertObj.GetType();
             break;
         }
-
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
-
-        string headSql = "INSERT INTO ";
-        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
-            headSql += this.OrmProvider.GetTableName(tableSegment.TableSchema) + ".";
-
-        string fixedFieldsSql = "(", fixedValuesSql = ") VALUES (";
         List<IDbDataParameter> fixedDbParameters = null;
-        Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = (dbParameters, builder, tableName) =>
-        {
-            builder.Append(headSql);
-            builder.Append(this.OrmProvider.GetTableName(tableName));
-            builder.Append(fixedFieldsSql);
-            builder.Append(fixedValuesSql);
-        };
+        this.FieldsBuilder.Append('(');
+        this.ValuesBuilder = new StringBuilder("(");
+
         if (this.deferredSegments.Count > 1)
         {
             if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding
                 && tableSegment.ShardingTableGetter == null && !tableSegment.IsUseOtherValuesTableSharding)
             {
-                this.isNeedSplitShardingTables = true;
-                this.shardingValues = new();
+                this.IsNeedSplitShardingTables = true;
+                this.ShardingValues = new();
             }
             var tempDbParameters = new TheaDbParameterCollection();
             this.DbParameters = tempDbParameters;
@@ -220,30 +210,45 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     default: throw new NotSupportedException("批量插入后，只支持WithBy/IgnoreFields/OnlyFields操作");
                 }
             }
-            fixedFieldsSql += "," + this.FieldsBuilder.ToString();
-            fixedValuesSql += this.ValuesBuilder.ToString() + ",";
-
+            this.FieldsBuilder.Append(',');
+            this.ValuesBuilder.Append(',');
             if (this.DbParameters.Count > 0)
-            {
                 fixedDbParameters = tempDbParameters.ToList();
-                firstSqlSetter = (dbParameters, builder, tableName) =>
-                {
-                    builder.Append(headSql);
-                    builder.Append(this.OrmProvider.GetTableName(tableName));
-                    builder.Append(fixedFieldsSql);
-                    builder.Append(fixedValuesSql);
-                    fixedDbParameters.ForEach(f => dbParameters.Add(f));
-                };
-            }
             this.DbParameters = command.Parameters;
         }
 
         var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(entityType);
-        Action<IDataParameterCollection, StringBuilder, DbContext, object, string> loopSqlSetter = null;
+        Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string> loopSqlSetter = null;
         if (firstInsertObj is IDictionary<string, object> dict)
-            loopSqlSetter = this.BuildDictBulkCommandInitializer(entityMapper, dict);
-        else loopSqlSetter = RepositoryHelper.BuildTypedBulkCommandInitializer(this.DbContext, entityType, insertObjType, 1,
-            this.OnlyFieldNames, this.IgnoreFieldNames) as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+        {
+            var valueSetters = this.BuildDictBulkCommandInitializer(entityMapper, dict);
+            loopSqlSetter = (dbParameters, builder, dbContext, headSql, insertObj, suffix) =>
+            {
+                var typedInsertObj = insertObj as IDictionary<string, object>;
+                builder.Append(headSql);
+                foreach (var valueSetter in valueSetters)
+                    valueSetter.Invoke(dbParameters, builder, typedInsertObj, suffix);
+            };
+        }
+        else
+        {
+            (var fieldsSql, loopSqlSetter) = ((string, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>))
+                RepositoryHelper.BuildTypedBulkCommandInitializer(this.DbContext, entityType, insertObjType, 1, this.OnlyFieldNames, this.IgnoreFieldNames);
+            this.FieldsBuilder.Append(fieldsSql);
+        }
+        this.FieldsBuilder.Append(')');
+
+        string headSql = "INSERT INTO ";
+        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
+            headSql += this.OrmProvider.GetTableName(tableSegment.TableSchema) + ".";
+
+        var sqlSegment = new BulkSqlSegment
+        {
+            HeadSql = headSql,
+            FixedFieldsSql = this.FieldsBuilder.ToString(),
+            FixedValuesSql = this.ValuesBuilder.ToString(),
+            FixedDbParameters = fixedDbParameters
+        };
 
         var shardingType = ShardingTableType.None;
         object shardingTables = tableSegment.Mapper.TableName;
@@ -262,10 +267,10 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(insertObjType, insertObjs, this.shardingValues);
+                shardingTables = this.SplitShardingParameters(insertObjType, insertObjs, this.ShardingValues);
             }
         }
-        return (shardingType, shardingTables, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, null, null);
+        return (shardingType, shardingTables, insertObjs, bulkCount, sqlSegment, loopSqlSetter, null, null);
     }
     public virtual void VisitWithBy(object insertObj)
     {
@@ -281,8 +286,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     continue;
 
                 var fieldValue = dict[key];
-                if (this.isNeedSplitShardingTables && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
-                    this.shardingValues[memberMapper.MemberName] = fieldValue;
+                if (this.IsNeedSplitShardingTables && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
+                    this.ShardingValues[memberMapper.MemberName] = fieldValue;
 
                 if (memberMapper.IsIgnore || memberMapper.IsAutoIncrement
                     || memberMapper.IsNavigation || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
@@ -322,11 +327,11 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         }
         else
         {
-            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this.DbContext, entityType, insertObjType, 1, false, this.isNeedSplitShardingTables, false, this.OnlyFieldNames, this.IgnoreFieldNames);
-            if (this.isNeedSplitShardingTables)
+            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this.DbContext, entityType, insertObjType, 1, false, this.IsNeedSplitShardingTables, false, this.OnlyFieldNames, this.IgnoreFieldNames);
+            if (this.IsNeedSplitShardingTables)
             {
                 var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, StringBuilder, IDictionary<string, object>, DbContext, object>;
-                typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.ValuesBuilder, this.shardingValues, this.DbContext, insertObj);
+                typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.ValuesBuilder, this.ShardingValues, this.DbContext, insertObj);
             }
             else
             {
@@ -409,34 +414,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             return fieldNames;
         return null;
     }
-    public virtual string GetTableName()
-    {
-        var tableSegment = this.Tables[0];
-        var entityType = tableSegment.EntityType;
-        string tableName = tableSegment.Mapper.TableName;
-        if (tableSegment.TableShardingInfo != null)
-        {
-            //已经手动设置过分表
-            if (tableSegment.IsSharding)
-                tableName = tableSegment.Body;
-            else
-            {
-                var memberInfos = tableSegment.TableShardingInfo.DependOnMembers;
-                if (memberInfos == null || memberInfos.Count == 0)
-                    throw new InvalidOperationException($"实体表{entityType.FullName}已设置分表，但未指定分表名，也未指定依赖成员，无法确定分表，原表名：{tableName}");
-                if (this.shardingValues == null || this.shardingValues.Count <= 0 || this.shardingValues.Count != memberInfos.Count)
-                    throw new InvalidOperationException($"实体表{entityType.FullName}已设置分表，但未指定分表名，已配置依赖成员，但未完全提供依赖成员值，无法确定分表，原表名：{tableName}");
-
-                var fieldValues = this.GetShardingValues(tableSegment.TableShardingInfo, this.shardingValues);
-                tableName = tableSegment.TableShardingInfo.Rule.Invoke(tableName, fieldValues.ToArray()) as string;
-            }
-        }
-        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
-            tableName = $"{this.OrmProvider.GetTableName(tableSegment.TableSchema)}.{this.OrmProvider.GetTableName(tableName)}";
-        else tableName = this.OrmProvider.GetTableName(tableName);
-        return tableName;
-    }
-    public Action<IDataParameterCollection, StringBuilder, DbContext, object, string> BuildDictBulkCommandInitializer(EntityMap entityMapper, IDictionary<string, object> dict)
+    public List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>> BuildDictBulkCommandInitializer(EntityMap entityMapper, IDictionary<string, object> dict)
     {
         var valueSetters = new List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>>();
         int index = 0;
@@ -446,6 +424,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                || memberMapper.IsAutoIncrement || memberMapper.IsNavigation
                || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
                 continue;
+
             if (this.hasOnlyFields || this.hasIgnoreFields)
             {
                 var lowerMemberName = memberMapper.MemberName.ToLower();
@@ -497,12 +476,14 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             valueSetters.Add(valueSetter);
             index++;
         }
-        return (dbParameters, builder, dbContext, insertObj, suffix) =>
-        {
-            var typedInsertObj = insertObj as IDictionary<string, object>;
-            foreach (var valueSetter in valueSetters)
-                valueSetter.Invoke(dbParameters, builder, typedInsertObj, suffix);
-        };
+        //return (dbParameters, builder, dbContext, headSql, insertObj, suffix) =>
+        //{
+        //    var typedInsertObj = insertObj as IDictionary<string, object>;
+        //    builder.Append(headSql);
+        //    foreach (var valueSetter in valueSetters)
+        //        valueSetter.Invoke(dbParameters, builder, typedInsertObj, suffix);
+        //};
+        return valueSetters;
     }
     public override void Dispose()
     {

@@ -30,7 +30,7 @@ public class Update<TEntity> : IUpdate<TEntity>
     {
         this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, false, tableNames);
         return this;
-    }  
+    }
     public virtual IUpdate<TEntity> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
@@ -190,11 +190,13 @@ public class Updated<TEntity> : IUpdated<TEntity>
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.Bulk:
-                var builder = new StringBuilder();
-                (var shardingType, var shardingTables, var updateObjs, var bulkCount, var fixedSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
+                (var shardingType, var shardingTables, var updateObjs, var bulkCount,
+                    var fixedSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
 
                 int index = 0;
+                var builder = new StringBuilder();
                 fixedSqlSetter?.Invoke(command.Parameters);
+
                 connection.Open();
                 if (shardingType == ShardingTableType.SplitTables)
                 {
@@ -204,7 +206,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
                         var tableParameters = tabledUpdateObjs[tableName];
                         foreach (var updateObj in tableParameters)
                         {
-                            loopSqlSetter.Invoke(command.Parameters, builder, tableName, updateObj, index);
+                            loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, index.ToString());
                         }
                         index++;
 
@@ -227,14 +229,14 @@ public class Updated<TEntity> : IUpdated<TEntity>
                         {
                             case ShardingTableType.None:
                             case ShardingTableType.SingleTable:
-                                loopSqlSetter.Invoke(command.Parameters, builder, shardingTables as string, updateObj, index);
+                                loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, shardingTables as string, updateObj, index.ToString());
                                 break;
                             case ShardingTableType.MultiTable:
                             case ShardingTableType.ShardingTableMap:
                                 var tableNames = shardingTables as List<string>;
                                 foreach (var tableName in tableNames)
                                 {
-                                    loopSqlSetter.Invoke(command.Parameters, builder, tableName, updateObj, index);
+                                    loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, index.ToString());
                                 }
                                 break;
                         }
@@ -261,7 +263,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
             default:
                 if (!this.Visitor.HasWhere)
                     throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
-                command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
+                command.CommandText = this.Visitor.BuildCommand(command, out _);
                 connection.Open();
                 result = command.ExecuteNonQuery(CommandSqlType.Update);
                 break;
@@ -279,50 +281,66 @@ public class Updated<TEntity> : IUpdated<TEntity>
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.Bulk:
-                var builder = new StringBuilder();
-                (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.Visitor.BuildWithBulk(command);
-                Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
+                (var shardingType, var shardingTables, var updateObjs, var bulkCount,
+                   var fixedSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
 
-                Action<object, int> sqlExecuter = null;
-                if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
+                int index = 0;
+                var builder = new StringBuilder();
+                fixedSqlSetter?.Invoke(command.Parameters);
+
+                connection.Open();
+                if (shardingType == ShardingTableType.SplitTables)
                 {
-                    sqlExecuter = (updateObj, index) =>
+                    var tabledUpdateObjs = shardingTables as Dictionary<string, List<object>>;
+                    foreach (var tableName in tabledUpdateObjs.Keys)
                     {
-                        if (index > 0) builder.Append(';');
-                        var tableNames = this.Visitor.ShardingTables[0].TableNames;
-                        firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableNames[0], updateObj, suffixGetter.Invoke(index));
-                        for (int i = 1; i < tableNames.Count; i++)
+                        var tableParameters = tabledUpdateObjs[tableName];
+                        foreach (var updateObj in tableParameters)
                         {
-                            builder.Append(';');
-                            sqlSetter.Invoke(builder, this.DbContext, tableNames[i], updateObj, suffixGetter.Invoke(index));
+                            loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, index.ToString());
                         }
-                    };
+                        index++;
+
+                        if (index >= bulkCount)
+                        {
+                            command.CommandText = builder.ToString();
+                            result += command.ExecuteNonQuery(CommandSqlType.BulkUpdate);
+                            command.Parameters.Clear();
+                            fixedSqlSetter?.Invoke(command.Parameters);
+                            builder.Clear();
+                            index = 0;
+                        }
+                    }
                 }
                 else
                 {
-                    sqlExecuter = (updateObj, index) =>
+                    foreach (var updateObj in updateObjs)
                     {
-                        if (index > 0) builder.Append(';');
-                        firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, suffixGetter.Invoke(index));
-                    };
-                }
-
-                int index = 0;
-                fixedParameterSetter?.Invoke(command.Parameters);
-                await connection.OpenAsync(cancellationToken);
-                foreach (var updateObj in updateObjs)
-                {
-                    sqlExecuter.Invoke(updateObj, index);
-                    index++;
-
-                    if (index >= bulkCount)
-                    {
-                        command.CommandText = builder.ToString();
-                        result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkUpdate, cancellationToken);
-                        command.Parameters.Clear();
-                        fixedParameterSetter?.Invoke(command.Parameters);
-                        builder.Clear();
-                        index = 0;
+                        switch (shardingType)
+                        {
+                            case ShardingTableType.None:
+                            case ShardingTableType.SingleTable:
+                                loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, shardingTables as string, updateObj, index.ToString());
+                                break;
+                            case ShardingTableType.MultiTable:
+                            case ShardingTableType.ShardingTableMap:
+                                var tableNames = shardingTables as List<string>;
+                                foreach (var tableName in tableNames)
+                                {
+                                    loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, index.ToString());
+                                }
+                                break;
+                        }
+                        index++;
+                        if (index >= bulkCount)
+                        {
+                            command.CommandText = builder.ToString();
+                            result += command.ExecuteNonQuery(CommandSqlType.BulkUpdate);
+                            command.Parameters.Clear();
+                            fixedSqlSetter?.Invoke(command.Parameters);
+                            builder.Clear();
+                            index = 0;
+                        }
                     }
                 }
                 if (index > 0)
@@ -335,7 +353,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
             default:
                 if (!this.Visitor.HasWhere)
                     throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
-                command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
+                command.CommandText = this.Visitor.BuildCommand( command, out _);
                 await connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
                 break;
