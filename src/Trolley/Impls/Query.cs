@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -191,17 +190,17 @@ public class Query<T> : QueryBase, IQuery<T>
     #region Sharding
     public virtual IQuery<T> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IQuery<T> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T> UseUnionShardingTable()

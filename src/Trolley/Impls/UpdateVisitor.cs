@@ -20,8 +20,17 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public bool IsFrom { get; set; }
     public bool IsJoin { get; set; }
     public StringBuilder FieldsBuilder { get; set; }
-    public string FixedSql { get; set; }
+
     public bool HasWhere { get; protected set; }
+
+
+    public string HeadSql { get; set; }
+    public string FixedHeadSql { get; set; }
+    public string FixedTailSql { get; set; }
+    public List<IDbDataParameter> FixedDbParameters { get; set; }
+    public List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>> ValueSetters { get; set; }
+    public List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>> WhereSetters { get; set; }
+
 
     public UpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
     {
@@ -113,18 +122,17 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             updateObjType = updateObj.GetType();
             break;
         }
-
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
 
-        var headSql = "UPDATE";
+        this.HeadSql = "UPDATE";
         if (!string.IsNullOrEmpty(tableSegment.TableSchema))
-            headSql += $" {this.OrmProvider.GetTableName(tableSegment.TableSchema)}.";
+            this.HeadSql += $" {this.OrmProvider.GetTableName(tableSegment.TableSchema)}.";
+        this.FixedHeadSql = "SET ";
+        this.FixedTailSql = ";";
+
         Action<IDataParameterCollection> firstSqlSetter = null;
         Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string> loopSqlSetter = null;
-        string fixedHeadSql = "SET ", fixedTailSql = ";";
-        List<IDbDataParameter> fixedDbParameters = null;
-
         if (this.deferredSegments.Count > 1)
         {
             if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding
@@ -167,29 +175,29 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             }
             if (this.DbParameters.Count > 0)
             {
-                fixedDbParameters = tempDbParameters.ToList();
-                firstSqlSetter = dbParameters => fixedDbParameters.ForEach(f => dbParameters.Add(f));
+                this.FixedDbParameters = tempDbParameters.ToList();
+                firstSqlSetter = dbParameters => this.FixedDbParameters.ForEach(f => dbParameters.Add(f));
             }
             if (this.FieldsBuilder.Length > 0)
-                fixedHeadSql = $"SET {this.FieldsBuilder.ToString()},";
+                this.FixedHeadSql = $"SET {this.FieldsBuilder.ToString()},";
             if (this.WhereBuilder.Length > 0)
-                fixedTailSql = $" AND {this.WhereBuilder.ToString()};";
+                this.FixedTailSql = $" AND {this.WhereBuilder.ToString()};";
             this.DbParameters = command.Parameters;
         }
 
         if (firstUpdateObj is IDictionary<string, object> dict)
         {
-            (var valueSetters, var whereSetters) = this.BuildDictBulkCommandInitializer(tableSegment.Mapper, dict);
+            (this.ValueSetters, this.WhereSetters) = this.BuildDictBulkCommandInitializer(tableSegment.Mapper, dict);
             loopSqlSetter = (dbParameters, builder, dbContext, tableName, updateObj, index) =>
             {
                 var dictObj = updateObj as IDictionary<string, object>;
-                builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} SET {fixedHeadSql}");
-                foreach (var valueSetter in valueSetters)
+                builder.Append($"{this.HeadSql}{this.OrmProvider.GetTableName(tableName)} {this.FixedHeadSql}");
+                foreach (var valueSetter in this.ValueSetters)
                     valueSetter.Invoke(dbParameters, builder, dictObj, index.ToString());
                 builder.Append(" WHERE ");
-                foreach (var valueSetter in whereSetters)
+                foreach (var valueSetter in this.WhereSetters)
                     valueSetter.Invoke(dbParameters, builder, dictObj, index.ToString());
-                builder.Append(fixedTailSql);
+                builder.Append(this.FixedTailSql);
             };
         }
         else
@@ -198,9 +206,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
             loopSqlSetter = (dbParameters, builder, dbContext, tableName, updateObj, index) =>
             {
-                builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} SET {fixedHeadSql}");
+                builder.Append($"{this.HeadSql}{this.OrmProvider.GetTableName(tableName)} {this.FixedHeadSql}");
                 commandInitializer.Invoke(dbParameters, builder, dbContext, updateObj, index.ToString());
-                builder.Append(fixedTailSql);
+                builder.Append(this.FixedTailSql);
             };
         }
 
@@ -461,16 +469,24 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.IsJoin = false;
         this.deferredSegments.Clear();
         this.FieldsBuilder.Clear();
-        this.FixedSql = null;
+        this.FixedHeadSql = null;
+        this.FixedTailSql = null;
+        this.FixedDbParameters = null;
     }
     public override void Dispose()
     {
         base.Dispose();
         this.deferredSegments = null;
-        this.FieldsBuilder = null;
-        this.FixedSql = null;
+        this.FieldsBuilder = null;  
         this.OnlyFieldNames = null;
         this.IgnoreFieldNames = null;
+
+        this.HeadSql = null;
+        this.FixedHeadSql = null;
+        this.FixedTailSql = null;
+        this.FixedDbParameters = null;
+        this.ValueSetters = null;
+        this.WhereSetters = null;
     }
     public virtual void VisitSetField(object deferredSegmentValue)
     {

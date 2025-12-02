@@ -22,6 +22,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     public ActionMode ActionMode { get; set; }
     public bool IsReturnIdentity { get; set; }
 
+    public string HeadSql { get; set; }
+    public string FixedFieldsSql { get; set; }
+    public string FixedValuesSql { get; set; }
+    public List<IDbDataParameter> FixedDbParameters { get; set; }
+    public List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>> ValueSetters { get; set; }
+
     public CreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
     {
         this.DbContext = dbContext;
@@ -179,9 +185,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         }
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
-        List<IDbDataParameter> fixedDbParameters = null;
         this.FieldsBuilder.Append('(');
         this.ValuesBuilder = new StringBuilder("(");
+
+        this.HeadSql = "INSERT INTO ";
+        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
+            this.HeadSql += this.OrmProvider.GetTableName(tableSegment.TableSchema) + ".";
 
         if (this.deferredSegments.Count > 1)
         {
@@ -210,55 +219,59 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             this.FieldsBuilder.Append(',');
             this.ValuesBuilder.Append(',');
             if (this.DbParameters.Count > 0)
-                fixedDbParameters = tempDbParameters.ToList();
+                this.FixedDbParameters = tempDbParameters.ToList();
             this.DbParameters = command.Parameters;
         }
 
-        var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(entityType);
         Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
-        Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string> loopSqlSetter = null;
+        Action<IDataParameterCollection, StringBuilder, DbContext, object, string> loopSqlSetter = null;
         if (firstInsertObj is IDictionary<string, object> dict)
         {
-            var valueSetters = this.BuildDictBulkCommandInitializer(entityMapper, dict);
-            loopSqlSetter = (dbParameters, builder, dbContext, headSql, insertObj, suffix) =>
+            var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(entityType);
+            this.ValueSetters = this.BuildDictBulkCommandInitializer(entityMapper, dict);
+            loopSqlSetter = (dbParameters, builder, dbContext, insertObj, suffix) =>
             {
                 var typedInsertObj = insertObj as IDictionary<string, object>;
-                builder.Append(headSql);
-                foreach (var valueSetter in valueSetters)
+                builder.Append(this.FixedValuesSql);
+                foreach (var valueSetter in this.ValueSetters)
                     valueSetter.Invoke(dbParameters, builder, typedInsertObj, suffix);
+                builder.Append("),");
             };
         }
         else
         {
-            (var fieldsSql, loopSqlSetter) = ((string, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>))
+            (var fieldsSql, var sqlSetter) = ((string, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>))
                 RepositoryHelper.BuildTypedBulkCommandInitializer(this.DbContext, entityType, insertObjType, 1, this.OnlyFieldNames, this.IgnoreFieldNames);
             this.FieldsBuilder.Append(fieldsSql);
+            loopSqlSetter = (dbParameters, builder, dbContext, insertObj, suffix) =>
+            {
+                sqlSetter.Invoke(dbParameters, builder, dbContext, this.FixedValuesSql, insertObj, suffix);
+                builder.Append("),");
+            };
         }
         this.FieldsBuilder.Append(") VALUES ");
+        this.FixedFieldsSql = this.FieldsBuilder.ToString();
+        this.FixedValuesSql = this.ValuesBuilder.ToString();
 
-        string headSql = "INSERT INTO ";
-        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
-            headSql += this.OrmProvider.GetTableName(tableSegment.TableSchema) + ".";
-
-        if (this.DbParameters.Count > 0)
+        if (this.FixedDbParameters != null && this.FixedDbParameters.Count > 0)
         {
             firstSqlSetter = (dbParameters, builder, tableName) =>
             {
-                builder.Append(headSql);
+                builder.Append(this.HeadSql);
                 builder.Append(this.OrmProvider.GetTableName(tableName));
-                builder.Append(this.FieldsBuilder.ToString());
-                builder.Append(this.ValuesBuilder.ToString());
-                fixedDbParameters.ForEach(f => dbParameters.Add(f));
+                builder.Append(this.FixedFieldsSql);
+                builder.Append(this.FixedValuesSql);
+                this.FixedDbParameters.ForEach(f => dbParameters.Add(f));
             };
         }
         else
         {
             firstSqlSetter = (dbParameters, builder, tableName) =>
             {
-                builder.Append(headSql);
+                builder.Append(this.HeadSql);
                 builder.Append(this.OrmProvider.GetTableName(tableName));
-                builder.Append(this.FieldsBuilder.ToString());
-                builder.Append(this.ValuesBuilder.ToString());
+                builder.Append(this.FixedFieldsSql);
+                builder.Append(this.FixedValuesSql);
             };
         }
         var shardingType = ShardingTableType.None;
@@ -281,6 +294,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 shardingTables = this.SplitShardingParameters(insertObjType, insertObjs, this.ShardingValues);
             }
         }
+
         return (shardingType, shardingTables, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, null, null);
     }
     public virtual void VisitWithBy(object insertObj)
@@ -487,13 +501,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             valueSetters.Add(valueSetter);
             index++;
         }
-        //return (dbParameters, builder, dbContext, headSql, insertObj, suffix) =>
-        //{
-        //    var typedInsertObj = insertObj as IDictionary<string, object>;
-        //    builder.Append(headSql);
-        //    foreach (var valueSetter in valueSetters)
-        //        valueSetter.Invoke(dbParameters, builder, typedInsertObj, suffix);
-        //};
         return valueSetters;
     }
     public override void Dispose()
@@ -504,6 +511,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.ValuesBuilder = null;
         this.OnlyFieldNames = null;
         this.IgnoreFieldNames = null;
+
+        this.HeadSql = null;
+        this.FixedFieldsSql = null;
+        this.FixedValuesSql = null;
+        this.FixedDbParameters = null;
+        this.ValueSetters = null;
     }
     public override IQueryVisitor CreateQueryVisitor(char? tableAsStart = null)
     {

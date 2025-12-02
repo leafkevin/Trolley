@@ -52,7 +52,7 @@ public interface ICreate<TEntity>
     /// </summary>
     /// <param name="otherFieldValues">分表依赖字段值获取委托</param>
     /// <returns>返回更新对象</returns>
-    ICreate<TEntity> UseTableByOthers(params object[] otherFieldValues);   
+    ICreate<TEntity> UseTableByOthers(params object[] otherFieldValues);
     #endregion
 
     #region UseTableSchema

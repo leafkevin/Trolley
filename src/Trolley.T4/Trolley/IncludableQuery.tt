@@ -28,22 +28,22 @@ public class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember
     #region Sharding
     public new IIncludableQuery<T, TMember> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(this.IsIncludeMany, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, this.IsIncludeMany, tableNames);
         return this;
     }
     public IIncludableQuery<T, TMember> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(this.IsIncludeMany, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.ReadOnly, this.IsIncludeMany, tableNameGetter);
         return this;
     }
     public new IIncludableQuery<T, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(this.IsIncludeMany, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, this.IsIncludeMany, fieldValues);
         return this;
     }
     public new IIncludableQuery<T, TMember> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, this.IsIncludeMany, fieldValues);
         return this;
     }
     public new IIncludableQuery<T, TMember> UseUnionShardingTable()
@@ -102,22 +102,22 @@ public class IncludableQuery<<#=tables#>, TMember> : Query<<#=tables#>>, IInclud
     #region Sharding
     public new IIncludableQuery<<#=tables#>, TMember> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(this.IsIncludeMany, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, this.IsIncludeMany, tableNames);
         return this;
     }
     public new IIncludableQuery<<#=tables#>, TMember> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(this.IsIncludeMany, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.ReadOnly, this.IsIncludeMany, tableNameGetter);
         return this;
     }
     public new IIncludableQuery<<#=tables#>, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(this.IsIncludeMany, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, this.IsIncludeMany, fieldValues);
         return this;
     }
     public new IIncludableQuery<<#=tables#>, TMember> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, this.IsIncludeMany, fieldValues);
         return this;
     }
     public new IIncludableQuery<<#=tables#>, TMember> UseUnionShardingTable()

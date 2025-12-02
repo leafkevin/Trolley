@@ -28,25 +28,34 @@ public class Update<TEntity> : IUpdate<TEntity>
     public Update(DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.Visitor = this.DbContext.OrmProvider.NewUpdateVisitor(dbContext);
-        this.Visitor.Initialize(typeof(TEntity));
+        this.Visitor = this.DbContext.OrmProvider.NewUpdateVisitor(typeof(TEntity), dbContext);
     }
     #endregion
 
     #region Sharding
-    public virtual IUpdate<TEntity> UseTable(string tableName)
+    public virtual IUpdate<TEntity> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableName);
-        return this;
-    }
-    public virtual IUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
-    {
-        this.Visitor.UseTable(tableNameGetter);
+        this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, false, tableNames);
         return this;
     }
     public virtual IUpdate<TEntity> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
+        return this;
+    }
+    public virtual IUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
+    {
+        this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, tableNameGetter);
+        return this;
+    }
+    public virtual IUpdate<TEntity> UseTableByOthers(params object[] otherFieldValues)
+    {
+        this.Visitor.UseTableByOthers(TableShardingUsageMode.WriteOnly, otherFieldValues);
+        return this;
+    }
+    public virtual IUpdate<TEntity> UseTableByRange(params object[] fieldValues)
+    {
+        this.Visitor.UseTableByRange(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     #endregion
@@ -185,57 +194,72 @@ public class Updated<TEntity> : IUpdated<TEntity>
     {
         int result = 0;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        if (this.Visitor.IsNeedFetchShardingTables)
-            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.Bulk:
-                var builder = new StringBuilder();
-                (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.Visitor.BuildWithBulk(command);
-                Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
+                (var shardingType, var shardingTables, var updateObjs, var bulkCount,
+                    var fixedSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
 
-                Action<object, int> sqlExecuter = null;
-                if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
+                int index = 0;
+                var builder = new StringBuilder();
+                fixedSqlSetter?.Invoke(command.Parameters);
+
+                connection.Open();
+                if (shardingType == ShardingTableType.SplitTables)
                 {
-                    sqlExecuter = (updateObj, index) =>
+                    var tabledUpdateObjs = shardingTables as Dictionary<string, List<object>>;
+                    foreach (var tableName in tabledUpdateObjs.Keys)
                     {
-                        if (index > 0) builder.Append(';');
-                        var tableNames = this.Visitor.ShardingTables[0].TableNames;
-                        firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableNames[0], updateObj, suffixGetter.Invoke(index));
-                        for (int i = 1; i < tableNames.Count; i++)
+                        var tableParameters = tabledUpdateObjs[tableName];
+                        foreach (var updateObj in tableParameters)
                         {
-                            builder.Append(';');
-                            sqlSetter.Invoke(builder, this.DbContext, tableNames[i], updateObj, suffixGetter.Invoke(index));
+                            loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, index.ToString());
                         }
-                    };
+                        index++;
+
+                        if (index >= bulkCount)
+                        {
+                            command.CommandText = builder.ToString();
+                            result += command.ExecuteNonQuery(CommandSqlType.BulkUpdate);
+                            command.Parameters.Clear();
+                            fixedSqlSetter?.Invoke(command.Parameters);
+                            builder.Clear();
+                            index = 0;
+                        }
+                    }
                 }
                 else
                 {
-                    sqlExecuter = (updateObj, index) =>
+                    foreach (var updateObj in updateObjs)
                     {
-                        if (index > 0) builder.Append(';');
-                        firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, suffixGetter.Invoke(index));
-                    };
-                }
-
-                int index = 0;
-                fixedParameterSetter?.Invoke(command.Parameters);
-                connection.Open();
-                foreach (var updateObj in updateObjs)
-                {
-                    sqlExecuter.Invoke(updateObj, index);
-                    index++;
-
-                    if (index >= bulkCount)
-                    {
-                        command.CommandText = builder.ToString();
-                        result += command.ExecuteNonQuery(CommandSqlType.BulkUpdate);
-                        command.Parameters.Clear();
-                        fixedParameterSetter?.Invoke(command.Parameters);
-                        builder.Clear();
-                        index = 0;
+                        switch (shardingType)
+                        {
+                            case ShardingTableType.None:
+                            case ShardingTableType.SingleTable:
+                                loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, shardingTables as string, updateObj, index.ToString());
+                                break;
+                            case ShardingTableType.MultiTable:
+                            case ShardingTableType.ShardingTableMap:
+                                var tableNames = shardingTables as List<string>;
+                                foreach (var tableName in tableNames)
+                                {
+                                    loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, index.ToString());
+                                }
+                                break;
+                        }
+                        index++;
+                        if (index >= bulkCount)
+                        {
+                            command.CommandText = builder.ToString();
+                            result += command.ExecuteNonQuery(CommandSqlType.BulkUpdate);
+                            command.Parameters.Clear();
+                            fixedSqlSetter?.Invoke(command.Parameters);
+                            builder.Clear();
+                            index = 0;
+                        }
                     }
                 }
+
                 if (index > 0)
                 {
                     command.CommandText = builder.ToString();
@@ -246,7 +270,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
             default:
                 if (!this.Visitor.HasWhere)
                     throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
-                command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
+                command.CommandText = this.Visitor.BuildCommand(command, out _);
                 connection.Open();
                 result = command.ExecuteNonQuery(CommandSqlType.Update);
                 break;
@@ -260,56 +284,70 @@ public class Updated<TEntity> : IUpdated<TEntity>
     {
         int result = 0;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        if (this.Visitor.IsNeedFetchShardingTables)
-            await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
 
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.Bulk:
-                var builder = new StringBuilder();
-                (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.Visitor.BuildWithBulk(command);
-                Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
+                (var shardingType, var shardingTables, var updateObjs, var bulkCount,
+                   var fixedSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
 
-                Action<object, int> sqlExecuter = null;
-                if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
+                int index = 0;
+                var builder = new StringBuilder();
+                fixedSqlSetter?.Invoke(command.Parameters);
+
+                connection.Open();
+                if (shardingType == ShardingTableType.SplitTables)
                 {
-                    sqlExecuter = (updateObj, index) =>
+                    var tabledUpdateObjs = shardingTables as Dictionary<string, List<object>>;
+                    foreach (var tableName in tabledUpdateObjs.Keys)
                     {
-                        if (index > 0) builder.Append(';');
-                        var tableNames = this.Visitor.ShardingTables[0].TableNames;
-                        firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableNames[0], updateObj, suffixGetter.Invoke(index));
-                        for (int i = 1; i < tableNames.Count; i++)
+                        var tableParameters = tabledUpdateObjs[tableName];
+                        foreach (var updateObj in tableParameters)
                         {
-                            builder.Append(';');
-                            sqlSetter.Invoke(builder, this.DbContext, tableNames[i], updateObj, suffixGetter.Invoke(index));
+                            loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, index.ToString());
                         }
-                    };
+                        index++;
+
+                        if (index >= bulkCount)
+                        {
+                            command.CommandText = builder.ToString();
+                            result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkUpdate, cancellationToken);
+                            command.Parameters.Clear();
+                            fixedSqlSetter?.Invoke(command.Parameters);
+                            builder.Clear();
+                            index = 0;
+                        }
+                    }
                 }
                 else
                 {
-                    sqlExecuter = (updateObj, index) =>
+                    foreach (var updateObj in updateObjs)
                     {
-                        if (index > 0) builder.Append(';');
-                        firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, suffixGetter.Invoke(index));
-                    };
-                }
-
-                int index = 0;
-                fixedParameterSetter?.Invoke(command.Parameters);
-                await connection.OpenAsync(cancellationToken);
-                foreach (var updateObj in updateObjs)
-                {
-                    sqlExecuter.Invoke(updateObj, index);
-                    index++;
-
-                    if (index >= bulkCount)
-                    {
-                        command.CommandText = builder.ToString();
-                        result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkUpdate, cancellationToken);
-                        command.Parameters.Clear();
-                        fixedParameterSetter?.Invoke(command.Parameters);
-                        builder.Clear();
-                        index = 0;
+                        switch (shardingType)
+                        {
+                            case ShardingTableType.None:
+                            case ShardingTableType.SingleTable:
+                                loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, shardingTables as string, updateObj, index.ToString());
+                                break;
+                            case ShardingTableType.MultiTable:
+                            case ShardingTableType.ShardingTableMap:
+                                var tableNames = shardingTables as List<string>;
+                                foreach (var tableName in tableNames)
+                                {
+                                    loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, index.ToString());
+                                }
+                                break;
+                        }
+                        index++;
+                        if (index >= bulkCount)
+                        {
+                            command.CommandText = builder.ToString();
+                            result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkUpdate, cancellationToken);
+                            command.Parameters.Clear();
+                            fixedSqlSetter?.Invoke(command.Parameters);
+                            builder.Clear();
+                            index = 0;
+                        }
                     }
                 }
                 if (index > 0)
@@ -322,7 +360,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
             default:
                 if (!this.Visitor.HasWhere)
                     throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
-                command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
+                command.CommandText = this.Visitor.BuildCommand(command, out _);
                 await connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
                 break;
@@ -338,7 +376,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        var sql = this.Visitor.BuildCommand(this.DbContext, command, out _);
+        var sql = this.Visitor.BuildCommand(command, out _);
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         this.Visitor.Dispose();
@@ -735,12 +773,22 @@ public class UpdateJoin<<#=tables#>> : Updated<TEntity>, IUpdateJoin<<#=tables#>
     #region Sharding
     public virtual IUpdateJoin<<#=tables#>> UseTable(string tableName)
     {
-        this.Visitor.UseTable(false, tableName);
+        this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, false, tableName);
         return this;
     }
     public virtual IUpdateJoin<<#=tables#>> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
+        return this;
+    }
+    public virtual IUpdateJoin<<#=tables#>> UseTableByRange(params object[] fieldValues)
+    {
+        this.Visitor.UseTableByRange(TableShardingUsageMode.WriteOnly, false, fieldValues);
+        return this;
+    }
+    public virtual IUpdateJoin<<#=tables#>> UseTableMap(Func<string, string, string, string> tableNameGetter)
+    {
+        this.Visitor.UseTableMap(TableShardingUsageMode.WriteOnly, false, tableNameGetter);
         return this;
     }
     #endregion

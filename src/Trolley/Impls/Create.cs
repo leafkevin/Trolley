@@ -150,6 +150,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                         index++;
                         if (index >= bulkCount)
                         {
+                            builder.Remove(builder.Length - 1, 1);
                             command.CommandText = builder.ToString();
                             result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
                             builder.Clear();

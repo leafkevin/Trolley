@@ -37,7 +37,7 @@ public interface IUpdate<TEntity>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新的实体类型</typeparam>
     /// <param name="tableNameGetter">分表名获取委托</param>
-    /// <returns>返回插入对象</returns>
+    /// <returns>返回更新对象</returns>
     IUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter);
     /// <summary>
     /// 手动指定分表规则依赖的批量更新参数(SetBulk方法中的参数)外的其他参数值，Trolley会自动结合otherFieldValues和批量更新参数中分表依赖字段值确定分表名，otherFieldValues字段值数组中的顺序与配置的依赖字段(批量更新参数中的依赖字段除外)顺序一致，自动更新到多个分表中，此方法只能用于批量场景。

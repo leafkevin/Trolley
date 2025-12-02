@@ -49,6 +49,30 @@ public interface IUpdateJoin<<#=tables#>> : IUpdated<TEntity>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<<#=tables#>> UseTableBy(params object[] fieldValues);
+    /// <summary>
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="<#=currentTable#>"/>表分表名，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// </summary>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateJoin<<#=tables#>> UseTableByRange(params object[] fieldValues);
+    /// <summary>
+    /// 根据更新实体<typeparamref name="TEntity"/>表与当前<typeparamref name="<#=currentTable#>"/>表名的映射关系，指定当前<typeparamref name="<#=currentTable#>"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="TEntity"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="<#=currentTable#>"/>表分表名称，如：
+    /// <code>
+    /// .Update&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// }) ...
+    /// SQL:
+    /// UPDATE `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...;UPDATE `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// </code>
+    /// </summary>
+    /// <param name="tableNameGetter"><typeparamref name="<#=currentTable#>"/>表分表名获取委托</param>
+    /// <returns>返回查询对象</returns>
+    IUpdateJoin<<#=tables#>> UseTableMap(Func<string, string, string, string> tableNameGetter);
     #endregion
 
     #region UseTableSchema

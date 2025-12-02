@@ -12,17 +12,41 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T1表分表名，完整的表名，如：.UseTable("sys_order_202001")
+    /// 直接指定<typeparamref name="T1"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")
     /// </summary>
     /// <param name="tableName">分表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1> UseTable(string tableName);
     /// <summary>
-    /// 手动指定分表规则参数值，执行分表规则确定T1表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="T1"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1> UseTableBy(params object[] fieldValues);
+    /// <summary>
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T1"/>表分表名，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// </summary>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateJoin<TEntity, T1> UseTableByRange(params object[] fieldValues);
+    /// <summary>
+    /// 根据更新实体<typeparamref name="TEntity"/>表与当前<typeparamref name="T1"/>表名的映射关系，指定当前<typeparamref name="T1"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="TEntity"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T1"/>表分表名称，如：
+    /// <code>
+    /// .Update&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// }) ...
+    /// SQL:
+    /// UPDATE `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...;UPDATE `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// </code>
+    /// </summary>
+    /// <param name="tableNameGetter"><typeparamref name="T1"/>表分表名获取委托</param>
+    /// <returns>返回查询对象</returns>
+    IUpdateJoin<TEntity, T1> UseTableMap(Func<string, string, string, string> tableNameGetter);
     #endregion
 
     #region UseTableSchema
@@ -291,17 +315,41 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T2表分表名，完整的表名，如：.UseTable("sys_order_202001")
+    /// 直接指定<typeparamref name="T2"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")
     /// </summary>
     /// <param name="tableName">分表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2> UseTable(string tableName);
     /// <summary>
-    /// 手动指定分表规则参数值，执行分表规则确定T2表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="T2"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2> UseTableBy(params object[] fieldValues);
+    /// <summary>
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T2"/>表分表名，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// </summary>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateJoin<TEntity, T1, T2> UseTableByRange(params object[] fieldValues);
+    /// <summary>
+    /// 根据更新实体<typeparamref name="TEntity"/>表与当前<typeparamref name="T2"/>表名的映射关系，指定当前<typeparamref name="T2"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="TEntity"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T2"/>表分表名称，如：
+    /// <code>
+    /// .Update&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// }) ...
+    /// SQL:
+    /// UPDATE `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...;UPDATE `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// </code>
+    /// </summary>
+    /// <param name="tableNameGetter"><typeparamref name="T2"/>表分表名获取委托</param>
+    /// <returns>返回查询对象</returns>
+    IUpdateJoin<TEntity, T1, T2> UseTableMap(Func<string, string, string, string> tableNameGetter);
     #endregion
 
     #region UseTableSchema
@@ -571,17 +619,41 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T3表分表名，完整的表名，如：.UseTable("sys_order_202001")
+    /// 直接指定<typeparamref name="T3"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")
     /// </summary>
     /// <param name="tableName">分表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3> UseTable(string tableName);
     /// <summary>
-    /// 手动指定分表规则参数值，执行分表规则确定T3表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="T3"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3> UseTableBy(params object[] fieldValues);
+    /// <summary>
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T3"/>表分表名，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// </summary>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateJoin<TEntity, T1, T2, T3> UseTableByRange(params object[] fieldValues);
+    /// <summary>
+    /// 根据更新实体<typeparamref name="TEntity"/>表与当前<typeparamref name="T3"/>表名的映射关系，指定当前<typeparamref name="T3"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="TEntity"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T3"/>表分表名称，如：
+    /// <code>
+    /// .Update&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// }) ...
+    /// SQL:
+    /// UPDATE `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...;UPDATE `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// </code>
+    /// </summary>
+    /// <param name="tableNameGetter"><typeparamref name="T3"/>表分表名获取委托</param>
+    /// <returns>返回查询对象</returns>
+    IUpdateJoin<TEntity, T1, T2, T3> UseTableMap(Func<string, string, string, string> tableNameGetter);
     #endregion
 
     #region UseTableSchema
@@ -852,17 +924,41 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T4表分表名，完整的表名，如：.UseTable("sys_order_202001")
+    /// 直接指定<typeparamref name="T4"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")
     /// </summary>
     /// <param name="tableName">分表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4> UseTable(string tableName);
     /// <summary>
-    /// 手动指定分表规则参数值，执行分表规则确定T4表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="T4"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableBy(params object[] fieldValues);
+    /// <summary>
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T4"/>表分表名，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// </summary>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableByRange(params object[] fieldValues);
+    /// <summary>
+    /// 根据更新实体<typeparamref name="TEntity"/>表与当前<typeparamref name="T4"/>表名的映射关系，指定当前<typeparamref name="T4"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="TEntity"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T4"/>表分表名称，如：
+    /// <code>
+    /// .Update&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// }) ...
+    /// SQL:
+    /// UPDATE `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...;UPDATE `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// </code>
+    /// </summary>
+    /// <param name="tableNameGetter"><typeparamref name="T4"/>表分表名获取委托</param>
+    /// <returns>返回查询对象</returns>
+    IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableMap(Func<string, string, string, string> tableNameGetter);
     #endregion
 
     #region UseTableSchema
@@ -1134,17 +1230,41 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T5表分表名，完整的表名，如：.UseTable("sys_order_202001")
+    /// 直接指定<typeparamref name="T5"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")
     /// </summary>
     /// <param name="tableName">分表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTable(string tableName);
     /// <summary>
-    /// 手动指定分表规则参数值，执行分表规则确定T5表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="T5"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues);
+    /// <summary>
+    /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="T5"/>表分表名，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
+    /// </summary>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableByRange(params object[] fieldValues);
+    /// <summary>
+    /// 根据更新实体<typeparamref name="TEntity"/>表与当前<typeparamref name="T5"/>表名的映射关系，指定当前<typeparamref name="T5"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="TEntity"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T5"/>表分表名称，如：
+    /// <code>
+    /// .Update&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
+    /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    /// .UseTableMap((orderOrigName, userOrigName, orderTableName) =&gt;
+    /// {
+    ///     //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///     return tableName.Substring(0, tableName.Length - 7);
+    /// }) ...
+    /// SQL:
+    /// UPDATE `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...;UPDATE `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// </code>
+    /// </summary>
+    /// <param name="tableNameGetter"><typeparamref name="T5"/>表分表名获取委托</param>
+    /// <returns>返回查询对象</returns>
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableMap(Func<string, string, string, string> tableNameGetter);
     #endregion
 
     #region UseTableSchema

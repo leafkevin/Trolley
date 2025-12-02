@@ -2,8 +2,6 @@
 
 public static class MySqlExtensions
 {
-    public static IMySqlRepository Create(this IOrmDbFactory dbFactory, params object[] dbKeySelectorValues)
-        => dbFactory.Create<IMySqlRepository>(dbKeySelectorValues);
-    public static IMySqlRepository CreateRepository(this IOrmDbFactory dbFactory, string dbKey)
-        => dbFactory.CreateRepository<IMySqlRepository>(dbKey);
+    public static IMySqlRepository Create(this IOrmDbFactory dbFactory, string dbKey = null)
+        => dbFactory.CreateRepository(dbKey) as IMySqlRepository;
 }

@@ -2,8 +2,6 @@
 
 public static class PostgreSqlExtensions
 {
-    public static IPostgreSqlRepository Create(this IOrmDbFactory dbFactory, params object[] dbKeySelectorValues)
-        => dbFactory.Create<IPostgreSqlRepository>(dbKeySelectorValues);
-    public static IPostgreSqlRepository CreateRepository(this IOrmDbFactory dbFactory, string dbKey)
-        => dbFactory.CreateRepository<IPostgreSqlRepository>(dbKey);
+    public static IPostgreSqlRepository Create(this IOrmDbFactory dbFactory, string dbKey = null)
+        => dbFactory.CreateRepository(dbKey) as IPostgreSqlRepository;
 }

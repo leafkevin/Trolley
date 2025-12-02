@@ -140,13 +140,13 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                     builder.Append("DELETE FROM ");
                     builder.Append(this.OrmProvider.GetTableName(tableNames[i]));
                     builder.Append(" WHERE ");
-                    builder.Append(this.WhereBuilder);
+                    builder.Append(this.WhereBuilder.ToString());
                 }
             }
             else
             {
                 var tableName = this.Tables[0].Body ?? this.Tables[0].Mapper.TableName;
-                builder.Append($"DELETE FROM {this.OrmProvider.GetTableName(tableName)} WHERE {this.WhereBuilder}");
+                builder.Append($"DELETE FROM {this.OrmProvider.GetTableName(tableName)} WHERE {this.WhereBuilder.ToString()}");
             }
             sql = builder.ToString();
         }

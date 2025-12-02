@@ -313,13 +313,13 @@ public sealed class DbContext
     #endregion
 
     #region Query
-    public TResult Query<TTarget, TResult>(string rawSql, bool isSingle,
+    public TResult Query<TTarget, TResult>(string rawSql, bool isBulk,
         Func<ITheaDataReader, Func<ITheaDataReader, object>, TResult> readerInitializer, CommandType commandType = CommandType.Text)
     {
         (var isNeedClose, var connection, var command) = this.CreateRawSqlCommand(rawSql, commandType);
 
         connection.Open();
-        var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
+        var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
         var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this);
         var result = readerInitializer.Invoke(reader, deserializer);
@@ -329,13 +329,13 @@ public sealed class DbContext
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<TResult> QueryAsync<TTarget, TResult>(string rawSql, bool isSingle,
+    public async Task<TResult> QueryAsync<TTarget, TResult>(string rawSql, bool isBulk,
         Func<ITheaDataReader, Func<ITheaDataReader, object>, CancellationToken, Task<TResult>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command) = this.CreateRawSqlCommand(rawSql, commandType);
 
         await connection.OpenAsync(cancellationToken);
-        var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
+        var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
         var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this);
         var result = await readerInitializer.Invoke(reader, deserializer, cancellationToken);
@@ -345,13 +345,13 @@ public sealed class DbContext
         if (isNeedClose) await connection.CloseAsync();
         return result;
     }
-    public TResult Query<TTarget, TResult>(string rawSql, bool isSingle, object parameters,
+    public TResult Query<TTarget, TResult>(string rawSql, bool isBulk, object parameters,
         Func<ITheaDataReader, Func<ITheaDataReader, object>, TResult> readerInitializer, CommandType commandType = CommandType.Text)
     {
         (var isNeedClose, var connection, var command) = this.CreateRawSqlCommand(rawSql, parameters, commandType);
 
         connection.Open();
-        var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
+        var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
         var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this);
         var result = readerInitializer.Invoke(reader, deserializer);
@@ -361,13 +361,13 @@ public sealed class DbContext
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<TResult> QueryAsync<TTarget, TResult>(string rawSql, bool isSingle, object parameters,
+    public async Task<TResult> QueryAsync<TTarget, TResult>(string rawSql, bool isBulk, object parameters,
         Func<ITheaDataReader, Func<ITheaDataReader, object>, CancellationToken, Task<TResult>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command) = this.CreateRawSqlCommand(rawSql, parameters, commandType);
 
         await connection.OpenAsync(cancellationToken);
-        var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
+        var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
         var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this);
         var result = await readerInitializer.Invoke(reader, deserializer, cancellationToken);
@@ -404,13 +404,13 @@ public sealed class DbContext
         return (isNeedClose, connection, command);
     }
 
-    public TResult Query<TTarget, TResult>(string rawSql, bool isSingle, List<IDbDataParameter> parameters,
+    public TResult Query<TTarget, TResult>(string rawSql, bool isBulk, List<IDbDataParameter> parameters,
         Func<ITheaDataReader, Func<ITheaDataReader, object>, TResult> readerInitializer, CommandType commandType = CommandType.Text)
     {
         (var isNeedClose, var connection, var command) = this.CreateRawSqlDbParametersCommand(rawSql, parameters, commandType);
 
         connection.Open();
-        var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
+        var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
         var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this);
         var result = readerInitializer.Invoke(reader, deserializer);
@@ -420,13 +420,13 @@ public sealed class DbContext
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<TResult> QueryAsync<TTarget, TResult>(string rawSql, bool isSingle, List<IDbDataParameter> parameters,
+    public async Task<TResult> QueryAsync<TTarget, TResult>(string rawSql, bool isBulk, List<IDbDataParameter> parameters,
         Func<ITheaDataReader, Func<ITheaDataReader, object>, CancellationToken, Task<TResult>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command) = this.CreateRawSqlDbParametersCommand(rawSql, parameters, commandType);
 
         await connection.OpenAsync(cancellationToken);
-        var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
+        var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
         var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this);
         var result = await readerInitializer.Invoke(reader, deserializer, cancellationToken);
@@ -450,12 +450,12 @@ public sealed class DbContext
         return (isNeedClose, connection, command);
     }
 
-    public TResult Query<TEntity, TResult>(object whereObj, bool isSingle, Func<ITheaDataReader, Func<ITheaDataReader, object>, TResult> readerInitializer)
+    public TResult Query<TEntity, TResult>(object whereObj, bool isBulk, Func<ITheaDataReader, Func<ITheaDataReader, object>, TResult> readerInitializer)
     {
         (var isNeedClose, var connection, var command) = this.CreateQueryWhereObjsCommand(typeof(TEntity), whereObj);
 
         connection.Open();
-        var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
+        var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
         var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this);
         var result = readerInitializer.Invoke(reader, deserializer);
@@ -465,12 +465,12 @@ public sealed class DbContext
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<TResult> QueryAsync<TEntity, TResult>(object whereObj, bool isSingle, Func<ITheaDataReader, Func<ITheaDataReader, object>, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
+    public async Task<TResult> QueryAsync<TEntity, TResult>(object whereObj, bool isBulk, Func<ITheaDataReader, Func<ITheaDataReader, object>, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command) = this.CreateQueryWhereObjsCommand(typeof(TEntity), whereObj);
 
         await connection.OpenAsync(cancellationToken);
-        var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
+        var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
         var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this);
         var result = await readerInitializer.Invoke(reader, deserializer, cancellationToken);
@@ -495,12 +495,12 @@ public sealed class DbContext
     #endregion
 
     #region QueryById
-    public TResult QueryById<TEntity, TResult>(object whereKeys, bool isSingle, Func<ITheaDataReader, Func<ITheaDataReader, object>, TResult> readerInitializer)
+    public TResult QueryById<TEntity, TResult>(object whereKeys, bool isBulk, Func<ITheaDataReader, Func<ITheaDataReader, object>, TResult> readerInitializer)
     {
-        (var isNeedClose, var connection, var command) = this.CreateQueryWhereKeysCommand(typeof(TEntity), whereKeys);
+        (var isNeedClose, var connection, var command) = this.CreateQueryWhereKeysCommand(typeof(TEntity), isBulk, whereKeys);
 
         connection.Open();
-        var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
+        var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
         var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this);
         var result = readerInitializer.Invoke(reader, deserializer);
@@ -510,12 +510,12 @@ public sealed class DbContext
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<TResult> QueryByIdAsync<TEntity, TResult>(object whereKeys, bool isSingle, Func<ITheaDataReader, Func<ITheaDataReader, object>, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
+    public async Task<TResult> QueryByIdAsync<TEntity, TResult>(object whereKeys, bool isBulk, Func<ITheaDataReader, Func<ITheaDataReader, object>, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
     {
-        (var isNeedClose, var connection, var command) = this.CreateQueryWhereKeysCommand(typeof(TEntity), whereKeys);
+        (var isNeedClose, var connection, var command) = this.CreateQueryWhereKeysCommand(typeof(TEntity), isBulk, whereKeys);
 
         await connection.OpenAsync(cancellationToken);
-        var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
+        var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
         var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this);
         var result = await readerInitializer.Invoke(reader, deserializer, cancellationToken);
@@ -525,11 +525,10 @@ public sealed class DbContext
         if (isNeedClose) await connection.CloseAsync();
         return result;
     }
-    private (bool, ITheaConnection, ITheaCommand) CreateQueryWhereKeysCommand(Type entityType, object whereKeys)
+    private (bool, ITheaConnection, ITheaCommand) CreateQueryWhereKeysCommand(Type entityType, bool isBulk, object whereKeys)
     {
         if (whereKeys == null)
             throw new ArgumentNullException(nameof(whereKeys));
-        bool isBulk = whereKeys is IEnumerable && whereKeys is not string && whereKeys is not IDictionary<string, object>;
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         var commandInitializer = RepositoryHelper.BuildGetKeySqlParameters(this, entityType, whereKeys, false, isBulk);
         command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereKeys);
@@ -538,7 +537,7 @@ public sealed class DbContext
     #endregion 
 
     #region QueryVisitor
-    public TResult QueryFrom<TEntity, TResult>(IQueryVisitor visitor, bool isSingle, Func<Type, ITheaDataReader, List<SqlFieldSegment>, TResult> readerInitializer)
+    public TResult QueryFrom<TEntity, TResult>(IQueryVisitor visitor, bool isBulk, Func<Type, ITheaDataReader, List<SqlFieldSegment>, TResult> readerInitializer)
     {
         var entityType = typeof(TEntity);
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
@@ -550,17 +549,17 @@ public sealed class DbContext
         visitor.DbParameters.CopyTo(command.Parameters);
 
         connection.Open();
-        var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
+        var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
         var result = readerInitializer.Invoke(entityType, reader, readerFields);
-        if (visitor.BuildIncludeSql(entityType, result, isSingle, out sql))
+        if (visitor.BuildIncludeSql(entityType, result, isBulk, out sql))
         {
             reader.Dispose();
             command.CommandText = sql;
             command.Parameters.Clear();
             visitor.NextDbParameters.CopyTo(command.Parameters);
             reader = command.ExecuteReader(CommandSqlType.Select, CommandBehavior.SequentialAccess);
-            visitor.SetIncludeValues(entityType, result, reader, isSingle);
+            visitor.SetIncludeValues(entityType, result, reader, isBulk);
         }
 
         reader.Dispose();
@@ -569,7 +568,7 @@ public sealed class DbContext
         visitor.Dispose();
         return result;
     }
-    public async Task<TResult> QueryFromAsync<TEntity, TResult>(IQueryVisitor visitor, bool isSingle, Func<Type, ITheaDataReader, List<SqlFieldSegment>, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
+    public async Task<TResult> QueryFromAsync<TEntity, TResult>(IQueryVisitor visitor, bool isBulk, Func<Type, ITheaDataReader, List<SqlFieldSegment>, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
     {
         var entityType = typeof(TEntity);
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
@@ -582,17 +581,17 @@ public sealed class DbContext
         visitor.DbParameters.CopyTo(command.Parameters);
 
         await connection.OpenAsync(cancellationToken);
-        var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
+        var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
         var result = await readerInitializer.Invoke(entityType, reader, readerFields, cancellationToken);
-        if (visitor.BuildIncludeSql(entityType, result, isSingle, out sql))
+        if (visitor.BuildIncludeSql(entityType, result, isBulk, out sql))
         {
             await reader.DisposeAsync();
             command.CommandText = sql;
             command.Parameters.Clear();
             visitor.NextDbParameters.CopyTo(command.Parameters);
             reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-            await visitor.SetIncludeValuesAsync(entityType, result, reader, isSingle, cancellationToken);
+            await visitor.SetIncludeValuesAsync(entityType, result, reader, isBulk, cancellationToken);
         }
 
         await reader.DisposeAsync();
