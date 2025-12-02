@@ -1383,7 +1383,7 @@ public sealed class DbContext
             throw new ArgumentNullException(nameof(whereKeys));
         var isBulk = whereKeys is IEnumerable && whereKeys is not string && whereKeys is not IDictionary<string, object>;
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        var commandInitializer = RepositoryHelper.BuildDeleteSqlParameters(this, entityType, whereKeys, false, isBulk, false)
+        var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this, entityType, whereKeys, false, isBulk, false)
             as Func<IDataParameterCollection, DbContext, object, string>;
         command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereKeys);
         return (isNeedClose, connection, command);

@@ -12,7 +12,9 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     public bool IsWhereKeys { get; set; }
     protected List<CommandSegment> deferredSegments = new();
 
+    public ActionMode ActionMode { get; set; }
     public bool HasWhere { get; protected set; }
+
     public DeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
     {
         this.DbContext = dbContext;
@@ -36,24 +38,40 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         readerFields = null;
         this.DbParameters = command.Parameters;
 
-        if (this.IsWhereKeys)
+        var tableSegment = this.Tables[0];
+        var entityType = tableSegment.EntityType;
+        var shardingType = ShardingTableType.None;
+        object shardingTables = tableSegment.Mapper.TableName;
+        if (tableSegment.TableShardingInfo != null)
         {
-            var entityType = this.Tables[0].EntityType;
-            var whereKeys = this.deferredSegments[0].Value;
-            Type whereObjType = null;
-            var isBulk = whereKeys is IEnumerable && whereKeys is not string && whereKeys is not IDictionary<string, object>;
-            IEnumerable entities = null;
-            if (isBulk)
+            if (tableSegment.IsSharding)
             {
-                entities = whereKeys as IEnumerable;
-                foreach (var entity in entities)
+                if (!string.IsNullOrEmpty(tableSegment.Body))
                 {
-                    whereObjType = entity.GetType();
-                    break;
+                    shardingTables = tableSegment.Body;
+                    shardingType = ShardingTableType.SingleTable;
+                }
+                else
+                {
+                    shardingTables = tableSegment.TableNames;
+                    shardingType = ShardingTableType.MultiTable;
                 }
             }
-            else whereObjType = whereKeys.GetType();
-            (var isMultiKeys, var origName, var headSqlSetter, var whereSqlSetter) = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, entityType, whereObjType, this.IsMultiple, isBulk);
+            else throw new NotSupportedException($"实体表{entityType.FullName}已设置分表，但未指定分表，原始表：{tableSegment.Mapper.TableName}");
+        }
+        if (this.IsWhereKeys)
+        {
+            var whereKeys = this.deferredSegments[0].Value;
+            var isBulk = this.ActionMode == ActionMode.Bulk;
+
+            switch (this.ActionMode)
+            {
+                case ActionMode.Bulk:
+                    break;
+                default:
+                    throw new NotSupportedException($"不支持的ActionMode类型：{this.ActionMode}");
+            }
+            var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, entityType, whereKeys, tableSegment.IsSharding, isBulk, false);
 
             int index = 0;
             var builder = new StringBuilder();
@@ -61,7 +79,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             Action sqlExecuter = null;
             if (isBulk)
             {
-                var typedWhereSqlSetter = whereSqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+                var typedWhereSqlSetter = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
                 Func<int, string> suffixGetter = index => this.IsMultiple ? $"_m{this.CommandIndex}{index}" : $"{index}";
                 sqlExecuter = () =>
                 {
@@ -79,12 +97,12 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             {
                 if (this.IsMultiple)
                 {
-                    var typedWhereSqlSetter = whereSqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+                    var typedWhereSqlSetter = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
                     sqlExecuter = () => typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, whereKeys, $"_m{this.CommandIndex}");
                 }
                 else
                 {
-                    var typedWhereSqlSetter = whereSqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
+                    var typedWhereSqlSetter = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
                     sqlExecuter = () => typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, whereKeys);
                 }
             }
@@ -152,10 +170,11 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         }
         return sql;
     }
-    public virtual void WhereWith(object wherKeys)
+    public virtual void WhereWith(object wherKeys, ActionMode actionMode)
     {
         this.IsWhereKeys = true;
         this.HasWhere = true;
+        this.ActionMode = actionMode;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "WhereWith",

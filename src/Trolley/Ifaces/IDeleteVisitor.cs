@@ -18,12 +18,11 @@ public interface IDeleteVisitor : IDisposable
     string BuildCommand(ITheaCommand command, out List<SqlFieldSegment> readerFields);
 
     void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
-    void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
-    void UseTableMap(TableShardingUsageMode usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter);
     void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
+    void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
-    void WhereWith(object wherKeys);
+    void WhereWith(object wherKeys, ActionMode actionMode);
     void Where(Expression whereExpr);
     void And(Expression whereExpr);
     void Or(Expression whereExpr);

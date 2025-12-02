@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -15,24 +16,23 @@ public class Delete<TEntity> : Deleted<TEntity>, IDelete<TEntity>
     #endregion
 
     #region Constructor
-    public Delete(DbContext dbContext)
-        : base(dbContext, dbContext.OrmProvider.NewDeleteVisitor(dbContext)) { }
+    public Delete(DbContext dbContext) : base(dbContext) { }
     #endregion
 
     #region Sharding
     public virtual IDelete<TEntity> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, false, tableNames);
         return this;
     }
     public virtual IDelete<TEntity> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IDelete<TEntity> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     #endregion
@@ -46,12 +46,20 @@ public class Delete<TEntity> : Deleted<TEntity>, IDelete<TEntity>
     #endregion
 
     #region Where
-    public virtual IDelete<TEntity> Where(object keys)
+    public virtual IDelete<TEntity> Where(object whereKey)
     {
-        if (keys == null)
-            throw new ArgumentNullException(nameof(keys));
+        if (whereKey == null)
+            throw new ArgumentNullException(nameof(whereKey));
 
-        this.Visitor.WhereWith(keys);
+        this.Visitor.WhereWith(whereKey, ActionMode.Single);
+        return this;
+    }
+    public virtual IDelete<TEntity> Where(IEnumerable whereKeys)
+    {
+        if (whereKeys == null)
+            throw new ArgumentNullException(nameof(whereKeys));
+
+        this.Visitor.WhereWith(whereKeys, ActionMode.Bulk);
         return this;
     }
     public virtual IDelete<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
@@ -124,11 +132,10 @@ public class Deleted<TEntity> : IDeleted<TEntity>
     #endregion
 
     #region Constructor
-    public Deleted(DbContext dbContext, IDeleteVisitor visitor)
+    public Deleted(DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.Visitor = visitor;
-        this.Visitor.Initialize(typeof(TEntity));
+        this.Visitor = this.DbContext.OrmProvider.NewDeleteVisitor(typeof(TEntity), dbContext);
     }
     #endregion
 

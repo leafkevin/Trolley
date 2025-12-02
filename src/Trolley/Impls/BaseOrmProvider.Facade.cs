@@ -138,7 +138,7 @@ partial class BaseOrmProvider
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> NewUpdateJoin<TEntity, T1, T2, T3, T4, T5>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateJoin<TEntity, T1, T2, T3, T4, T5>(dbContext, visitor);
 
     public virtual IDelete<TEntity> NewDelete<TEntity>(DbContext dbContext) => new Delete<TEntity>(dbContext);
-    public virtual IDeleted<TEntity> NewDeleted<TEntity>(DbContext dbContext, IDeleteVisitor visitor) => new Deleted<TEntity>(dbContext, visitor);
+    public virtual IDeleted<TEntity> NewDeleted<TEntity>(DbContext dbContext, IDeleteVisitor visitor) => new Deleted<TEntity>(dbContext);
 
     public virtual IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null) => new QueryVisitor(dbContext, tableAsStart, dbParameters);
     public virtual ICreateVisitor NewCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a') => new CreateVisitor(entityType, dbContext, tableAsStart);

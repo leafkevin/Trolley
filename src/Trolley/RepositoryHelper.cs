@@ -310,7 +310,7 @@ public static class RepositoryHelper
             return BuildSimpleWhereObjSqlParameters(dbContext, entityType, whereObjType, isUseKey, isSharding, isMultiple, isBulk, hasWhereSql, headSql);
         });
     }
-    public static object BuildDeleteSqlParameters(DbContext dbContext, Type entityType, object whereObjs, bool isSharding, bool isBulk, bool hasWhereSql)
+    public static object BuildDeleteCommandInitializer(DbContext dbContext, Type entityType, object whereObjs, bool isSharding, bool isBulk, bool hasTailSql)
     {
         Type whereObjType = null;
         if (isBulk)
@@ -323,11 +323,11 @@ public static class RepositoryHelper
             }
         }
         else whereObjType = whereObjs.GetType();
-        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, hasWhereSql);
+        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, hasTailSql);
         var commandInitializerCache = isBulk ? deleteBulkCommandInitializerCache : deleteCommandInitializerCache;
-        return commandInitializerCache.GetOrAdd(cacheKey, f => BuildSimpleWhereObjSqlParameters(dbContext, entityType, whereObjType, true, isSharding, false, isBulk, hasWhereSql, $"DELETE "));
+        return commandInitializerCache.GetOrAdd(cacheKey, f => BuildSimpleWhereObjSqlParameters(dbContext, entityType, whereObjType, true, isSharding, false, isBulk, hasTailSql, $"DELETE "));
     }
-    private static object BuildSimpleWhereObjSqlParameters(DbContext dbContext, Type entityType, Type whereObjType, bool isUseKey, bool isSharding, bool isMultiple, bool isBulk, bool hasWhereSql, string headSql)
+    private static object BuildSimpleWhereObjSqlParameters(DbContext dbContext, Type entityType, Type whereObjType, bool isUseKey, bool isSharding, bool isMultiple, bool isBulk, bool hasTailSql, string headSql)
     {
         var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
         var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
@@ -342,25 +342,25 @@ public static class RepositoryHelper
             tableNameExpr = Expression.Parameter(typeof(string), "tableName");
             blockParameters.Add(tableNameExpr);
         }
-        if (hasWhereSql)
+        if (hasTailSql)
         {
             tailSqlExpr = Expression.Parameter(typeof(string), "tailSql");
             blockParameters.Add(tailSqlExpr);
         }
         var headSqlExpr = Expression.Constant(headSql);
         AddSimpleSqlParameters(dbParametersExpr, builderExpr, dbContextExpr, whereObjExpr, headSqlExpr, tableNameExpr, tailSqlExpr,
-            dbContext, entityType, whereObjType, isUseKey, isSharding, isMultiple, isBulk, hasWhereSql, hasWhereSql, blockParameters, blockBodies);
+            dbContext, entityType, whereObjType, isUseKey, isSharding, isMultiple, isBulk, hasTailSql, blockParameters, blockBodies);
         object result = null;
         if (isSharding)
         {
-            if (hasWhereSql) result = Expression.Lambda<Func<IDataParameterCollection, DbContext, string, object, string, string>>(
+            if (hasTailSql) result = Expression.Lambda<Func<IDataParameterCollection, DbContext, string, object, string, string>>(
                 Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, tableNameExpr, whereObjExpr, tailSqlExpr).Compile();
-            else result = Expression.Lambda<Func<IDataParameterCollection, DbContext, string, object>>(
+            else result = Expression.Lambda<Func<IDataParameterCollection, DbContext, string, object, string>>(
                 Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, tableNameExpr, whereObjExpr).Compile();
         }
         else
         {
-            if (hasWhereSql) result = Expression.Lambda<Func<IDataParameterCollection, DbContext, object, string, string>>(
+            if (hasTailSql) result = Expression.Lambda<Func<IDataParameterCollection, DbContext, object, string, string>>(
                 Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, whereObjExpr, tailSqlExpr).Compile();
             else result = Expression.Lambda<Func<IDataParameterCollection, DbContext, object, string>>(
                 Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, whereObjExpr).Compile();
@@ -368,7 +368,7 @@ public static class RepositoryHelper
         return result;
     }
     private static void AddSimpleSqlParameters(ParameterExpression dbParametersExpr, ParameterExpression builderExpr, ParameterExpression dbContextExpr, ParameterExpression whereObjExpr, Expression headSqlExpr, Expression tableNameExpr,
-        Expression tailSqlExpr, DbContext dbContext, Type entityType, Type whereObjType, bool isUseKey, bool isSharding, bool isMultiple, bool isBulk, bool hasTailSql, bool hasWhereSql, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
+        Expression tailSqlExpr, DbContext dbContext, Type entityType, Type whereObjType, bool isUseKey, bool isSharding, bool isMultiple, bool isBulk, bool hasTailSql, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
     {
         var entityMapper = dbContext.EntityMapProvider.GetEntityMap(entityType);
         string tableName = dbContext.OrmProvider.GetTableName(entityMapper.TableName);
@@ -383,18 +383,13 @@ public static class RepositoryHelper
         }
         else blockBodies.Add(Expression.Call(builderExpr, methodInfo, Expression.Constant($" FROM {tableName} WHERE ")));
 
-        var isMultiKeys = isBulk && entityMapper.KeyMembers.Count > 1;
-        if (hasTailSql && hasWhereSql && isMultiKeys)
-            blockBodies.Add(Expression.Call(builderExpr, methodInfo, Expression.Constant("(")));
+        if (isBulk) blockBodies.Add(Expression.Call(builderExpr, methodInfo, Expression.Constant("(")));
         AddWhereSqlParameters(dbParametersExpr, builderExpr, dbContextExpr, whereObjExpr, dbContext,
             entityType, whereObjType, isUseKey, false, isMultiple, isBulk, blockParameters, blockBodies);
 
-        if (hasTailSql)
-        {
-            if (hasWhereSql && isMultiKeys) blockBodies.Add(Expression.Call(builderExpr, methodInfo, Expression.Constant(")")));
-            tailSqlExpr = Expression.Parameter(typeof(string), "tailSql");
-            blockBodies.Add(Expression.Call(builderExpr, methodInfo, tailSqlExpr));
-        }
+        if (isBulk) blockBodies.Add(Expression.Call(builderExpr, methodInfo, Expression.Constant(")")));
+        if (hasTailSql) blockBodies.Add(Expression.Call(builderExpr, methodInfo, tailSqlExpr));
+
         methodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.ToString), Type.EmptyTypes);
         var returnExpr = Expression.Call(builderExpr, methodInfo);
         var resultLabelExpr = Expression.Label(typeof(string));

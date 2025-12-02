@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
@@ -15,7 +16,7 @@ public interface IDelete<TEntity> : IDeleted<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定<typeparamref name="T"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="TEntity"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回删除对象</returns>  
@@ -45,19 +46,25 @@ public interface IDelete<TEntity> : IDeleted<TEntity>
 
     #region Where
     /// <summary>
-    /// 主键删除，单条也可多条，keys可以是主键值也可以是包含主键值的匿名对象，也可以是对应的集合，如：
+    /// 单条主键删除，whereKey可以是主键值也可以是包含主键值的匿名对象，如：
     /// <code>
-    /// 单个删除,下面两个方法等效
     /// repository.Delete&lt;User&gt;(1);
     /// repository.Delete&lt;User&gt;(new { Id = 1});
-    /// 批量删除,下面两个方法等效
+    /// </code>
+    /// </summary>
+    /// <param name="whereKey">主键值，可以是一个值或是一个匿名对象</param>
+    /// <returns>返回删除对象</returns>
+    IDelete<TEntity> Where(object whereKey);
+    /// <summary>
+    /// 多条主键删除，whereKeys可以是主键值或是包含主键值的匿名对象的集合类型，如：
+    /// <code>
     /// repository.Delete&lt;User&gt;(new[] { 1, 2 });
     /// repository.Delete&lt;User&gt;(new[] { new { Id = 1 }, new { Id = 2 } });
     /// </code>
     /// </summary>
-    /// <param name="keys">主键值，可以是一个值或是一个匿名对象，也可以是多个值或是多个匿名对象</param>
+    /// <param name="whereKeys">主键值，可以是一个值或是一个匿名对象，也可以是多个值或是多个匿名对象</param>
     /// <returns>返回删除对象</returns>
-    IDelete<TEntity> Where(object keys);
+    IDelete<TEntity> Where(IEnumerable whereKeys);
     /// <summary>
     /// 条件删除，predicate为null时不生成任何条件
     /// </summary>
