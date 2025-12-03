@@ -730,36 +730,74 @@ public interface IRepository
     /// <returns>返回删除对象</returns>
     IDelete<TEntity> Delete<TEntity>();
     /// <summary>
-    /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，不支持分表，如：
+    /// 根据属性值删除单条数据，通常是匿名对象、字典，不支持分表，如：
     /// <code>
-    /// 单个删除,下面两个方法等效
-    /// repository.Delete&lt;User&gt;(1);
+    /// repository.Delete&lt;User&gt;(new { Name = "kevin"});
     /// repository.Delete&lt;User&gt;(new { Id = 1});
-    /// 批量删除,下面两个方法等效
-    /// repository.Delete&lt;User&gt;(new[] { 1, 2 });
-    /// repository.Delete&lt;User&gt;(new[] { new { Id = 1 }, new { Id = 2 } });
     /// </code>
     /// </summary>
-    /// <typeparam name="TEntity">要删除的实体类型</typeparam>
-    /// <param name="whereKeys">主键值，可以是一个值或是一个匿名对象，也可以是多个值或是多个匿名对象</param>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="whereObj">条件对象，匿名对象或是字典对象，所有属性都参与条件判断</param>
     /// <returns>返回删除行数</returns>
-    int Delete<TEntity>(object whereKeys);
+    int Delete<TEntity>(object whereObj);
     /// <summary>
-    /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，不支持分表，如：
+    /// 根据属性值删除单条数据，通常是匿名对象、字典，不支持分表，如：
     /// <code>
-    /// 单个删除,下面两个方法等效
-    /// await repository.DeleteAsync&lt;User&gt;(1);
+    /// await repository.DeleteAsync&lt;User&gt;(new { Name = "kevin"});
     /// await repository.DeleteAsync&lt;User&gt;(new { Id = 1});
-    /// 批量删除,下面两个方法等效
-    /// await repository.DeleteAsync&lt;User&gt;(new[] { 1, 2 });
-    /// await repository.DeleteAsync&lt;User&gt;(new[] { new { Id = 1 }, new { Id = 2 } });
     /// </code>
     /// </summary>
-    /// <typeparam name="TEntity">要删除的实体类型</typeparam>
-    /// <param name="whereKeys">主键值，可以是一个值或是一个匿名对象，也可以是多个值或是多个匿名对象</param>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="whereObj">条件对象，匿名对象或是字典对象，所有属性都参与条件判断</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回删除行数</returns>
-    Task<int> DeleteAsync<TEntity>(object whereKeys, CancellationToken cancellationToken = default);
+    Task<int> DeleteAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 根据主键值删除单条数据，不支持分表，如：
+    /// <code>
+    /// repository.DeleteById&lt;User&gt;(1);
+    /// repository.DeleteById&lt;User&gt;(new { Id = 1});
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="whereKey">主键值或是包含主键栏位的匿名对象</param>
+    /// <returns>返回删除行数</returns>
+    int DeleteById<TEntity>(object whereKey);
+    /// <summary>
+    /// 根据主键值删除单条数据，不支持分表，如：
+    /// <code>
+    /// await repository.DeleteByIdAsync&lt;User&gt;(1);
+    /// await repository.DeleteByIdAsync&lt;User&gt;(new { Id = 1});
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="whereKey">主键值或是包含主键栏位的匿名对象</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回删除行数</returns>
+    Task<int> DeleteByIdAsync<TEntity>(object whereKey, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 根据多个主键值删除多条数据，不支持分表，如：
+    /// <code>
+    /// repository.DeleteByIds&lt;User&gt;(new int[]{ 1, 2, 3 });
+    /// repository.DeleteByIds&lt;User&gt;(new []{ new { Id = 1}, new { Id = 2}, new { Id = 3} });
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="whereKeys">主键值或是包含主键栏位的匿名对象集合</param>
+    /// <returns>返回删除行数</returns>
+    int DeleteByIds<TEntity>(IEnumerable whereKeys);
+    /// <summary>
+    /// 根据多个主键值删除多条数据，不支持分表，如：
+    /// <code>
+    /// await repository.DeleteByIdsAsync&lt;User&gt;(new int[]{ 1, 2, 3 });
+    /// await repository.DeleteByIdsAsync&lt;User&gt;(new []{ new { Id = 1}, new { Id = 2}, new { Id = 3} });
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="whereKeys">主键值或是包含主键栏位的匿名对象集合</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回删除行数</returns>
+    Task<int> DeleteByIdsAsync<TEntity>(IEnumerable whereKeys, CancellationToken cancellationToken = default);
     #endregion
 
     #region Execute

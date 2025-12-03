@@ -300,7 +300,7 @@ public class Repository : IRepository
     public virtual async Task<int> DeleteByIdAsync<TEntity>(object whereKey, CancellationToken cancellationToken = default)
         => await this.DbContext.DeleteAsync<TEntity>(whereKey, true, false, cancellationToken);
     public virtual int DeleteByIds<TEntity>(IEnumerable whereKeys) => this.DbContext.Delete<TEntity>(whereKeys, true, true);
-    public virtual async Task<int> DeleteByIdsAsync<TEntity>(object whereKeys, CancellationToken cancellationToken = default)
+    public virtual async Task<int> DeleteByIdsAsync<TEntity>(IEnumerable whereKeys, CancellationToken cancellationToken = default)
         => await this.DbContext.DeleteAsync<TEntity>(whereKeys, true, true, cancellationToken);
     #endregion
 
