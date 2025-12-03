@@ -293,15 +293,21 @@ public class Repository : IRepository
 
     #region Delete
     public virtual IDelete<TEntity> Delete<TEntity>() => this.OrmProvider.NewDelete<TEntity>(this.DbContext);
-    public virtual int Delete<TEntity>(object whereKeys) => this.DbContext.Delete<TEntity>(whereKeys);
-    public virtual async Task<int> DeleteAsync<TEntity>(object whereKeys, CancellationToken cancellationToken = default)
-        => await this.DbContext.DeleteAsync<TEntity>(whereKeys, cancellationToken);
+    public virtual int Delete<TEntity>(object whereObj) => this.DbContext.Delete<TEntity>(whereObj, false, false);
+    public virtual async Task<int> DeleteAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
+        => await this.DbContext.DeleteAsync<TEntity>(whereObj, false, false, cancellationToken);
+    public virtual int DeleteById<TEntity>(object whereKey) => this.DbContext.Delete<TEntity>(whereKey, true, false);
+    public virtual async Task<int> DeleteByIdAsync<TEntity>(object whereKey, CancellationToken cancellationToken = default)
+        => await this.DbContext.DeleteAsync<TEntity>(whereKey, true, false, cancellationToken);
+    public virtual int DeleteByIds<TEntity>(IEnumerable whereKeys) => this.DbContext.Delete<TEntity>(whereKeys, true, true);
+    public virtual async Task<int> DeleteByIdsAsync<TEntity>(object whereKeys, CancellationToken cancellationToken = default)
+        => await this.DbContext.DeleteAsync<TEntity>(whereKeys, true, true, cancellationToken);
     #endregion
 
     #region Exists
-    public virtual bool Exists<TEntity>(object whereObjs) => this.DbContext.Exists<TEntity>(whereObjs);
-    public virtual async Task<bool> ExistsAsync<TEntity>(object whereObjs, CancellationToken cancellationToken = default)
-        => await this.DbContext.ExistsAsync<TEntity>(whereObjs, cancellationToken);
+    public virtual bool Exists<TEntity>(object whereObj) => this.DbContext.Exists<TEntity>(whereObj);
+    public virtual async Task<bool> ExistsAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
+        => await this.DbContext.ExistsAsync<TEntity>(whereObj, cancellationToken);
     public virtual bool Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null)
         => this.From<TEntity>().Where(wherePredicate).Count() > 0;
     public virtual async Task<bool> ExistsAsync<TEntity>(Expression<Func<TEntity, bool>> wherePredicate, CancellationToken cancellationToken = default)

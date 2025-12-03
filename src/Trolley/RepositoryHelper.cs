@@ -30,7 +30,6 @@ public static class RepositoryHelper
     private static readonly ConcurrentDictionary<int, object> queryWhereObjCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<int, object> queryBulkWhereObjCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<int, object> queryExistsCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<int, object> queryBulkExistsCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<int, object> deleteCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<int, object> deleteBulkCommandInitializerCache = new();
 
@@ -246,22 +245,10 @@ public static class RepositoryHelper
         return commandInitializer;
     }
 
-    public static object BuildExistsSqlParameters(DbContext dbContext, Type entityType, object whereObjs, bool isSharding, bool isMultiple, bool isBulk, bool hasWhereSql)
+    public static object BuildExistsSqlParameters(DbContext dbContext, Type entityType, Type whereObjType, bool isMultiple)
     {
-        Type whereObjType = null;
-        if (isBulk)
-        {
-            var parameters = whereObjs as IEnumerable;
-            foreach (var parameter in parameters)
-            {
-                whereObjType = parameter.GetType();
-                break;
-            }
-        }
-        else whereObjType = whereObjs.GetType();
-        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, isMultiple, hasWhereSql);
-        var commandInitializerCache = isBulk ? queryBulkExistsCommandInitializerCache : queryExistsCommandInitializerCache;
-        return commandInitializerCache.GetOrAdd(cacheKey, f => BuildSimpleWhereObjSqlParameters(dbContext, entityType, whereObjType, true, isSharding, isMultiple, isBulk, hasWhereSql, $"SELECT COUNT(1)"));
+        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, isMultiple, false);
+        return queryExistsCommandInitializerCache.GetOrAdd(cacheKey, f => BuildSimpleWhereObjSqlParameters(dbContext, entityType, whereObjType, true, false, isMultiple, false, false, $"SELECT COUNT(1)"));
     }
     public static Func<IDataParameterCollection, DbContext, object, string> BuildGetKeySqlParameters(DbContext dbContext, Type entityType, object whereObjs, bool isMultiple, bool isBulk)
     {
@@ -287,7 +274,7 @@ public static class RepositoryHelper
                 as Func<IDataParameterCollection, DbContext, object, string>;
         });
     }
-    public static object BuildQueryWhereObjSqlParameters(DbContext dbContext, Type entityType, object whereObjs, bool isUseKey, bool isSharding, bool isMultiple, bool isBulk, bool hasWhereSql)
+    public static object BuildQueryWhereObjSqlParameters(DbContext dbContext, Type entityType, object whereObjs, bool isUseKey, bool isMultiple, bool isBulk, bool hasWhereSql)
     {
         Type whereObjType = null;
         if (isBulk)
@@ -301,7 +288,7 @@ public static class RepositoryHelper
         }
         else whereObjType = whereObjs.GetType();
 
-        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, isUseKey, isSharding, isMultiple, hasWhereSql);
+        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, isUseKey, false, isMultiple, hasWhereSql);
         var commandInitializerCache = isBulk ? queryBulkWhereObjCommandInitializerCache : queryWhereObjCommandInitializerCache;
         return commandInitializerCache.GetOrAdd(cacheKey, f =>
         {
@@ -310,7 +297,7 @@ public static class RepositoryHelper
             return BuildSimpleWhereObjSqlParameters(dbContext, entityType, whereObjType, isUseKey, isSharding, isMultiple, isBulk, hasWhereSql, headSql);
         });
     }
-    public static object BuildDeleteCommandInitializer(DbContext dbContext, Type entityType, object whereObjs, bool isSharding, bool isBulk, bool hasTailSql)
+    public static object BuildDeleteCommandInitializer(DbContext dbContext, Type entityType, object whereObjs, bool isUseKey, bool isBulk)
     {
         Type whereObjType = null;
         if (isBulk)
@@ -323,9 +310,9 @@ public static class RepositoryHelper
             }
         }
         else whereObjType = whereObjs.GetType();
-        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, hasTailSql);
+        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, isUseKey);
         var commandInitializerCache = isBulk ? deleteBulkCommandInitializerCache : deleteCommandInitializerCache;
-        return commandInitializerCache.GetOrAdd(cacheKey, f => BuildSimpleWhereObjSqlParameters(dbContext, entityType, whereObjType, true, isSharding, false, isBulk, hasTailSql, $"DELETE "));
+        return commandInitializerCache.GetOrAdd(cacheKey, f => BuildSimpleWhereObjSqlParameters(dbContext, entityType, whereObjType, isUseKey, false, false, isBulk, false, $"DELETE "));
     }
     private static object BuildSimpleWhereObjSqlParameters(DbContext dbContext, Type entityType, Type whereObjType, bool isUseKey, bool isSharding, bool isMultiple, bool isBulk, bool hasTailSql, string headSql)
     {

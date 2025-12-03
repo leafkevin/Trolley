@@ -487,7 +487,7 @@ public sealed class DbContext
         bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
 
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this, entityType, whereObj, false, false, false, isBulk, false)
+        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this, entityType, whereObj, false,  false, isBulk, false)
             as Func<IDataParameterCollection, DbContext, object, string>;
         command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereObj);
         return (isNeedClose, connection, command);
@@ -687,9 +687,9 @@ public sealed class DbContext
     #endregion
 
     #region Exists
-    public bool Exists<TEntity>(object whereObjs)
+    public bool Exists<TEntity>(object whereObj)
     {
-        (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereObjs);
+        (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereObj);
 
         int result = 0;
         connection.Open();
@@ -701,9 +701,9 @@ public sealed class DbContext
         if (isNeedClose) connection.Close();
         return result > 0;
     }
-    public async Task<bool> ExistsAsync<TEntity>(object whereObjs, CancellationToken cancellationToken = default)
+    public async Task<bool> ExistsAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
     {
-        (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereObjs);
+        (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereObj);
 
         int result = 0;
         await connection.OpenAsync(cancellationToken);
@@ -715,15 +715,15 @@ public sealed class DbContext
         if (isNeedClose) await connection.CloseAsync();
         return result > 0;
     }
-    private (bool, ITheaConnection, ITheaCommand) CreateExistsCommand(Type entityType, object whereObjs)
+    private (bool, ITheaConnection, ITheaCommand) CreateExistsCommand(Type entityType, object whereObj)
     {
-        if (whereObjs == null)
-            throw new ArgumentNullException(nameof(whereObjs));
-        var isBulk = whereObjs is IEnumerable && whereObjs is not string && whereObjs is not IDictionary<string, object>;
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this, entityType, whereObjs, false, false, isBulk, false)
+        var whereObjType = whereObj.GetType();
+        var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this, entityType, whereObjType, false)
             as Func<IDataParameterCollection, DbContext, object, string>;
-        command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereObjs);
+        command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereObj);
         return (isNeedClose, connection, command);
     }
 
@@ -1357,9 +1357,9 @@ public sealed class DbContext
     #endregion
 
     #region Delete
-    public int Delete<TEntity>(object whereKeys)
+    public int Delete<TEntity>(object whereObjs, bool isUseKey, bool isBulk)
     {
-        (var isNeedClose, var connection, var command) = this.CreateDeleteCommand(typeof(TEntity), whereKeys);
+        (var isNeedClose, var connection, var command) = this.CreateDeleteCommand(typeof(TEntity), whereObjs, isUseKey, isBulk);
         connection.Open();
         var result = command.ExecuteNonQuery(CommandSqlType.Delete);
 
@@ -1367,9 +1367,9 @@ public sealed class DbContext
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<int> DeleteAsync<TEntity>(object whereKeys, CancellationToken cancellationToken = default)
+    public async Task<int> DeleteAsync<TEntity>(object whereObjs, bool isUseKey, bool isBulk, CancellationToken cancellationToken = default)
     {
-        (var isNeedClose, var connection, var command) = this.CreateDeleteCommand(typeof(TEntity), whereKeys);
+        (var isNeedClose, var connection, var command) = this.CreateDeleteCommand(typeof(TEntity), whereObjs, isUseKey, isBulk);
         await connection.OpenAsync(cancellationToken);
         var result = await command.ExecuteNonQueryAsync(CommandSqlType.Delete, cancellationToken);
 
@@ -1377,15 +1377,16 @@ public sealed class DbContext
         if (isNeedClose) await connection.CloseAsync();
         return result;
     }
-    private (bool, ITheaConnection, ITheaCommand) CreateDeleteCommand(Type entityType, object whereKeys)
+    private (bool, ITheaConnection, ITheaCommand) CreateDeleteCommand(Type entityType, object whereObjs, bool isUseKey, bool isBulk)
     {
-        if (whereKeys == null)
-            throw new ArgumentNullException(nameof(whereKeys));
-        var isBulk = whereKeys is IEnumerable && whereKeys is not string && whereKeys is not IDictionary<string, object>;
+        if (whereObjs == null)
+            throw new ArgumentNullException(nameof(whereObjs));
+        if (isBulk && whereObjs is not IDictionary<string, object>)
+            isBulk = false;
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this, entityType, whereKeys, false, isBulk, false)
+        var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this, entityType, whereObjs, isUseKey, isBulk)
             as Func<IDataParameterCollection, DbContext, object, string>;
-        command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereKeys);
+        command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereObjs);
         return (isNeedClose, connection, command);
     }
     #endregion

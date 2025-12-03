@@ -19,12 +19,12 @@ public class QueryBase : QueryInternal, IQueryBase
     #endregion
 
     #region Count
-    public virtual int Count() => this.QueryScalar<int>("COUNT(1)", "COUNT_VALUE");
+    public virtual int Count() => this.QueryScalar<int>("COUNT(*)", "COUNT_VALUE");
     public virtual async Task<int> CountAsync(CancellationToken cancellationToken = default)
         => await this.QueryScalarAsync<int>("COUNT(*)", "COUNT_VALUE", null, cancellationToken);
-    public virtual long LongCount() => this.QueryScalar<long>("COUNT(1)", "COUNT_VALUE");
+    public virtual long LongCount() => this.QueryScalar<long>("COUNT(*)", "COUNT_VALUE");
     public virtual async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryScalarAsync<long>("COUNT(1)", "COUNT_VALUE", null, cancellationToken);
+        => await this.QueryScalarAsync<long>("COUNT(*)", "COUNT_VALUE", null, cancellationToken);
     #endregion
 
     #region Count/Aggregate Internal
@@ -143,7 +143,7 @@ public class QueryBase : QueryInternal, IQueryBase
     #endregion
 
     #region Exists
-    public virtual bool Exists() => this.QueryScalar<int>("COUNT(1)", "COUNT_VALUE") > 0;
+    public virtual bool Exists() => this.QueryScalar<int>("COUNT(*)", "COUNT_VALUE") > 0;
     public virtual async Task<bool> ExistsAsync(CancellationToken cancellationToken = default)
         => await this.QueryScalarAsync<int>("COUNT(*)", "COUNT_VALUE", null, cancellationToken) > 0;
     #endregion
