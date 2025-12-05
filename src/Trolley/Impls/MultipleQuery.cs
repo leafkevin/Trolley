@@ -297,7 +297,7 @@ public class MultipleQuery : IMultipleQuery
         var whereObjType = parameters.GetType();
         if (!whereObjType.IsEntityType(out _))
             throw new NotSupportedException("不支持的参数类型，此方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
-        var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
+        var commandInitializer = RepositoryHelper.BuildQueryRawSqlCommandInitializer(this.OrmProvider, rawSql, parameters);
         commandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, parameters);
         this.AddReader(targetType, rawSql, isSingle);
     }

@@ -46,25 +46,23 @@ public interface IDelete<TEntity> : IDeleted<TEntity>
 
     #region Where
     /// <summary>
-    /// 单条主键删除，whereKey可以是主键值也可以是包含主键值的匿名对象，如：
-    /// <code>
-    /// repository.Delete&lt;User&gt;(1);
-    /// repository.Delete&lt;User&gt;(new { Id = 1});
-    /// </code>
+    /// 条件删除，如：.WhereBy(new { IsEnabled = true })，whereObj不能为null
     /// </summary>
-    /// <param name="whereKey">主键值，可以是一个值或是一个匿名对象</param>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
     /// <returns>返回删除对象</returns>
-    IDelete<TEntity> Where(object whereKey);
+    IDelete<TEntity> WhereBy(object whereObj);
     /// <summary>
-    /// 多条主键删除，whereKeys可以是主键值或是包含主键值的匿名对象的集合类型，如：
-    /// <code>
-    /// repository.Delete&lt;User&gt;(new[] { 1, 2 });
-    /// repository.Delete&lt;User&gt;(new[] { new { Id = 1 }, new { Id = 2 } });
-    /// </code>
+    /// 主键条件删除，如：.WhereById(1) 或是 .WhereById(new { Id = 1 })，whereKey不能为null
     /// </summary>
-    /// <param name="whereKeys">主键值，可以是一个值或是一个匿名对象，也可以是多个值或是多个匿名对象</param>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
     /// <returns>返回删除对象</returns>
-    IDelete<TEntity> Where(IEnumerable whereKeys);
+    IDelete<TEntity> WhereById(object whereKey);
+    /// <summary>
+    /// 多主键条件删除，如：.WhereByIds(new int[]{ 1, 2, 3 }) 或是 .WhereByIds(new []{new { Id = 1 }, new { Id = 2 }, new { Id = 3 } })，whereKeys不能为null
+    /// </summary>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回删除对象</returns>
+    IDelete<TEntity> WhereByIds(IEnumerable whereKeys);
     /// <summary>
     /// 条件删除，predicate为null时不生成任何条件
     /// </summary>

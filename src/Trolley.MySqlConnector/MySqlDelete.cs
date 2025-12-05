@@ -32,7 +32,7 @@ public class MySqlDelete<TEntity> : Delete<TEntity>, IMySqlDelete<TEntity>
 
     #region Where
     public new IMySqlDelete<TEntity> Where(object keys)
-        => base.Where(keys) as IMySqlDelete<TEntity>;
+        => base.WhereBy(keys) as IMySqlDelete<TEntity>;
     public new IMySqlDelete<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.Where(true, predicate);
     public new IMySqlDelete<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)

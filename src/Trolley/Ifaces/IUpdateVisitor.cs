@@ -43,7 +43,9 @@ public interface IUpdateVisitor : IDisposable
     void OnlyFields(Expression fieldsSelector);
     void SetBulk(IEnumerable updateObjs, int bulkCount);
 
-    void WhereWith(object whereObj);
+    void WhereBy(object whereObj);
+    void WhereById(object whereKey);
+    void WhereByIds(IEnumerable whereKeys);
     void Where(Expression whereExpr);
     void And(Expression whereExpr);
     void Or(Expression whereExpr);

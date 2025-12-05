@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
@@ -22,7 +23,9 @@ public interface IDeleteVisitor : IDisposable
     void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
-    void WhereWith(object wherKeys, ActionMode actionMode);
+    void WhereBy(object whereObj);
+    void WhereById(object whereKey);
+    void WhereByIds(IEnumerable whereKeys);
     void Where(Expression whereExpr);
     void And(Expression whereExpr);
     void Or(Expression whereExpr);

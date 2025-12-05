@@ -346,7 +346,7 @@ public class UnitTest1 : UnitTestBase
             })
             .IgnoreFields("CompanyId", "sourceType")
             .Execute();
-        var user = repository.GetById<User>(1);
+        var user = repository.QueryById<User>(1);
         repository.Commit();
         Assert.Equal(Gender.Male, user.Gender);
         Assert.Equal(0, user.CompanyId);
@@ -390,7 +390,7 @@ public class UnitTest1 : UnitTestBase
             })
             .IgnoreFields(f => new { f.Gender, f.CompanyId })
             .Execute();
-        user = repository.GetById<User>(1);
+        user = repository.QueryById<User>(1);
         repository.Commit();
         Assert.Equal(Gender.Unknown, user.Gender);
         Assert.Equal(0, user.CompanyId);
@@ -402,7 +402,7 @@ public class UnitTest1 : UnitTestBase
         Guid? guidField = Guid.NewGuid();
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
-        var user = repository.GetById<User>(1);
+        var user = repository.QueryById<User>(1);
         var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
         var sql = repository.Create<User>()
             .WithBy(new
@@ -452,7 +452,7 @@ public class UnitTest1 : UnitTestBase
         this.Initialize(3);
         Guid? guidField = Guid.NewGuid();
         var repository = this.dbFactory.Create();
-        var user = repository.GetById<User>(1);
+        var user = repository.QueryById<User>(1);
         var sql = repository.Create<User>()
             .WithBy(new
             {
@@ -794,7 +794,7 @@ public class UnitTest1 : UnitTestBase
         var brandId = 1;
         var name = "雪中飞羽绒裤";
         int categoryId = 1;
-        var brand = repository.GetById<Brand>(brandId);
+        var brand = repository.QueryById<Brand>(brandId);
         var sql = repository.Create<Product>()
             .From<Brand>()
             .Where(f => f.Id == brandId)
@@ -837,7 +837,7 @@ public class UnitTest1 : UnitTestBase
                 UpdatedAt = DateTime.Now
             })
            .Execute();
-        var product = repository.GetById<Product>(id);
+        var product = repository.QueryById<Product>(id);
         repository.Commit();
         Assert.True(count > 0);
         Assert.NotNull(product);
@@ -890,8 +890,8 @@ public class UnitTest1 : UnitTestBase
                 UpdatedAt = x.UpdatedAt
             })
            .ExecuteAsync();
-        var orderDetail = repository.GetById<OrderDetail>("7");
-        var product = repository.GetById<Product>(1);
+        var orderDetail = repository.QueryById<OrderDetail>("7");
+        var product = repository.QueryById<Product>(1);
         await repository.CommitAsync();
         Assert.True(result > 0);
         Assert.NotNull(orderDetail);
@@ -1042,7 +1042,7 @@ public class UnitTest1 : UnitTestBase
             UpdatedAt = DateTime.Now,
             UpdatedBy = 1
         });
-        var result = repository.GetById<Order>("1");
+        var result = repository.QueryById<Order>("1");
         repository.Commit();
         if (count > 0)
         {
@@ -1108,7 +1108,7 @@ public class UnitTest1 : UnitTestBase
                 UpdatedBy = 1
             })
             .Execute();
-        var order = repository.GetById<Order>("4");
+        var order = repository.QueryById<Order>("4");
         repository.Commit();
         Assert.NotEmpty(order.Products);
         Assert.NotNull(order.Disputes);
@@ -1200,7 +1200,7 @@ public class UnitTest1 : UnitTestBase
             })
             .OnlyFields(f => new { f.Id, f.TenantId, f.Name, f.IsEnabled, f.CreatedBy, f.CreatedAt, f.UpdatedAt, f.UpdatedBy })
             .ExecuteAsync();
-        var user = repository.GetById<User>(1);
+        var user = repository.QueryById<User>(1);
         repository.Commit();
         Assert.Equal(1, count);
         Assert.Equal(0, user.CompanyId);
@@ -1565,7 +1565,7 @@ public class UnitTest1 : UnitTestBase
             ByteArrayField = Encoding.ASCII.GetBytes("ByteArry"),
             BitArrayField = Encoding.ASCII.GetBytes("BitArray")
         });
-        var entity = await repository.GetByIdAsync<UpdateEntity3>(1);
+        var entity = await repository.QueryByIdAsync<UpdateEntity3>(1);
         await repository.CommitAsync();
         Assert.Equal(entity.ByteArrayField, Encoding.ASCII.GetBytes("ByteArry"));
         Assert.Equal(entity.BitArrayField, Encoding.ASCII.GetBytes("BitArray"));

@@ -70,6 +70,28 @@ public static class OrmExtensions
         => await repository.From<TEntity>().Where(wherePredicate).ToListAsync(cancellationToken);
     #endregion
 
+    #region Exists
+    /// <summary>
+    /// 判断TEntity表是否存在满足wherePredicate条件的记录，存在返回true，否则返回false，不支持分表
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="repository">仓储对象</param>
+    /// <param name="wherePredicate">where条件表达式，可以为null</param>
+    /// <returns>返回是否存在</returns>
+    public static bool Exists<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> wherePredicate = null)
+        => repository.From<TEntity>().Where(wherePredicate).Count() > 0;
+    /// <summary>
+    /// 判断TEntity表是否存在满足wherePredicate条件的记录，存在返回true，否则返回false，不支持分表
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="repository">仓储对象</param>
+    /// <param name="wherePredicate">where条件表达式，可以为null</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回是否存在，布尔值</returns>
+    public static async Task<bool> ExistsAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> wherePredicate = null, CancellationToken cancellationToken = default)
+        => await repository.From<TEntity>().Where(wherePredicate).CountAsync(cancellationToken) > 0;
+    #endregion
+
     #region Update
     /// <summary>
     /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如：

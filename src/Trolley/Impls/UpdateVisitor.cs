@@ -20,17 +20,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public bool IsFrom { get; set; }
     public bool IsJoin { get; set; }
     public StringBuilder FieldsBuilder { get; set; }
-
     public bool HasWhere { get; protected set; }
-
-
-    public string HeadSql { get; set; }
-    public string FixedHeadSql { get; set; }
-    public string FixedTailSql { get; set; }
-    public List<IDbDataParameter> FixedDbParameters { get; set; }
-    public List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>> ValueSetters { get; set; }
-    public List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>> WhereSetters { get; set; }
-
 
     public UpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
     {
@@ -125,12 +115,13 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
 
-        this.HeadSql = "UPDATE";
+        var headSql = "UPDATE";
         if (!string.IsNullOrEmpty(tableSegment.TableSchema))
-            this.HeadSql += $" {this.OrmProvider.GetTableName(tableSegment.TableSchema)}.";
-        this.FixedHeadSql = "SET ";
-        this.FixedTailSql = ";";
+            headSql += $" {this.OrmProvider.GetTableName(tableSegment.TableSchema)}.";
+        var fixedHeadSql = "SET ";
+        var fixedTailSql = ";";
 
+        List<IDbDataParameter> fixedDbParameters = null;
         Action<IDataParameterCollection> firstSqlSetter = null;
         Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string> loopSqlSetter = null;
         if (this.deferredSegments.Count > 1)
@@ -175,29 +166,29 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             }
             if (this.DbParameters.Count > 0)
             {
-                this.FixedDbParameters = tempDbParameters.ToList();
-                firstSqlSetter = dbParameters => this.FixedDbParameters.ForEach(f => dbParameters.Add(f));
+                fixedDbParameters = tempDbParameters.ToList();
+                firstSqlSetter = dbParameters => fixedDbParameters.ForEach(f => dbParameters.Add(f));
             }
             if (this.FieldsBuilder.Length > 0)
-                this.FixedHeadSql = $"SET {this.FieldsBuilder.ToString()},";
+                fixedHeadSql = $"SET {this.FieldsBuilder.ToString()},";
             if (this.WhereBuilder.Length > 0)
-                this.FixedTailSql = $" AND {this.WhereBuilder.ToString()};";
+                fixedTailSql = $" AND {this.WhereBuilder.ToString()};";
             this.DbParameters = command.Parameters;
         }
 
         if (firstUpdateObj is IDictionary<string, object> dict)
         {
-            (this.ValueSetters, this.WhereSetters) = this.BuildDictBulkCommandInitializer(tableSegment.Mapper, dict);
+            (var valueSetters, var whereSetters) = this.BuildDictBulkCommandInitializer(tableSegment.Mapper, dict);
             loopSqlSetter = (dbParameters, builder, dbContext, tableName, updateObj, index) =>
             {
                 var dictObj = updateObj as IDictionary<string, object>;
-                builder.Append($"{this.HeadSql}{this.OrmProvider.GetTableName(tableName)} {this.FixedHeadSql}");
-                foreach (var valueSetter in this.ValueSetters)
+                builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} {fixedHeadSql}");
+                foreach (var valueSetter in valueSetters)
                     valueSetter.Invoke(dbParameters, builder, dictObj, index.ToString());
                 builder.Append(" WHERE ");
-                foreach (var valueSetter in this.WhereSetters)
+                foreach (var valueSetter in whereSetters)
                     valueSetter.Invoke(dbParameters, builder, dictObj, index.ToString());
-                builder.Append(this.FixedTailSql);
+                builder.Append(fixedTailSql);
             };
         }
         else
@@ -206,9 +197,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
             loopSqlSetter = (dbParameters, builder, dbContext, tableName, updateObj, index) =>
             {
-                builder.Append($"{this.HeadSql}{this.OrmProvider.GetTableName(tableName)} {this.FixedHeadSql}");
+                builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} {fixedHeadSql}");
                 commandInitializer.Invoke(dbParameters, builder, dbContext, updateObj, index.ToString());
-                builder.Append(this.FixedTailSql);
+                builder.Append(fixedTailSql);
             };
         }
 
@@ -271,7 +262,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 case "Where":
                     this.VisitWhere(deferredSegment.Value as Expression);
                     break;
-                case "WhereWith":
+                case "WhereBy":
                     this.VisitWhereWith(deferredSegment.Value);
                     break;
                 case "And":
@@ -399,13 +390,31 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             Value = (updateObjs, bulkCount)
         });
     }
-    public virtual void WhereWith(object whereObj)
+    public virtual void WhereBy(object whereObj)
     {
         this.HasWhere = true;
         this.deferredSegments.Add(new CommandSegment
         {
-            Type = "WhereWith",
+            Type = "WhereBy",
             Value = whereObj
+        });
+    }
+    public virtual void WhereById(object whereKey)
+    {
+        this.HasWhere = true;
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "WhereById",
+            Value = whereKey
+        });
+    }
+    public virtual void WhereByIds(IEnumerable whereKeys)
+    {
+        this.HasWhere = true;
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "WhereByIds",
+            Value = whereKeys
         });
     }
     public virtual void Where(Expression whereExpr)
@@ -469,24 +478,14 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.IsJoin = false;
         this.deferredSegments.Clear();
         this.FieldsBuilder.Clear();
-        this.FixedHeadSql = null;
-        this.FixedTailSql = null;
-        this.FixedDbParameters = null;
     }
     public override void Dispose()
     {
         base.Dispose();
         this.deferredSegments = null;
-        this.FieldsBuilder = null;  
+        this.FieldsBuilder = null;
         this.OnlyFieldNames = null;
         this.IgnoreFieldNames = null;
-
-        this.HeadSql = null;
-        this.FixedHeadSql = null;
-        this.FixedTailSql = null;
-        this.FixedDbParameters = null;
-        this.ValueSetters = null;
-        this.WhereSetters = null;
     }
     public virtual void VisitSetField(object deferredSegmentValue)
     {

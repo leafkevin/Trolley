@@ -74,12 +74,12 @@ public class UnitTest3 : UnitTestBase
     {
         this.Initialize(2);
         var repository = this.dbFactory.Create();
-        var user = repository.GetById<User>(1);
+        var user = repository.QueryById<User>(1);
         user.Name = "kevin";
         user.Gender = Gender.Female;
         user.SourceType = null;
         var count = repository.Update<User>(user);
-        var changedUser = repository.GetById<User>(1);
+        var changedUser = repository.QueryById<User>(1);
         Assert.True(count > 0);
         Assert.NotNull(changedUser);
         Assert.True(changedUser.Name == user.Name);
@@ -92,7 +92,7 @@ public class UnitTest3 : UnitTestBase
             Gender = Gender.Male,
             SourceType = UserSourceType.Douyin
         });
-        var result = repository.GetById<User>(1);
+        var result = repository.QueryById<User>(1);
         Assert.True(count > 0);
         Assert.NotNull(result);
         Assert.Null(result.Name);
@@ -337,7 +337,7 @@ public class UnitTest3 : UnitTestBase
             .Returning(f => new { f.Id, f.TotalAmount })
             .ExecuteAsync();
 
-        var updatedOrders = repository.GetByIds<Order>(ids);
+        var updatedOrders = repository.QueryByIds<Order>(ids);
         repository.Commit();
         foreach (var updatedOrder in updatedOrders)
         {
@@ -357,7 +357,7 @@ public class UnitTest3 : UnitTestBase
         Assert.Equal("UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount0,\"Products\"=@Products0,\"Disputes\"=@Disputes0,\"UpdatedAt\"=@UpdatedAt0 WHERE \"Id\"=@kId0 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount1,\"Products\"=@Products1,\"Disputes\"=@Disputes1,\"UpdatedAt\"=@UpdatedAt1 WHERE \"Id\"=@kId1 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount2,\"Products\"=@Products2,\"Disputes\"=@Disputes2,\"UpdatedAt\"=@UpdatedAt2 WHERE \"Id\"=@kId2 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount3,\"Products\"=@Products3,\"Disputes\"=@Disputes3,\"UpdatedAt\"=@UpdatedAt3 WHERE \"Id\"=@kId3 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount4,\"Products\"=@Products4,\"Disputes\"=@Disputes4,\"UpdatedAt\"=@UpdatedAt4 WHERE \"Id\"=@kId4 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount5,\"Products\"=@Products5,\"Disputes\"=@Disputes5,\"UpdatedAt\"=@UpdatedAt5 WHERE \"Id\"=@kId5 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount6,\"Products\"=@Products6,\"Disputes\"=@Disputes6,\"UpdatedAt\"=@UpdatedAt6 WHERE \"Id\"=@kId6 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount7,\"Products\"=@Products7,\"Disputes\"=@Disputes7,\"UpdatedAt\"=@UpdatedAt7 WHERE \"Id\"=@kId7 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount8,\"Products\"=@Products8,\"Disputes\"=@Disputes8,\"UpdatedAt\"=@UpdatedAt8 WHERE \"Id\"=@kId8 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount9,\"Products\"=@Products9,\"Disputes\"=@Disputes9,\"UpdatedAt\"=@UpdatedAt9 WHERE \"Id\"=@kId9 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount10,\"Products\"=@Products10,\"Disputes\"=@Disputes10,\"UpdatedAt\"=@UpdatedAt10 WHERE \"Id\"=@kId10 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount11,\"Products\"=@Products11,\"Disputes\"=@Disputes11,\"UpdatedAt\"=@UpdatedAt11 WHERE \"Id\"=@kId11 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount12,\"Products\"=@Products12,\"Disputes\"=@Disputes12,\"UpdatedAt\"=@UpdatedAt12 WHERE \"Id\"=@kId12 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount13,\"Products\"=@Products13,\"Disputes\"=@Disputes13,\"UpdatedAt\"=@UpdatedAt13 WHERE \"Id\"=@kId13 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount14,\"Products\"=@Products14,\"Disputes\"=@Disputes14,\"UpdatedAt\"=@UpdatedAt14 WHERE \"Id\"=@kId14 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount15,\"Products\"=@Products15,\"Disputes\"=@Disputes15,\"UpdatedAt\"=@UpdatedAt15 WHERE \"Id\"=@kId15 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount16,\"Products\"=@Products16,\"Disputes\"=@Disputes16,\"UpdatedAt\"=@UpdatedAt16 WHERE \"Id\"=@kId16 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount17,\"Products\"=@Products17,\"Disputes\"=@Disputes17,\"UpdatedAt\"=@UpdatedAt17 WHERE \"Id\"=@kId17 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount18,\"Products\"=@Products18,\"Disputes\"=@Disputes18,\"UpdatedAt\"=@UpdatedAt18 WHERE \"Id\"=@kId18 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount19,\"Products\"=@Products19,\"Disputes\"=@Disputes19,\"UpdatedAt\"=@UpdatedAt19 WHERE \"Id\"=@kId19 RETURNING *", sql2);
 
         repository.BeginTransaction();
-        orders = repository.GetByIds<Order>(ids);
+        orders = repository.QueryByIds<Order>(ids);
         parameters = orders.Select(f => new
         {
             f.Id,
@@ -378,7 +378,7 @@ public class UnitTest3 : UnitTestBase
             .SetBulk(parameters, 10)
             .Returning<Order>("*")
             .Execute();
-        updatedOrders = repository.GetByIds<Order>(ids);
+        updatedOrders = repository.QueryByIds<Order>(ids);
         repository.Commit();
         foreach (var updatedOrder in updatedOrders)
         {
@@ -404,7 +404,7 @@ public class UnitTest3 : UnitTestBase
             .Returning(f => new { f.Id, f.BuyerId, f.TotalAmount })
             .ExecuteAsync();
 
-        updatedOrders = repository.GetByIds<Order>(ids);
+        updatedOrders = repository.QueryByIds<Order>(ids);
         repository.Commit();
         foreach (var updatedOrder in updatedOrders)
         {
@@ -423,7 +423,7 @@ public class UnitTest3 : UnitTestBase
             Gender = Gender.Female,
             SourceType = DBNull.Value
         }, t => t.Id == 1);
-        var result1 = repository.GetById<User>(1);
+        var result1 = repository.QueryById<User>(1);
         Assert.True(result > 0);
         Assert.NotNull(result1);
         Assert.Equal("leafkevin_1", result1.Name);
@@ -436,7 +436,7 @@ public class UnitTest3 : UnitTestBase
             Gender = Gender.Female,
             SourceType = DBNull.Value
         });
-        var result3 = repository.GetById<User>(1);
+        var result3 = repository.QueryById<User>(1);
         Assert.True(result2 > 0);
         Assert.NotNull(result3);
         Assert.Equal("kevin", result3.Name);
@@ -456,7 +456,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(f => f.Id == 1)
             .Execute();
-        var result2 = repository.GetById<User>(1);
+        var result2 = repository.QueryById<User>(1);
         Assert.True(result > 0);
         Assert.NotNull(result2);
         Assert.Equal("leafkevin22", result2.Name);
@@ -469,12 +469,12 @@ public class UnitTest3 : UnitTestBase
         this.Initialize(2);
         var repository = this.dbFactory.Create();
         var result = repository.Update<User>(new { id = 1, name = "leafkevin11" });
-        var result1 = repository.GetById<User>(1);
+        var result1 = repository.QueryById<User>(1);
         Assert.True(result > 0);
         Assert.NotNull(result1);
         Assert.Equal("leafkevin11", result1.Name);
         result = repository.Update<User>(new Dictionary<string, object> { { "id", 1 }, { "name", "leafkevin22" } });
-        result1 = repository.GetById<User>(1);
+        result1 = repository.QueryById<User>(1);
         Assert.True(result > 0);
         Assert.NotNull(result1);
         Assert.Equal("leafkevin22", result1.Name);
@@ -508,7 +508,7 @@ public class UnitTest3 : UnitTestBase
            })
            .Where(f => f.Id == 1)
            .Execute();
-        var result = repository.GetById<User>(1);
+        var result = repository.QueryById<User>(1);
         Assert.Equal("leafkevin22", result.Name);
         Assert.Equal(25, result.Age);
         Assert.Equal(0, result.CompanyId);
@@ -518,7 +518,7 @@ public class UnitTest3 : UnitTestBase
     {
         this.Initialize(2);
         var repository = this.dbFactory.Create();
-        var user = repository.GetById<User>(1);
+        var user = repository.QueryById<User>(1);
         var sql = repository.Update<User>()
             .Set(new
             {
@@ -543,7 +543,7 @@ public class UnitTest3 : UnitTestBase
             .OnlyFields(f => f.Name)
             .Where(f => f.Id == 1)
             .Execute();
-        var result = repository.GetById<User>(1);
+        var result = repository.QueryById<User>(1);
         Assert.Equal("leafkevinabc", result.Name);
         Assert.True(result.Age == user.Age);
         Assert.True(result.CompanyId == user.CompanyId);
@@ -578,7 +578,7 @@ public class UnitTest3 : UnitTestBase
             .IgnoreFields(f => f.Name)
             .Where(f => f.Id == 1)
             .Execute();
-        var result = repository.GetById<User>(1);
+        var result = repository.QueryById<User>(1);
         Assert.NotEqual("leafkevin22", result.Name);
         Assert.Equal(25, result.Age);
         Assert.Equal(0, result.CompanyId);
@@ -594,7 +594,7 @@ public class UnitTest3 : UnitTestBase
             ProductCount = 10,
             Id = 1
         });
-        var result1 = repository.GetById<Order>(new { Id = "1" });
+        var result1 = repository.QueryById<Order>(new { Id = "1" });
         repository.Commit();
         if (result > 0)
         {
@@ -607,7 +607,7 @@ public class UnitTest3 : UnitTestBase
             .Set(new { ProductCount = 11 })
             .Where(new { Id = "1" })
             .Execute();
-        var result2 = repository.GetById<Order>(new { Id = "1" });
+        var result2 = repository.QueryById<Order>(new { Id = "1" });
         repository.Commit();
         if (result > 0)
         {
@@ -625,7 +625,7 @@ public class UnitTest3 : UnitTestBase
             .Set(updateObj)
             .Where(new { Id = "1" })
             .Execute();
-        var result3 = repository.GetById<Order>(new { Id = "1" });
+        var result3 = repository.QueryById<Order>(new { Id = "1" });
         repository.Commit();
         if (result > 0)
         {
@@ -667,7 +667,7 @@ public class UnitTest3 : UnitTestBase
         this.Initialize(2);
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
-        var parameter = repository.GetById<Order>("1");
+        var parameter = repository.QueryById<Order>("1");
         parameter.TotalAmount += 50;
         var result = repository.Update<Order>()
             .Set(f => new
@@ -678,7 +678,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(x => x.Id == "2")
             .Execute();
-        var order = repository.GetById<Order>("2");
+        var order = repository.QueryById<Order>("2");
         repository.Commit();
         if (result > 0)
         {
@@ -690,7 +690,7 @@ public class UnitTest3 : UnitTestBase
             Assert.True(order.TotalAmount == this.CalcAmount(parameter.TotalAmount, 3));
         }
 
-        var updateObj = repository.GetById<Order>("1");
+        var updateObj = repository.QueryById<Order>("1");
         updateObj.Disputes = new Dispute
         {
             Id = 2,
@@ -734,7 +734,7 @@ public class UnitTest3 : UnitTestBase
             .Where(new { updateObj.Id })
             .Execute();
 
-        var updatedOrder = repository.GetById<Order>("1");
+        var updatedOrder = repository.QueryById<Order>("1");
         repository.Commit();
         if (result > 0)
         {
@@ -919,7 +919,7 @@ public class UnitTest3 : UnitTestBase
     {
         this.Initialize(2);
         var repository = this.dbFactory.Create();
-        var order = repository.GetById<Order>("1");
+        var order = repository.QueryById<Order>("1");
         var totalAmount = await repository.From<OrderDetail>()
             .Where(f => f.OrderId == "1")
             .SumAsync(f => f.Amount);
@@ -945,7 +945,7 @@ public class UnitTest3 : UnitTestBase
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.Id == "1")
             .ExecuteAsync();
-        var reult = repository.GetById<Order>("1");
+        var reult = repository.QueryById<Order>("1");
         Assert.True(count > 0);
         Assert.True(reult.TotalAmount == totalAmount);
         Assert.True(reult.TotalAmount != order.TotalAmount);
@@ -1184,7 +1184,7 @@ public class UnitTest3 : UnitTestBase
             .Set((x, y) => new { BuyerId = DBNull.Value })
             .Where((a, b) => a.Id == "1")
             .Execute();
-        var order = await repository.GetByIdAsync<Order>("1");
+        var order = await repository.QueryByIdAsync<Order>("1");
         var orderDetails = await repository.QueryAsync<OrderDetail>(f => f.OrderId == "1");
         await repository.CommitAsync();
         Assert.True(result > 0);
@@ -1218,7 +1218,7 @@ public class UnitTest3 : UnitTestBase
             .Set((x, y) => new { BuyerId = DBNull.Value })
             .Where((x, y) => x.Id == "2")
             .Execute();
-        order = await repository.GetByIdAsync<Order>("2");
+        order = await repository.QueryByIdAsync<Order>("2");
         orderDetails = await repository.QueryAsync<OrderDetail>(f => f.OrderId == "2");
         await repository.CommitAsync();
 
@@ -1246,7 +1246,7 @@ public class UnitTest3 : UnitTestBase
     {
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
-        var parameter = repository.GetById<Order>("1");
+        var parameter = repository.QueryById<Order>("1");
         parameter.TotalAmount += 50;
         var result = repository.Update<Order>()
             .Set(f => new
@@ -1264,7 +1264,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(x => x.Id == "1")
             .Execute();
-        var order = repository.GetById<Order>("1");
+        var order = repository.QueryById<Order>("1");
         repository.Commit();
         if (result > 0)
         {
@@ -1277,7 +1277,7 @@ public class UnitTest3 : UnitTestBase
         }
 
         repository.BeginTransaction();
-        parameter = repository.GetById<Order>("1");
+        parameter = repository.QueryById<Order>("1");
         parameter.TotalAmount += 50;
         result = repository.Update<Order>()
             .Set(new
@@ -1295,7 +1295,7 @@ public class UnitTest3 : UnitTestBase
             })
           .Where(x => x.Id == "1")
           .Execute();
-        order = repository.GetById<Order>("1");
+        order = repository.QueryById<Order>("1");
         repository.Commit();
         if (result > 0)
         {
@@ -1311,7 +1311,7 @@ public class UnitTest3 : UnitTestBase
     public void Update_Set_Returning()
     {
         var repository = this.dbFactory.Create();
-        var parameter = repository.GetById<Order>("1");
+        var parameter = repository.QueryById<Order>("1");
         parameter.TotalAmount += 50;
         var sql1 = repository.Update<Order>()
             .Set(f => new
@@ -1351,7 +1351,7 @@ public class UnitTest3 : UnitTestBase
             .Returning(f => new { f.Id, f.TotalAmount })
             .Execute();
 
-        var order = repository.GetById<Order>("1");
+        var order = repository.QueryById<Order>("1");
         repository.Commit();
         Assert.NotEmpty(order.Products);
         Assert.Equal(3, order.Products.Count);
@@ -1383,7 +1383,7 @@ public class UnitTest3 : UnitTestBase
         Assert.Equal("UPDATE \"sys_order\" SET \"TotalAmount\"=@p0,\"Products\"=@p1,\"Disputes\"=@p2 WHERE \"Id\"='1' RETURNING *", sql2);
 
         repository.BeginTransaction();
-        parameter = repository.GetById<Order>("1");
+        parameter = repository.QueryById<Order>("1");
         parameter.TotalAmount += 50;
         var result2 = repository.Update<Order>()
             .Set(new
@@ -1402,7 +1402,7 @@ public class UnitTest3 : UnitTestBase
             .Where(x => x.Id == "1")
             .Returning<Order>("*")
             .Execute();
-        order = repository.GetById<Order>("1");
+        order = repository.QueryById<Order>("1");
         repository.Commit();
         Assert.NotEmpty(order.Products);
         Assert.Equal(3, order.Products.Count);
@@ -1436,7 +1436,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(x => x.Id == "1")
             .Execute();
-        var order = repository.GetById<Order>("1");
+        var order = repository.QueryById<Order>("1");
         repository.Commit();
         if (result > 0)
         {
@@ -1469,7 +1469,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(x => x.Id == "2")
             .Execute();
-        var order = repository.GetById<Order>("1");
+        var order = repository.QueryById<Order>("1");
         repository.Commit();
         if (result > 0)
         {
@@ -1670,7 +1670,7 @@ public class UnitTest3 : UnitTestBase
             .Set(new { SomeTimes = timeSpan })
             .Where(new { Id = 1 })
             .ExecuteAsync();
-        var userInfo = repository.GetById<User>(1);
+        var userInfo = repository.QueryById<User>(1);
         repository.Commit();
 #if NET6_0_OR_GREATER
         Assert.True(userInfo.SomeTimes.Value == TimeOnly.FromTimeSpan(timeSpan));

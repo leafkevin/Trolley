@@ -93,11 +93,11 @@ public class UnitTest2 : UnitTestBase
     {
         this.Initialize(3);
         var repository = this.dbFactory.Create();
-        var result = repository.GetById<User>(1);
+        var result = repository.QueryById<User>(1);
         Assert.Equal("leafkevin", result.Name);
-        var user = await repository.GetByIdAsync<User>(new { Id = 1 });
+        var user = await repository.QueryByIdAsync<User>(new { Id = 1 });
         Assert.True(user.Name == result.Name);
-        user = await repository.GetByIdAsync<User>(new[] { 1, 2, 3 });
+        user = await repository.QueryByIdAsync<User>(new[] { 1, 2, 3 });
         Assert.True(user.Name == result.Name);
     }
     [Fact]
@@ -106,9 +106,9 @@ public class UnitTest2 : UnitTestBase
         this.Initialize(3);
         var repository = this.dbFactory.Create();
         var userIds = new int[] { 1, 2, 3 };
-        var users = repository.GetByIds<User>(userIds);
+        var users = repository.QueryByIds<User>(userIds);
         Assert.Equal("leafkevin", users[0].Name);
-        var userInfos = await repository.GetByIdsAsync<User>(new[] { new { Id = 1 }, new { Id = 2 }, new { Id = 3 } });
+        var userInfos = await repository.QueryByIdsAsync<User>(new[] { new { Id = 1 }, new { Id = 2 }, new { Id = 3 } });
         Assert.True(users[0].Name == userInfos[0].Name);
     }
     [Fact]
@@ -1704,7 +1704,7 @@ SELECT a.[Id],a.[Name],b.[Name] AS [CompanyName] FROM [sys_user] a INNER JOIN [s
     {
         this.Initialize(3);
         var repository = this.dbFactory.Create();
-        var result = repository.GetById<Order>("1");
+        var result = repository.QueryById<Order>("1");
         Assert.NotNull(result);
         Assert.NotNull(result.Products);
         Assert.NotNull(result.Disputes);
@@ -2743,7 +2743,7 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
         }
         await repository.BeginTransactionAsync();
         await repository.ExecuteAsync(CommandType.StoredProcedure, "UPDATE_USER", parameters);
-        result = await repository.GetByIdAsync<User>(1);
+        result = await repository.QueryByIdAsync<User>(1);
         await repository.CommitAsync();
         Assert.Equal("UpdatedName", result.Name);
         Assert.Equal(18, result.Age);

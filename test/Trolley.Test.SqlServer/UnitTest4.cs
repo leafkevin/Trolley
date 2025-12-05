@@ -331,7 +331,7 @@ public class UnitTest4 : UnitTestBase
             .ToSql(out _);
         Assert.Equal("DELETE FROM [sys_user] OUTPUT DELETED.[Id],DELETED.[TenantId],(DELETED.[Gender]+'-'+CAST(DELETED.[Age] AS NVARCHAR(MAX))+'-'+UPPER(DELETED.[Name])) AS [Info] WHERE [Id]=@Id", sql);
 
-        var user = await repository.GetByIdAsync<User>(1);
+        var user = await repository.QueryByIdAsync<User>(1);
         var result1 = await repository.Delete<User>()
             .Where(1)
             .Output(f => new { f.Id, f.TenantId, Info = $"{f.Gender}-{f.Age}-{f.Name.ToUpper()}" })
@@ -365,7 +365,7 @@ public class UnitTest4 : UnitTestBase
             })
             .ExecuteAsync();
 
-        user = await repository.GetByIdAsync<User>(1);
+        user = await repository.QueryByIdAsync<User>(1);
         var users = await repository.Delete<User>()
             .Where(1)
             .Output<User>("*")
@@ -381,7 +381,7 @@ public class UnitTest4 : UnitTestBase
           .ToSql(out _);
         Assert.Equal("DELETE FROM [sys_user] OUTPUT DELETED.[Id],DELETED.[TenantId],(DELETED.[Gender]+'-'+CAST(DELETED.[Age] AS NVARCHAR(MAX))+'-'+UPPER(DELETED.[Name])) AS [Info] WHERE [Id] IN (@Id0,@Id1,@Id2)", sql);
 
-        users = await repository.GetByIdsAsync<User>(userIds);
+        users = await repository.QueryByIdsAsync<User>(userIds);
         result1 = await repository.Delete<User>()
             .Where(userIds)
             .Output(f => new { f.Id, f.TenantId, Info = $"{f.Gender}-{f.Age}-{f.Name.ToUpper()}" })
@@ -462,7 +462,7 @@ public class UnitTest4 : UnitTestBase
                 UpdatedAt = DateTime.Parse("2023-03-15 16:27:38"),
                 UpdatedBy = 1
             });
-        var user = await repository.GetByIdAsync<User>(1);
+        var user = await repository.QueryByIdAsync<User>(1);
         Assert.NotNull(user);
     }
     [Fact]
@@ -506,7 +506,7 @@ public class UnitTest4 : UnitTestBase
                 UpdatedAt = DateTime.Parse("2023-03-15 16:27:38"),
                 UpdatedBy = 1
             });
-        var user = await repository.GetByIdAsync<User>(1);
+        var user = await repository.QueryByIdAsync<User>(1);
         Assert.NotNull(user);
     }
 }

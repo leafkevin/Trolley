@@ -1707,7 +1707,7 @@ public class AllUnitTest : UnitTestBase
             })
             .IgnoreFields("CompanyId", "SourceType")
             .Execute();
-        var user = repository.GetById<User>(1);
+        var user = repository.QueryById<User>(1);
         repository.Commit();
         Assert.Equal(Gender.Male, user.Gender);
         Assert.Equal(0, user.CompanyId);
@@ -1751,7 +1751,7 @@ public class AllUnitTest : UnitTestBase
             })
             .IgnoreFields(f => new { f.Gender, f.CompanyId })
             .Execute();
-        user = repository.GetById<User>(1);
+        user = repository.QueryById<User>(1);
         repository.Commit();
         Assert.Equal(Gender.Unknown, user.Gender);
         Assert.Equal(0, user.CompanyId);
@@ -1763,7 +1763,7 @@ public class AllUnitTest : UnitTestBase
         Guid? guidField = Guid.NewGuid();
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
-        var user = repository.GetById<User>(1);
+        var user = repository.QueryById<User>(1);
         var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
         var sql = repository.Create<User>()
             .WithBy(new
@@ -1813,7 +1813,7 @@ public class AllUnitTest : UnitTestBase
         this.Initialize(1);
         Guid? guidField = Guid.NewGuid();
         var repository = this.dbFactory.Create();
-        var user = repository.GetById<User>(1);
+        var user = repository.QueryById<User>(1);
         var sql = repository.Create<User>()
             .WithBy(new
             {
@@ -2159,7 +2159,7 @@ public class AllUnitTest : UnitTestBase
         var brandId = 1;
         var name = "雪中飞羽绒裤";
         int categoryId = 1;
-        var brand = repository.GetById<Brand>(brandId);
+        var brand = repository.QueryById<Brand>(brandId);
         var sql = repository.Create<Product>()
             .IgnoreInto()
             .From<Brand>()
@@ -2204,7 +2204,7 @@ public class AllUnitTest : UnitTestBase
                 UpdatedAt = DateTime.Now
             })
            .Execute();
-        var product = repository.GetById<Product>(id);
+        var product = repository.QueryById<Product>(id);
         repository.Commit();
         Assert.True(count > 0);
         Assert.NotNull(product);
@@ -2281,8 +2281,8 @@ public class AllUnitTest : UnitTestBase
                 UpdatedAt = x.UpdatedAt
             })
            .ExecuteAsync();
-        var orderDetail = repository.GetById<OrderDetail>("7");
-        var product = repository.GetById<Product>(1);
+        var orderDetail = repository.QueryById<OrderDetail>("7");
+        var product = repository.QueryById<Product>(1);
         await repository.CommitAsync();
         Assert.True(result > 0);
         Assert.NotNull(orderDetail);
@@ -2380,7 +2380,7 @@ public class AllUnitTest : UnitTestBase
             UpdatedAt = DateTime.Now,
             UpdatedBy = 1
         });
-        var result = repository.GetById<Order>("1");
+        var result = repository.QueryById<Order>("1");
         repository.Commit();
         if (count > 0)
         {
@@ -2446,7 +2446,7 @@ public class AllUnitTest : UnitTestBase
                 UpdatedBy = 1
             })
             .Execute();
-        var order = repository.GetById<Order>("4");
+        var order = repository.QueryById<Order>("4");
         repository.Commit();
         Assert.NotEmpty(order.Products);
         Assert.NotNull(order.Disputes);
@@ -2582,7 +2582,7 @@ public class AllUnitTest : UnitTestBase
             })
             .OnlyFields(f => new { f.Id, f.TenantId, f.Name, f.IsEnabled, f.CreatedBy, f.CreatedAt, f.UpdatedAt, f.UpdatedBy })
             .ExecuteAsync();
-        var user = repository.GetById<User>(1);
+        var user = repository.QueryById<User>(1);
         repository.Commit();
         Assert.Equal(1, count);
         Assert.Equal(0, user.CompanyId);
@@ -2741,14 +2741,14 @@ public class AllUnitTest : UnitTestBase
                 .Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
                 .Set(true, f => f.Products, f => x.Values(f.Products)))
             .ExecuteAsync();
-        var order = await repository.GetByIdAsync<Order>("9");
+        var order = await repository.QueryByIdAsync<Order>("9");
         await repository.CommitAsync();
         Assert.Equal(1, count);
         Assert.Equal(500, order.TotalAmount);
         Assert.Null(order.Products);
 
         await repository.BeginTransactionAsync();
-        var oldOrder = await repository.GetByIdAsync<Order>("9");
+        var oldOrder = await repository.QueryByIdAsync<Order>("9");
         count = await repository.Create<Order>()
             .WithBy(new
             {
@@ -2778,7 +2778,7 @@ public class AllUnitTest : UnitTestBase
                 .Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
                 .Set(true, f => f.Products, f => x.Values(f.Products)))
             .ExecuteAsync();
-        order = await repository.GetByIdAsync<Order>("9");
+        order = await repository.QueryByIdAsync<Order>("9");
         await repository.CommitAsync();
         Assert.Equal(2, count);
         Assert.Equal(order.TotalAmount, oldOrder.TotalAmount + 600);
@@ -3030,9 +3030,9 @@ public class AllUnitTest : UnitTestBase
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create();
-        var result = repository.GetById<User>(1);
+        var result = repository.QueryById<User>(1);
         Assert.Equal("leafkevin", result.Name);
-        var user = await repository.GetByIdAsync<User>(new { Id = 1 });
+        var user = await repository.QueryByIdAsync<User>(new { Id = 1 });
         Assert.True(user.Name == result.Name);
     }
     [Fact]
@@ -4572,7 +4572,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create();
-        var result = repository.GetById<Order>("1");
+        var result = repository.QueryById<Order>("1");
         Assert.NotNull(result);
         Assert.NotNull(result.Products);
         Assert.NotNull(result.Disputes);
@@ -5483,12 +5483,12 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create();
-        var user = repository.GetById<User>(1);
+        var user = repository.QueryById<User>(1);
         user.Name = "kevin";
         user.Gender = Gender.Female;
         user.SourceType = null;
         var count = repository.Update<User>(user);
-        var changedUser = repository.GetById<User>(1);
+        var changedUser = repository.QueryById<User>(1);
         Assert.True(count > 0);
         Assert.NotNull(changedUser);
         Assert.True(changedUser.Name == user.Name);
@@ -5501,7 +5501,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             Gender = Gender.Male,
             SourceType = UserSourceType.Douyin
         });
-        var result = repository.GetById<User>(1);
+        var result = repository.QueryById<User>(1);
         Assert.True(count > 0);
         Assert.NotNull(result);
         Assert.Null(result.Name);
@@ -5720,7 +5720,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             Gender = Gender.Female,
             SourceType = DBNull.Value
         }, t => t.Id == 1);
-        var result1 = repository.GetById<User>(1);
+        var result1 = repository.QueryById<User>(1);
         Assert.True(result > 0);
         Assert.NotNull(result1);
         Assert.Equal("leafkevin_1", result1.Name);
@@ -5733,7 +5733,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             Gender = Gender.Female,
             SourceType = DBNull.Value
         });
-        var result3 = repository.GetById<User>(1);
+        var result3 = repository.QueryById<User>(1);
         Assert.True(result2 > 0);
         Assert.NotNull(result3);
         Assert.Equal("kevin", result3.Name);
@@ -5753,7 +5753,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             })
             .Where(f => f.Id == 1)
             .Execute();
-        var result2 = repository.GetById<User>(1);
+        var result2 = repository.QueryById<User>(1);
         Assert.True(result > 0);
         Assert.NotNull(result2);
         Assert.Equal("leafkevin22", result2.Name);
@@ -5766,7 +5766,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         this.Initialize(1);
         var repository = this.dbFactory.Create();
         var result = repository.Update<User>(new { Id = 1, Name = "leafkevin11" });
-        var result1 = repository.GetById<User>(1);
+        var result1 = repository.QueryById<User>(1);
         Assert.True(result > 0);
         Assert.NotNull(result1);
         Assert.Equal("leafkevin11", result1.Name);
@@ -5800,7 +5800,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
            })
            .Where(f => f.Id == 1)
            .Execute();
-        var result = repository.GetById<User>(1);
+        var result = repository.QueryById<User>(1);
         Assert.Equal("leafkevin22", result.Name);
         Assert.Equal(25, result.Age);
         Assert.Equal(0, result.CompanyId);
@@ -5810,7 +5810,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create();
-        var user = repository.GetById<User>(1);
+        var user = repository.QueryById<User>(1);
         var sql = repository.Update<User>()
             .Set(new
             {
@@ -5835,7 +5835,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .OnlyFields(f => f.Name)
             .Where(f => f.Id == 1)
             .Execute();
-        var result = repository.GetById<User>(1);
+        var result = repository.QueryById<User>(1);
         Assert.Equal("leafkevinabc", result.Name);
         Assert.True(result.Age == user.Age);
         Assert.True(result.CompanyId == user.CompanyId);
@@ -5870,7 +5870,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .IgnoreFields(f => f.Name)
             .Where(f => f.Id == 1)
             .Execute();
-        var result = repository.GetById<User>(1);
+        var result = repository.QueryById<User>(1);
         Assert.NotEqual("leafkevin22", result.Name);
         Assert.Equal(25, result.Age);
         Assert.Equal(0, result.CompanyId);
@@ -5886,7 +5886,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             ProductCount = 10,
             Id = 1
         });
-        var result1 = repository.GetById<Order>(new { Id = "1" });
+        var result1 = repository.QueryById<Order>(new { Id = "1" });
         repository.Commit();
         if (result > 0)
         {
@@ -5899,7 +5899,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .Set(new { ProductCount = 11 })
             .Where(new { Id = "1" })
             .Execute();
-        var result2 = repository.GetById<Order>(new { Id = "1" });
+        var result2 = repository.QueryById<Order>(new { Id = "1" });
         repository.Commit();
         if (result > 0)
         {
@@ -5917,7 +5917,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .Set(updateObj)
             .Where(new { Id = "1" })
             .Execute();
-        var result3 = repository.GetById<Order>(new { Id = "1" });
+        var result3 = repository.QueryById<Order>(new { Id = "1" });
         repository.Commit();
         if (result > 0)
         {
@@ -5959,7 +5959,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         this.Initialize(1);
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
-        var parameter = repository.GetById<Order>("1");
+        var parameter = repository.QueryById<Order>("1");
         parameter.TotalAmount += 50;
         var result = repository.Update<Order>()
             .Set(f => new
@@ -5970,7 +5970,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             })
             .Where(x => x.Id == "2")
             .Execute();
-        var order = repository.GetById<Order>("2");
+        var order = repository.QueryById<Order>("2");
         repository.Commit();
         if (result > 0)
         {
@@ -5982,7 +5982,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             Assert.True(order.TotalAmount == this.CalcAmount(parameter.TotalAmount, 3));
         }
 
-        var updateObj = repository.GetById<Order>("1");
+        var updateObj = repository.QueryById<Order>("1");
         updateObj.Disputes = new Dispute
         {
             Id = 2,
@@ -6026,7 +6026,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .Where(new { updateObj.Id })
             .Execute();
 
-        var updatedOrder = repository.GetById<Order>("1");
+        var updatedOrder = repository.QueryById<Order>("1");
         repository.Commit();
         if (result > 0)
         {
@@ -6211,7 +6211,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create();
-        var order = repository.GetById<Order>("1");
+        var order = repository.QueryById<Order>("1");
         var totalAmount = await repository.From<OrderDetail>()
             .Where(f => f.OrderId == "1")
             .SumAsync(f => f.Amount);
@@ -6237,7 +6237,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.Id == "1")
             .ExecuteAsync();
-        var reult = repository.GetById<Order>("1");
+        var reult = repository.QueryById<Order>("1");
         Assert.True(count > 0);
         Assert.True(reult.TotalAmount == (double)totalAmount);
         Assert.True(reult.TotalAmount != order.TotalAmount);
@@ -6476,7 +6476,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .Set((x, y) => new { BuyerId = DBNull.Value })
             .Where((a, b) => a.Id == "1")
             .Execute();
-        var order = await repository.GetByIdAsync<Order>("1");
+        var order = await repository.QueryByIdAsync<Order>("1");
         var orderDetails = await repository.QueryAsync<OrderDetail>(f => f.OrderId == "1");
         await repository.CommitAsync();
         Assert.True(result > 0);
@@ -6510,7 +6510,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .Set((x, y) => new { BuyerId = DBNull.Value })
             .Where((x, y) => x.Id == "2")
             .Execute();
-        order = await repository.GetByIdAsync<Order>("2");
+        order = await repository.QueryByIdAsync<Order>("2");
         orderDetails = await repository.QueryAsync<OrderDetail>(f => f.OrderId == "2");
         await repository.CommitAsync();
 
@@ -6538,7 +6538,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
     {
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
-        var parameter = repository.GetById<Order>("1");
+        var parameter = repository.QueryById<Order>("1");
         parameter.TotalAmount += 50;
         var result = repository.Update<Order>()
             .Set(f => new
@@ -6556,7 +6556,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             })
             .Where(x => x.Id == "1")
             .Execute();
-        var order = repository.GetById<Order>("1");
+        var order = repository.QueryById<Order>("1");
         repository.Commit();
         if (result > 0)
         {
@@ -6569,7 +6569,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         }
 
         repository.BeginTransaction();
-        parameter = repository.GetById<Order>("1");
+        parameter = repository.QueryById<Order>("1");
         parameter.TotalAmount += 50;
         result = repository.Update<Order>()
             .Set(new
@@ -6587,7 +6587,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             })
           .Where(x => x.Id == "1")
           .Execute();
-        order = repository.GetById<Order>("1");
+        order = repository.QueryById<Order>("1");
         repository.Commit();
         if (result > 0)
         {
@@ -6619,7 +6619,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             })
             .Where(x => x.Id == "1")
             .Execute();
-        var order = repository.GetById<Order>("1");
+        var order = repository.QueryById<Order>("1");
         repository.Commit();
         if (result > 0)
         {
@@ -6652,7 +6652,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             })
             .Where(x => x.Id == "2")
             .Execute();
-        var order = repository.GetById<Order>("1");
+        var order = repository.QueryById<Order>("1");
         repository.Commit();
         if (result > 0)
         {
@@ -6851,7 +6851,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .Set(new { SomeTimes = timeSpan })
             .Where(new { Id = 1 })
             .ExecuteAsync();
-        var userInfo = repository.GetById<User>(1);
+        var userInfo = repository.QueryById<User>(1);
         repository.Commit();
 #if NET6_0_OR_GREATER
         Assert.True(userInfo.SomeTimes.Value == TimeOnly.FromTimeSpan(timeSpan));
@@ -9034,7 +9034,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         Assert.Equal("SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order` a WHERE a.`BuyerId` IS NULL", sql1);
         repository.BeginTransaction();
         repository.Update<Order>(f => new { BuyerId = DBNull.Value }, f => f.Id == "1");
-        var result1 = repository.GetById<Order>("1");
+        var result1 = repository.QueryById<Order>("1");
         repository.Commit();
         Assert.Equal(0, result1.BuyerId);
         var result2 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet);

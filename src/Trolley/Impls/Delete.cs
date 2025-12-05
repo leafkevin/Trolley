@@ -46,20 +46,28 @@ public class Delete<TEntity> : Deleted<TEntity>, IDelete<TEntity>
     #endregion
 
     #region Where
-    public virtual IDelete<TEntity> Where(object whereKey)
+    public virtual IDelete<TEntity> WhereBy(object whereObj)
+    {
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+
+        this.Visitor.WhereBy(whereObj);
+        return this;
+    }
+    public virtual IDelete<TEntity> WhereById(object whereKey)
     {
         if (whereKey == null)
             throw new ArgumentNullException(nameof(whereKey));
 
-        this.Visitor.WhereWith(whereKey, ActionMode.Single);
+        this.Visitor.WhereById(whereKey);
         return this;
     }
-    public virtual IDelete<TEntity> Where(IEnumerable whereKeys)
+    public virtual IDelete<TEntity> WhereByIds(IEnumerable whereKeys)
     {
         if (whereKeys == null)
             throw new ArgumentNullException(nameof(whereKeys));
 
-        this.Visitor.WhereWith(whereKeys, ActionMode.Bulk);
+        this.Visitor.WhereByIds(whereKeys);
         return this;
     }
     public virtual IDelete<TEntity> Where(Expression<Func<TEntity, bool>> predicate)

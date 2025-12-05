@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
@@ -446,6 +447,24 @@ public interface IQuery<T> : IQueryBase
     #endregion
 
     #region Where
+    /// <summary>
+    /// 条件查询，如：.WhereBy(new { IsEnabled = true})，whereObj不能为null
+    /// </summary>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns>返回查询条件</returns>
+    IQuery<T> WhereBy(object whereObj);
+    /// <summary>
+    /// 主键条件查询，如：.WhereById(1) 或是 .WhereById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回查询条件</returns>
+    IQuery<T> WhereById(object whereKey);
+    /// <summary>
+    /// 多主键条件查询，如：.WhereByIds(new int[]{1,2,3}) 或是 .WhereByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回查询条件</returns>
+    IQuery<T> WhereByIds(IEnumerable whereKeys);
     /// <summary>
     /// 条件查询，predicate为null时不生成任何条件
     /// </summary>

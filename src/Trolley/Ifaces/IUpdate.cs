@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
@@ -24,7 +25,7 @@ public interface IUpdate<TEntity>
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回更新对象</returns>
-    IUpdate<TEntity> UseTable(params string[] tableNames);   
+    IUpdate<TEntity> UseTable(params string[] tableNames);
     /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="TEntity"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
@@ -445,12 +446,23 @@ public interface IContinuedUpdate<TEntity> : IUpdated<TEntity>
 
     #region Where
     /// <summary>
-    /// 使用whereObj对象生成Where条件，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，whereObj对象可以是匿名对象、命名对象或是字典，推荐使用匿名对象，不可为null
+    /// 条件更新，如：.WhereBy(new { IsEnabled = true})，whereObj不能为null
     /// </summary>
-    /// <typeparam name="TWhereObj">where条件对象类型</typeparam>
-    /// <param name="whereObj">where条件对象，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，可以是匿名对象、命名对象或是字典，推荐使用匿名对象，不可为null</param>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj);
+    IContinuedUpdate<TEntity> WhereBy(object whereObj);
+    /// <summary>
+    /// 主键条件查询，如：.WhereById(1) 或是 .WhereById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="whereKey"></param>
+    /// <returns>返回更新对象</returns>
+    IContinuedUpdate<TEntity> WhereById(object whereKey);
+    /// <summary>
+    /// 多主键条件查询，如：.WhereByIds(new int[]{1,2,3}) 或是 .WhereByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回更新对象</returns>
+    IContinuedUpdate<TEntity> WhereByIds(IEnumerable whereKeys);
     /// <summary>
     /// 条件查询，predicate为null时不生成任何条件
     /// </summary>

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -509,11 +510,25 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
     #endregion
 
     #region Where
-    public virtual IUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj)
+    public virtual IUpdated<TEntity> Where(object whereObj)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
-        this.Visitor.WhereWith(whereObj);
+        this.Visitor.WhereBy(whereObj);
+        return this;
+    }
+    public virtual IUpdated<TEntity> WhereById(object whereKey)
+    {
+        if (whereKey == null)
+            throw new ArgumentNullException(nameof(whereKey));
+        this.Visitor.WhereBy(whereKey);
+        return this;
+    }
+    public virtual IUpdated<TEntity> WhereByIds(IEnumerable whereKeys)
+    {
+        if (whereKeys == null)
+            throw new ArgumentNullException(nameof(whereKeys));
+        this.Visitor.WhereBy(whereKeys);
         return this;
     }
     public virtual IContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
@@ -679,7 +694,7 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
-        this.Visitor.WhereWith(whereObj);
+        this.Visitor.WhereBy(whereObj);
         return this;
     }
     public virtual IBulkContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)

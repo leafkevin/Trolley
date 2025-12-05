@@ -38,7 +38,7 @@ public class SqlServerDelete<TEntity> : Delete<TEntity>, ISqlServerDelete<TEntit
 
     #region Where
     public new ISqlServerContinuedDelete<TEntity> Where(object keys)
-        => base.Where(keys) as ISqlServerContinuedDelete<TEntity>;
+        => base.WhereBy(keys) as ISqlServerContinuedDelete<TEntity>;
     public new ISqlServerContinuedDelete<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.Where(true, predicate);
     public new ISqlServerContinuedDelete<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
