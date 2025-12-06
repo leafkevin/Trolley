@@ -673,7 +673,7 @@ public sealed class DbContext
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this, entityType, whereObj, false);
+        var commandInitializer = RepositoryHelper(this, entityType, whereObj, false);
         command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereObj);
         return (isNeedClose, connection, command);
     }
@@ -1332,10 +1332,8 @@ public sealed class DbContext
     {
         if (whereObjs == null)
             throw new ArgumentNullException(nameof(whereObjs));
-        if (isBulk && whereObjs is not IDictionary<string, object>)
-            isBulk = false;
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this, entityType, whereObjs, isUseKey, isBulk)
+        var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this, entityType, whereObjs, isUseKey, false, isBulk)
             as Func<IDataParameterCollection, DbContext, object, string>;
         command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereObjs);
         return (isNeedClose, connection, command);

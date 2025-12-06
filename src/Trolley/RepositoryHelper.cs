@@ -33,6 +33,8 @@ public static class RepositoryHelper
     private static readonly ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>> deleteByCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>> deleteByIdCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>> deleteByIdsCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, object> whereCommandInitializerCache = new();
+
 
     private static readonly ConcurrentDictionary<int, object> dictBulkCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<int, object> typedCreateCommandInitializerCache = new();
@@ -54,7 +56,7 @@ public static class RepositoryHelper
 
     private static readonly ConcurrentDictionary<int, object> updateCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<int, object> updateBulkCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<int, object> whereCommandInitializerCache = new();
+
 
     private static readonly ConcurrentDictionary<int, Delegate> readerDeserializerGetters = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerDeserializerAsyncGetters = new();
@@ -258,13 +260,12 @@ public static class RepositoryHelper
 
     public static Func<IDataParameterCollection, DbContext, object, string> BuildQueryWhereCommandInitializer(DbContext dbContext, Type entityType, object whereObjs, bool isUseKey, bool isMultiple, bool isBulk)
     {
-        object firstWhereObj = null;
         Type whereObjType = null;
         bool isDictionary = false;
         bool hasWhere = whereObjs != null;
-        List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>> valueSetters = null;
         if (isBulk)
         {
+            object firstWhereObj = null;
             var typedWhereObjs = whereObjs as IEnumerable;
             foreach (var whereObj in typedWhereObjs)
             {
@@ -275,7 +276,6 @@ public static class RepositoryHelper
             {
                 isDictionary = true;
                 whereObjType = typeof(IDictionary<string, object>);
-                valueSetters = BuildBulkDictKeysValueSetters(dbContext, entityType, dict);
             }
             else whereObjType = firstWhereObj.GetType();
         }
@@ -294,11 +294,22 @@ public static class RepositoryHelper
                 headSql += $" FROM {ormProvider.GetTableName(entityMapper.TableName)}";
                 return (dbParameters, dbContext, parameters) => headSql;
             }
-            var commandInitializer = BuildWhereObjsCommandInitializer(dbContext, entityType, whereObjType, false, isUseKey, false, isMultiple, isBulk, headSql);
+            var commandInitializer = BuildWhereObjsCommandInitializer(dbContext, entityType, whereObjType, false, isUseKey, false, isMultiple, isBulk, headSql, null);
             if (isDictionary && isBulk)
             {
                 var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>>, DbContext, object, string>;
-                return (dbParameters, dbContext, whereObjs) => typedCommandInitializer.Invoke(dbParameters, valueSetters, dbContext, whereObjs);
+                return (dbParameters, dbContext, whereObjs) =>
+                {
+                    IDictionary<string, object> dict = null;
+                    var typedWhereObjs = whereObjs as IEnumerable;
+                    foreach (var whereObj in typedWhereObjs)
+                    {
+                        dict = whereObj as IDictionary<string, object>;
+                        break;
+                    }
+                    var valueSetters = BuildBulkDictKeysValueSetters(dbContext, entityType, dict);
+                    return typedCommandInitializer.Invoke(dbParameters, valueSetters, dbContext, whereObjs);
+                };
             }
             return commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
         });
@@ -329,43 +340,64 @@ public static class RepositoryHelper
                 Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, dbContextExpr, whereObjExpr).Compile();
         });
     }
-    public static object BuildDeleteCommandInitializer(DbContext dbContext, Type entityType, object whereObjs, bool isUseKey, bool isBulk)
+    public static object BuildExistsCommandInitializer(DbContext dbContext, Type entityType, object whereObjs, int commantType, bool isUseKey, bool isMultiple, bool isBulk)
     {
         Type whereObjType = null;
+        bool isDictionary = false;
+        bool hasWhere = whereObjs != null;
         if (isBulk)
         {
-            var parameters = whereObjs as IEnumerable;
-            foreach (var parameter in parameters)
+            object firstWhereObj = null;
+            var typedWhereObjs = whereObjs as IEnumerable;
+            foreach (var whereObj in typedWhereObjs)
             {
-                whereObjType = parameter.GetType();
+                firstWhereObj = whereObj;
                 break;
             }
-            //DELETE FROM sys_user WHERE user_id IN (1,2,3)
-            //DELETE FROM sys_lookup_value WHERE lookup_id='1' AND lookup_type='aa' OR lookup_id='2' AND lookup_type='aa'
-            var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, false);
-            return deleteBulkCommandInitializerCache.GetOrAdd(cacheKey, f =>
+            if (firstWhereObj is IDictionary<string, object> dict)
             {
-                var entityMapper = dbContext.EntityMapProvider.GetEntityMap(entityType);
-                if (!isUseKey) throw new NotSupportedException("不支持非主键字段的批量删除");
-                var isMultiKeys = entityMapper.KeyMembers.Count > 1;
-                var joinMark = isMultiKeys ? "OR" : ",";
-                var ormProvider = dbContext.OrmProvider;
-                var headSql = $"DELETE FROM {ormProvider.GetTableName(entityMapper.TableName)} WHERE ";
-                if (!isMultiKeys) headSql += $"{ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName)} IN (";
-                return (headSql, joinMark, BuildSimpleWhereObjSqlParameters(dbContext, entityType, whereObjType, isUseKey, isSharding, false, isBulk, false, null));
-            });
+                isDictionary = true;
+                whereObjType = typeof(IDictionary<string, object>);
+            }
+            else whereObjType = firstWhereObj.GetType();
         }
-        else
+        else whereObjType = hasWhere ? whereObjs.GetType() : entityType;
+
+        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, isMultiple);
+        var commandInitializerCache = isBulk ? existsByIdsCommandInitializerCache : isUseKey ? existsByIdCommandInitializerCache : existsByCommandInitializerCache;
+        return commandInitializerCache.GetOrAdd(cacheKey, f =>
         {
-            //DELETE FROM sys_user WHERE user_id=1
-            //DELETE FROM sys_lookup_value WHERE lookup_id = '1' AND lookup_type = 'aa'
-            whereObjType = whereObjs.GetType();
-            var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, isUseKey, isSharding);
-            return deleteCommandInitializerCache.GetOrAdd(cacheKey, f => BuildSimpleWhereObjSqlParameters(dbContext, entityType, whereObjType, isUseKey, isSharding, false, isBulk, false, $"DELETE "));
-        }
+            var entityMapper = dbContext.EntityMapProvider.GetEntityMap(entityType);
+            var fieldSql = BuildSelectFieldsSqlPart(dbContext, entityMapper, entityType);
+            var headSql = "SELECT 1";
+            if (!hasWhere)
+            {
+                var ormProvider = dbContext.OrmProvider;
+                headSql += $" FROM {ormProvider.GetTableName(entityMapper.TableName)} LIMIT 1";
+                return (dbParameters, dbContext, parameters) => headSql;
+            }
+            var commandInitializer = BuildWhereObjsCommandInitializer(dbContext, entityType, whereObjType, false, isUseKey, false, isMultiple, isBulk, headSql, " LIMIT 1");
+            if (isDictionary && isBulk)
+            {
+                var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>>, DbContext, object, string>;
+                return (dbParameters, dbContext, whereObjs) =>
+                {
+                    IDictionary<string, object> dict = null;
+                    var typedWhereObjs = whereObjs as IEnumerable;
+                    foreach (var whereObj in typedWhereObjs)
+                    {
+                        dict = whereObj as IDictionary<string, object>;
+                        break;
+                    }
+                    var valueSetters = BuildBulkDictKeysValueSetters(dbContext, entityType, dict);
+                    return typedCommandInitializer.Invoke(dbParameters, valueSetters, dbContext, whereObjs);
+                };
+            }
+            return commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
+        });
     }
     private static object BuildWhereObjsCommandInitializer(DbContext dbContext, Type entityType, Type whereObjType,
-        bool isOnlyWhereSql, bool isUseKey, bool isWithKey, bool isMultiple, bool isBulk, string headSql)
+        bool isOnlyWhereSql, bool isUseKey, bool isWithKey, bool isMultiple, bool isBulk, string headSql, string tailSql)
     {
         object commandInitializer = null;
         var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
@@ -403,11 +435,11 @@ public static class RepositoryHelper
         var typedWhereObjExpr = Expression.Variable(whereObjType, isDictionary ? "dict" : "typedWhereObj");
         blockParameters.Add(typedWhereObjExpr);
 
-        //builder.Append($"{headSql} {ormProvider.GetTableName(tableName)} {tailSql}");
+        //builder.Append($"{headSql} FROM {ormProvider.GetTableName(tableName)} {tailSql}");
         if (!isOnlyWhereSql)
         {
             string tableName = ormProvider.GetTableName(entityMapper.TableName);
-            var fixedHeadSql = $"{headSql} {tableName} WHERE";
+            var fixedHeadSql = $"{headSql} FROM {tableName} WHERE";
             if (isInExpr) fixedHeadSql += $"{ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName)} IN (";
             blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(fixedHeadSql)));
         }
@@ -455,11 +487,14 @@ public static class RepositoryHelper
         {
             Dictionary<string, MemberInfo> targetMemberInfos = null;
             bool isEntityType = false;
-            if (!isDictionary) isEntityType = whereObjType.IsEntityType(out _);
-            if (isEntityType) targetMemberInfos = whereObjType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToDictionary(f => f.Name.ToLower(), f => f);
-            else if (!(isUseKey && entityMapper.KeyMembers.Count == 1))
-                throw new NotSupportedException("不支持非单主键字段的业务场景");
+            if (!isDictionary)
+            {
+                isEntityType = whereObjType.IsEntityType(out _);
+                if (isEntityType) targetMemberInfos = whereObjType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                    .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToDictionary(f => f.Name.ToLower(), f => f);
+                else if (!(isUseKey && entityMapper.KeyMembers.Count == 1))
+                    throw new NotSupportedException("不支持非单主键字段的业务场景");
+            }
 
             var index = 0;
             var hasSuffix = isMultiple || isBulk;
@@ -551,6 +586,7 @@ public static class RepositoryHelper
             //var valueSetter = valueSetters[loopIndex];
             //var suffix = dbParameters.Count.ToString();
             //valueSetter.Invoke(dbParameters, builder, dict, suffix);
+            //loopIndex++;
             Expression suffixExpr = Expression.Property(dbParametersExpr, nameof(IDataParameterCollection.Count));
             suffixExpr = Expression.Call(suffixExpr, typeof(int).GetMethod(nameof(int.ToString), Type.EmptyTypes));
             var itemProperyInfo = valueSettersType.GetProperties(BindingFlags.Instance | BindingFlags.Public)
@@ -558,6 +594,7 @@ public static class RepositoryHelper
             var valueSetterExpr = Expression.Property(valueSettersExpr, itemProperyInfo, loopIndexExpr);
 
             myLoopBodies.Add(Expression.Invoke(valueSetterExpr, dbParametersExpr, builderExpr, typedWhereObjExpr, suffixExpr));
+            myLoopBodies.Add(Expression.AddAssign(loopIndexExpr, Expression.Constant(1)));
             loopBodies.Add(Expression.Loop(Expression.Block(myLoopBodies), myBreakLabel));
         }
         else
@@ -605,7 +642,7 @@ public static class RepositoryHelper
             {
                 var greaterThenExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0));
                 var appendExpr = Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(" AND "));
-                myBlockBodies.Add(Expression.IfThen(greaterThenExpr, appendExpr));
+                loopBodies.Add(Expression.IfThen(greaterThenExpr, appendExpr));
             }
             var parameterNameExpr = Expression.Variable(typeof(string));
             blockParameters.Add(parameterNameExpr);
@@ -622,7 +659,7 @@ public static class RepositoryHelper
                 myParameterNameExpr = Expression.Call(methodInfo, myParameterNameExpr, memberNameExpr, suffixExpr);
             }
             else myParameterNameExpr = Expression.Call(concatMethodInfo, myParameterNameExpr, memberNameExpr);
-            myBlockBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
+            loopBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
 
             //builder.Append($"{ormProvider.GetFieldName(memberMapper.FieldName)}=@ParameterName");
             methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetFieldName));
@@ -630,8 +667,8 @@ public static class RepositoryHelper
             fieldNameExpr = Expression.Call(ormProviderExpr, methodInfo, fieldNameExpr);
             methodInfo = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string), typeof(string)]);
             var sqlExpr = Expression.Call(concatMethodInfo, fieldNameExpr, Expression.Constant("="), parameterNameExpr);
-            myBlockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, sqlExpr));
-            AddValueParameter(dbContext, dbContextExpr, dbParametersExpr, ormProviderExpr, parameterNameExpr, currentExpr, memberMapperExpr, blockBodies);
+            loopBodies.Add(Expression.Call(builderExpr, appendMethodInfo, sqlExpr));
+            AddValueParameter(dbContext, dbContextExpr, dbParametersExpr, ormProviderExpr, parameterNameExpr, currentExpr, memberMapperExpr, loopBodies);
         }
 
         if (isBulk)
@@ -641,6 +678,8 @@ public static class RepositoryHelper
             blockBodies.Add(Expression.Loop(Expression.Block(loopBodies), breakLabel));
             if (isInExpr) blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(")")));
         }
+        if (!string.IsNullOrEmpty(tailSql))
+            blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(tailSql)));
 
         methodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.ToString), Type.EmptyTypes);
         var returnExpr = Expression.Call(builderExpr, methodInfo);
@@ -706,8 +745,8 @@ public static class RepositoryHelper
         }
         return valueSetters;
     }
-  
-    
+
+
     public static object BuildTypedCommandInitializer(DbContext dbContext, Type entityType, Type parameterType, int commandType, bool isFunc, bool isSplitSharding, bool hasIdentity, List<string> onlyFields, List<string> ignoreFields)
     {
         var hasOnlyFields = onlyFields != null && onlyFields.Count > 0;

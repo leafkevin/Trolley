@@ -1115,6 +1115,24 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         });
     }
 
+    public virtual void Where1(Expression whereExpr)
+    {
+        //为了兼容，Where条件中的Exists，多个表联合查询时，有Where+Exists的场景
+        this.WhereBuilder ??= new();
+        if (this.WhereBuilder.Length > 0)
+        {
+            this.And(whereExpr);
+            return;
+        }
+        this.IsWhere = true;
+        var lambdaExpr = whereExpr as LambdaExpression;
+        this.ClearUnionSql();
+        this.InitTableAlias(lambdaExpr);
+        //不能更改LastWhereOperationType，如果是引用已有子查询，LastWhereOperationType是有值的
+        this.WhereBuilder.Append(this.VisitConditionExpr(lambdaExpr.Body, out var operationType));
+        this.LastWhereOperationType = operationType;
+        this.IsWhere = false;
+    }
     public virtual void Where(Expression whereExpr)
     {
         //为了兼容，Where条件中的Exists，多个表联合查询时，有Where+Exists的场景
