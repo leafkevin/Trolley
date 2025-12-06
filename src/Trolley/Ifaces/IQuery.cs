@@ -451,20 +451,41 @@ public interface IQuery<T> : IQueryBase
     /// 条件查询，如：.WhereBy(new { IsEnabled = true})，whereObj不能为null
     /// </summary>
     /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
-    /// <returns>返回查询条件</returns>
+    /// <returns>返回查询对象</returns>
     IQuery<T> WhereBy(object whereObj);
+    /// <summary>
+    /// 条件查询，如：.WhereBy(new { IsEnabled = true})，whereObj不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns></returns>
+    IQuery<T> WhereBy(bool condition, object whereObj);
     /// <summary>
     /// 主键条件查询，如：.WhereById(1) 或是 .WhereById(new { Id = 1})，whereKey不能为null
     /// </summary>
     /// <param name="whereKey">主键值或是包含主键的对象</param>
-    /// <returns>返回查询条件</returns>
+    /// <returns>返回查询对象</returns>
     IQuery<T> WhereById(object whereKey);
+    /// <summary>
+    /// 主键条件查询，如：.WhereById(1) 或是 .WhereById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> WhereById(bool condition, object whereKey);
     /// <summary>
     /// 多主键条件查询，如：.WhereByIds(new int[]{1,2,3}) 或是 .WhereByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
     /// </summary>
     /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
-    /// <returns>返回查询条件</returns>
+    /// <returns>返回查询对象</returns>
     IQuery<T> WhereByIds(IEnumerable whereKeys);
+    /// <summary>
+    /// 多主键条件查询，如：.WhereByIds(new int[]{1,2,3}) 或是 .WhereByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> WhereByIds(bool condition, IEnumerable whereKeys);
     /// <summary>
     /// 条件查询，predicate为null时不生成任何条件
     /// </summary>
@@ -489,6 +510,45 @@ public interface IQuery<T> : IQueryBase
 
     #region And
     /// <summary>
+    /// 条件查询，并与已有的条件AND操作，如：.AndBy(new { IsEnabled = true})，whereObj不能为null
+    /// </summary>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> AndBy(object whereObj);
+    /// <summary>
+    /// 条件查询，并与已有的条件AND操作，如：.AndBy(new { IsEnabled = true})，whereObj不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns></returns>
+    IQuery<T> AndBy(bool condition, object whereObj);
+    /// <summary>
+    /// 主键条件查询，如：.AndById(1) 或是 .AndById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> AndById(object whereKey);
+    /// <summary>
+    /// 主键条件查询，并与已有的条件AND操作，如：.AndById(1) 或是 .AndById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> AndById(bool condition, object whereKey);
+    /// <summary>
+    /// 多主键条件查询，并与已有的条件AND操作，如：.AndByIds(new int[]{1,2,3}) 或是 .AndByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> AndByIds(IEnumerable whereKeys);
+    /// <summary>
+    /// 多主键条件查询，并与已有的条件AND操作，如：.AndByIds(new int[]{1,2,3}) 或是 .AndByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> AndByIds(bool condition, IEnumerable whereKeys);
+    /// <summary>
     /// 条件查询，并与已有的条件AND操作，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
@@ -511,6 +571,45 @@ public interface IQuery<T> : IQueryBase
     #endregion
 
     #region Or
+    /// <summary>
+    /// 条件查询，并与已有的条件OR操作，如：.OrBy(new { IsEnabled = true})，whereObj不能为null
+    /// </summary>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> OrBy(object whereObj);
+    /// <summary>
+    /// 条件查询，并与已有的条件OR操作，如：.OrBy(new { IsEnabled = true})，whereObj不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns></returns>
+    IQuery<T> OrBy(bool condition, object whereObj);
+    /// <summary>
+    /// 主键条件查询，并与已有的条件OR操作，如：.OrById(1) 或是 .OrById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> OrById(object whereKey);
+    /// <summary>
+    /// 主键条件查询，并与已有的条件OR操作，如：.OrById(1) 或是 .OrById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> OrById(bool condition, object whereKey);
+    /// <summary>
+    /// 多主键条件查询，并与已有的条件OR操作，如：.OrByIds(new int[]{1,2,3}) 或是 .OrByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> OrByIds(IEnumerable whereKeys);
+    /// <summary>
+    /// 多主键条件查询，并与已有的条件OR操作，如：.OrByIds(new int[]{1,2,3}) 或是 .OrByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> OrByIds(bool condition, IEnumerable whereKeys);
     /// <summary>
     /// 条件查询，并与已有的条件OR操作，predicate为null时不生成任何条件
     /// </summary>

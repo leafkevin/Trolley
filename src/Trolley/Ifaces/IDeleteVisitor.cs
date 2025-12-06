@@ -26,7 +26,6 @@ public interface IDeleteVisitor : IDisposable
     void WhereBy(object whereObj);
     void WhereById(object whereKey);
     void WhereByIds(IEnumerable whereKeys);
-    void Where(Expression whereExpr);
     void And(Expression whereExpr);
     void Or(Expression whereExpr);
 

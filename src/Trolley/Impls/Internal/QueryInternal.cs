@@ -201,7 +201,7 @@ public class QueryInternal
     protected void WhereInternal(Expression predicate)
     {
         if (predicate == null) return;
-        this.Visitor.Where(predicate);
+        this.Visitor.And(predicate);
     }
     protected void WhereInternal(bool condition, Expression ifPredicate, Expression elsePredicate = null)
     {
@@ -209,9 +209,9 @@ public class QueryInternal
         {
             if (ifPredicate == null)
                 throw new ArgumentNullException(nameof(ifPredicate));
-            this.Visitor.Where(ifPredicate);
+            this.Visitor.And(ifPredicate);
         }
-        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
     }
     #endregion
 

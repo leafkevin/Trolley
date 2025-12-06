@@ -46,7 +46,6 @@ public interface IUpdateVisitor : IDisposable
     void WhereBy(object whereObj);
     void WhereById(object whereKey);
     void WhereByIds(IEnumerable whereKeys);
-    void Where(Expression whereExpr);
     void And(Expression whereExpr);
     void Or(Expression whereExpr);
     DataTable ToDataTable(Type updateObjType, IEnumerable entities, List<(MemberMap, Func<object, object>)> memberMappers, string tableName = null);

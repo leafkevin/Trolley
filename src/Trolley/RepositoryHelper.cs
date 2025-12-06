@@ -314,33 +314,7 @@ public static class RepositoryHelper
             return commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
         });
     }
-    public static object BuildWhereCommandInitializer(DbContext dbContext, Type entityType, Type whereObjType, bool isFunc, bool isUseKey, bool isWithKey)
-    {
-        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, isFunc, isUseKey, isWithKey);
-        return whereCommandInitializerCache.GetOrAdd(cacheKey, f =>
-        {
-            var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
-            var builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
-            var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
-            var whereObjExpr = Expression.Parameter(typeof(object), "whereObj");
-            var blockParameters = new List<ParameterExpression>();
-            var blockBodies = new List<Expression>();
-            if (isFunc) blockParameters.Add(builderExpr);
-            AddWhereSqlParameters(dbParametersExpr, builderExpr, dbContextExpr, whereObjExpr, dbContext, entityType, whereObjType, isUseKey, isWithKey, false, false, blockParameters, blockBodies);
-            if (isFunc)
-            {
-                var returnExpr = Expression.Call(builderExpr, typeof(StringBuilder).GetMethod(nameof(StringBuilder.ToString), Type.EmptyTypes));
-                var resultLabelExpr = Expression.Label(typeof(string));
-                blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
-                blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(string))));
-                return Expression.Lambda<Func<IDataParameterCollection, DbContext, object, string>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, whereObjExpr).Compile();
-            }
-            return Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, object>>(
-                Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, dbContextExpr, whereObjExpr).Compile();
-        });
-    }
-    public static object BuildExistsCommandInitializer(DbContext dbContext, Type entityType, object whereObjs, int commantType, bool isUseKey, bool isMultiple, bool isBulk)
+    public static Func<IDataParameterCollection, DbContext, object, string> BuildExistsCommandInitializer(DbContext dbContext, Type entityType, object whereObjs, bool isUseKey, bool isMultiple, bool isBulk)
     {
         Type whereObjType = null;
         bool isDictionary = false;
@@ -396,8 +370,80 @@ public static class RepositoryHelper
             return commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
         });
     }
+    public static Func<IDataParameterCollection, DbContext, object, string> BuildDeleteCommandInitializer(DbContext dbContext, Type entityType, object whereObjs, bool isUseKey, bool isMultiple, bool isBulk)
+    {
+        Type whereObjType = null;
+        bool isDictionary = false;
+        if (isBulk)
+        {
+            object firstWhereObj = null;
+            var typedWhereObjs = whereObjs as IEnumerable;
+            foreach (var whereObj in typedWhereObjs)
+            {
+                firstWhereObj = whereObj;
+                break;
+            }
+            if (firstWhereObj is IDictionary<string, object> dict)
+            {
+                isDictionary = true;
+                whereObjType = typeof(IDictionary<string, object>);
+            }
+            else whereObjType = firstWhereObj.GetType();
+        }
+        else whereObjType = whereObjs.GetType();
+
+        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, isMultiple);
+        var commandInitializerCache = isBulk ? deleteByIdsCommandInitializerCache : isUseKey ? deleteByIdCommandInitializerCache : deleteByCommandInitializerCache;
+        return commandInitializerCache.GetOrAdd(cacheKey, f =>
+        {
+            var commandInitializer = BuildWhereObjsCommandInitializer(dbContext, entityType, whereObjType, false, isUseKey, false, isMultiple, isBulk, "DELETE", null);
+            if (isDictionary && isBulk)
+            {
+                var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>>, DbContext, object, string>;
+                return (dbParameters, dbContext, whereObjs) =>
+                {
+                    IDictionary<string, object> dict = null;
+                    var typedWhereObjs = whereObjs as IEnumerable;
+                    foreach (var whereObj in typedWhereObjs)
+                    {
+                        dict = whereObj as IDictionary<string, object>;
+                        break;
+                    }
+                    var valueSetters = BuildBulkDictKeysValueSetters(dbContext, entityType, dict);
+                    return typedCommandInitializer.Invoke(dbParameters, valueSetters, dbContext, whereObjs);
+                };
+            }
+            return commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
+        });
+    }
+    public static object BuildWhereCommandInitializer(DbContext dbContext, Type entityType, Type whereObjType, bool isFunc, bool isUseKey, bool isWithKey)
+    {
+        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, isFunc, isUseKey, isWithKey);
+        return whereCommandInitializerCache.GetOrAdd(cacheKey, f =>
+        {
+            var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
+            var builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
+            var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
+            var whereObjExpr = Expression.Parameter(typeof(object), "whereObj");
+            var blockParameters = new List<ParameterExpression>();
+            var blockBodies = new List<Expression>();
+            if (isFunc) blockParameters.Add(builderExpr);
+            AddWhereSqlParameters(dbParametersExpr, builderExpr, dbContextExpr, whereObjExpr, dbContext, entityType, whereObjType, isUseKey, isWithKey, false, false, blockParameters, blockBodies);
+            if (isFunc)
+            {
+                var returnExpr = Expression.Call(builderExpr, typeof(StringBuilder).GetMethod(nameof(StringBuilder.ToString), Type.EmptyTypes));
+                var resultLabelExpr = Expression.Label(typeof(string));
+                blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
+                blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(string))));
+                return Expression.Lambda<Func<IDataParameterCollection, DbContext, object, string>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, whereObjExpr).Compile();
+            }
+            return Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, object>>(
+                Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, dbContextExpr, whereObjExpr).Compile();
+        });
+    }
     private static object BuildWhereObjsCommandInitializer(DbContext dbContext, Type entityType, Type whereObjType,
-        bool isOnlyWhereSql, bool isUseKey, bool isWithKey, bool isMultiple, bool isBulk, string headSql, string tailSql)
+         bool isOnlyWhereSql, bool isUseKey, bool isWithKey, bool isMultiple, bool isBulk, string headSql, string tailSql)
     {
         object commandInitializer = null;
         var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");

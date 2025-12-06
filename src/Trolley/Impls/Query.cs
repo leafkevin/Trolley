@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -346,6 +347,45 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region Where
+    public virtual IQuery<T> WhereBy(object whereObj)
+    {
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+
+        this.Visitor.WhereBy(whereObj);
+        return this;
+    }
+    public virtual IQuery<T> WhereBy(bool condition, object whereObj)
+    {
+        if (!condition) return this;
+        return this.WhereBy(whereObj);
+    }
+    public virtual IQuery<T> WhereById(object whereKey)
+    {
+        if (whereKey == null)
+            throw new ArgumentNullException(nameof(whereKey));
+
+        this.Visitor.WhereById(whereKey);
+        return this;
+    }
+    public virtual IQuery<T> WhereById(bool condition, object whereKey)
+    {
+        if (!condition) return this;
+        return this.WhereById(whereKey);
+    }
+    public virtual IQuery<T> WhereByIds(IEnumerable whereKeys)
+    {
+        if (whereKeys == null)
+            throw new ArgumentNullException(nameof(whereKeys));
+
+        this.Visitor.WhereByIds(whereKeys);
+        return this;
+    }
+    public virtual IQuery<T> WhereByIds(bool condition, IEnumerable whereKeys)
+    {
+        if (!condition) return this;
+        return this.WhereByIds(whereKeys);
+    }
     public virtual IQuery<T> Where(Expression<Func<T, bool>> predicate)
     {
         base.WhereInternal(predicate);

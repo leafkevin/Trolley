@@ -54,6 +54,11 @@ public class Delete<TEntity> : Deleted<TEntity>, IDelete<TEntity>
         this.Visitor.WhereBy(whereObj);
         return this;
     }
+    public virtual IDelete<TEntity> WhereBy(bool condition, object whereObj)
+    {
+        if (!condition) return this;
+        return this.WhereBy(whereObj);
+    }
     public virtual IDelete<TEntity> WhereById(object whereKey)
     {
         if (whereKey == null)
@@ -61,6 +66,11 @@ public class Delete<TEntity> : Deleted<TEntity>, IDelete<TEntity>
 
         this.Visitor.WhereById(whereKey);
         return this;
+    }
+    public virtual IDelete<TEntity> WhereById(bool condition, object whereKey)
+    {
+        if (!condition) return this;
+        return this.WhereById(whereKey);
     }
     public virtual IDelete<TEntity> WhereByIds(IEnumerable whereKeys)
     {
@@ -70,6 +80,11 @@ public class Delete<TEntity> : Deleted<TEntity>, IDelete<TEntity>
         this.Visitor.WhereByIds(whereKeys);
         return this;
     }
+    public virtual IDelete<TEntity> WhereByIds(bool condition, IEnumerable whereKeys)
+    {
+        if (!condition) return this;
+        return this.WhereByIds(whereKeys);
+    }
     public virtual IDelete<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.Where(true, predicate);
     public virtual IDelete<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -78,13 +93,15 @@ public class Delete<TEntity> : Deleted<TEntity>, IDelete<TEntity>
         {
             if (ifPredicate == null)
                 throw new ArgumentNullException(nameof(ifPredicate));
-            this.Visitor.Where(ifPredicate);
+            this.Visitor.And(ifPredicate);
         }
-        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
     public virtual IDelete<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<TEntity>();
         return this.Where(predicateInitializer.Invoke(builder));
     }

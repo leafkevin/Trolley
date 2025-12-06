@@ -299,6 +299,61 @@ public class SqlVisitor : ISqlVisitor
     }
     public virtual string BuildTableShardingsSql() => null;
 
+    public virtual void VisitWhereSql(string whereSql)
+    {
+        if (this.LastWhereOperationType == OperationType.Or)
+        {
+            this.WhereBuilder.Insert(0, '(');
+            this.WhereBuilder.Append(')');
+        }
+        if (this.LastWhereOperationType != OperationType.None)
+            this.WhereBuilder.Append(" AND ");
+        this.WhereBuilder.Append(whereSql);
+        this.LastWhereOperationType = OperationType.And;
+    }
+    public virtual void VisitAnd(Expression whereExpr)
+    {
+        this.IsWhere = true;
+        var lambdaExpr = whereExpr as LambdaExpression;
+        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
+        this.IsWhere = false;
+
+        if (this.LastWhereOperationType == OperationType.Or)
+        {
+            this.WhereBuilder.Insert(0, '(');
+            this.WhereBuilder.Append(')');
+        }
+        if (this.LastWhereOperationType != OperationType.None)
+        {
+            this.WhereBuilder.Append(" AND ");
+            if (operationType == OperationType.Or)
+                conditionSql = $"({conditionSql})";
+        }
+        this.WhereBuilder.Append(conditionSql);
+        if (this.LastWhereOperationType == OperationType.None && operationType == OperationType.Or)
+            this.LastWhereOperationType = OperationType.Or;
+        else this.LastWhereOperationType = OperationType.And;
+    }
+    public virtual void VisitOr(Expression whereExpr)
+    {
+        this.IsWhere = true;
+        var lambdaExpr = whereExpr as LambdaExpression;
+        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
+        this.IsWhere = false;
+
+        if (this.LastWhereOperationType == OperationType.None && operationType != OperationType.Or)
+        {
+            this.WhereBuilder.Append(conditionSql);
+            this.LastWhereOperationType = OperationType.And;
+        }
+        else
+        {
+            this.WhereBuilder.Append(" OR ");
+            this.WhereBuilder.Append(conditionSql);
+            this.LastWhereOperationType = OperationType.Or;
+        }
+    }
+
     public virtual SqlFieldSegment VisitAndDeferred(SqlFieldSegment sqlSegment)
     {
         sqlSegment = this.Visit(sqlSegment);

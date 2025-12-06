@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
@@ -11,7 +12,6 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     public bool IsWhereKeys { get; set; }
     protected List<CommandSegment> deferredSegments = new();
 
-    public ActionMode ActionMode { get; set; }
     public bool HasWhere { get; protected set; }
 
     public DeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
@@ -130,13 +130,25 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         }
         else
         {
+            if (this.HasWhere) this.WhereBuilder = new();
+            Func<IDataParameterCollection, DbContext, object, string> commandInitializer = null;
             foreach (var deferredSegment in this.deferredSegments)
             {
                 switch (deferredSegment.Type)
                 {
-                    case "Where":
-                        this.VisitWhere(deferredSegment.Value as Expression);
+                    case "WhereBy":
+                        commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, entityType, deferredSegment.Value, false, false, false);
+                        this.VisitWhereSql(commandInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
                         break;
+                    case "WhereById":
+                        commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, entityType, deferredSegment.Value, true, false, false);
+                        this.VisitWhereSql(commandInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                        break;
+                    case "WhereByIds":
+                        commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, entityType, deferredSegment.Value, true, false, true);
+                        this.VisitWhereSql(commandInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                        break;
+                    case "Where":
                     case "And":
                         this.VisitAnd(deferredSegment.Value as Expression);
                         break;
@@ -169,24 +181,34 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         }
         return sql;
     }
-    public virtual void WhereWith(object wherKeys, ActionMode actionMode)
+    public virtual void WhereBy(object whereObj)
     {
         this.IsWhereKeys = true;
         this.HasWhere = true;
-        this.ActionMode = actionMode;
         this.deferredSegments.Add(new CommandSegment
         {
-            Type = "WhereWith",
-            Value = wherKeys
+            Type = "WhereBy",
+            Value = whereObj
         });
     }
-    public virtual void Where(Expression whereExpr)
+    public virtual void WhereById(object whereKey)
     {
+        this.IsWhereKeys = true;
         this.HasWhere = true;
         this.deferredSegments.Add(new CommandSegment
         {
-            Type = "Where",
-            Value = whereExpr
+            Type = "WhereById",
+            Value = whereKey
+        });
+    }
+    public virtual void WhereByIds(IEnumerable whereKeys)
+    {
+        this.IsWhereKeys = true;
+        this.HasWhere = true;
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "WhereByIds",
+            Value = whereKeys
         });
     }
     public virtual void And(Expression whereExpr)
@@ -338,64 +360,19 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         base.Dispose();
         this.deferredSegments = null;
     }
-    public virtual void VisitWhere(Expression whereExpr)
+    public virtual void VisitWhereBy(object whereObj)
     {
-        this.WhereBuilder ??= new();
-        if (this.WhereBuilder.Length > 0)
+        var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, this.Tables[0].EntityType, whereObj, false, false, false);
+        var conditionSql = commandInitializer.Invoke(this.DbParameters, this.DbContext, whereObj);
+        if (this.LastWhereOperationType == OperationType.Or)
         {
-            this.VisitAnd(whereExpr);
-            return;
+            this.WhereBuilder.Insert(0, '(');
+            this.WhereBuilder.Append(')');
         }
-        this.IsWhere = true;
-        var lambdaExpr = whereExpr as LambdaExpression;
-        this.LastWhereOperationType = OperationType.None;
-        this.WhereBuilder.Append(this.VisitConditionExpr(lambdaExpr.Body, out var operationType));
-        this.LastWhereOperationType = operationType;
-        this.IsWhere = false;
-    }
-    public virtual void VisitAnd(Expression whereExpr)
-    {
-        this.IsWhere = true;
-        var lambdaExpr = whereExpr as LambdaExpression;
-        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        if (this.WhereBuilder.Length > 0)
-        {
-            if (this.LastWhereOperationType == OperationType.Or)
-                this.WhereBuilder.Append($"({this.WhereBuilder})");
-            if (operationType == OperationType.Or)
-                conditionSql = $"({conditionSql})";
-            this.WhereBuilder.Append(" AND " + conditionSql);
-            this.LastWhereOperationType = OperationType.And;
-        }
-        else
-        {
-            this.WhereBuilder.Append(conditionSql);
-            this.LastWhereOperationType = operationType;
-        }
-
-        this.IsWhere = false;
-    }
-    public virtual void VisitOr(Expression whereExpr)
-    {
-        this.IsWhere = true;
-        var lambdaExpr = whereExpr as LambdaExpression;
-        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-
-        if (this.WhereBuilder.Length > 0)
-        {
-            if (this.LastWhereOperationType == OperationType.And)
-                this.WhereBuilder.Append($"({this.WhereBuilder})");
-            if (operationType == OperationType.And)
-                conditionSql = $"({conditionSql})";
-            this.WhereBuilder.Append(" OR " + conditionSql);
-            this.LastWhereOperationType = OperationType.Or;
-        }
-        else
-        {
-            this.WhereBuilder.Append(conditionSql);
-            this.LastWhereOperationType = operationType;
-        }
-        this.IsWhere = false;
+        if (this.LastWhereOperationType != OperationType.None)
+            this.WhereBuilder.Append(" AND ");
+        this.WhereBuilder.Append(conditionSql);
+        this.LastWhereOperationType = OperationType.And;
     }
     public void AddMemberElement(SqlFieldSegment sqlSegment, MemberMap memberMapper, StringBuilder builder)
     {

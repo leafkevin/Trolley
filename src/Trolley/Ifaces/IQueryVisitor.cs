@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
@@ -89,9 +90,13 @@ public interface IQueryVisitor : ICloneable, IDisposable
     bool BuildIncludeSql(Type targetType, object target, bool isSingle, out string sql);
     void SetIncludeValues(Type targetType, object target, ITheaDataReader reader, bool isSingle);
     Task SetIncludeValuesAsync(Type targetType, object target, ITheaDataReader reader, bool isSingle, CancellationToken cancellationToken);
-    void Where(Expression whereExpr);
+
+    void WhereBy(object whereObj);
+    void WhereById(object whereKey);
+    void WhereByIds(IEnumerable whereKeys);
     void And(Expression whereExpr);
     void Or(Expression whereExpr);
+
     void GroupBy(Expression expr);
     void OrderBy(string orderType, Expression expr);
     void Having(Expression havingExpr);

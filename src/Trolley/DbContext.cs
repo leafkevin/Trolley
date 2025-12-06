@@ -644,37 +644,33 @@ public sealed class DbContext
     {
         (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereObj, isUseKey, isBulk);
 
-        int result = 0;
         connection.Open();
         var objResult = command.ExecuteScalar(CommandSqlType.Select);
-        if (objResult != null && objResult is not DBNull)
-            result = (int)Convert.ChangeType(objResult, typeof(int));
+        var result = objResult != null && objResult is not DBNull;
 
         command.Dispose();
         if (isNeedClose) connection.Close();
-        return result > 0;
+        return result;
     }
     public async Task<bool> ExistsAsync<TEntity>(object whereObj, bool isUseKey, bool isBulk, CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereObj, isUseKey, isBulk);
 
-        int result = 0;
         await connection.OpenAsync(cancellationToken);
         var objResult = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
-        if (objResult != null && objResult is not DBNull)
-            result = (int)Convert.ChangeType(objResult, typeof(int));
+        var result = objResult != null && objResult is not DBNull;
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
-        return result > 0;
+        return result;
     }
-    private (bool, ITheaConnection, ITheaCommand) CreateExistsCommand(Type entityType, object whereObj, bool isUseKey, bool isBulk)
+    private (bool, ITheaConnection, ITheaCommand) CreateExistsCommand(Type entityType, object whereObjs, bool isUseKey, bool isBulk)
     {
-        if (whereObj == null)
-            throw new ArgumentNullException(nameof(whereObj));
+        if (whereObjs == null)
+            throw new ArgumentNullException(nameof(whereObjs));
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        var commandInitializer = RepositoryHelper(this, entityType, whereObj, false);
-        command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereObj);
+        var commandInitializer = RepositoryHelper.BuildExistsCommandInitializer(this, entityType, whereObjs, isUseKey, false, isBulk);
+        command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereObjs);
         return (isNeedClose, connection, command);
     }
 

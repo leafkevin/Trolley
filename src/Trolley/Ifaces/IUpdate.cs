@@ -487,6 +487,45 @@ public interface IContinuedUpdate<TEntity> : IUpdated<TEntity>
 
     #region And
     /// <summary>
+    /// 条件更新，并与已有的条件AND操作，如：.AndBy(new { IsEnabled = true})，whereObj不能为null
+    /// </summary>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns>返回更新对象</returns>
+    IDelete<TEntity> AndBy(object whereObj);
+    /// <summary>
+    /// 条件更新，并与已有的条件AND操作，如：.AndBy(new { IsEnabled = true})，whereObj不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns></returns>
+    IDelete<TEntity> AndBy(bool condition, object whereObj);
+    /// <summary>
+    /// 主键条件更新，如：.AndById(1) 或是 .AndById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回更新对象</returns>
+    IDelete<TEntity> AndById(object whereKey);
+    /// <summary>
+    /// 主键条件更新，并与已有的条件AND操作，如：.AndById(1) 或是 .AndById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回更新对象</returns>
+    IDelete<TEntity> AndById(bool condition, object whereKey);
+    /// <summary>
+    /// 多主键条件更新，并与已有的条件AND操作，如：.AndByIds(new int[]{1,2,3}) 或是 .AndByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回更新对象</returns>
+    IDelete<TEntity> AndByIds(IEnumerable whereKeys);
+    /// <summary>
+    /// 多主键条件更新，并与已有的条件AND操作，如：.AndByIds(new int[]{1,2,3}) 或是 .AndByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回更新对象</returns>
+    IDelete<TEntity> AndByIds(bool condition, IEnumerable whereKeys);
+    /// <summary>
     /// 条件查询，并与已有的条件AND操作，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
@@ -509,6 +548,45 @@ public interface IContinuedUpdate<TEntity> : IUpdated<TEntity>
     #endregion
 
     #region Or
+    /// <summary>
+    /// 条件更新，并与已有的条件OR操作，如：.OrBy(new { IsEnabled = true})，whereObj不能为null
+    /// </summary>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns>返回更新对象</returns>
+    IDelete<TEntity> OrBy(object whereObj);
+    /// <summary>
+    /// 条件更新，并与已有的条件OR操作，如：.OrBy(new { IsEnabled = true})，whereObj不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns></returns>
+    IDelete<TEntity> OrBy(bool condition, object whereObj);
+    /// <summary>
+    /// 主键条件更新，并与已有的条件OR操作，如：.OrById(1) 或是 .OrById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回更新对象</returns>
+    IDelete<TEntity> OrById(object whereKey);
+    /// <summary>
+    /// 主键条件更新，并与已有的条件OR操作，如：.OrById(1) 或是 .OrById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回更新对象</returns>
+    IDelete<TEntity> OrById(bool condition, object whereKey);
+    /// <summary>
+    /// 多主键条件更新，并与已有的条件OR操作，如：.OrByIds(new int[]{1,2,3}) 或是 .OrByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回更新对象</returns>
+    IDelete<TEntity> OrByIds(IEnumerable whereKeys);
+    /// <summary>
+    /// 多主键条件更新，并与已有的条件OR操作，如：.OrByIds(new int[]{1,2,3}) 或是 .OrByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回更新对象</returns>
+    IDelete<TEntity> OrByIds(bool condition, IEnumerable whereKeys);
     /// <summary>
     /// 条件查询，并与已有的条件OR操作，predicate为null时不生成任何条件
     /// </summary>
