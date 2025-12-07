@@ -6999,7 +6999,7 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
         this.Initialize(3);
         var repository = this.dbFactory.Create();
         using var reader = await repository.QueryMultipleAsync(f => f
-            .GetById<User>(new { Id = 1 })
+            .QueryById<User>(new { Id = 1 })
             .Exists<Order>(f => f.BuyerId.IsNull())
             .From<Order>()
                 .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
@@ -7039,7 +7039,7 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
         var repository = this.dbFactory.Create();
         using var reader = await repository.QueryMultipleAsync(f => f
             .UseMaster()
-            .GetById<User>(new { Id = 1 })
+            .QueryById<User>(new { Id = 1 })
             .Exists<Order>(f => f.BuyerId.IsNull())
             .From<Order>()
                 .InnerJoin<User>((x, y) => x.BuyerId == y.Id)

@@ -89,7 +89,7 @@ public class UnitTest2 : UnitTestBase
         Assert.Equal("leafkevin", result3.Name);
     }
     [Fact]
-    public async Task GetById()
+    public async Task QueryById()
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create();
@@ -101,7 +101,7 @@ public class UnitTest2 : UnitTestBase
         Assert.True(user.Name == result.Name);
     }
     [Fact]
-    public async Task GetByIds()
+    public async Task QueryByIds()
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create();
@@ -1331,8 +1331,8 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         Assert.True(result1.Count > 0);
 
         var userKeys = await repository.From<User>()
-            .Select(f => new { f.Gender, f.Age }).Take(5).ToListAsync();
-        var result3 = await repository.ExistsAsync<User>(userKeys);
+            .Select(f => f.Id).Take(5).ToListAsync();
+        var result3 = await repository.ExistsByIdsAsync<User>(userKeys);
         Assert.True(result3);
     }
     [Fact]

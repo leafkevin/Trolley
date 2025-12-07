@@ -218,6 +218,42 @@ public sealed class DbContext
         visitor.Dispose();
         return result;
     }
+    public bool QueryExists(IQueryVisitor visitor)
+    {
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        var sql = visitor.BuildSql(true, out var readerFields);
+        command.CommandText = sql;
+        visitor.DbParameters.CopyTo(command.Parameters);
+
+        var result = false;
+        connection.Open();
+        var objResult = command.ExecuteScalar(CommandSqlType.Select);
+        if (objResult != null && objResult is not DBNull)
+            result = true;
+
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        visitor.Dispose();
+        return result;
+    }
+    public async Task<bool> QueryExistsAsync(IQueryVisitor visitor, CancellationToken cancellationToken = default)
+    {
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        var sql = visitor.BuildSql(true, out var readerFields);
+        command.CommandText = sql;
+        visitor.DbParameters.CopyTo(command.Parameters);
+
+        var result = false;
+        await connection.OpenAsync(cancellationToken);
+        var objResult = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
+        if (objResult != null && objResult is not DBNull)
+            result = true;
+
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        visitor.Dispose();
+        return result;
+    }
     #endregion
 
     #region QueryValue
@@ -483,7 +519,7 @@ public sealed class DbContext
     private (bool, ITheaConnection, ITheaCommand) CreateQueryWhereCommand(Type entityType, object whereObjs, bool isUseKey, bool isBulk)
     {
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        var commandInitializer = RepositoryHelper.BuildQueryWhereCommandInitializer(this, entityType, whereObjs, isUseKey, false, isBulk);
+        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this, entityType, whereObjs, 1, isUseKey, false, isBulk);
         command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereObjs);
         return (isNeedClose, connection, command);
     }
@@ -669,7 +705,7 @@ public sealed class DbContext
         if (whereObjs == null)
             throw new ArgumentNullException(nameof(whereObjs));
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        var commandInitializer = RepositoryHelper.BuildExistsCommandInitializer(this, entityType, whereObjs, isUseKey, false, isBulk);
+        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this, entityType, whereObjs, 2, isUseKey, false, isBulk);
         command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereObjs);
         return (isNeedClose, connection, command);
     }
@@ -1329,8 +1365,7 @@ public sealed class DbContext
         if (whereObjs == null)
             throw new ArgumentNullException(nameof(whereObjs));
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this, entityType, whereObjs, isUseKey, false, isBulk)
-            as Func<IDataParameterCollection, DbContext, object, string>;
+        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this, entityType, whereObjs, 3, isUseKey, false, isBulk);
         command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereObjs);
         return (isNeedClose, connection, command);
     }

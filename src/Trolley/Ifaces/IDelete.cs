@@ -121,7 +121,7 @@ public interface IDelete<TEntity> : IDeleted<TEntity>
     /// <returns></returns>
     IDelete<TEntity> AndBy(bool condition, object whereObj);
     /// <summary>
-    /// 主键条件删除，如：.AndById(1) 或是 .AndById(new { Id = 1})，whereKey不能为null
+    /// 主键条件删除，并与已有的条件AND操作，如：.AndById(1) 或是 .AndById(new { Id = 1})，whereKey不能为null
     /// </summary>
     /// <param name="whereKey">主键值或是包含主键的对象</param>
     /// <returns>返回删除对象</returns>
@@ -228,7 +228,7 @@ public interface IDelete<TEntity> : IDeleted<TEntity>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回删除对象</returns>
     IDelete<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer);
-    #endregion    
+    #endregion
 }
 /// <summary>
 /// 删除数据

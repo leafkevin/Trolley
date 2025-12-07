@@ -122,38 +122,38 @@ public interface IMultipleQuery : IDisposable
     IMultipleQuery QueryScalar<TValue>(string rawSql, List<IDbDataParameter> parameters);
     #endregion
 
-    #region GetById
+    #region QueryById
     /// <summary>
     /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，不支持分表，如：
     /// <code>
-    /// f.GetById&lt;User&gt;(1) //或是
-    /// f.GetById&lt;User&gt;(new { Id = 1 }) //或是
+    /// f.QueryById&lt;User&gt;(1) //或是
+    /// f.QueryById&lt;User&gt;(new { Id = 1 }) //或是
     /// var userInfo = new UserInfo { Id = 1, Name = "xxx" ... };
-    /// f.GetById&lt;User&gt;(userInfo) //三种写法是等效的
+    /// f.QueryById&lt;User&gt;(userInfo) //三种写法是等效的
     /// SQL: SELECT ... FROM `sys_user` a WHERE a.`Id`=@Id
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="whereObj">主键值或是包含主键的匿名对象或是已有对象，如：1，2或new { Id = 1}或是已有对象userInfo(包含主键栏位Id) </param>
     /// <returns>返回实体对象或是TEntity类型默认值</returns>
-    IMultipleQuery GetById<TEntity>(object whereObj);
+    IMultipleQuery QueryById<TEntity>(object whereObj);
     #endregion
 
-    #region GetByIds
+    #region QueryByIds
     /// <summary>
     /// 根据多个主键信息查询表TEntity中数据，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，如：
     /// <code>
-    /// f.GetByIds&lt;User&gt;(new []{1 ,2, 3}) //或是
-    /// f.GetByIds&lt;User&gt;(new []{{ Id = 1 }, { Id = 2 }, { Id = 3 }}) //或是
+    /// f.QueryByIds&lt;User&gt;(new []{1 ,2, 3}) //或是
+    /// f.QueryByIds&lt;User&gt;(new []{{ Id = 1 }, { Id = 2 }, { Id = 3 }}) //或是
     /// var userInfo = new UserInfo { Id = 1, Name = "xxx" ... };
-    /// f.GetByIds&lt;User&gt;(new List&lt;UserInfo&gt;{userInfo}) //三种写法是等效的
+    /// f.QueryByIds&lt;User&gt;(new List&lt;UserInfo&gt;{userInfo}) //三种写法是等效的
     /// SQL: SELECT ... FROM `sys_user` a WHERE a.`Id` in (@Id0,@Id1,@Id2)
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="whereKeys">主键值或是包含主键的匿名对象或是已有对象，如：1，2或new { Id = 1}或是已有对象userInfo(包含主键栏位Id) </param>
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
-    IMultipleQuery GetByIds<TEntity>(IEnumerable whereKeys);
+    IMultipleQuery QueryByIds<TEntity>(IEnumerable whereKeys);
     #endregion
 
     #region QueryFirst

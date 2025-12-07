@@ -91,8 +91,8 @@ public class MultipleQuery : IMultipleQuery
     }
     #endregion
 
-    #region GetById
-    public virtual IMultipleQuery GetById<TEntity>(object whereObj)
+    #region QueryById
+    public virtual IMultipleQuery QueryById<TEntity>(object whereObj)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
@@ -107,8 +107,8 @@ public class MultipleQuery : IMultipleQuery
     }
     #endregion
 
-    #region GetByIds
-    public virtual IMultipleQuery GetByIds<TEntity>(IEnumerable whereObjs)
+    #region QueryByIds
+    public virtual IMultipleQuery QueryByIds<TEntity>(IEnumerable whereObjs)
     {
         if (whereObjs == null)
             throw new ArgumentNullException(nameof(whereObjs));

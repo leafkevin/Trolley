@@ -452,11 +452,25 @@ public interface IContinuedUpdate<TEntity> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IContinuedUpdate<TEntity> WhereBy(object whereObj);
     /// <summary>
-    /// 主键条件查询，如：.WhereById(1) 或是 .WhereById(new { Id = 1})，whereKey不能为null
+    /// 条件更新，如：.WhereBy(new { IsEnabled = true})，whereObj不能为null
     /// </summary>
-    /// <param name="whereKey"></param>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns></returns>
+    IContinuedUpdate<TEntity> WhereBy(bool condition, object whereObj);
+    /// <summary>
+    /// 主键条件更新，如：.WhereById(1) 或是 .WhereById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
     /// <returns>返回更新对象</returns>
     IContinuedUpdate<TEntity> WhereById(object whereKey);
+    /// <summary>
+    /// 主键条件更新，如：.WhereById(1) 或是 .WhereById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回更新对象</returns>
+    IContinuedUpdate<TEntity> WhereById(bool condition, object whereKey);
     /// <summary>
     /// 多主键条件查询，如：.WhereByIds(new int[]{1,2,3}) 或是 .WhereByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
     /// </summary>
@@ -464,13 +478,20 @@ public interface IContinuedUpdate<TEntity> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IContinuedUpdate<TEntity> WhereByIds(IEnumerable whereKeys);
     /// <summary>
-    /// 条件查询，predicate为null时不生成任何条件
+    /// 多主键条件更新，如：.WhereByIds(new int[]{1,2,3}) 或是 .WhereByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回更新对象</returns>
+    IContinuedUpdate<TEntity> WhereByIds(bool condition, IEnumerable whereKeys);
+    /// <summary>
+    /// 条件更新，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回更新对象</returns>
     IContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
-    /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
+    /// 条件更新，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -478,7 +499,7 @@ public interface IContinuedUpdate<TEntity> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不可为null
+    /// 条件更新，构造表达式断言predicateInitializer生成Where条件，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回更新对象</returns>
@@ -491,56 +512,56 @@ public interface IContinuedUpdate<TEntity> : IUpdated<TEntity>
     /// </summary>
     /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
     /// <returns>返回更新对象</returns>
-    IDelete<TEntity> AndBy(object whereObj);
+    IContinuedUpdate<TEntity> AndBy(object whereObj);
     /// <summary>
     /// 条件更新，并与已有的条件AND操作，如：.AndBy(new { IsEnabled = true})，whereObj不能为null
     /// </summary>
     /// <param name="condition">判断条件，为true时条件生效</param>
     /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
     /// <returns></returns>
-    IDelete<TEntity> AndBy(bool condition, object whereObj);
+    IContinuedUpdate<TEntity> AndBy(bool condition, object whereObj);
     /// <summary>
-    /// 主键条件更新，如：.AndById(1) 或是 .AndById(new { Id = 1})，whereKey不能为null
+    /// 主键条件更新，并与已有的条件AND操作，如：.AndById(1) 或是 .AndById(new { Id = 1})，whereKey不能为null
     /// </summary>
     /// <param name="whereKey">主键值或是包含主键的对象</param>
     /// <returns>返回更新对象</returns>
-    IDelete<TEntity> AndById(object whereKey);
+    IContinuedUpdate<TEntity> AndById(object whereKey);
     /// <summary>
     /// 主键条件更新，并与已有的条件AND操作，如：.AndById(1) 或是 .AndById(new { Id = 1})，whereKey不能为null
     /// </summary>
     /// <param name="condition">判断条件，为true时条件生效</param>
     /// <param name="whereKey">主键值或是包含主键的对象</param>
     /// <returns>返回更新对象</returns>
-    IDelete<TEntity> AndById(bool condition, object whereKey);
+    IContinuedUpdate<TEntity> AndById(bool condition, object whereKey);
     /// <summary>
     /// 多主键条件更新，并与已有的条件AND操作，如：.AndByIds(new int[]{1,2,3}) 或是 .AndByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
     /// </summary>
     /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
     /// <returns>返回更新对象</returns>
-    IDelete<TEntity> AndByIds(IEnumerable whereKeys);
+    IContinuedUpdate<TEntity> AndByIds(IEnumerable whereKeys);
     /// <summary>
     /// 多主键条件更新，并与已有的条件AND操作，如：.AndByIds(new int[]{1,2,3}) 或是 .AndByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
     /// </summary>
     /// <param name="condition">判断条件，为true时条件生效</param>
     /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
     /// <returns>返回更新对象</returns>
-    IDelete<TEntity> AndByIds(bool condition, IEnumerable whereKeys);
+    IContinuedUpdate<TEntity> AndByIds(bool condition, IEnumerable whereKeys);
     /// <summary>
-    /// 条件查询，并与已有的条件AND操作，predicate为null时不生成任何条件
+    /// 条件更新，并与已有的条件AND操作，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回更新对象</returns>
     IContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
-    /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
+    /// 条件更新，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，elsePredicate为null时不生成任何条件</param>
     /// <returns>返回更新对象</returns>
-    IContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
+    IContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
-    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
+    /// 条件更新，构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回更新对象</returns>
@@ -553,48 +574,48 @@ public interface IContinuedUpdate<TEntity> : IUpdated<TEntity>
     /// </summary>
     /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
     /// <returns>返回更新对象</returns>
-    IDelete<TEntity> OrBy(object whereObj);
+    IContinuedUpdate<TEntity> OrBy(object whereObj);
     /// <summary>
     /// 条件更新，并与已有的条件OR操作，如：.OrBy(new { IsEnabled = true})，whereObj不能为null
     /// </summary>
     /// <param name="condition">判断条件，为true时条件生效</param>
     /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
     /// <returns></returns>
-    IDelete<TEntity> OrBy(bool condition, object whereObj);
+    IContinuedUpdate<TEntity> OrBy(bool condition, object whereObj);
     /// <summary>
     /// 主键条件更新，并与已有的条件OR操作，如：.OrById(1) 或是 .OrById(new { Id = 1})，whereKey不能为null
     /// </summary>
     /// <param name="whereKey">主键值或是包含主键的对象</param>
     /// <returns>返回更新对象</returns>
-    IDelete<TEntity> OrById(object whereKey);
+    IContinuedUpdate<TEntity> OrById(object whereKey);
     /// <summary>
     /// 主键条件更新，并与已有的条件OR操作，如：.OrById(1) 或是 .OrById(new { Id = 1})，whereKey不能为null
     /// </summary>
     /// <param name="condition">判断条件，为true时条件生效</param>
     /// <param name="whereKey">主键值或是包含主键的对象</param>
     /// <returns>返回更新对象</returns>
-    IDelete<TEntity> OrById(bool condition, object whereKey);
+    IContinuedUpdate<TEntity> OrById(bool condition, object whereKey);
     /// <summary>
     /// 多主键条件更新，并与已有的条件OR操作，如：.OrByIds(new int[]{1,2,3}) 或是 .OrByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
     /// </summary>
     /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
     /// <returns>返回更新对象</returns>
-    IDelete<TEntity> OrByIds(IEnumerable whereKeys);
+    IContinuedUpdate<TEntity> OrByIds(IEnumerable whereKeys);
     /// <summary>
     /// 多主键条件更新，并与已有的条件OR操作，如：.OrByIds(new int[]{1,2,3}) 或是 .OrByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
     /// </summary>
     /// <param name="condition">判断条件，为true时条件生效</param>
     /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
     /// <returns>返回更新对象</returns>
-    IDelete<TEntity> OrByIds(bool condition, IEnumerable whereKeys);
+    IContinuedUpdate<TEntity> OrByIds(bool condition, IEnumerable whereKeys);
     /// <summary>
-    /// 条件查询，并与已有的条件OR操作，predicate为null时不生成任何条件
+    /// 条件更新，并与已有的条件OR操作，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回更新对象</returns>
     IContinuedUpdate<TEntity> Or(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
-    /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
+    /// 条件更新，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -602,7 +623,7 @@ public interface IContinuedUpdate<TEntity> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
-    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
+    /// 条件更新，构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回更新对象</returns>
@@ -731,20 +752,52 @@ public interface IBulkContinuedUpdate<TEntity> : IUpdated<TEntity>
 
     #region Where
     /// <summary>
-    /// 使用whereObj对象生成Where条件，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，whereObj对象可以是匿名对象、命名对象或是字典，推荐使用匿名对象，不可为null
+    /// 条件更新，如：.WhereBy(new { IsEnabled = true})，whereObj不能为null
     /// </summary>
-    /// <typeparam name="TWhereObj">where条件对象类型</typeparam>
-    /// <param name="whereObj">where条件对象，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，可以是匿名对象、命名对象或是字典，推荐使用匿名对象，不可为null</param>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj);
+    IBulkContinuedUpdate<TEntity> WhereBy(object whereObj);
     /// <summary>
-    /// 条件查询，predicate为null时不生成任何条件
+    /// 条件更新，如：.WhereBy(new { IsEnabled = true})，whereObj不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns></returns>
+    IBulkContinuedUpdate<TEntity> WhereBy(bool condition, object whereObj);
+    /// <summary>
+    /// 主键条件更新，如：.WhereById(1) 或是 .WhereById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回更新对象</returns>
+    IBulkContinuedUpdate<TEntity> WhereById(object whereKey);
+    /// <summary>
+    /// 主键条件更新，如：.WhereById(1) 或是 .WhereById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回更新对象</returns>
+    IBulkContinuedUpdate<TEntity> WhereById(bool condition, object whereKey);
+    /// <summary>
+    /// 多主键条件查询，如：.WhereByIds(new int[]{1,2,3}) 或是 .WhereByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回更新对象</returns>
+    IBulkContinuedUpdate<TEntity> WhereByIds(IEnumerable whereKeys);
+    /// <summary>
+    /// 多主键条件更新，如：.WhereByIds(new int[]{1,2,3}) 或是 .WhereByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回更新对象</returns>
+    IBulkContinuedUpdate<TEntity> WhereByIds(bool condition, IEnumerable whereKeys);
+    /// <summary>
+    /// 条件更新，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回更新对象</returns>
     IBulkContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
-    /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
+    /// 条件更新，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -752,7 +805,7 @@ public interface IBulkContinuedUpdate<TEntity> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IBulkContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不可为null
+    /// 条件更新，构造表达式断言predicateInitializer生成Where条件，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回更新对象</returns>
@@ -761,21 +814,60 @@ public interface IBulkContinuedUpdate<TEntity> : IUpdated<TEntity>
 
     #region And
     /// <summary>
-    /// 条件查询，并与已有的条件AND操作，predicate为null时不生成任何条件
+    /// 条件更新，并与已有的条件AND操作，如：.AndBy(new { IsEnabled = true})，whereObj不能为null
+    /// </summary>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns>返回更新对象</returns>
+    IBulkContinuedUpdate<TEntity> AndBy(object whereObj);
+    /// <summary>
+    /// 条件更新，并与已有的条件AND操作，如：.AndBy(new { IsEnabled = true})，whereObj不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns></returns>
+    IBulkContinuedUpdate<TEntity> AndBy(bool condition, object whereObj);
+    /// <summary>
+    /// 主键条件更新，并与已有的条件AND操作，如：.AndById(1) 或是 .AndById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回更新对象</returns>
+    IBulkContinuedUpdate<TEntity> AndById(object whereKey);
+    /// <summary>
+    /// 主键条件更新，并与已有的条件AND操作，如：.AndById(1) 或是 .AndById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回更新对象</returns>
+    IBulkContinuedUpdate<TEntity> AndById(bool condition, object whereKey);
+    /// <summary>
+    /// 多主键条件更新，并与已有的条件AND操作，如：.AndByIds(new int[]{1,2,3}) 或是 .AndByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回更新对象</returns>
+    IBulkContinuedUpdate<TEntity> AndByIds(IEnumerable whereKeys);
+    /// <summary>
+    /// 多主键条件更新，并与已有的条件AND操作，如：.AndByIds(new int[]{1,2,3}) 或是 .AndByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回更新对象</returns>
+    IBulkContinuedUpdate<TEntity> AndByIds(bool condition, IEnumerable whereKeys);
+    /// <summary>
+    /// 条件更新，并与已有的条件AND操作，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回更新对象</returns>
     IBulkContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
-    /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
+    /// 条件更新，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，elsePredicate为null时不生成任何条件</param>
     /// <returns>返回更新对象</returns>
-    IBulkContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
+    IBulkContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
-    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
+    /// 条件更新，构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回更新对象</returns>
@@ -784,13 +876,52 @@ public interface IBulkContinuedUpdate<TEntity> : IUpdated<TEntity>
 
     #region Or
     /// <summary>
-    /// 条件查询，并与已有的条件OR操作，predicate为null时不生成任何条件
+    /// 条件更新，并与已有的条件OR操作，如：.OrBy(new { IsEnabled = true})，whereObj不能为null
+    /// </summary>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns>返回更新对象</returns>
+    IBulkContinuedUpdate<TEntity> OrBy(object whereObj);
+    /// <summary>
+    /// 条件更新，并与已有的条件OR操作，如：.OrBy(new { IsEnabled = true})，whereObj不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns></returns>
+    IBulkContinuedUpdate<TEntity> OrBy(bool condition, object whereObj);
+    /// <summary>
+    /// 主键条件更新，并与已有的条件OR操作，如：.OrById(1) 或是 .OrById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回更新对象</returns>
+    IBulkContinuedUpdate<TEntity> OrById(object whereKey);
+    /// <summary>
+    /// 主键条件更新，并与已有的条件OR操作，如：.OrById(1) 或是 .OrById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回更新对象</returns>
+    IBulkContinuedUpdate<TEntity> OrById(bool condition, object whereKey);
+    /// <summary>
+    /// 多主键条件更新，并与已有的条件OR操作，如：.OrByIds(new int[]{1,2,3}) 或是 .OrByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回更新对象</returns>
+    IBulkContinuedUpdate<TEntity> OrByIds(IEnumerable whereKeys);
+    /// <summary>
+    /// 多主键条件更新，并与已有的条件OR操作，如：.OrByIds(new int[]{1,2,3}) 或是 .OrByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回更新对象</returns>
+    IBulkContinuedUpdate<TEntity> OrByIds(bool condition, IEnumerable whereKeys);
+    /// <summary>
+    /// 条件更新，并与已有的条件OR操作，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
     /// <returns>返回更新对象</returns>
     IBulkContinuedUpdate<TEntity> Or(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
-    /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
+    /// 条件更新，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -798,7 +929,7 @@ public interface IBulkContinuedUpdate<TEntity> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IBulkContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
-    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
+    /// 条件更新，构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回更新对象</returns>

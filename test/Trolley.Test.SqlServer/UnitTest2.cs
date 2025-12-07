@@ -89,7 +89,7 @@ public class UnitTest2 : UnitTestBase
         Assert.Equal("leafkevin", result3.Name);
     }
     [Fact]
-    public async Task GetById()
+    public async Task QueryById()
     {
         this.Initialize(3);
         var repository = this.dbFactory.Create();
@@ -101,7 +101,7 @@ public class UnitTest2 : UnitTestBase
         Assert.True(user.Name == result.Name);
     }
     [Fact]
-    public async Task GetByIds()
+    public async Task QueryByIds()
     {
         this.Initialize(3);
         var repository = this.dbFactory.Create();

@@ -732,12 +732,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.TableAliases.Add(b[0].Name, this.LastIncludeSegment);
     }, filter);
     public virtual bool HasIncludeTables() => this.IncludeTables != null && this.IncludeTables.Count > 0;
-    public virtual bool BuildIncludeSql(Type targetType, object target, bool isSingle, out string sql)
+    public virtual bool BuildIncludeSql(Type targetType, object target, bool isMultiResult, out string sql)
     {
         sql = null;
         if (target == null) return false;
         ICollection targets = null;
-        if (!isSingle)
+        if (isMultiResult)
         {
             targets = target as ICollection;
             if (targets.Count == 0)
@@ -746,15 +746,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (this.IncludeTables == null) return false;
 
         Action<StringBuilder, Action<StringBuilder, IOrmProvider, object>> sqlBuilderInitializer = null;
-        if (isSingle)
-        {
-            sqlBuilderInitializer = (builder, foreignKeysSetter) =>
-            {
-                foreignKeysSetter.Invoke(builder, this.OrmProvider, target);
-                builder.Append(')');
-            };
-        }
-        else
+        if (isMultiResult)
         {
             sqlBuilderInitializer = (builder, foreignKeysSetter) =>
             {
@@ -765,6 +757,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     foreignKeysSetter.Invoke(builder, this.OrmProvider, target);
                     index++;
                 }
+                builder.Append(')');
+            };
+        }
+        else
+        {
+            sqlBuilderInitializer = (builder, foreignKeysSetter) =>
+            {
+                foreignKeysSetter.Invoke(builder, this.OrmProvider, target);
                 builder.Append(')');
             };
         }
@@ -816,7 +816,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         return false;
     }
-    public virtual void SetIncludeValues(Type targetType, object target, ITheaDataReader reader, bool isSingle)
+    public virtual void SetIncludeValues(Type targetType, object target, ITheaDataReader reader, bool isMultiResult)
     {
         var deferredInitializers = new List<(object, Action<object>)>();
         foreach (var includeSegment in this.IncludeTables)
@@ -830,15 +830,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             Action<object> includeValuesSetter = f => this.SetIncludeValueToTarget(targetType, firstMember, includeSegment, f, includeValues);
             deferredInitializers.Add((includeValues, includeValuesSetter));
         }
-        if (isSingle)
-        {
-            foreach ((var includeValues, var valueSetter) in deferredInitializers)
-            {
-                if (includeValues is ICollection collection && collection.Count > 0)
-                    valueSetter(target);
-            }
-        }
-        else
+        if (isMultiResult)
         {
             var targets = target as ICollection;
             foreach ((var includeValues, var includeValuesSetter) in deferredInitializers)
@@ -850,9 +842,17 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 }
             }
         }
+        else
+        {
+            foreach ((var includeValues, var valueSetter) in deferredInitializers)
+            {
+                if (includeValues is ICollection collection && collection.Count > 0)
+                    valueSetter(target);
+            }
+        }
         reader.NextResult();
     }
-    public virtual async Task SetIncludeValuesAsync(Type targetType, object target, ITheaDataReader reader, bool isSingle, CancellationToken cancellationToken = default)
+    public virtual async Task SetIncludeValuesAsync(Type targetType, object target, ITheaDataReader reader, bool isMultiResult, CancellationToken cancellationToken = default)
     {
         var deferredInitializers = new List<(object, Action<object>)>();
         foreach (var includeSegment in this.IncludeTables)
@@ -865,15 +865,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             Action<object> includeValuesSetter = f => this.SetIncludeValueToTarget(targetType, firstMember, includeSegment, f, includeValues);
             deferredInitializers.Add((includeValues, includeValuesSetter));
         }
-        if (isSingle)
-        {
-            foreach ((var includeValues, var includeValuesSetter) in deferredInitializers)
-            {
-                if (includeValues is ICollection collection && collection.Count > 0)
-                    includeValuesSetter(target);
-            }
-        }
-        else
+        if (isMultiResult)
         {
             var targets = target as ICollection;
             foreach ((var includeValues, var includeValuesSetter) in deferredInitializers)
@@ -883,6 +875,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     foreach (var targetItem in targets)
                         includeValuesSetter(targetItem);
                 }
+            }
+        }
+        else
+        {
+            foreach ((var includeValues, var includeValuesSetter) in deferredInitializers)
+            {
+                if (includeValues is ICollection collection && collection.Count > 0)
+                    includeValuesSetter(target);
             }
         }
         await reader.NextResultAsync(cancellationToken);
@@ -1114,42 +1114,20 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             return (headSql, sqlInitializer);
         });
     }
-
-    public virtual void Where1(Expression whereExpr)
+    public virtual void AndBy(object whereObj)
     {
-        //为了兼容，Where条件中的Exists，多个表联合查询时，有Where+Exists的场景
-        this.WhereBuilder ??= new();
-        if (this.WhereBuilder.Length > 0)
-        {
-            this.And(whereExpr);
-            return;
-        }
-        this.IsWhere = true;
-        var lambdaExpr = whereExpr as LambdaExpression;
-        this.ClearUnionSql();
-        this.InitTableAlias(lambdaExpr);
-        //不能更改LastWhereOperationType，如果是引用已有子查询，LastWhereOperationType是有值的
-        this.WhereBuilder.Append(this.VisitConditionExpr(lambdaExpr.Body, out var operationType));
-        this.LastWhereOperationType = operationType;
-        this.IsWhere = false;
+        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, this.Tables[0].EntityType, whereObj, 4, false, false, false);
+        this.VisitAndSql(commandInitializer.Invoke(this.DbParameters, this.DbContext, whereObj));
     }
-    public virtual void Where(Expression whereExpr)
+    public virtual void AndById(object whereKey)
     {
-        //为了兼容，Where条件中的Exists，多个表联合查询时，有Where+Exists的场景
-        this.WhereBuilder ??= new();
-        if (this.WhereBuilder.Length > 0)
-        {
-            this.And(whereExpr);
-            return;
-        }
-        this.IsWhere = true;
-        var lambdaExpr = whereExpr as LambdaExpression;
-        this.ClearUnionSql();
-        this.InitTableAlias(lambdaExpr);
-        //不能更改LastWhereOperationType，如果是引用已有子查询，LastWhereOperationType是有值的
-        this.WhereBuilder.Append(this.VisitConditionExpr(lambdaExpr.Body, out var operationType));
-        this.LastWhereOperationType = operationType;
-        this.IsWhere = false;
+        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, this.Tables[0].EntityType, whereKey, 4, true, false, false);
+        this.VisitAndSql(commandInitializer.Invoke(this.DbParameters, this.DbContext, whereKey));
+    }
+    public virtual void AndByIds(object whereKeys)
+    {
+        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, this.Tables[0].EntityType, whereKeys, 4, true, false, true);
+        this.VisitAndSql(commandInitializer.Invoke(this.DbParameters, this.DbContext, whereKeys));
     }
     public virtual void And(Expression whereExpr)
     {
@@ -1157,22 +1135,25 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var lambdaExpr = whereExpr as LambdaExpression;
         this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
-        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        if (this.WhereBuilder.Length > 0)
-        {
-            if (this.LastWhereOperationType == OperationType.Or)
-                this.WhereBuilder.Append($"({this.WhereBuilder})");
-            if (operationType == OperationType.Or)
-                conditionSql = $"({conditionSql})";
-            this.WhereBuilder.Append(" AND " + conditionSql);
-            this.LastWhereOperationType = OperationType.And;
-        }
-        else
-        {
-            this.WhereBuilder.Append(conditionSql);
-            this.LastWhereOperationType = operationType;
-        }
+        //不能更改LastWhereOperationType，如果是引用已有子查询，LastWhereOperationType是有值的
+        var whereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
         this.IsWhere = false;
+        this.VisitAndSql(whereSql, operationType);
+    }
+    public virtual void OrBy(object whereObj)
+    {
+        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, this.Tables[0].EntityType, whereObj, 4, false, false, false);
+        this.VisitOrSql(commandInitializer.Invoke(this.DbParameters, this.DbContext, whereObj));
+    }
+    public virtual void OrById(object whereKey)
+    {
+        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, this.Tables[0].EntityType, whereKey, 4, true, false, false);
+        this.VisitOrSql(commandInitializer.Invoke(this.DbParameters, this.DbContext, whereKey));
+    }
+    public virtual void OrByIds(object whereKeys)
+    {
+        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, this.Tables[0].EntityType, whereKeys, 4, true, false, true);
+        this.VisitOrSql(commandInitializer.Invoke(this.DbParameters, this.DbContext, whereKeys));
     }
     public virtual void Or(Expression whereExpr)
     {
@@ -1180,22 +1161,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var lambdaExpr = whereExpr as LambdaExpression;
         this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
-        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        if (this.WhereBuilder.Length > 0)
-        {
-            if (this.LastWhereOperationType == OperationType.And)
-                this.WhereBuilder.Append($"({this.WhereBuilder})");
-            if (operationType == OperationType.And)
-                conditionSql = $"({conditionSql})";
-            this.WhereBuilder.Append(" OR " + conditionSql);
-            this.LastWhereOperationType = OperationType.Or;
-        }
-        else
-        {
-            this.WhereBuilder.Append(conditionSql);
-            this.LastWhereOperationType = operationType;
-        }
+        var whereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
         this.IsWhere = false;
+        this.VisitOrSql(whereSql, operationType);
     }
     public virtual void GroupBy(Expression expr)
     {

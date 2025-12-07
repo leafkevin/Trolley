@@ -493,7 +493,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> Where(Expression<Func<T, bool>> predicate);
     /// <summary>
-    /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
+    /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -501,7 +501,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不可为null
+    /// 条件查询，构造表达式断言predicateInitializer生成Where条件，predicateInitializer不可为null
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
@@ -523,7 +523,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns></returns>
     IQuery<T> AndBy(bool condition, object whereObj);
     /// <summary>
-    /// 主键条件查询，如：.AndById(1) 或是 .AndById(new { Id = 1})，whereKey不能为null
+    /// 主键条件查询，并与已有的条件AND操作，如：.AndById(1) 或是 .AndById(new { Id = 1})，whereKey不能为null
     /// </summary>
     /// <param name="whereKey">主键值或是包含主键的对象</param>
     /// <returns>返回查询对象</returns>
@@ -561,7 +561,7 @@ public interface IQuery<T> : IQueryBase
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，elsePredicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> And(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null);
+    IQuery<T> And(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null);
     /// <summary>
     /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件AND操作，predicateInitializer不可为null
     /// </summary>
@@ -617,13 +617,13 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> Or(Expression<Func<T, bool>> predicate);
     /// <summary>
-    /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null    
+    /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，elsePredicate为null时不生成任何条件</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> Or(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null);
+    IQuery<T> Or(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null);
     /// <summary>
     /// 条件查询，构造表达式断言predicateInitializer生成Where条件，并与已有的条件OR操作，predicateInitializer不可为null
     /// </summary>
@@ -719,6 +719,13 @@ public interface IQuery<T> : IQueryBase
     /// </summary>
     /// <returns>返回查询对象</returns>
     IQuery<T> Select();
+    /// <summary>
+    /// 选择指定字段返回，可以是单个或多个字段的SQL，如: .Select("1") 或是 .Select("Id, COUNT(OrderId) AS OrderCount")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="rawFields">字段SQL, 单个或多个字段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<TTarget> Select<TTarget>(string rawFields);
     /// <summary>
     /// 选择指定字段返回，可以是单个或多个字段的匿名对象，如：
     /// <code> .Select(f =&gt; new { f.Id, f.Name }) 或是 .Select(x =&gt; x.CreatedAt.Date)</code>
@@ -954,13 +961,13 @@ public interface IQuery<T1, T2> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T2表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T2"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个分表与当前<typeparamref name="T2"/>表名的映射关系，指定当前<typeparamref name="T2"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T2"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T2"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T2"/>表名的映射关系，指定当前<typeparamref name="T2"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T2"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T2"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -1366,6 +1373,13 @@ public interface IQuery<T1, T2> : IQueryBase
 
     #region Select
     /// <summary>
+    /// 选择指定字段返回，可以是单个或多个字段的SQL，如: .Select("1") 或是 .Select("Id, COUNT(OrderId) AS OrderCount")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="rawFields">字段SQL, 单个或多个字段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<TTarget> Select<TTarget>(string rawFields);
+    /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
@@ -1535,7 +1549,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T3表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T3"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
@@ -1947,6 +1961,13 @@ public interface IQuery<T1, T2, T3> : IQueryBase
 
     #region Select
     /// <summary>
+    /// 选择指定字段返回，可以是单个或多个字段的SQL，如: .Select("1") 或是 .Select("Id, COUNT(OrderId) AS OrderCount")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="rawFields">字段SQL, 单个或多个字段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<TTarget> Select<TTarget>(string rawFields);
+    /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
@@ -2117,13 +2138,13 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T4表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T4"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个分表与当前<typeparamref name="T4"/>表名的映射关系，指定当前<typeparamref name="T4"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T4"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T4"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T4"/>表名的映射关系，指定当前<typeparamref name="T4"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T4"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T4"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -2529,6 +2550,13 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
 
     #region Select
     /// <summary>
+    /// 选择指定字段返回，可以是单个或多个字段的SQL，如: .Select("1") 或是 .Select("Id, COUNT(OrderId) AS OrderCount")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="rawFields">字段SQL, 单个或多个字段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<TTarget> Select<TTarget>(string rawFields);
+    /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
@@ -2700,13 +2728,13 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T5表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T5"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个分表与当前<typeparamref name="T5"/>表名的映射关系，指定当前<typeparamref name="T5"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T5"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T5"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T5"/>表名的映射关系，指定当前<typeparamref name="T5"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T5"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T5"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -3112,6 +3140,13 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
 
     #region Select
     /// <summary>
+    /// 选择指定字段返回，可以是单个或多个字段的SQL，如: .Select("1") 或是 .Select("Id, COUNT(OrderId) AS OrderCount")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="rawFields">字段SQL, 单个或多个字段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<TTarget> Select<TTarget>(string rawFields);
+    /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
@@ -3284,13 +3319,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T6表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T6"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个分表与当前<typeparamref name="T6"/>表名的映射关系，指定当前<typeparamref name="T6"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T6"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T6"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T6"/>表名的映射关系，指定当前<typeparamref name="T6"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T6"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T6"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -3696,6 +3731,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
 
     #region Select
     /// <summary>
+    /// 选择指定字段返回，可以是单个或多个字段的SQL，如: .Select("1") 或是 .Select("Id, COUNT(OrderId) AS OrderCount")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="rawFields">字段SQL, 单个或多个字段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<TTarget> Select<TTarget>(string rawFields);
+    /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
@@ -3869,13 +3911,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T7表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T7"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个分表与当前<typeparamref name="T7"/>表名的映射关系，指定当前<typeparamref name="T7"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T7"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T7"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T7"/>表名的映射关系，指定当前<typeparamref name="T7"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T7"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T7"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -4281,6 +4323,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
 
     #region Select
     /// <summary>
+    /// 选择指定字段返回，可以是单个或多个字段的SQL，如: .Select("1") 或是 .Select("Id, COUNT(OrderId) AS OrderCount")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="rawFields">字段SQL, 单个或多个字段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<TTarget> Select<TTarget>(string rawFields);
+    /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
@@ -4455,13 +4504,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T8表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T8"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个分表与当前<typeparamref name="T8"/>表名的映射关系，指定当前<typeparamref name="T8"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T8"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T8"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T8"/>表名的映射关系，指定当前<typeparamref name="T8"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T8"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T8"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -4867,6 +4916,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
 
     #region Select
     /// <summary>
+    /// 选择指定字段返回，可以是单个或多个字段的SQL，如: .Select("1") 或是 .Select("Id, COUNT(OrderId) AS OrderCount")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="rawFields">字段SQL, 单个或多个字段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<TTarget> Select<TTarget>(string rawFields);
+    /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
@@ -5042,13 +5098,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T9表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T9"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个分表与当前<typeparamref name="T9"/>表名的映射关系，指定当前<typeparamref name="T9"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T9"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T9"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T9"/>表名的映射关系，指定当前<typeparamref name="T9"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T9"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T9"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -5454,6 +5510,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
 
     #region Select
     /// <summary>
+    /// 选择指定字段返回，可以是单个或多个字段的SQL，如: .Select("1") 或是 .Select("Id, COUNT(OrderId) AS OrderCount")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="rawFields">字段SQL, 单个或多个字段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<TTarget> Select<TTarget>(string rawFields);
+    /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
@@ -5630,13 +5693,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T10表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T10"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个分表与当前<typeparamref name="T10"/>表名的映射关系，指定当前<typeparamref name="T10"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T10"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T10"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T10"/>表名的映射关系，指定当前<typeparamref name="T10"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T10"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T10"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -6042,6 +6105,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
 
     #region Select
     /// <summary>
+    /// 选择指定字段返回，可以是单个或多个字段的SQL，如: .Select("1") 或是 .Select("Id, COUNT(OrderId) AS OrderCount")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="rawFields">字段SQL, 单个或多个字段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<TTarget> Select<TTarget>(string rawFields);
+    /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
@@ -6219,13 +6289,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T11表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T11"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个分表与当前<typeparamref name="T11"/>表名的映射关系，指定当前<typeparamref name="T11"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T11"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T11"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T11"/>表名的映射关系，指定当前<typeparamref name="T11"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T11"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T11"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -6631,6 +6701,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
 
     #region Select
     /// <summary>
+    /// 选择指定字段返回，可以是单个或多个字段的SQL，如: .Select("1") 或是 .Select("Id, COUNT(OrderId) AS OrderCount")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="rawFields">字段SQL, 单个或多个字段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<TTarget> Select<TTarget>(string rawFields);
+    /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
@@ -6809,13 +6886,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T12表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T12"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个分表与当前<typeparamref name="T12"/>表名的映射关系，指定当前<typeparamref name="T12"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T12"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T12"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T12"/>表名的映射关系，指定当前<typeparamref name="T12"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T12"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T12"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -7221,6 +7298,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
 
     #region Select
     /// <summary>
+    /// 选择指定字段返回，可以是单个或多个字段的SQL，如: .Select("1") 或是 .Select("Id, COUNT(OrderId) AS OrderCount")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="rawFields">字段SQL, 单个或多个字段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<TTarget> Select<TTarget>(string rawFields);
+    /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
@@ -7400,13 +7484,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T13表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T13"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个分表与当前<typeparamref name="T13"/>表名的映射关系，指定当前<typeparamref name="T13"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T13"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T13"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T13"/>表名的映射关系，指定当前<typeparamref name="T13"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T13"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T13"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -7812,6 +7896,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
 
     #region Select
     /// <summary>
+    /// 选择指定字段返回，可以是单个或多个字段的SQL，如: .Select("1") 或是 .Select("Id, COUNT(OrderId) AS OrderCount")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="rawFields">字段SQL, 单个或多个字段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<TTarget> Select<TTarget>(string rawFields);
+    /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
@@ -7992,13 +8083,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T14表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T14"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个分表与当前<typeparamref name="T14"/>表名的映射关系，指定当前<typeparamref name="T14"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T14"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T14"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T14"/>表名的映射关系，指定当前<typeparamref name="T14"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T14"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T14"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -8404,6 +8495,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region Select
     /// <summary>
+    /// 选择指定字段返回，可以是单个或多个字段的SQL，如: .Select("1") 或是 .Select("Id, COUNT(OrderId) AS OrderCount")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="rawFields">字段SQL, 单个或多个字段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<TTarget> Select<TTarget>(string rawFields);
+    /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
@@ -8585,13 +8683,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T15表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T15"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个分表与当前<typeparamref name="T15"/>表名的映射关系，指定当前<typeparamref name="T15"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T15"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T15"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T15"/>表名的映射关系，指定当前<typeparamref name="T15"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T15"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T15"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -8997,6 +9095,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     #region Select
     /// <summary>
+    /// 选择指定字段返回，可以是单个或多个字段的SQL，如: .Select("1") 或是 .Select("Id, COUNT(OrderId) AS OrderCount")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="rawFields">字段SQL, 单个或多个字段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<TTarget> Select<TTarget>(string rawFields);
+    /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
@@ -9179,13 +9284,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定T16表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定<typeparamref name="T16"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable(params string[] tableNames);
     /// <summary>
-    /// 根据首个分表与当前<typeparamref name="T16"/>表名的映射关系，指定当前<typeparamref name="T16"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T16"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T16"/>表分表名称，如：
+    /// 根据首个多分表与当前<typeparamref name="T16"/>表名的映射关系，指定当前<typeparamref name="T16"/>表分表名获取委托，执行委托获取分表名。委托第一个参数是首个分表原始表名，第二个参数是当前<typeparamref name="T16"/>表原始表名，第三个参数是首个分表当前分表名，返回值是当前<typeparamref name="T16"/>表分表名称，如：
     /// <code>
     /// .From&lt;Order&gt;().UseTable("sys_order_104_202405", "sys_order_105_202405")
     /// .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
@@ -9445,6 +9550,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     #endregion
 
     #region Select
+    /// <summary>
+    /// 选择指定字段返回，可以是单个或多个字段的SQL，如: .Select("1") 或是 .Select("Id, COUNT(OrderId) AS OrderCount")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="rawFields">字段SQL, 单个或多个字段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<TTarget> Select<TTarget>(string rawFields);
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，如：
     /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)

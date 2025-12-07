@@ -187,21 +187,11 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
     #endregion
 
     #region Where
-    public virtual IMultiQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
-    {
-        base.WhereInternal(predicate);
-        return this;
-    }
+    public virtual IMultiQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate) => this.And(true, predicate);
     public virtual IMultiQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
-    {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => this.And(condition, ifPredicate, elsePredicate);
     public virtual IMultiQuery<<#=tables#>> WherePredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<<#=tables#>>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => this.AndPredicate(predicateInitializer);
     #endregion
 
     #region And
@@ -217,6 +207,8 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
     }
     public virtual IMultiQuery<<#=tables#>> AndPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<<#=tables#>>();
         return this.And(predicateInitializer.Invoke(builder));
     }
@@ -235,6 +227,8 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
     }
     public virtual IMultiQuery<<#=tables#>> OrPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<<#=tables#>>();
         return this.Or(predicateInitializer.Invoke(builder));
     }
@@ -290,7 +284,12 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
     }
     #endregion
 
-    #region Select 
+    #region Select
+    public virtual IMultiQuery<TTarget> Select<TTarget>(string rawFields)
+    {
+        base.SelectInternal(rawFields);
+        return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
+    }
     public virtual IMultiQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);

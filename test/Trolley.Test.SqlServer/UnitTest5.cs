@@ -71,8 +71,8 @@ public class UnitTest5 : UnitTestBase
         var repository = this.dbFactory.Create();
         using var reader = await repository.QueryMultipleAsync(f => f
             .UseMaster()
-            .GetById<User>(new { Id = 1 })
-            .GetByIds<User>(new int[] { 1, 2, 3 })
+            .QueryById<User>(new { Id = 1 })
+            .QueryByIds<User>(new int[] { 1, 2, 3 })
             .Exists<Order>(f => f.BuyerId.IsNull())
             .From<Order>()
                 .InnerJoin<User>((x, y) => x.BuyerId == y.Id)

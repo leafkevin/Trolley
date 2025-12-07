@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Linq.Expressions;
 
 namespace Trolley;
@@ -197,25 +198,25 @@ public class QueryInternal
     }
     #endregion
 
-    #region Where
-    protected void WhereInternal(Expression predicate)
-    {
-        if (predicate == null) return;
-        this.Visitor.And(predicate);
-    }
-    protected void WhereInternal(bool condition, Expression ifPredicate, Expression elsePredicate = null)
-    {
-        if (condition)
-        {
-            if (ifPredicate == null)
-                throw new ArgumentNullException(nameof(ifPredicate));
-            this.Visitor.And(ifPredicate);
-        }
-        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
-    }
-    #endregion
-
     #region And
+    protected void AndByInternal(object whereObj)
+    {
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+        this.Visitor.AndBy(whereObj);
+    }
+    protected void AndByIdInternal(object whereKey)
+    {
+        if (whereKey == null)
+            throw new ArgumentNullException(nameof(whereKey));
+        this.Visitor.AndById(whereKey);
+    }
+    protected void AndByIdsInternal(IEnumerable whereKeys)
+    {
+        if (whereKeys == null)
+            throw new ArgumentNullException(nameof(whereKeys));
+        this.Visitor.AndByIds(whereKeys);
+    }
     protected void AndInternal(Expression predicate)
     {
         if (predicate == null) return;
@@ -234,11 +235,28 @@ public class QueryInternal
     #endregion
 
     #region Or
+    protected void OrByInternal(object whereObj)
+    {
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+        this.Visitor.OrBy(whereObj);
+    }
+    protected void OrByIdInternal(object whereKey)
+    {
+        if (whereKey == null)
+            throw new ArgumentNullException(nameof(whereKey));
+        this.Visitor.OrById(whereKey);
+    }
+    protected void OrByIdsInternal(IEnumerable whereKeys)
+    {
+        if (whereKeys == null)
+            throw new ArgumentNullException(nameof(whereKeys));
+        this.Visitor.OrByIds(whereKeys);
+    }
     protected void OrInternal(Expression predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
-
         this.Visitor.Or(predicate);
     }
     protected void OrInternal(bool condition, Expression ifPredicate, Expression elsePredicate = null)

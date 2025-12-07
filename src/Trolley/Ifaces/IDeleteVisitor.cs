@@ -23,10 +23,13 @@ public interface IDeleteVisitor : IDisposable
     void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
-    void WhereBy(object whereObj);
-    void WhereById(object whereKey);
-    void WhereByIds(IEnumerable whereKeys);
+    void AndBy(object whereObj);
+    void AndById(object whereKey);
+    void AndByIds(IEnumerable whereKeys); 
     void And(Expression whereExpr);
+    void OrBy(object whereObj);
+    void OrById(object whereKey);
+    void OrByIds(IEnumerable whereKeys);
     void Or(Expression whereExpr);
 
     string GetTableName(TableSegment tableSegment);

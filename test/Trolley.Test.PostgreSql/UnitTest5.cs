@@ -71,7 +71,7 @@ public class UnitTest5 : UnitTestBase
         this.Initialize(2);
         var repository = this.dbFactory.Create();
         using var reader = await repository.QueryMultipleAsync(f => f
-            .GetById<User>(new { Id = 1 })
+            .QueryById<User>(new { Id = 1 })
             .Exists<Order>(f => f.BuyerId.IsNull())
             .From<Order>()
                 .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
@@ -119,12 +119,12 @@ public class UnitTest5 : UnitTestBase
         this.Initialize(2);
         var repository = this.dbFactory.Create().UseMaster();
         using var reader = await repository.QueryMultipleAsync(f => f
-            .GetById<User>(new { Id = 1 })
-            .GetByIds<User>(new int[] { 1, 2, 3 })
+            .QueryById<User>(new { Id = 1 })
+            .QueryByIds<User>(new int[] { 1, 2, 3 })
             .Exists<Order>(f => f.BuyerId.IsNull())
             .From<Order>()
                 .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-                .Where((x, y) => x.Id == "1")
+                .Where((x, y) => x.Id == "1")                
                 .Select((x, y) => new { x.Id, x.OrderNo, x.BuyerId, BuyerName = y.Name, x.TotalAmount })
                 .First()
             .QueryFirst<User>(new { Id = 2 })

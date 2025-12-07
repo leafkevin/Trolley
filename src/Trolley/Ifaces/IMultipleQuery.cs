@@ -208,38 +208,38 @@ public interface IMultipleQuery : IDisposable
     IMultipleQuery QueryScalar<TValue>(string rawSql, List<IDbDataParameter> parameters);
     #endregion
 
-    #region GetById
+    #region QueryById
     /// <summary>
     /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，不支持分表，如：
     /// <code>
-    /// f.GetById&lt;User&gt;(1) //或是
-    /// f.GetById&lt;User&gt;(new { Id = 1 }) //或是
+    /// f.QueryById&lt;User&gt;(1) //或是
+    /// f.QueryById&lt;User&gt;(new { Id = 1 }) //或是
     /// var userInfo = new UserInfo { Id = 1, Name = "xxx" ... };
-    /// f.GetById&lt;User&gt;(userInfo) //三种写法是等效的
+    /// f.QueryById&lt;User&gt;(userInfo) //三种写法是等效的
     /// SQL: SELECT ... FROM `sys_user` a WHERE a.`Id`=@Id
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="whereObj">主键值或是包含主键的匿名对象或是已有对象，如：1，2或new { Id = 1}或是已有对象userInfo(包含主键栏位Id) </param>
     /// <returns>返回实体对象或是TEntity类型默认值</returns>
-    IMultipleQuery GetById<TEntity>(object whereObj);
+    IMultipleQuery QueryById<TEntity>(object whereObj);
     #endregion
 
-    #region GetByIds
+    #region QueryByIds
     /// <summary>
     /// 根据多个主键信息查询表TEntity中数据，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，如：
     /// <code>
-    /// f.GetByIds&lt;User&gt;(new []{1 ,2, 3}) //或是
-    /// f.GetByIds&lt;User&gt;(new []{{ Id = 1 }, { Id = 2 }, { Id = 3 }}) //或是
+    /// f.QueryByIds&lt;User&gt;(new []{1 ,2, 3}) //或是
+    /// f.QueryByIds&lt;User&gt;(new []{{ Id = 1 }, { Id = 2 }, { Id = 3 }}) //或是
     /// var userInfo = new UserInfo { Id = 1, Name = "xxx" ... };
-    /// f.GetByIds&lt;User&gt;(new List&lt;UserInfo&gt;{userInfo}) //三种写法是等效的
+    /// f.QueryByIds&lt;User&gt;(new List&lt;UserInfo&gt;{userInfo}) //三种写法是等效的
     /// SQL: SELECT ... FROM `sys_user` a WHERE a.`Id` in (@Id0,@Id1,@Id2)
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="whereKeys">主键值或是包含主键的匿名对象或是已有对象，如：1，2或new { Id = 1}或是已有对象userInfo(包含主键栏位Id) </param>
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
-    IMultipleQuery GetByIds<TEntity>(IEnumerable whereKeys);
+    IMultipleQuery QueryByIds<TEntity>(IEnumerable whereKeys);
     #endregion
 
     #region QueryFirst
@@ -316,16 +316,25 @@ public interface IMultipleQuery : IDisposable
 
     #region Exists
     /// <summary>
-    /// 判断是否存在表TEntity中满足与whereObj对象各属性值都相等的记录，存在返回true，否则返回false，不支持分表
-    /// <code>
-    /// f.Exists&lt;User&gt;(new { Id = 1, IsEnabled = true })
-    /// SQL: SELECT COUNT(1) FROM `sys_user` WHERE `Id`=@Id AND `IsEnabled`=@IsEnabled
-    /// </code>
+    /// 判断是否存在，同名属性值作为查询条件，不支持分表，如：.ExistsBy&lt;User&gt;(new { IsEnabled = true })，whereObj不能为null
     /// </summary>
-    /// <typeparam name="TEntity">实体对象类型</typeparam>
-    /// <param name="whereObj">where条件对象，whereObj对象各属性值都参与相等比较,推荐使用匿名对象</param>
-    /// <returns>返回是否存在，布尔值</returns>
-    IMultipleQuery Exists<TEntity>(object whereObj);
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，不能为null</param>
+    /// <returns>返回是否存在</returns>
+    IMultipleQuery ExistsBy<TEntity>(object whereObj);
+    /// <summary>
+    /// 根据主键判断是否存在，不支持分表，如：.ExistsById&lt;User&gt;(1) 或是 .ExistsById&lt;User&gt;(new { Id = 1 })，whereKey不能为null
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="whereKey">主键值或是包含主键的对象，不能为null</param>
+    /// <returns>返回是否存在</returns>
+    IMultipleQuery ExistsById<TEntity>(object whereKey);
+    /// <summary>
+    /// 根据多主键判断是否存在，存在任意一条返回true，不支持分表，如：.ExistsByIds&lt;User&gt;(new int[]{ 1, 2, 3 }) 或是 .ExistsByIds&lt;User&gt;(new []{new { Id = 1 }, new { Id = 2 }, new { Id = 3 } })，whereKeys不能为null
+    /// </summary>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合，不能为null</param>
+    /// <returns>返回是否存在</returns>
+    IMultipleQuery ExistsByIds<TEntity>(IEnumerable whereKeys);
     /// <summary>
     /// 判断TEntity表是否存在满足wherePredicate条件的记录，存在返回true，否则返回false，不支持分表
     /// </summary>
@@ -336,15 +345,20 @@ public interface IMultipleQuery : IDisposable
     #endregion
 
     #region AddReader/BuildSql
-    void AddReader(Type targetType, string sql, bool isSingle, IQueryVisitor queryVisitor = null, int pageNumber = 0, int pageSize = 0);
+    void AddReader(Type targetType, string sql, ReaderResultType resultType, bool isExists = false, IQueryVisitor visitor = null);
     string BuildSql(out List<ReaderAfter> readerAfters);
     #endregion
 }
 public class ReaderAfter
 {
     public Type TargetType { get; set; }
-    public IQueryVisitor QueryVisitor { get; set; }
-    public bool IsSingle { get; set; }
-    public int PageNumber { get; set; }
-    public int PageSize { get; set; }
+    public IQueryVisitor Visitor { get; set; }
+    public ReaderResultType ResultType { get; set; }
+    public bool IsExists { get; set; }
+}
+public enum ReaderResultType
+{
+    Value = 1,
+    Entity,
+    List
 }

@@ -510,65 +510,63 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
     #endregion
 
     #region Where
-    public virtual IUpdated<TEntity> WhereBy(object whereObj)
-    {
-        if (whereObj == null)
-            throw new ArgumentNullException(nameof(whereObj));
-        this.Visitor.WhereBy(whereObj);
-        return this;
-    }
-    public virtual IUpdated<TEntity> WhereBy(bool condition, object whereObj)
-    {
-        if (!condition) return this;
-        return this.WhereBy(whereObj);
-    }
-    public virtual IUpdated<TEntity> WhereById(object whereKey)
-    {
-        if (whereKey == null)
-            throw new ArgumentNullException(nameof(whereKey));
-        this.Visitor.WhereBy(whereKey);
-        return this;
-    }
-    public virtual IUpdated<TEntity> WhereById(bool condition, object whereKey)
-    {
-        if (!condition) return this;
-        return this.WhereById(whereKey);
-    }
-    public virtual IUpdated<TEntity> WhereByIds(IEnumerable whereKeys)
-    {
-        if (whereKeys == null)
-            throw new ArgumentNullException(nameof(whereKeys));
-        this.Visitor.WhereBy(whereKeys);
-        return this;
-    }
-    public virtual IUpdated<TEntity> WhereByIds(bool condition, IEnumerable whereKeys)
-    {
-        if (!condition) return this;
-        return this.WhereByIds(whereKeys);
-    }
+    public virtual IContinuedUpdate<TEntity> WhereBy(object whereObj)
+        => this.AndBy(whereObj);
+    public virtual IContinuedUpdate<TEntity> WhereBy(bool condition, object whereObj)
+        => this.AndBy(condition, whereObj);
+    public virtual IContinuedUpdate<TEntity> WhereById(object whereKey)
+        => this.AndById(whereKey);
+    public virtual IContinuedUpdate<TEntity> WhereById(bool condition, object whereKey)
+        => this.AndById(condition, whereKey);
+    public virtual IContinuedUpdate<TEntity> WhereByIds(IEnumerable whereKeys)
+        => this.AndByIds(whereKeys);
+    public virtual IContinuedUpdate<TEntity> WhereByIds(bool condition, IEnumerable whereKeys)
+        => this.AndByIds(condition, whereKeys);
     public virtual IContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
-        => this.Where(true, predicate);
+        => this.And(true, predicate);
     public virtual IContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
-    {
-        if (condition)
-        {
-            if (ifPredicate == null)
-                throw new ArgumentNullException(nameof(ifPredicate));
-            this.Visitor.And(ifPredicate);
-        }
-        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
-        return this;
-    }
+        => this.And(condition, ifPredicate, elsePredicate);
     public virtual IContinuedUpdate<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
-    {
-        if (predicateInitializer == null)
-            throw new ArgumentNullException(nameof(predicateInitializer));
-        var builder = new PredicateBuilder<TEntity>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => this.AndPredicate(predicateInitializer);
     #endregion
 
     #region And
+    public virtual IContinuedUpdate<TEntity> AndBy(object whereObj)
+    {
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+        this.Visitor.AndBy(whereObj);
+        return this;
+    }
+    public virtual IContinuedUpdate<TEntity> AndBy(bool condition, object whereObj)
+    {
+        if (!condition) return this;
+        return this.AndBy(whereObj);
+    }
+    public virtual IContinuedUpdate<TEntity> AndById(object whereKey)
+    {
+        if (whereKey == null)
+            throw new ArgumentNullException(nameof(whereKey));
+        this.Visitor.AndById(whereKey);
+        return this;
+    }
+    public virtual IContinuedUpdate<TEntity> AndById(bool condition, object whereKey)
+    {
+        if (!condition) return this;
+        return this.AndById(whereKey);
+    }
+    public virtual IContinuedUpdate<TEntity> AndByIds(IEnumerable whereKeys)
+    {
+        if (whereKeys == null)
+            throw new ArgumentNullException(nameof(whereKeys));
+        this.Visitor.AndByIds(whereKeys);
+        return this;
+    }
+    public virtual IContinuedUpdate<TEntity> AndByIds(bool condition, IEnumerable whereKeys)
+    {
+        if (!condition) return this;
+        return this.AndByIds(whereKeys);
+    }
     public virtual IContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
     public virtual IContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -584,12 +582,50 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
     }
     public virtual IContinuedUpdate<TEntity> AndPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<TEntity>();
         return this.And(predicateInitializer.Invoke(builder));
     }
     #endregion
 
     #region Or
+    public virtual IContinuedUpdate<TEntity> OrBy(object whereObj)
+    {
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+        this.Visitor.OrBy(whereObj);
+        return this;
+    }
+    public virtual IContinuedUpdate<TEntity> OrBy(bool condition, object whereObj)
+    {
+        if (!condition) return this;
+        return this.OrBy(whereObj);
+    }
+    public virtual IContinuedUpdate<TEntity> OrById(object whereKey)
+    {
+        if (whereKey == null)
+            throw new ArgumentNullException(nameof(whereKey));
+        this.Visitor.OrById(whereKey);
+        return this;
+    }
+    public virtual IContinuedUpdate<TEntity> OrById(bool condition, object whereKey)
+    {
+        if (!condition) return this;
+        return this.OrById(whereKey);
+    }
+    public virtual IContinuedUpdate<TEntity> OrByIds(IEnumerable whereKeys)
+    {
+        if (whereKeys == null)
+            throw new ArgumentNullException(nameof(whereKeys));
+        this.Visitor.OrByIds(whereKeys);
+        return this;
+    }
+    public virtual IContinuedUpdate<TEntity> OrByIds(bool condition, IEnumerable whereKeys)
+    {
+        if (!condition) return this;
+        return this.OrByIds(whereKeys);
+    }
     public virtual IContinuedUpdate<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
         => this.Or(true, predicate);
     public virtual IContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -605,6 +641,8 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
     }
     public virtual IContinuedUpdate<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<TEntity>();
         return this.Or(predicateInitializer.Invoke(builder));
     }
@@ -707,34 +745,63 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
     #endregion
 
     #region Where
-    public virtual IUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj)
-    {
-        if (whereObj == null)
-            throw new ArgumentNullException(nameof(whereObj));
-        this.Visitor.WhereBy(whereObj);
-        return this;
-    }
+    public virtual IBulkContinuedUpdate<TEntity> WhereBy(object whereObj)
+        => this.AndBy(whereObj);
+    public virtual IBulkContinuedUpdate<TEntity> WhereBy(bool condition, object whereObj)
+        => this.AndBy(condition, whereObj);
+    public virtual IBulkContinuedUpdate<TEntity> WhereById(object whereKey)
+        => this.AndById(whereKey);
+    public virtual IBulkContinuedUpdate<TEntity> WhereById(bool condition, object whereKey)
+        => this.AndById(condition, whereKey);
+    public virtual IBulkContinuedUpdate<TEntity> WhereByIds(IEnumerable whereKeys)
+        => this.AndByIds(whereKeys);
+    public virtual IBulkContinuedUpdate<TEntity> WhereByIds(bool condition, IEnumerable whereKeys)
+        => this.AndByIds(condition, whereKeys);
     public virtual IBulkContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
-        => this.Where(true, predicate);
+        => this.And(true, predicate);
     public virtual IBulkContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
-    {
-        if (condition)
-        {
-            if (ifPredicate == null)
-                throw new ArgumentNullException(nameof(ifPredicate));
-            this.Visitor.And(ifPredicate);
-        }
-        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
-        return this;
-    }
+        => this.And(condition, ifPredicate, elsePredicate);
     public virtual IBulkContinuedUpdate<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<TEntity>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => this.AndPredicate(predicateInitializer);
     #endregion
 
     #region And
+    public virtual IBulkContinuedUpdate<TEntity> AndBy(object whereObj)
+    {
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+        this.Visitor.AndBy(whereObj);
+        return this;
+    }
+    public virtual IBulkContinuedUpdate<TEntity> AndBy(bool condition, object whereObj)
+    {
+        if (!condition) return this;
+        return this.AndBy(whereObj);
+    }
+    public virtual IBulkContinuedUpdate<TEntity> AndById(object whereKey)
+    {
+        if (whereKey == null)
+            throw new ArgumentNullException(nameof(whereKey));
+        this.Visitor.AndById(whereKey);
+        return this;
+    }
+    public virtual IBulkContinuedUpdate<TEntity> AndById(bool condition, object whereKey)
+    {
+        if (!condition) return this;
+        return this.AndById(whereKey);
+    }
+    public virtual IBulkContinuedUpdate<TEntity> AndByIds(IEnumerable whereKeys)
+    {
+        if (whereKeys == null)
+            throw new ArgumentNullException(nameof(whereKeys));
+        this.Visitor.AndByIds(whereKeys);
+        return this;
+    }
+    public virtual IBulkContinuedUpdate<TEntity> AndByIds(bool condition, IEnumerable whereKeys)
+    {
+        if (!condition) return this;
+        return this.AndByIds(whereKeys);
+    }
     public virtual IBulkContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
     public virtual IBulkContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -750,12 +817,50 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
     }
     public virtual IBulkContinuedUpdate<TEntity> AndPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<TEntity>();
         return this.And(predicateInitializer.Invoke(builder));
     }
     #endregion
 
     #region Or
+    public virtual IBulkContinuedUpdate<TEntity> OrBy(object whereObj)
+    {
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+        this.Visitor.OrBy(whereObj);
+        return this;
+    }
+    public virtual IBulkContinuedUpdate<TEntity> OrBy(bool condition, object whereObj)
+    {
+        if (!condition) return this;
+        return this.OrBy(whereObj);
+    }
+    public virtual IBulkContinuedUpdate<TEntity> OrById(object whereKey)
+    {
+        if (whereKey == null)
+            throw new ArgumentNullException(nameof(whereKey));
+        this.Visitor.OrById(whereKey);
+        return this;
+    }
+    public virtual IBulkContinuedUpdate<TEntity> OrById(bool condition, object whereKey)
+    {
+        if (!condition) return this;
+        return this.OrById(whereKey);
+    }
+    public virtual IBulkContinuedUpdate<TEntity> OrByIds(IEnumerable whereKeys)
+    {
+        if (whereKeys == null)
+            throw new ArgumentNullException(nameof(whereKeys));
+        this.Visitor.OrByIds(whereKeys);
+        return this;
+    }
+    public virtual IBulkContinuedUpdate<TEntity> OrByIds(bool condition, IEnumerable whereKeys)
+    {
+        if (!condition) return this;
+        return this.OrByIds(whereKeys);
+    }
     public virtual IBulkContinuedUpdate<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
         => this.Or(true, predicate);
     public virtual IBulkContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -771,6 +876,8 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
     }
     public virtual IBulkContinuedUpdate<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<TEntity>();
         return this.Or(predicateInitializer.Invoke(builder));
     }
@@ -924,23 +1031,11 @@ public class UpdateJoin<TEntity, T1> : Updated<TEntity>, IUpdateJoin<TEntity, T1
 
     #region Where
     public virtual IUpdateJoin<TEntity, T1> Where(Expression<Func<TEntity, T1, bool>> predicate)
-        => this.Where(true, predicate);
+        => this.And(true, predicate);
     public virtual IUpdateJoin<TEntity, T1> Where(bool condition, Expression<Func<TEntity, T1, bool>> ifPredicate, Expression<Func<TEntity, T1, bool>> elsePredicate = null)
-    {
-        if (condition)
-        {
-            if (ifPredicate == null)
-                throw new ArgumentNullException(nameof(ifPredicate));
-            this.Visitor.And(ifPredicate);
-        }
-        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
-        return this;
-    }
+        => this.And(condition, ifPredicate, elsePredicate);
     public virtual IUpdateJoin<TEntity, T1> WherePredicate(Func<PredicateBuilder<TEntity, T1>, Expression<Func<TEntity, T1, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<TEntity, T1>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => this.AndPredicate(predicateInitializer);
     #endregion
 
     #region And
@@ -959,6 +1054,8 @@ public class UpdateJoin<TEntity, T1> : Updated<TEntity>, IUpdateJoin<TEntity, T1
     }
     public virtual IUpdateJoin<TEntity, T1> AndPredicate(Func<PredicateBuilder<TEntity, T1>, Expression<Func<TEntity, T1, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<TEntity, T1>();
         return this.And(predicateInitializer.Invoke(builder));
     }
@@ -980,6 +1077,8 @@ public class UpdateJoin<TEntity, T1> : Updated<TEntity>, IUpdateJoin<TEntity, T1
     }
     public virtual IUpdateJoin<TEntity, T1> OrPredicate(Func<PredicateBuilder<TEntity, T1>, Expression<Func<TEntity, T1, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<TEntity, T1>();
         return this.Or(predicateInitializer.Invoke(builder));
     }
@@ -1133,23 +1232,11 @@ public class UpdateJoin<TEntity, T1, T2> : Updated<TEntity>, IUpdateJoin<TEntity
 
     #region Where
     public virtual IUpdateJoin<TEntity, T1, T2> Where(Expression<Func<TEntity, T1, T2, bool>> predicate)
-        => this.Where(true, predicate);
+        => this.And(true, predicate);
     public virtual IUpdateJoin<TEntity, T1, T2> Where(bool condition, Expression<Func<TEntity, T1, T2, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, bool>> elsePredicate = null)
-    {
-        if (condition)
-        {
-            if (ifPredicate == null)
-                throw new ArgumentNullException(nameof(ifPredicate));
-            this.Visitor.And(ifPredicate);
-        }
-        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
-        return this;
-    }
+        => this.And(condition, ifPredicate, elsePredicate);
     public virtual IUpdateJoin<TEntity, T1, T2> WherePredicate(Func<PredicateBuilder<TEntity, T1, T2>, Expression<Func<TEntity, T1, T2, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<TEntity, T1, T2>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => this.AndPredicate(predicateInitializer);
     #endregion
 
     #region And
@@ -1168,6 +1255,8 @@ public class UpdateJoin<TEntity, T1, T2> : Updated<TEntity>, IUpdateJoin<TEntity
     }
     public virtual IUpdateJoin<TEntity, T1, T2> AndPredicate(Func<PredicateBuilder<TEntity, T1, T2>, Expression<Func<TEntity, T1, T2, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<TEntity, T1, T2>();
         return this.And(predicateInitializer.Invoke(builder));
     }
@@ -1189,6 +1278,8 @@ public class UpdateJoin<TEntity, T1, T2> : Updated<TEntity>, IUpdateJoin<TEntity
     }
     public virtual IUpdateJoin<TEntity, T1, T2> OrPredicate(Func<PredicateBuilder<TEntity, T1, T2>, Expression<Func<TEntity, T1, T2, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<TEntity, T1, T2>();
         return this.Or(predicateInitializer.Invoke(builder));
     }
@@ -1342,23 +1433,11 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateJoin<TEn
 
     #region Where
     public virtual IUpdateJoin<TEntity, T1, T2, T3> Where(Expression<Func<TEntity, T1, T2, T3, bool>> predicate)
-        => this.Where(true, predicate);
+        => this.And(true, predicate);
     public virtual IUpdateJoin<TEntity, T1, T2, T3> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, bool>> elsePredicate = null)
-    {
-        if (condition)
-        {
-            if (ifPredicate == null)
-                throw new ArgumentNullException(nameof(ifPredicate));
-            this.Visitor.And(ifPredicate);
-        }
-        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
-        return this;
-    }
+        => this.And(condition, ifPredicate, elsePredicate);
     public virtual IUpdateJoin<TEntity, T1, T2, T3> WherePredicate(Func<PredicateBuilder<TEntity, T1, T2, T3>, Expression<Func<TEntity, T1, T2, T3, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<TEntity, T1, T2, T3>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => this.AndPredicate(predicateInitializer);
     #endregion
 
     #region And
@@ -1377,6 +1456,8 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateJoin<TEn
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3> AndPredicate(Func<PredicateBuilder<TEntity, T1, T2, T3>, Expression<Func<TEntity, T1, T2, T3, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<TEntity, T1, T2, T3>();
         return this.And(predicateInitializer.Invoke(builder));
     }
@@ -1398,6 +1479,8 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateJoin<TEn
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3> OrPredicate(Func<PredicateBuilder<TEntity, T1, T2, T3>, Expression<Func<TEntity, T1, T2, T3, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<TEntity, T1, T2, T3>();
         return this.Or(predicateInitializer.Invoke(builder));
     }
@@ -1551,23 +1634,11 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateJoin
 
     #region Where
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> Where(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate)
-        => this.Where(true, predicate);
+        => this.And(true, predicate);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, bool>> elsePredicate = null)
-    {
-        if (condition)
-        {
-            if (ifPredicate == null)
-                throw new ArgumentNullException(nameof(ifPredicate));
-            this.Visitor.And(ifPredicate);
-        }
-        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
-        return this;
-    }
+        => this.And(condition, ifPredicate, elsePredicate);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> WherePredicate(Func<PredicateBuilder<TEntity, T1, T2, T3, T4>, Expression<Func<TEntity, T1, T2, T3, T4, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<TEntity, T1, T2, T3, T4>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => this.AndPredicate(predicateInitializer);
     #endregion
 
     #region And
@@ -1586,6 +1657,8 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateJoin
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> AndPredicate(Func<PredicateBuilder<TEntity, T1, T2, T3, T4>, Expression<Func<TEntity, T1, T2, T3, T4, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<TEntity, T1, T2, T3, T4>();
         return this.And(predicateInitializer.Invoke(builder));
     }
@@ -1607,6 +1680,8 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateJoin
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> OrPredicate(Func<PredicateBuilder<TEntity, T1, T2, T3, T4>, Expression<Func<TEntity, T1, T2, T3, T4, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<TEntity, T1, T2, T3, T4>();
         return this.Or(predicateInitializer.Invoke(builder));
     }
@@ -1741,23 +1816,11 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdate
 
     #region Where
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate)
-        => this.Where(true, predicate);
+        => this.And(true, predicate);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> elsePredicate = null)
-    {
-        if (condition)
-        {
-            if (ifPredicate == null)
-                throw new ArgumentNullException(nameof(ifPredicate));
-            this.Visitor.And(ifPredicate);
-        }
-        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
-        return this;
-    }
+        => this.And(condition, ifPredicate, elsePredicate);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> WherePredicate(Func<PredicateBuilder<TEntity, T1, T2, T3, T4, T5>, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<TEntity, T1, T2, T3, T4, T5>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => this.AndPredicate(predicateInitializer);
     #endregion
 
     #region And
@@ -1776,6 +1839,8 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdate
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> AndPredicate(Func<PredicateBuilder<TEntity, T1, T2, T3, T4, T5>, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<TEntity, T1, T2, T3, T4, T5>();
         return this.And(predicateInitializer.Invoke(builder));
     }
@@ -1797,6 +1862,8 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdate
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> OrPredicate(Func<PredicateBuilder<TEntity, T1, T2, T3, T4, T5>, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<TEntity, T1, T2, T3, T4, T5>();
         return this.Or(predicateInitializer.Invoke(builder));
     }

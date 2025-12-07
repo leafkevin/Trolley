@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -22,7 +23,12 @@ public class MultiQueryBase : QueryInternal, IMultiQueryBase
     #endregion
 
     #region Exists
-    public virtual IMultipleQuery Exists() => this.QueryScalar<bool>("COUNT(1)", "COUNT_VALUE");
+    public virtual IMultipleQuery Exists()
+    {
+        this.Visitor.Select("1", null);
+        this.Visitor.Take(1);
+        return this.QueryScalar<bool>();
+    }
     #endregion
 
     #region Count
@@ -55,6 +61,12 @@ public class MultiQueryBase : QueryInternal, IMultiQueryBase
     #endregion
 
     #region QueryScalar
+    protected IMultipleQuery QueryScalar<TTarget>()
+    {
+        var sql = this.Visitor.BuildSql(true, out _);
+        this.MultipleQuery.AddReader(typeof(TTarget), sql, ReaderResultType.Value);
+        return this.MultipleQuery;
+    }
     protected IMultipleQuery QueryScalar<TTarget>(string sqlFormat, string shardingFieldAlias)
     {
         if (string.IsNullOrEmpty(sqlFormat))
@@ -63,7 +75,7 @@ public class MultiQueryBase : QueryInternal, IMultiQueryBase
         this.Visitor.AggFieldAlias = shardingFieldAlias;
         this.Visitor.Select(sqlFormat, null);
         var sql = this.Visitor.BuildSql(true, out _);
-        this.MultipleQuery.AddReader(typeof(TTarget), sql, true);
+        this.MultipleQuery.AddReader(typeof(TTarget), sql, ReaderResultType.Value);
         return this.MultipleQuery;
     }
     protected IMultipleQuery QueryScalar<TTarget>(string sqlFormat, string shardingFieldAlias, Expression fieldExpr)
@@ -76,7 +88,7 @@ public class MultiQueryBase : QueryInternal, IMultiQueryBase
         this.Visitor.AggFieldAlias = shardingFieldAlias;
         this.Visitor.Select(sqlFormat, fieldExpr);
         var sql = this.Visitor.BuildSql(true, out _);
-        this.MultipleQuery.AddReader(typeof(TTarget), sql, true);
+        this.MultipleQuery.AddReader(typeof(TTarget), sql, ReaderResultType.Value);
         return this.MultipleQuery;
     }
     #endregion
@@ -91,22 +103,22 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #region Sharding
     public virtual IMultiQuery<T> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(false, tableNames);
+        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IMultiQuery<T> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(false, tableNameGetter);
+        this.Visitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameGetter);
         return this;
     }
     public virtual IMultiQuery<T> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValues);
+        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IMultiQuery<T> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(false, fieldValues);
+        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IMultiQuery<T> UseUnionShardingTable()
@@ -254,24 +266,60 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #endregion
 
     #region Where
+    public virtual IMultiQuery<T> WhereBy(object whereObj)
+      => this.AndBy(whereObj);
+    public virtual IMultiQuery<T> WhereBy(bool condition, object whereObj)
+        => this.AndBy(condition, whereObj);
+    public virtual IMultiQuery<T> WhereById(object whereKey)
+        => this.AndById(whereKey);
+    public virtual IMultiQuery<T> WhereById(bool condition, object whereKey)
+        => this.AndById(condition, whereKey);
+    public virtual IMultiQuery<T> WhereByIds(IEnumerable whereKeys)
+        => this.AndByIds(whereKeys);
+    public virtual IMultiQuery<T> WhereByIds(bool condition, IEnumerable whereKeys)
+        => this.AndByIds(condition, whereKeys);
     public virtual IMultiQuery<T> Where(Expression<Func<T, bool>> predicate)
-    {
-        base.WhereInternal(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public virtual IMultiQuery<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
-    {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => this.And(condition, ifPredicate, elsePredicate);
     public virtual IMultiQuery<T> WherePredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => this.AndPredicate(predicateInitializer);
     #endregion
 
     #region And
+    public virtual IMultiQuery<T> AndBy(object whereObj)
+    {
+        base.AndByInternal(whereObj);
+        return this;
+    }
+    public virtual IMultiQuery<T> AndBy(bool condition, object whereObj)
+    {
+        if (!condition) return this;
+        base.AndByInternal(whereObj);
+        return this;
+    }
+    public virtual IMultiQuery<T> AndById(object whereKey)
+    {
+        base.AndByIdInternal(whereKey);
+        return this;
+    }
+    public virtual IMultiQuery<T> AndById(bool condition, object whereKey)
+    {
+        if (!condition) return this;
+        base.AndByIdInternal(whereKey);
+        return this;
+    }
+    public virtual IMultiQuery<T> AndByIds(IEnumerable whereKeys)
+    {
+        base.AndByIdsInternal(whereKeys);
+        return this;
+    }
+    public virtual IMultiQuery<T> AndByIds(bool condition, IEnumerable whereKeys)
+    {
+        if (!condition) return this;
+        base.AndByIdsInternal(whereKeys);
+        return this;
+    }
     public virtual IMultiQuery<T> And(Expression<Func<T, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -284,12 +332,47 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     }
     public virtual IMultiQuery<T> AndPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<T>();
         return this.And(predicateInitializer.Invoke(builder));
     }
     #endregion
 
     #region Or
+    public virtual IMultiQuery<T> OrBy(object whereObj)
+    {
+        base.OrByInternal(whereObj);
+        return this;
+    }
+    public virtual IMultiQuery<T> OrBy(bool condition, object whereObj)
+    {
+        if (!condition) return this;
+        base.OrByInternal(whereObj);
+        return this;
+    }
+    public virtual IMultiQuery<T> OrById(object whereKey)
+    {
+        base.OrByIdInternal(whereKey);
+        return this;
+    }
+    public virtual IMultiQuery<T> OrById(bool condition, object whereKey)
+    {
+        if (!condition) return this;
+        base.OrByIdInternal(whereKey);
+        return this;
+    }
+    public virtual IMultiQuery<T> OrByIds(IEnumerable whereKeys)
+    {
+        base.OrByIdsInternal(whereKeys);
+        return this;
+    }
+    public virtual IMultiQuery<T> OrByIds(bool condition, IEnumerable whereKeys)
+    {
+        if (!condition) return this;
+        base.OrByIdsInternal(whereKeys);
+        return this;
+    }
     public virtual IMultiQuery<T> Or(Expression<Func<T, bool>> predicate)
     {
         base.OrInternal(predicate);
@@ -302,6 +385,8 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     }
     public virtual IMultiQuery<T> OrPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<T>();
         return this.Or(predicateInitializer.Invoke(builder));
     }
@@ -345,6 +430,11 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         Expression<Func<T, T>> defaultExpr = f => f;
         this.Visitor.Select(null, defaultExpr);
         return this;
+    }
+    public virtual IMultiQuery<TTarget> Select<TTarget>(string rawFields)
+    {
+        base.SelectInternal(rawFields);
+        return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     public virtual IMultiQuery<TTarget> SelectTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
     {
@@ -412,27 +502,18 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #endregion
 
     #region First/ToList/ToPageList/ToDictionary
-    public virtual IMultipleQuery First() => this.QueryResult(true);
-    public virtual IMultipleQuery ToList() => this.QueryResult(false);
-    public virtual IMultipleQuery ToPageList() => this.QueryResult(false);
-    public virtual IMultipleQuery ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector) where TKey : notnull
-    {
-        if (keySelector == null)
-            throw new ArgumentNullException(nameof(keySelector));
-        if (valueSelector == null)
-            throw new ArgumentNullException(nameof(valueSelector));
-
-        return this.QueryResult(false);
-    }
+    public virtual IMultipleQuery First() => this.QueryResult(ReaderResultType.Entity, false);
+    public virtual IMultipleQuery ToList() => this.QueryResult(ReaderResultType.List, false);
+    public virtual IMultipleQuery ToPageList() => this.QueryResult(ReaderResultType.List, false);
     #endregion
 
     #region QueryResult
-    private IMultipleQuery QueryResult(bool isSingle)
+    private IMultipleQuery QueryResult(ReaderResultType resultType, bool isExists)
     {
         Expression<Func<T, T>> defaultExpr = f => f;
         this.Visitor.SelectDefault(defaultExpr);
-        var sql = this.Visitor.BuildSql(true, out var readerFields);
-        this.MultipleQuery.AddReader(typeof(T), sql, isSingle, this.Visitor, this.Visitor.PageNumber, this.Visitor.PageSize);
+        var sql = this.Visitor.BuildSql(true, out _);
+        this.MultipleQuery.AddReader(typeof(T), sql, resultType, isExists, this.Visitor);
         return this.MultipleQuery;
     }
     #endregion

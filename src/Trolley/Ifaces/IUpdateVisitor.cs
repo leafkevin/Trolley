@@ -43,11 +43,15 @@ public interface IUpdateVisitor : IDisposable
     void OnlyFields(Expression fieldsSelector);
     void SetBulk(IEnumerable updateObjs, int bulkCount);
 
-    void WhereBy(object whereObj);
-    void WhereById(object whereKey);
-    void WhereByIds(IEnumerable whereKeys);
+    void AndBy(object whereObj);
+    void AndById(object whereKey);
+    void AndByIds(IEnumerable whereKeys);
     void And(Expression whereExpr);
+    void OrBy(object whereObj);
+    void OrById(object whereKey);
+    void OrByIds(IEnumerable whereKeys);
     void Or(Expression whereExpr);
+
     DataTable ToDataTable(Type updateObjType, IEnumerable entities, List<(MemberMap, Func<object, object>)> memberMappers, string tableName = null);
     List<(MemberMap, Func<object, object>)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper, bool isUpdate = false);
     string BuildTableShardingsSql();

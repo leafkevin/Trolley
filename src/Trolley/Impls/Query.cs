@@ -144,9 +144,18 @@ public class QueryBase : QueryInternal, IQueryBase
     #endregion
 
     #region Exists
-    public virtual bool Exists() => this.QueryScalar<int>("COUNT(*)", "COUNT_VALUE") > 0;
+    public virtual bool Exists()
+    {
+        this.Visitor.Select("1");
+        this.Visitor.Take(1);
+        return this.DbContext.QueryExists(this.Visitor);
+    }
     public virtual async Task<bool> ExistsAsync(CancellationToken cancellationToken = default)
-        => await this.QueryScalarAsync<int>("COUNT(*)", "COUNT_VALUE", null, cancellationToken) > 0;
+    {
+        this.Visitor.Select("1");
+        this.Visitor.Take(1);
+        return await this.DbContext.QueryExistsAsync(this.Visitor, cancellationToken);
+    }
     #endregion
 
     #region ToSql
@@ -348,64 +357,59 @@ public class Query<T> : QueryBase, IQuery<T>
 
     #region Where
     public virtual IQuery<T> WhereBy(object whereObj)
-    {
-        if (whereObj == null)
-            throw new ArgumentNullException(nameof(whereObj));
-
-        this.Visitor.WhereBy(whereObj);
-        return this;
-    }
+        => this.AndBy(whereObj);
     public virtual IQuery<T> WhereBy(bool condition, object whereObj)
-    {
-        if (!condition) return this;
-        return this.WhereBy(whereObj);
-    }
+        => this.AndBy(condition, whereObj);
     public virtual IQuery<T> WhereById(object whereKey)
-    {
-        if (whereKey == null)
-            throw new ArgumentNullException(nameof(whereKey));
-
-        this.Visitor.WhereById(whereKey);
-        return this;
-    }
+        => this.AndById(whereKey);
     public virtual IQuery<T> WhereById(bool condition, object whereKey)
-    {
-        if (!condition) return this;
-        return this.WhereById(whereKey);
-    }
+        => this.AndById(condition, whereKey);
     public virtual IQuery<T> WhereByIds(IEnumerable whereKeys)
-    {
-        if (whereKeys == null)
-            throw new ArgumentNullException(nameof(whereKeys));
-
-        this.Visitor.WhereByIds(whereKeys);
-        return this;
-    }
+        => this.AndByIds(whereKeys);
     public virtual IQuery<T> WhereByIds(bool condition, IEnumerable whereKeys)
-    {
-        if (!condition) return this;
-        return this.WhereByIds(whereKeys);
-    }
+        => this.AndByIds(condition, whereKeys);
     public virtual IQuery<T> Where(Expression<Func<T, bool>> predicate)
-    {
-        base.WhereInternal(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public virtual IQuery<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
-    {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => this.And(condition, ifPredicate, elsePredicate);
     public virtual IQuery<T> WherePredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
-    {
-        if (predicateInitializer == null)
-            throw new ArgumentNullException(nameof(predicateInitializer));
-        var builder = new PredicateBuilder<T>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => this.AndPredicate(predicateInitializer);
     #endregion
 
     #region And
+    public virtual IQuery<T> AndBy(object whereObj)
+    {
+        base.AndByInternal(whereObj);
+        return this;
+    }
+    public virtual IQuery<T> AndBy(bool condition, object whereObj)
+    {
+        if (!condition) return this;
+        base.AndByInternal(whereObj);
+        return this;
+    }
+    public virtual IQuery<T> AndById(object whereKey)
+    {
+        base.AndByIdInternal(whereKey);
+        return this;
+    }
+    public virtual IQuery<T> AndById(bool condition, object whereKey)
+    {
+        if (!condition) return this;
+        base.AndByIdInternal(whereKey);
+        return this;
+    }
+    public virtual IQuery<T> AndByIds(IEnumerable whereKeys)
+    {
+        base.AndByIdsInternal(whereKeys);
+        return this;
+    }
+    public virtual IQuery<T> AndByIds(bool condition, IEnumerable whereKeys)
+    {
+        if (!condition) return this;
+        base.AndByIdsInternal(whereKeys);
+        return this;
+    }
     public virtual IQuery<T> And(Expression<Func<T, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -418,12 +422,47 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     public virtual IQuery<T> AndPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<T>();
         return this.And(predicateInitializer.Invoke(builder));
     }
     #endregion
 
     #region Or
+    public virtual IQuery<T> OrBy(object whereObj)
+    {
+        base.OrByInternal(whereObj);
+        return this;
+    }
+    public virtual IQuery<T> OrBy(bool condition, object whereObj)
+    {
+        if (!condition) return this;
+        base.OrByInternal(whereObj);
+        return this;
+    }
+    public virtual IQuery<T> OrById(object whereKey)
+    {
+        base.OrByIdInternal(whereKey);
+        return this;
+    }
+    public virtual IQuery<T> OrById(bool condition, object whereKey)
+    {
+        if (!condition) return this;
+        base.OrByIdInternal(whereKey);
+        return this;
+    }
+    public virtual IQuery<T> OrByIds(IEnumerable whereKeys)
+    {
+        base.OrByIdsInternal(whereKeys);
+        return this;
+    }
+    public virtual IQuery<T> OrByIds(bool condition, IEnumerable whereKeys)
+    {
+        if (!condition) return this;
+        base.OrByIdsInternal(whereKeys);
+        return this;
+    }
     public virtual IQuery<T> Or(Expression<Func<T, bool>> predicate)
     {
         base.OrInternal(predicate);
@@ -436,6 +475,8 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     public virtual IQuery<T> OrPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<T>();
         return this.Or(predicateInitializer.Invoke(builder));
     }
@@ -497,6 +538,11 @@ public class Query<T> : QueryBase, IQuery<T>
         Expression<Func<T, T>> defaultExpr = f => f;
         this.Visitor.Select(null, defaultExpr);
         return this;
+    }
+    public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
+    {
+        base.SelectInternal(rawFields);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
     {

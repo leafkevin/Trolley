@@ -47,67 +47,62 @@ public class Delete<TEntity> : Deleted<TEntity>, IDelete<TEntity>
 
     #region Where
     public virtual IDelete<TEntity> WhereBy(object whereObj)
-    {
-        if (whereObj == null)
-            throw new ArgumentNullException(nameof(whereObj));
-
-        this.Visitor.WhereBy(whereObj);
-        return this;
-    }
+        => this.AndBy(whereObj);
     public virtual IDelete<TEntity> WhereBy(bool condition, object whereObj)
-    {
-        if (!condition) return this;
-        return this.WhereBy(whereObj);
-    }
+        => this.AndBy(condition, whereObj);
     public virtual IDelete<TEntity> WhereById(object whereKey)
-    {
-        if (whereKey == null)
-            throw new ArgumentNullException(nameof(whereKey));
-
-        this.Visitor.WhereById(whereKey);
-        return this;
-    }
+        => this.AndById(whereKey);
     public virtual IDelete<TEntity> WhereById(bool condition, object whereKey)
-    {
-        if (!condition) return this;
-        return this.WhereById(whereKey);
-    }
+        => this.AndById(condition, whereKey);
     public virtual IDelete<TEntity> WhereByIds(IEnumerable whereKeys)
-    {
-        if (whereKeys == null)
-            throw new ArgumentNullException(nameof(whereKeys));
-
-        this.Visitor.WhereByIds(whereKeys);
-        return this;
-    }
+        => this.AndByIds(whereKeys);
     public virtual IDelete<TEntity> WhereByIds(bool condition, IEnumerable whereKeys)
-    {
-        if (!condition) return this;
-        return this.WhereByIds(whereKeys);
-    }
+        => this.AndByIds(condition, whereKeys);
     public virtual IDelete<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
-        => this.Where(true, predicate);
+        => this.And(true, predicate);
     public virtual IDelete<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
-    {
-        if (condition)
-        {
-            if (ifPredicate == null)
-                throw new ArgumentNullException(nameof(ifPredicate));
-            this.Visitor.And(ifPredicate);
-        }
-        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
-        return this;
-    }
+        => this.And(condition, ifPredicate, elsePredicate);
     public virtual IDelete<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
-    {
-        if (predicateInitializer == null)
-            throw new ArgumentNullException(nameof(predicateInitializer));
-        var builder = new PredicateBuilder<TEntity>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => this.AndPredicate(predicateInitializer);
     #endregion
 
     #region And
+    public virtual IDelete<TEntity> AndBy(object whereObj)
+    {
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+        this.Visitor.AndBy(whereObj);
+        return this;
+    }
+    public virtual IDelete<TEntity> AndBy(bool condition, object whereObj)
+    {
+        if (!condition) return this;
+        return this.AndBy(whereObj);
+    }
+    public virtual IDelete<TEntity> AndById(object whereKey)
+    {
+        if (whereKey == null)
+            throw new ArgumentNullException(nameof(whereKey));
+        this.Visitor.AndById(whereKey);
+        return this;
+    }
+    public virtual IDelete<TEntity> AndById(bool condition, object whereKey)
+    {
+        if (!condition) return this;
+        return this.AndById(whereKey);
+    }
+    public virtual IDelete<TEntity> AndByIds(IEnumerable whereKeys)
+    {
+        if (whereKeys == null)
+            throw new ArgumentNullException(nameof(whereKeys));
+        this.Visitor.AndByIds(whereKeys);
+        return this;
+    }
+    public virtual IDelete<TEntity> AndByIds(bool condition, IEnumerable whereKeys)
+    {
+        if (!condition) return this;
+        return this.AndByIds(whereKeys);
+    }
     public virtual IDelete<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
     public virtual IDelete<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -123,12 +118,50 @@ public class Delete<TEntity> : Deleted<TEntity>, IDelete<TEntity>
     }
     public virtual IDelete<TEntity> AndPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<TEntity>();
         return this.And(predicateInitializer.Invoke(builder));
     }
     #endregion
 
     #region Or
+    public virtual IDelete<TEntity> OrBy(object whereObj)
+    {
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+        this.Visitor.OrBy(whereObj);
+        return this;
+    }
+    public virtual IDelete<TEntity> OrBy(bool condition, object whereObj)
+    {
+        if (!condition) return this;
+        return this.OrBy(whereObj);
+    }
+    public virtual IDelete<TEntity> OrById(object whereKey)
+    {
+        if (whereKey == null)
+            throw new ArgumentNullException(nameof(whereKey));
+        this.Visitor.OrById(whereKey);
+        return this;
+    }
+    public virtual IDelete<TEntity> OrById(bool condition, object whereKey)
+    {
+        if (!condition) return this;
+        return this.OrById(whereKey);
+    }
+    public virtual IDelete<TEntity> OrByIds(IEnumerable whereKeys)
+    {
+        if (whereKeys == null)
+            throw new ArgumentNullException(nameof(whereKeys));
+        this.Visitor.OrByIds(whereKeys);
+        return this;
+    }
+    public virtual IDelete<TEntity> OrByIds(bool condition, IEnumerable whereKeys)
+    {
+        if (!condition) return this;
+        return this.OrByIds(whereKeys);
+    }
     public virtual IDelete<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
         => this.Or(true, predicate);
     public virtual IDelete<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -144,6 +177,8 @@ public class Delete<TEntity> : Deleted<TEntity>, IDelete<TEntity>
     }
     public virtual IDelete<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<TEntity>();
         return this.Or(predicateInitializer.Invoke(builder));
     }

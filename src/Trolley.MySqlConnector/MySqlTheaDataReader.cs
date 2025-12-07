@@ -38,7 +38,7 @@ class MySqlTheaDataReader : ITheaDataReader
     }
     public void Dispose() => this.reader.Dispose();
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-	public ValueTask DisposeAsync() => this.reader.DisposeAsync();
+    public ValueTask DisposeAsync() => this.reader.DisposeAsync();
 #else
     public ValueTask DisposeAsync() => new ValueTask(this.reader.DisposeAsync());
 #endif

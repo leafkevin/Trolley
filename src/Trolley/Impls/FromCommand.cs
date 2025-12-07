@@ -179,21 +179,11 @@ public class FromCommand<TEntity, T> : FromCommand, IFromCommand<TEntity, T>
     #endregion
 
     #region Where
-    public virtual IFromCommand<TEntity, T> Where(Expression<Func<T, bool>> predicate)
-    {
-        base.WhereInternal(predicate);
-        return this;
-    }
+    public virtual IFromCommand<TEntity, T> Where(Expression<Func<T, bool>> predicate) => this.And(predicate);
     public virtual IFromCommand<TEntity, T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
-    {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => this.And(condition, ifPredicate, elsePredicate);
     public virtual IFromCommand<TEntity, T> WherePredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => this.AndPredicate(predicateInitializer);
     #endregion
 
     #region And
@@ -209,6 +199,8 @@ public class FromCommand<TEntity, T> : FromCommand, IFromCommand<TEntity, T>
     }
     public virtual IFromCommand<TEntity, T> AndPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<T>();
         return this.And(predicateInitializer.Invoke(builder));
     }
@@ -227,6 +219,8 @@ public class FromCommand<TEntity, T> : FromCommand, IFromCommand<TEntity, T>
     }
     public virtual IFromCommand<TEntity, T> OrPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<T>();
         return this.Or(predicateInitializer.Invoke(builder));
     }
@@ -473,21 +467,11 @@ public class FromCommand<TEntity, T1, T2> : FromCommand, IFromCommand<TEntity, T
     #endregion
 
     #region Where
-    public virtual IFromCommand<TEntity, T1, T2> Where(Expression<Func<T1, T2, bool>> predicate)
-    {
-        base.WhereInternal(predicate);
-        return this;
-    }
+    public virtual IFromCommand<TEntity, T1, T2> Where(Expression<Func<T1, T2, bool>> predicate) => this.And(predicate);
     public virtual IFromCommand<TEntity, T1, T2> Where(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null)
-    {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => this.And(condition, ifPredicate, elsePredicate);
     public virtual IFromCommand<TEntity, T1, T2> WherePredicate(Func<PredicateBuilder<T1, T2>, Expression<Func<T1, T2, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T1, T2>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => this.AndPredicate(predicateInitializer);
     #endregion
 
     #region And
@@ -503,6 +487,8 @@ public class FromCommand<TEntity, T1, T2> : FromCommand, IFromCommand<TEntity, T
     }
     public virtual IFromCommand<TEntity, T1, T2> AndPredicate(Func<PredicateBuilder<T1, T2>, Expression<Func<T1, T2, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<T1, T2>();
         return this.And(predicateInitializer.Invoke(builder));
     }
@@ -521,6 +507,8 @@ public class FromCommand<TEntity, T1, T2> : FromCommand, IFromCommand<TEntity, T
     }
     public virtual IFromCommand<TEntity, T1, T2> OrPredicate(Func<PredicateBuilder<T1, T2>, Expression<Func<T1, T2, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<T1, T2>();
         return this.Or(predicateInitializer.Invoke(builder));
     }
@@ -724,21 +712,11 @@ public class FromCommand<TEntity, T1, T2, T3> : FromCommand, IFromCommand<TEntit
     #endregion
 
     #region Where
-    public virtual IFromCommand<TEntity, T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate)
-    {
-        base.WhereInternal(predicate);
-        return this;
-    }
+    public virtual IFromCommand<TEntity, T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate) => this.And(predicate);
     public virtual IFromCommand<TEntity, T1, T2, T3> Where(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
-    {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => this.And(condition, ifPredicate, elsePredicate);
     public virtual IFromCommand<TEntity, T1, T2, T3> WherePredicate(Func<PredicateBuilder<T1, T2, T3>, Expression<Func<T1, T2, T3, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T1, T2, T3>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => this.AndPredicate(predicateInitializer);
     #endregion
 
     #region And
@@ -754,6 +732,8 @@ public class FromCommand<TEntity, T1, T2, T3> : FromCommand, IFromCommand<TEntit
     }
     public virtual IFromCommand<TEntity, T1, T2, T3> AndPredicate(Func<PredicateBuilder<T1, T2, T3>, Expression<Func<T1, T2, T3, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<T1, T2, T3>();
         return this.And(predicateInitializer.Invoke(builder));
     }
@@ -772,6 +752,8 @@ public class FromCommand<TEntity, T1, T2, T3> : FromCommand, IFromCommand<TEntit
     }
     public virtual IFromCommand<TEntity, T1, T2, T3> OrPredicate(Func<PredicateBuilder<T1, T2, T3>, Expression<Func<T1, T2, T3, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<T1, T2, T3>();
         return this.Or(predicateInitializer.Invoke(builder));
     }
@@ -975,21 +957,11 @@ public class FromCommand<TEntity, T1, T2, T3, T4> : FromCommand, IFromCommand<TE
     #endregion
 
     #region Where
-    public virtual IFromCommand<TEntity, T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate)
-    {
-        base.WhereInternal(predicate);
-        return this;
-    }
+    public virtual IFromCommand<TEntity, T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate) => this.And(predicate);
     public virtual IFromCommand<TEntity, T1, T2, T3, T4> Where(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
-    {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => this.And(condition, ifPredicate, elsePredicate);
     public virtual IFromCommand<TEntity, T1, T2, T3, T4> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4>, Expression<Func<T1, T2, T3, T4, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T1, T2, T3, T4>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => this.AndPredicate(predicateInitializer);
     #endregion
 
     #region And
@@ -1005,6 +977,8 @@ public class FromCommand<TEntity, T1, T2, T3, T4> : FromCommand, IFromCommand<TE
     }
     public virtual IFromCommand<TEntity, T1, T2, T3, T4> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4>, Expression<Func<T1, T2, T3, T4, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<T1, T2, T3, T4>();
         return this.And(predicateInitializer.Invoke(builder));
     }
@@ -1023,6 +997,8 @@ public class FromCommand<TEntity, T1, T2, T3, T4> : FromCommand, IFromCommand<TE
     }
     public virtual IFromCommand<TEntity, T1, T2, T3, T4> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4>, Expression<Func<T1, T2, T3, T4, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<T1, T2, T3, T4>();
         return this.Or(predicateInitializer.Invoke(builder));
     }
@@ -1226,21 +1202,11 @@ public class FromCommand<TEntity, T1, T2, T3, T4, T5> : FromCommand, IFromComman
     #endregion
 
     #region Where
-    public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
-    {
-        base.WhereInternal(predicate);
-        return this;
-    }
+    public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate) => this.And(predicate);
     public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
-    {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => this.And(condition, ifPredicate, elsePredicate);
     public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5>, Expression<Func<T1, T2, T3, T4, T5, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T1, T2, T3, T4, T5>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => this.AndPredicate(predicateInitializer);
     #endregion
 
     #region And
@@ -1256,6 +1222,8 @@ public class FromCommand<TEntity, T1, T2, T3, T4, T5> : FromCommand, IFromComman
     }
     public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5>, Expression<Func<T1, T2, T3, T4, T5, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<T1, T2, T3, T4, T5>();
         return this.And(predicateInitializer.Invoke(builder));
     }
@@ -1274,6 +1242,8 @@ public class FromCommand<TEntity, T1, T2, T3, T4, T5> : FromCommand, IFromComman
     }
     public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5>, Expression<Func<T1, T2, T3, T4, T5, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<T1, T2, T3, T4, T5>();
         return this.Or(predicateInitializer.Invoke(builder));
     }
@@ -1410,21 +1380,11 @@ public class FromCommand<TEntity, T1, T2, T3, T4, T5, T6> : FromCommand, IFromCo
     #endregion
 
     #region Where
-    public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5, T6> Where(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
-    {
-        base.WhereInternal(predicate);
-        return this;
-    }
+    public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5, T6> Where(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate) => this.And(predicate);
     public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5, T6> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null)
-    {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => this.And(condition, ifPredicate, elsePredicate);
     public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5, T6> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6>, Expression<Func<T1, T2, T3, T4, T5, T6, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => this.AndPredicate(predicateInitializer);
     #endregion
 
     #region And
@@ -1440,6 +1400,8 @@ public class FromCommand<TEntity, T1, T2, T3, T4, T5, T6> : FromCommand, IFromCo
     }
     public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5, T6> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6>, Expression<Func<T1, T2, T3, T4, T5, T6, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6>();
         return this.And(predicateInitializer.Invoke(builder));
     }
@@ -1458,6 +1420,8 @@ public class FromCommand<TEntity, T1, T2, T3, T4, T5, T6> : FromCommand, IFromCo
     }
     public virtual IFromCommand<TEntity, T1, T2, T3, T4, T5, T6> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6>, Expression<Func<T1, T2, T3, T4, T5, T6, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6>();
         return this.Or(predicateInitializer.Invoke(builder));
     }

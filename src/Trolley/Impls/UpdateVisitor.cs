@@ -45,6 +45,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         readerFields = null;
         this.hasOnlyFields = this.OnlyFieldNames != null && this.OnlyFieldNames.Count > 0;
         this.hasIgnoreFields = this.IgnoreFieldNames != null && this.IgnoreFieldNames.Count > 0;
+        if (this.HasWhere) this.WhereBuilder = new();
 
         switch (this.ActionMode)
         {
@@ -134,6 +135,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             }
             var tempDbParameters = new TheaDbParameterCollection();
             this.DbParameters = tempDbParameters;
+            Func<IDataParameterCollection, DbContext, object, string> whereSqlInitializer = null;
             for (int i = 1; i < this.deferredSegments.Count; i++)
             {
                 var deferredSegment = this.deferredSegments[i];
@@ -148,15 +150,32 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     case "SetWith":
                         this.VisitSetWith(deferredSegment.Value);
                         break;
-                    //分区表，二级分区为时间分区，为了提高性能，增加额外的时间条件命中二级时间分区
-                    case "Where":
-                        this.VisitWhere(deferredSegment.Value as Expression);
+                    case "AndBy":
+                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, false, false, false);
+                        this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
                         break;
-                    case "WhereWith":
-                        this.VisitWhereWith(deferredSegment.Value);
+                    case "AndById":
+                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, false);
+                        this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                        break;
+                    case "AndByIds":
+                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, true);
+                        this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
                         break;
                     case "And":
                         this.VisitAnd(deferredSegment.Value as Expression);
+                        break;
+                    case "OrBy":
+                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, false, false, false);
+                        this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                        break;
+                    case "OrById":
+                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, false);
+                        this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                        break;
+                    case "OrByIds":
+                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, true);
+                        this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
                         break;
                     case "Or":
                         this.VisitOr(deferredSegment.Value as Expression);
@@ -203,22 +222,18 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             };
         }
 
-        var shardingType = ShardingTableType.None;
+        var shardingType = tableSegment.ShardingType;
         object shardingTables = tableSegment.Mapper.TableName;
         if (tableSegment.TableShardingInfo != null)
         {
             if (tableSegment.IsSharding)
             {
-                if (!string.IsNullOrEmpty(tableSegment.Body))
+                shardingTables = shardingType switch
                 {
-                    shardingTables = tableSegment.Body;
-                    shardingType = ShardingTableType.SingleTable;
-                }
-                else
-                {
-                    shardingTables = tableSegment.TableNames;
-                    shardingType = ShardingTableType.MultiTable;
-                }
+                    ShardingTableType.SingleTable => tableSegment.Body,
+                    ShardingTableType.MultiTable => tableSegment.TableNames,
+                    _ => tableSegment.Mapper.TableName,
+                };
             }
             else
             {
@@ -234,12 +249,13 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.FieldsBuilder = new();
         this.DbParameters = command.Parameters;
         var tableSegment = this.Tables[0];
+        var entityType = tableSegment.EntityType;
         if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding)
         {
             this.IsNeedSplitShardingTables = true;
             this.ShardingValues = new();
         }
-
+        Func<IDataParameterCollection, DbContext, object, string> whereSqlInitializer = null;
         foreach (var deferredSegment in this.deferredSegments)
         {
             switch (deferredSegment.Type)
@@ -259,14 +275,32 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 case "SetFromField":
                     this.VisitSetFromField(deferredSegment.Value);
                     break;
-                case "Where":
-                    this.VisitWhere(deferredSegment.Value as Expression);
+                case "AndBy":
+                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, false, false, false);
+                    this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
                     break;
-                case "WhereBy":
-                    this.VisitWhereWith(deferredSegment.Value);
+                case "AndById":
+                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, false);
+                    this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                    break;
+                case "AndByIds":
+                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, true);
+                    this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
                     break;
                 case "And":
                     this.VisitAnd(deferredSegment.Value as Expression);
+                    break;
+                case "OrBy":
+                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, false, false, false);
+                    this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                    break;
+                case "OrById":
+                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, false);
+                    this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                    break;
+                case "OrByIds":
+                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, true);
+                    this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
                     break;
                 case "Or":
                     this.VisitOr(deferredSegment.Value as Expression);
@@ -390,52 +424,72 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             Value = (updateObjs, bulkCount)
         });
     }
-    public virtual void WhereBy(object whereObj)
+    public virtual void AndBy(object whereObj)
     {
         this.HasWhere = true;
         this.deferredSegments.Add(new CommandSegment
         {
-            Type = "WhereBy",
+            Type = "AndBy",
             Value = whereObj
         });
     }
-    public virtual void WhereById(object whereKey)
+    public virtual void AndById(object whereKey)
     {
         this.HasWhere = true;
         this.deferredSegments.Add(new CommandSegment
         {
-            Type = "WhereById",
+            Type = "AndById",
             Value = whereKey
         });
     }
-    public virtual void WhereByIds(IEnumerable whereKeys)
+    public virtual void AndByIds(IEnumerable whereKeys)
     {
         this.HasWhere = true;
         this.deferredSegments.Add(new CommandSegment
         {
-            Type = "WhereByIds",
+            Type = "AndByIds",
             Value = whereKeys
-        });
-    }
-    public virtual void Where(Expression whereExpr)
-    {
-        this.HasWhere = true;
-        this.deferredSegments.Add(new CommandSegment
-        {
-            Type = "Where",
-            Value = whereExpr
         });
     }
     public virtual void And(Expression whereExpr)
     {
+        this.HasWhere = true;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "And",
             Value = whereExpr
         });
     }
+    public virtual void OrBy(object whereObj)
+    {
+        this.HasWhere = true;
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "OrBy",
+            Value = whereObj
+        });
+    }
+    public virtual void OrById(object whereKey)
+    {
+        this.HasWhere = true;
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "OrById",
+            Value = whereKey
+        });
+    }
+    public virtual void OrByIds(IEnumerable whereKeys)
+    {
+        this.HasWhere = true;
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "OrByIds",
+            Value = whereKeys
+        });
+    }
     public virtual void Or(Expression whereExpr)
     {
+        this.HasWhere = true;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "Or",
@@ -645,89 +699,23 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         (var sql, _, _) = this.VisitFromQuery(valueSelector as LambdaExpression);
         this.FieldsBuilder.Append($"{this.Tables[0].AliasName}.{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
     }
-    public virtual void VisitWhereWith(object whereObj)
-    {
-        var entityType = this.Tables[0].EntityType;
-        var whereObjType = whereObj.GetType();
-        var whereSqlSetter = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjType, true, false, true)
-            as Func<IDataParameterCollection, DbContext, object, string>;
-        var conditionSql = whereSqlSetter.Invoke(this.DbParameters, this.DbContext, whereObj);
-
-        this.WhereBuilder ??= new();
-        if (this.WhereBuilder.Length > 0)
-        {
-            if (this.LastWhereOperationType == OperationType.Or)
-                this.WhereBuilder.Append($"({this.WhereBuilder})");
-            this.WhereBuilder.Append(" AND " + conditionSql);
-            this.LastWhereOperationType = OperationType.And;
-        }
-        else
-        {
-            this.WhereBuilder.Append(conditionSql);
-            this.LastWhereOperationType = OperationType.None;
-        }
-    }
-    public virtual void VisitWhere(Expression whereExpr)
-    {
-        this.WhereBuilder ??= new();
-        if (this.WhereBuilder.Length > 0)
-        {
-            this.VisitAnd(whereExpr);
-            return;
-        }
-        this.IsWhere = true;
-        var lambdaExpr = whereExpr as LambdaExpression;
-        this.InitTableAlias(lambdaExpr);
-        this.LastWhereOperationType = OperationType.None;
-        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        this.WhereBuilder.Append(conditionSql);
-        this.LastWhereOperationType = operationType;
-        this.IsWhere = false;
-    }
     public virtual void VisitAnd(Expression whereExpr)
     {
         this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
-        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        if (this.WhereBuilder.Length > 0)
-        {
-            if (this.LastWhereOperationType == OperationType.Or)
-                this.WhereBuilder.Append($"({this.WhereBuilder})");
-            if (operationType == OperationType.Or)
-                conditionSql = $"({conditionSql})";
-            this.WhereBuilder.Append(" AND " + conditionSql);
-            this.LastWhereOperationType = OperationType.And;
-        }
-        else
-        {
-            this.WhereBuilder.Append(conditionSql);
-            this.LastWhereOperationType = operationType;
-        }
+        var whereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
         this.IsWhere = false;
+        this.VisitAndSql(whereSql, operationType);
     }
     public virtual void VisitOr(Expression whereExpr)
     {
         this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
-        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-
-        if (this.WhereBuilder.Length > 0)
-        {
-            if (this.LastWhereOperationType == OperationType.And)
-                this.WhereBuilder.Append($"({this.WhereBuilder})");
-            if (operationType == OperationType.And)
-                conditionSql = $"({conditionSql})";
-            this.WhereBuilder.Append(" OR " + conditionSql);
-            this.LastWhereOperationType = OperationType.Or;
-        }
-        else
-        {
-            this.WhereBuilder.Append(conditionSql);
-            this.LastWhereOperationType = operationType;
-        }
+        var whereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
         this.IsWhere = false;
+        this.VisitOrSql(whereSql, operationType);
     }
     public virtual void VisitFields(Expression fieldsSelector, Action<MemberMap> fieldsAction)
     {

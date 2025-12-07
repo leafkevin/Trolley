@@ -120,57 +120,39 @@ public class MultipleQuery : IMultipleQuery
     #region QueryScalar
     public virtual IMultipleQuery QueryScalar<TValue>(string rawSql)
     {
-        this.CreateReader(rawSql, typeof(TValue), false);
+        this.CreateRawReader(rawSql, typeof(TValue), ReaderResultType.Value, false);
         return this;
     }
     public virtual IMultipleQuery QueryScalar<TValue>(string rawSql, object parameters)
     {
-        this.CreateReader(rawSql, parameters, typeof(TValue), false);
+        this.CreateRawReader(rawSql, parameters, typeof(TValue), ReaderResultType.Value, false);
         return this;
     }
     public virtual IMultipleQuery QueryScalar<TValue>(string rawSql, List<IDbDataParameter> parameters)
     {
-        this.CreateReader(rawSql, parameters, typeof(TValue), false);
+        this.CreateRawParametersReader(rawSql, parameters, typeof(TValue), ReaderResultType.Value, false);
         return this;
     }
     #endregion
 
-    #region GetById
-    public virtual IMultipleQuery GetById<TEntity>(object whereObj)
+    #region QueryById
+    public virtual IMultipleQuery QueryById<TEntity>(object whereObj)
     {
-        this.CreateReader(whereObj, typeof(TEntity), false);
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+        var entityType = typeof(TEntity);
+        this.CreateQueryReader(whereObj, entityType, entityType, false, 1, true, false, ReaderResultType.Entity);
         return this;
     }
-    #endregion
+    #endregion     
 
-    #region GetByIds
-    public virtual IMultipleQuery GetByIds<TEntity>(IEnumerable whereObjs)
+    #region QueryByIds
+    public virtual IMultipleQuery QueryByIds<TEntity>(IEnumerable whereObjs)
     {
         if (whereObjs == null)
             throw new ArgumentNullException(nameof(whereObjs));
         var entityType = typeof(TEntity);
-        bool isEmpty = true;
-        foreach (var whereObj in whereObjs)
-        {
-            isEmpty = false;
-            break;
-        }
-        if (isEmpty) throw new Exception("多主键ID查询，whereObjs参数至少要有一条数据");
-
-        (var isInExpr, var headSql, var commandInitializer) = ((bool, string, object))RepositoryHelper.BuildQueryWhereObjByKeySqlParameters(this.DbContext, entityType, whereObjs, true, true);
-        var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-        int index = 0;
-        var builder = new StringBuilder(headSql);
-        var jointMark = isInExpr ? "," : " OR ";
-        foreach (var whereObj in whereObjs)
-        {
-            if (index > 0) builder.Append(jointMark);
-            typedCommandInitializer.Invoke(this.Command.Parameters, builder, this.DbContext, whereObj, $"_m{this.ReaderAfters.Count}{index}");
-            index++;
-        }
-        if (isInExpr) builder.Append(')');
-        var sql = builder.ToString();
-        this.AddReader(entityType, sql, false);
+        this.CreateQueryReader(whereObjs, entityType, entityType, false, 1, true, true, ReaderResultType.List);
         return this;
     }
     #endregion
@@ -178,22 +160,23 @@ public class MultipleQuery : IMultipleQuery
     #region QueryFirst
     public virtual IMultipleQuery QueryFirst<TEntity>(string rawSql)
     {
-        this.CreateReader(rawSql, typeof(TEntity), true);
+        this.CreateRawReader(rawSql, typeof(TEntity), ReaderResultType.Entity, false);
         return this;
     }
     public IMultipleQuery QueryFirst<TEntity>(string rawSql, object parameters)
     {
-        this.CreateReader(rawSql, parameters, typeof(TEntity), true);
+        this.CreateRawReader(rawSql, parameters, typeof(TEntity), ReaderResultType.Entity, false);
         return this;
     }
     public IMultipleQuery QueryFirst<TEntity>(string rawSql, List<IDbDataParameter> parameters)
     {
-        this.CreateReader(rawSql, parameters, typeof(TEntity), true);
+        this.CreateRawParametersReader(rawSql, parameters, typeof(TEntity), ReaderResultType.Entity, false);
         return this;
     }
     public virtual IMultipleQuery QueryFirst<TEntity>(object whereObj)
     {
-        this.CreateReader(whereObj, typeof(TEntity), true);
+        var entityType = typeof(TEntity);
+        this.CreateQueryReader(whereObj, entityType, entityType, false, 1, false, false, ReaderResultType.Entity);
         return this;
     }
     #endregion
@@ -201,53 +184,60 @@ public class MultipleQuery : IMultipleQuery
     #region Query
     public virtual IMultipleQuery Query<TEntity>(string rawSql)
     {
-        this.CreateReader(rawSql, typeof(TEntity), false);
+        this.CreateRawReader(rawSql, typeof(TEntity), ReaderResultType.List, false);
         return this;
     }
     public IMultipleQuery Query<TEntity>(string rawSql, object parameters)
     {
-        this.CreateReader(rawSql, parameters, typeof(TEntity), false);
+        this.CreateRawReader(rawSql, parameters, typeof(TEntity), ReaderResultType.List, false);
         return this;
     }
     public virtual IMultipleQuery Query<TEntity>(string rawSql, List<IDbDataParameter> parameters)
     {
-        this.CreateReader(rawSql, parameters, typeof(TEntity), false);
+        this.CreateRawParametersReader(rawSql, parameters, typeof(TEntity), ReaderResultType.List, false);
         return this;
     }
     public virtual IMultipleQuery Query<TEntity>(object whereObj)
     {
-        this.CreateReader(whereObj, typeof(TEntity), false);
+        var entityType = typeof(TEntity);
+        this.CreateQueryReader(whereObj, entityType, entityType, false, 1, false, false, ReaderResultType.List);
         return this;
     }
     #endregion
 
     #region Exists
-    public virtual IMultipleQuery Exists<TEntity>(object whereObj)
+    public virtual IMultipleQuery ExistsBy<TEntity>(object whereObj)
     {
-        if (whereObj == null)
-            throw new ArgumentNullException(nameof(whereObj));
-
-        var entityType = typeof(TEntity);
-        bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
-        var commandInitializer = RepositoryHelper.BuildWhereKeysSqlParameters(this.DbContext, entityType, whereObj, isBulk, 2);
-        var sql = commandInitializer.Invoke(this.Command.Parameters, this.DbContext, whereObj);
-        this.AddReader(typeof(bool), sql, false);
+        this.CreateQueryReader(whereObj, typeof(TEntity), typeof(bool), true, 2, false, false, ReaderResultType.Value);
+        return this;
+    }
+    public virtual IMultipleQuery ExistsById<TEntity>(object whereKey)
+    {
+        if (whereKey == null)
+            throw new ArgumentNullException(nameof(whereKey));
+        this.CreateQueryReader(whereKey, typeof(TEntity), typeof(bool), true, 2, true, false, ReaderResultType.Value);
+        return this;
+    }
+    public virtual IMultipleQuery ExistsByIds<TEntity>(IEnumerable whereKeys)
+    {
+        if (whereKeys == null)
+            throw new ArgumentNullException(nameof(whereKeys));
+        this.CreateQueryReader(whereKeys, typeof(TEntity), typeof(bool), true, 2, true, true, ReaderResultType.List);
         return this;
     }
     public virtual IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate)
     {
         if (wherePredicate == null)
             throw new ArgumentNullException(nameof(wherePredicate));
-
         var sql = this.From<TEntity>().Where(wherePredicate)
-            .SelectAggregate((x, f) => x.Count()).ToSql(out _);
-        this.AddReader(typeof(bool), sql, false);
+            .Select<int>("1").Take(1).ToSql(out _);
+        this.AddReader(typeof(bool), sql, ReaderResultType.Value, true);
         return this;
     }
     #endregion
 
     #region AddReader/BuildSql
-    public virtual void AddReader(Type targetType, string sql, bool isSingle, IQueryVisitor queryVisitor = null, int pageNumber = 0, int pageSize = 0)
+    public virtual void AddReader(Type targetType, string sql, ReaderResultType resultType, bool isExists = false, IQueryVisitor visitor = null)
     {
         if (this.sqlBuilder.Length > 0)
             this.sqlBuilder.Append(';');
@@ -255,10 +245,9 @@ public class MultipleQuery : IMultipleQuery
         this.ReaderAfters.Add(new ReaderAfter
         {
             TargetType = targetType,
-            QueryVisitor = queryVisitor,
-            IsSingle = isSingle,
-            PageNumber = pageNumber,
-            PageSize = pageSize
+            Visitor = visitor,
+            ResultType = resultType,
+            IsExists = isExists
         });
     }
     public virtual string BuildSql(out List<ReaderAfter> readerAfters)
@@ -282,13 +271,13 @@ public class MultipleQuery : IMultipleQuery
     #region Others
     private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a')
         => this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart, this.Command.Parameters);
-    private void CreateReader(string rawSql, Type targetType, bool isSingle)
+    private void CreateRawReader(string rawSql, Type targetType, ReaderResultType resultType, bool isExists)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
-        this.AddReader(targetType, rawSql, isSingle);
+        this.AddReader(targetType, rawSql, resultType, isExists);
     }
-    private void CreateReader(string rawSql, object parameters, Type targetType, bool isSingle)
+    private void CreateRawReader(string rawSql, object parameters, Type targetType, ReaderResultType resultType, bool isExists)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
@@ -299,25 +288,22 @@ public class MultipleQuery : IMultipleQuery
             throw new NotSupportedException("不支持的参数类型，此方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
         var commandInitializer = RepositoryHelper.BuildQueryRawSqlCommandInitializer(this.OrmProvider, rawSql, parameters);
         commandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, parameters);
-        this.AddReader(targetType, rawSql, isSingle);
+        this.AddReader(targetType, rawSql, resultType, isExists);
     }
-    private void CreateReader(string rawSql, List<IDbDataParameter> parameters, Type targetType, bool isSingle)
+    private void CreateRawParametersReader(string rawSql, List<IDbDataParameter> parameters, Type targetType, ReaderResultType resultType, bool isExists)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
         if (parameters == null)
             throw new ArgumentNullException(nameof(parameters));
         parameters.ForEach(f => this.Command.Parameters.Add(f));
-        this.AddReader(targetType, rawSql, isSingle);
+        this.AddReader(targetType, rawSql, resultType, isExists);
     }
-    private void CreateReader(object whereObj, Type entityType, bool isSingle)
+    private void CreateQueryReader(object whereObjs, Type entityType, Type targetType, bool isExists, int commandType, bool isUseKey, bool isBulk, ReaderResultType resultType)
     {
-        if (whereObj == null)
-            throw new ArgumentNullException(nameof(whereObj));
-        bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
-        var commandInitializer = RepositoryHelper.BuildWhereKeysSqlParameters(this.DbContext, entityType, whereObj, isBulk, 1);
-        var sql = commandInitializer.Invoke(this.Command.Parameters, this.DbContext, whereObj);
-        this.AddReader(entityType, sql, isSingle);
+        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjs, commandType, isUseKey, true, isBulk);
+        var sql = commandInitializer.Invoke(this.Command.Parameters, this.DbContext, whereObjs);
+        this.AddReader(targetType, sql, resultType, isExists);
     }
     #endregion
 }

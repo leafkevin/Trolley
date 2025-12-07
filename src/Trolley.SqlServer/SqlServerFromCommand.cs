@@ -77,12 +77,12 @@ public class SqlServerFromCommand<TEntity, T> : FromCommand<TEntity, T>, ISqlSer
     #region Where/And
     public new ISqlServerFromCommand<TEntity, T> Where(Expression<Func<T, bool>> predicate)
     {
-        base.WhereInternal(predicate);
+        base.AndInternal(predicate);
         return this;
     }
     public new ISqlServerFromCommand<TEntity, T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
     {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
+        base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     public new ISqlServerFromCommand<TEntity, T> And(Expression<Func<T, bool>> predicate)
@@ -238,12 +238,12 @@ public class SqlServerFromCommand<TEntity, T1, T2> : FromCommand<TEntity, T1, T2
     #region Where/And
     public new ISqlServerFromCommand<TEntity, T1, T2> Where(Expression<Func<T1, T2, bool>> predicate)
     {
-        base.WhereInternal(predicate);
+        base.AndInternal(predicate);
         return this;
     }
     public new ISqlServerFromCommand<TEntity, T1, T2> Where(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null)
     {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
+        base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     public new ISqlServerFromCommand<TEntity, T1, T2> And(Expression<Func<T1, T2, bool>> predicate)
@@ -357,12 +357,12 @@ public class SqlServerFromCommand<TEntity, T1, T2, T3> : FromCommand<TEntity, T1
     #region Where/And
     public new ISqlServerFromCommand<TEntity, T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate)
     {
-        base.WhereInternal(predicate);
+        base.AndInternal(predicate);
         return this;
     }
     public new ISqlServerFromCommand<TEntity, T1, T2, T3> Where(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
     {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
+        base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     public new ISqlServerFromCommand<TEntity, T1, T2, T3> And(Expression<Func<T1, T2, T3, bool>> predicate)
@@ -476,12 +476,12 @@ public class SqlServerFromCommand<TEntity, T1, T2, T3, T4> : FromCommand<TEntity
     #region Where/And
     public new ISqlServerFromCommand<TEntity, T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate)
     {
-        base.WhereInternal(predicate);
+        base.AndInternal(predicate);
         return this;
     }
     public new ISqlServerFromCommand<TEntity, T1, T2, T3, T4> Where(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
     {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
+        base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     public new ISqlServerFromCommand<TEntity, T1, T2, T3, T4> And(Expression<Func<T1, T2, T3, T4, bool>> predicate)
@@ -595,12 +595,12 @@ public class SqlServerFromCommand<TEntity, T1, T2, T3, T4, T5> : FromCommand<TEn
     #region Where/And
     public new ISqlServerFromCommand<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
     {
-        base.WhereInternal(predicate);
+        base.AndInternal(predicate);
         return this;
     }
     public new ISqlServerFromCommand<TEntity, T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
     {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
+        base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     public new ISqlServerFromCommand<TEntity, T1, T2, T3, T4, T5> And(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
@@ -696,12 +696,12 @@ public class SqlServerFromCommand<TEntity, T1, T2, T3, T4, T5, T6> : FromCommand
     #region Where/And
     public new ISqlServerFromCommand<TEntity, T1, T2, T3, T4, T5, T6> Where(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
     {
-        base.WhereInternal(predicate);
+        base.AndInternal(predicate);
         return this;
     }
     public new ISqlServerFromCommand<TEntity, T1, T2, T3, T4, T5, T6> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null)
     {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
+        base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     public new ISqlServerFromCommand<TEntity, T1, T2, T3, T4, T5, T6> And(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)

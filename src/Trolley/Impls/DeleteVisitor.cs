@@ -9,7 +9,6 @@ namespace Trolley;
 
 public class DeleteVisitor : SqlVisitor, IDeleteVisitor
 {
-    public bool IsWhereKeys { get; set; }
     protected List<CommandSegment> deferredSegments = new();
 
     public bool HasWhere { get; protected set; }
@@ -39,193 +38,156 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
 
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
-        var shardingType = ShardingTableType.None;
-        object shardingTables = tableSegment.Mapper.TableName;
-        if (tableSegment.TableShardingInfo != null)
-        {
-            if (tableSegment.IsSharding)
-            {
-                if (!string.IsNullOrEmpty(tableSegment.Body))
-                {
-                    shardingTables = tableSegment.Body;
-                    shardingType = ShardingTableType.SingleTable;
-                }
-                else
-                {
-                    shardingTables = tableSegment.TableNames;
-                    shardingType = ShardingTableType.MultiTable;
-                }
-            }
-            else throw new NotSupportedException($"实体表{entityType.FullName}已设置分表，但未指定分表，原始表：{tableSegment.Mapper.TableName}");
-        }
-        if (this.IsWhereKeys)
-        {
-            var whereKeys = this.deferredSegments[0].Value;
-            var isBulk = this.ActionMode == ActionMode.Bulk;
+        if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding)
+            throw new NotSupportedException($"实体表{entityType.FullName}已设置分表，但未指定分表，原始表：{tableSegment.Mapper.TableName}");
 
-            switch (this.ActionMode)
+        if (this.HasWhere) this.WhereBuilder = new();
+        Func<IDataParameterCollection, DbContext, object, string> whereSqlInitializer = null;
+        foreach (var deferredSegment in this.deferredSegments)
+        {
+            switch (deferredSegment.Type)
             {
-                case ActionMode.Bulk:
+                case "AndBy":
+                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, false, false, false);
+                    this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
                     break;
-                default:
-                    throw new NotSupportedException($"不支持的ActionMode类型：{this.ActionMode}");
+                case "AndById":
+                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, false);
+                    this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                    break;
+                case "AndByIds":
+                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, true);
+                    this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                    break;
+                case "And":
+                    this.VisitAnd(deferredSegment.Value as Expression);
+                    break;
+                case "OrBy":
+                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, false, false, false);
+                    this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                    break;
+                case "OrById":
+                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, false);
+                    this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                    break;
+                case "OrByIds":
+                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, true);
+                    this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                    break;
+                case "Or":
+                    this.VisitOr(deferredSegment.Value as Expression);
+                    break;
             }
-            var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, entityType, whereKeys, tableSegment.IsSharding, isBulk, false);
+        }
 
-            int index = 0;
+        if (tableSegment.ShardingType > ShardingTableType.SingleTable)
+        {
             var builder = new StringBuilder();
-            var whereSqlBuilder = new StringBuilder();
-            Action sqlExecuter = null;
-            if (isBulk)
+            var tableNames = tableSegment.TableNames;
+            for (int i = 0; i < tableNames.Count; i++)
             {
-                var typedWhereSqlSetter = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-                Func<int, string> suffixGetter = index => this.IsMultiple ? $"_m{this.CommandIndex}{index}" : $"{index}";
-                sqlExecuter = () =>
-                {
-                    var jointMark = isMultiKeys ? " OR " : ",";
-                    foreach (var entity in entities)
-                    {
-                        if (index > 0) whereSqlBuilder.Append(jointMark);
-                        typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, entity, suffixGetter.Invoke(index));
-                        index++;
-                    }
-                    if (!isMultiKeys) whereSqlBuilder.Append(')');
-                };
-            }
-            else
-            {
-                if (this.IsMultiple)
-                {
-                    var typedWhereSqlSetter = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-                    sqlExecuter = () => typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, whereKeys, $"_m{this.CommandIndex}");
-                }
-                else
-                {
-                    var typedWhereSqlSetter = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
-                    sqlExecuter = () => typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, whereKeys);
-                }
-            }
-            if (!string.IsNullOrEmpty(this.Tables[0].TableSchema))
-                headSqlSetter = (builder, tableName) => headSqlSetter.Invoke(builder, this.Tables[0].TableSchema + "." + tableName);
-            if (this.ShardingTables != null && this.ShardingTables.Count > 0)
-            {
-                var tableNames = this.ShardingTables[0].TableNames;
-                sqlExecuter.Invoke();
-                for (int i = 0; i < tableNames.Count; i++)
-                {
-                    if (i > 0) builder.Append(';');
-                    headSqlSetter.Invoke(builder, tableNames[i]);
-                    builder.Append(whereSqlBuilder);
-                }
-            }
-            else
-            {
-                sqlExecuter.Invoke();
-                headSqlSetter.Invoke(builder, this.Tables[0].Body ?? origName);
-                builder.Append(whereSqlBuilder);
+                if (i > 0) builder.Append(';');
+                builder.Append("DELETE FROM ");
+                builder.Append(this.OrmProvider.GetTableName(tableNames[i]));
+                builder.Append(" WHERE ");
+                builder.Append(this.WhereBuilder.ToString());
             }
             sql = builder.ToString();
-            builder.Clear();
-            whereSqlBuilder.Clear();
         }
         else
         {
-            if (this.HasWhere) this.WhereBuilder = new();
-            Func<IDataParameterCollection, DbContext, object, string> commandInitializer = null;
-            foreach (var deferredSegment in this.deferredSegments)
-            {
-                switch (deferredSegment.Type)
-                {
-                    case "WhereBy":
-                        commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, entityType, deferredSegment.Value, false, false, false);
-                        this.VisitWhereSql(commandInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
-                        break;
-                    case "WhereById":
-                        commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, entityType, deferredSegment.Value, true, false, false);
-                        this.VisitWhereSql(commandInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
-                        break;
-                    case "WhereByIds":
-                        commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, entityType, deferredSegment.Value, true, false, true);
-                        this.VisitWhereSql(commandInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
-                        break;
-                    case "Where":
-                    case "And":
-                        this.VisitAnd(deferredSegment.Value as Expression);
-                        break;
-                    case "Or":
-                        this.VisitOr(deferredSegment.Value as Expression);
-                        break;
-                }
-            }
-
-            var builder = new StringBuilder();
-            if (this.ShardingTables != null && this.ShardingTables.Count > 0)
-            {
-                var tableSegment = this.ShardingTables[0];
-                var tableNames = tableSegment.TableNames;
-                for (int i = 0; i < tableNames.Count; i++)
-                {
-                    if (i > 0) builder.Append(';');
-                    builder.Append("DELETE FROM ");
-                    builder.Append(this.OrmProvider.GetTableName(tableNames[i]));
-                    builder.Append(" WHERE ");
-                    builder.Append(this.WhereBuilder.ToString());
-                }
-            }
-            else
-            {
-                var tableName = this.Tables[0].Body ?? this.Tables[0].Mapper.TableName;
-                builder.Append($"DELETE FROM {this.OrmProvider.GetTableName(tableName)} WHERE {this.WhereBuilder.ToString()}");
-            }
-            sql = builder.ToString();
+            var tableName = tableSegment.Body ?? tableSegment.Mapper.TableName;
+            sql = $"DELETE FROM {this.OrmProvider.GetTableName(tableName)} WHERE {this.WhereBuilder.ToString()}";
         }
         return sql;
     }
-    public virtual void WhereBy(object whereObj)
+    public virtual void AndBy(object whereObj)
     {
-        this.IsWhereKeys = true;
         this.HasWhere = true;
         this.deferredSegments.Add(new CommandSegment
         {
-            Type = "WhereBy",
+            Type = "AndBy",
             Value = whereObj
         });
     }
-    public virtual void WhereById(object whereKey)
+    public virtual void AndById(object whereKey)
     {
-        this.IsWhereKeys = true;
         this.HasWhere = true;
         this.deferredSegments.Add(new CommandSegment
         {
-            Type = "WhereById",
+            Type = "AndById",
             Value = whereKey
         });
     }
-    public virtual void WhereByIds(IEnumerable whereKeys)
+    public virtual void AndByIds(IEnumerable whereKeys)
     {
-        this.IsWhereKeys = true;
         this.HasWhere = true;
         this.deferredSegments.Add(new CommandSegment
         {
-            Type = "WhereByIds",
+            Type = "AndByIds",
             Value = whereKeys
         });
     }
     public virtual void And(Expression whereExpr)
     {
+        this.HasWhere = true;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "And",
             Value = whereExpr
         });
     }
+    public virtual void OrBy(object whereObj)
+    {
+        this.HasWhere = true;
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "OrBy",
+            Value = whereObj
+        });
+    }
+    public virtual void OrById(object whereKey)
+    {
+        this.HasWhere = true;
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "OrById",
+            Value = whereKey
+        });
+    }
+    public virtual void OrByIds(IEnumerable whereKeys)
+    {
+        this.HasWhere = true;
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "OrByIds",
+            Value = whereKeys
+        });
+    }
     public virtual void Or(Expression whereExpr)
     {
+        this.HasWhere = true;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "Or",
             Value = whereExpr
         });
+    }
+    public virtual void VisitAnd(Expression whereExpr)
+    {
+        this.IsWhere = true;
+        var lambdaExpr = whereExpr as LambdaExpression;
+        var whereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
+        this.IsWhere = false;
+        this.VisitAndSql(whereSql, operationType);
+    }
+    public virtual void VisitOr(Expression whereExpr)
+    {
+        this.IsWhere = true;
+        var lambdaExpr = whereExpr as LambdaExpression;
+        var whereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
+        this.IsWhere = false;
+        this.VisitOrSql(whereSql, operationType);
     }
     public override SqlFieldSegment VisitMemberAccess(SqlFieldSegment sqlSegment)
     {
@@ -359,20 +321,6 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     {
         base.Dispose();
         this.deferredSegments = null;
-    }
-    public virtual void VisitWhereBy(object whereObj)
-    {
-        var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, this.Tables[0].EntityType, whereObj, false, false, false);
-        var conditionSql = commandInitializer.Invoke(this.DbParameters, this.DbContext, whereObj);
-        if (this.LastWhereOperationType == OperationType.Or)
-        {
-            this.WhereBuilder.Insert(0, '(');
-            this.WhereBuilder.Append(')');
-        }
-        if (this.LastWhereOperationType != OperationType.None)
-            this.WhereBuilder.Append(" AND ");
-        this.WhereBuilder.Append(conditionSql);
-        this.LastWhereOperationType = OperationType.And;
     }
     public void AddMemberElement(SqlFieldSegment sqlSegment, MemberMap memberMapper, StringBuilder builder)
     {

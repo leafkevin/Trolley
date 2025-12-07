@@ -192,20 +192,11 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
 
     #region Where
     public virtual IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
-    {
-        base.WhereInternal(predicate);
-        return this;
-    }
+        => this.And(predicate);
     public virtual IQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
-    {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => this.And(condition, ifPredicate, elsePredicate);
     public virtual IQuery<<#=tables#>> WherePredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<<#=tables#>>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => this.AndPredicate(predicateInitializer);
     #endregion
 
     #region And
@@ -221,6 +212,8 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     }
     public virtual IQuery<<#=tables#>> AndPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<<#=tables#>>();
         return this.And(predicateInitializer.Invoke(builder));
     }
@@ -239,6 +232,8 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     }
     public virtual IQuery<<#=tables#>> OrPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
     {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
         var builder = new PredicateBuilder<<#=tables#>>();
         return this.Or(predicateInitializer.Invoke(builder));
     }
@@ -294,7 +289,12 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     }
     #endregion
 
-    #region Select 
+    #region Select
+    public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
+    {
+        base.SelectInternal(rawFields);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+    }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);

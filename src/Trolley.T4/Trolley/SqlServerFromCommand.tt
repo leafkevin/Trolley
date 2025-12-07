@@ -84,12 +84,12 @@ public class SqlServerFromCommand<TEntity, T> : FromCommand<TEntity, T>, ISqlSer
     #region Where/And
     public new ISqlServerFromCommand<TEntity, T> Where(Expression<Func<T, bool>> predicate)
     {
-        base.WhereInternal(predicate);
+        base.AndInternal(predicate);
         return this;
     }
     public new ISqlServerFromCommand<TEntity, T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
     {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
+        base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     public new ISqlServerFromCommand<TEntity, T> And(Expression<Func<T, bool>> predicate)
@@ -261,12 +261,12 @@ public class SqlServerFromCommand<TEntity, <#=tables#>> : FromCommand<TEntity, <
     #region Where/And
     public new ISqlServerFromCommand<TEntity, <#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
     {
-        base.WhereInternal(predicate);
+        base.AndInternal(predicate);
         return this;
     }
     public new ISqlServerFromCommand<TEntity, <#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
     {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
+        base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     public new ISqlServerFromCommand<TEntity, <#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate)

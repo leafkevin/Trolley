@@ -14,7 +14,6 @@ public class SqlVisitor : ISqlVisitor
     private bool isDisposed;
     private static MethodInfo IsNullMethodInfo = typeof(Sql).GetMethods().Where(f => f.Name == nameof(Sql.IsNull) && f.GetParameters().Length == 2).First();
 
-
     public DbContext DbContext { get; set; }
     public string DbKey => this.DbContext.DbKey;
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
@@ -299,25 +298,8 @@ public class SqlVisitor : ISqlVisitor
     }
     public virtual string BuildTableShardingsSql() => null;
 
-    public virtual void VisitWhereSql(string whereSql)
+    public virtual void VisitAndSql(string whereSql, OperationType operationType = OperationType.None)
     {
-        if (this.LastWhereOperationType == OperationType.Or)
-        {
-            this.WhereBuilder.Insert(0, '(');
-            this.WhereBuilder.Append(')');
-        }
-        if (this.LastWhereOperationType != OperationType.None)
-            this.WhereBuilder.Append(" AND ");
-        this.WhereBuilder.Append(whereSql);
-        this.LastWhereOperationType = OperationType.And;
-    }
-    public virtual void VisitAnd(Expression whereExpr)
-    {
-        this.IsWhere = true;
-        var lambdaExpr = whereExpr as LambdaExpression;
-        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        this.IsWhere = false;
-
         if (this.LastWhereOperationType == OperationType.Or)
         {
             this.WhereBuilder.Insert(0, '(');
@@ -327,31 +309,21 @@ public class SqlVisitor : ISqlVisitor
         {
             this.WhereBuilder.Append(" AND ");
             if (operationType == OperationType.Or)
-                conditionSql = $"({conditionSql})";
+                whereSql = $"({whereSql})";
         }
-        this.WhereBuilder.Append(conditionSql);
+        this.WhereBuilder.Append(whereSql);
         if (this.LastWhereOperationType == OperationType.None && operationType == OperationType.Or)
             this.LastWhereOperationType = OperationType.Or;
         else this.LastWhereOperationType = OperationType.And;
     }
-    public virtual void VisitOr(Expression whereExpr)
+    public virtual void VisitOrSql(string whereSql, OperationType operationType = OperationType.None)
     {
-        this.IsWhere = true;
-        var lambdaExpr = whereExpr as LambdaExpression;
-        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        this.IsWhere = false;
-
-        if (this.LastWhereOperationType == OperationType.None && operationType != OperationType.Or)
-        {
-            this.WhereBuilder.Append(conditionSql);
-            this.LastWhereOperationType = OperationType.And;
-        }
-        else
-        {
+        if (this.LastWhereOperationType != OperationType.None)
             this.WhereBuilder.Append(" OR ");
-            this.WhereBuilder.Append(conditionSql);
-            this.LastWhereOperationType = OperationType.Or;
-        }
+        this.WhereBuilder.Append(whereSql);
+        if (this.LastWhereOperationType == OperationType.None && operationType != OperationType.Or)
+            this.LastWhereOperationType = OperationType.And;
+        else this.LastWhereOperationType = OperationType.Or;
     }
 
     public virtual SqlFieldSegment VisitAndDeferred(SqlFieldSegment sqlSegment)
@@ -1895,6 +1867,27 @@ public class SqlVisitor : ISqlVisitor
                     else queryVisitor.Join(joinType, lambdaArgsExpr);
                     queryVisitor.RefTableAliases = null;
                     break;
+                case "WhereBy":
+                case "AndBy":
+                    queryVisitor.AndBy(this.Evaluate(callExpr.Arguments[0]));
+                    break;
+                case "WhereById":
+                case "AndById":
+                    queryVisitor.AndById(this.Evaluate(callExpr.Arguments[0]));
+                    break;
+                case "WhereByIds":
+                case "AndByIds":
+                    queryVisitor.AndByIds(this.Evaluate(callExpr.Arguments[0]));
+                    break;
+                case "OrBy":
+                    queryVisitor.OrBy(this.Evaluate(callExpr.Arguments[0]));
+                    break;
+                case "OrById":
+                    queryVisitor.OrById(this.Evaluate(callExpr.Arguments[0]));
+                    break;
+                case "OrByIds":
+                    queryVisitor.OrByIds(this.Evaluate(callExpr.Arguments[0]));
+                    break;
                 case "Where":
                 case "And":
                 case "Or":
@@ -1910,9 +1903,9 @@ public class SqlVisitor : ISqlVisitor
                         queryVisitor.RefTableAliases = this.TableAliases;
                         switch (methodInfo.Name)
                         {
-                            case "Where": queryVisitor.Where(lambdaArgsExpr); break;
+                            case "Where":
                             case "And": queryVisitor.And(lambdaArgsExpr); break;
-                            case "Or": queryVisitor.And(lambdaArgsExpr); break;
+                            case "Or": queryVisitor.Or(lambdaArgsExpr); break;
                         }
                         queryVisitor.RefTableAliases = null;
                     }
@@ -1928,9 +1921,9 @@ public class SqlVisitor : ISqlVisitor
                     queryVisitor.RefTableAliases = this.TableAliases;
                     switch (methodInfo.Name)
                     {
-                        case "WherePredicate": queryVisitor.Where(lambdaArgsExpr); break;
+                        case "WherePredicate":
                         case "AndPredicate": queryVisitor.And(lambdaArgsExpr); break;
-                        case "OrPredicate": queryVisitor.And(lambdaArgsExpr); break;
+                        case "OrPredicate": queryVisitor.Or(lambdaArgsExpr); break;
                     }
                     queryVisitor.RefTableAliases = null;
                     break;
@@ -2004,6 +1997,15 @@ public class SqlVisitor : ISqlVisitor
                 case "Distinct":
                     queryVisitor.Distinct();
                     break;
+                case "ExistsBy":
+                    queryVisitor.OrBy(this.Evaluate(callExpr.Arguments[0]));
+                    break;
+                case "ExistsById":
+                    queryVisitor.OrById(this.Evaluate(callExpr.Arguments[0]));
+                    break;
+                case "ExistsByIds":
+                    queryVisitor.OrByIds(this.Evaluate(callExpr.Arguments[0]));
+                    break;
                 case "Exists":
                 case "ExistsAsync":
                     //repository.Exists<TEntity>(object whereObj)此场景，在前面已经报错了，不会进来
@@ -2013,7 +2015,7 @@ public class SqlVisitor : ISqlVisitor
                         lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
                         queryVisitor.From(queryVisitor.TableAsStart, genericArguments);
                         queryVisitor.RefTableAliases = this.TableAliases;
-                        queryVisitor.Where(lambdaArgsExpr);
+                        queryVisitor.And(lambdaArgsExpr);
                         queryVisitor.RefTableAliases = null;
                         queryVisitor.Select("*");
                     }

@@ -235,28 +235,28 @@ public interface IRepository
     Task<TValue> QueryScalarAsync<TValue>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
     #endregion
 
-    #region GetById
+    #region QueryById
     /// <summary>
     /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，不支持分表，如：
     /// <code>
-    /// repository.GetById&lt;User&gt;(1) //或是
-    /// repository.GetById&lt;User&gt;(new { Id = 1 }) //或是
+    /// repository.QueryById&lt;User&gt;(1) //或是
+    /// repository.QueryById&lt;User&gt;(new { Id = 1 }) //或是
     /// var userInfo = new UserInfo { Id = 1, Name = "xxx" ... };
-    /// repository.GetById&lt;User&gt;(userInfo) //三种写法是等效的
+    /// repository.QueryById&lt;User&gt;(userInfo) //三种写法是等效的
     /// SQL: SELECT ... FROM `sys_user` a WHERE a.`Id`=@Id
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="whereObj">主键值或是包含主键的匿名对象或是已有对象，如：1，2或new { Id = 1}或是已有对象userInfo(包含主键栏位Id) </param>
     /// <returns>返回实体对象或是TEntity类型默认值</returns>
-    TEntity GetById<TEntity>(object whereObj);
+    TEntity QueryById<TEntity>(object whereObj);
     /// <summary>
     /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，不支持分表，如：
     /// <code>
-    /// await repository.GetByIdAsync&lt;User&gt;(1) //或是
-    /// await repository.GetByIdAsync&lt;User&gt;(new { Id = 1 }) //或是
+    /// await repository.QueryByIdAsync&lt;User&gt;(1) //或是
+    /// await repository.QueryByIdAsync&lt;User&gt;(new { Id = 1 }) //或是
     /// var userInfo = new UserInfo { Id = 1, Name = "xxx" ...};
-    /// await repository.GetByIdAsync&lt;User&gt;(userInfo) //三种写法是等效的
+    /// await repository.QueryByIdAsync&lt;User&gt;(userInfo) //三种写法是等效的
     /// SQL: SELECT ... FROM `sys_user` a WHERE a.`Id`=@Id
     /// </code>
     /// </summary>
@@ -264,31 +264,31 @@ public interface IRepository
     /// <param name="whereObj">主键值或是包含主键的匿名对象或是已有对象，如：1，2或new { Id = 1}或是已有对象userInfo(包含主键栏位Id) </param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回实体对象或是TEntity类型默认值</returns>
-    Task<TEntity> GetByIdAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default);
+    Task<TEntity> QueryByIdAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default);
     #endregion
 
-    #region GetByIds
+    #region QueryByIds
     /// <summary>
     /// 根据多个主键信息查询表TEntity中数据，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，如：
     /// <code>
-    /// repository.GetByIds&lt;User&gt;(new []{1 ,2, 3}) //或是
-    /// repository.GetByIds&lt;User&gt;(new []{{ Id = 1 }, { Id = 2 }, { Id = 3 }}) //或是
+    /// repository.QueryByIds&lt;User&gt;(new []{1 ,2, 3}) //或是
+    /// repository.QueryByIds&lt;User&gt;(new []{{ Id = 1 }, { Id = 2 }, { Id = 3 }}) //或是
     /// var userInfo = new UserInfo { Id = 1, Name = "xxx" ... };
-    /// repository.GetByIds&lt;User&gt;(new List&lt;UserInfo&gt;{userInfo}) //三种写法是等效的
+    /// repository.QueryByIds&lt;User&gt;(new List&lt;UserInfo&gt;{userInfo}) //三种写法是等效的
     /// SQL: SELECT ... FROM `sys_user` a WHERE a.`Id` in (@Id0,@Id1,@Id2)
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="whereKeys">主键值或是包含主键的匿名对象或是已有对象，如：1，2或new { Id = 1}或是已有对象userInfo(包含主键栏位Id) </param>
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
-    List<TEntity> GetByIds<TEntity>(IEnumerable whereKeys);
+    List<TEntity> QueryByIds<TEntity>(IEnumerable whereKeys);
     /// <summary>
     /// 根据多个主键信息查询表TEntity中数据，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，如：
     /// <code>
-    /// repository.GetByIds&lt;User&gt;(new []{1 ,2, 3}) //或是
-    /// repository.GetByIds&lt;User&gt;(new []{{ Id = 1 }, { Id = 2 }, { Id = 3 }}) //或是
+    /// repository.QueryByIds&lt;User&gt;(new []{1 ,2, 3}) //或是
+    /// repository.QueryByIds&lt;User&gt;(new []{{ Id = 1 }, { Id = 2 }, { Id = 3 }}) //或是
     /// var userInfo = new UserInfo { Id = 1, Name = "xxx" ... };
-    /// repository.GetByIds&lt;User&gt;(new List&lt;UserInfo&gt;{userInfo}) //三种写法是等效的
+    /// repository.QueryByIds&lt;User&gt;(new List&lt;UserInfo&gt;{userInfo}) //三种写法是等效的
     /// SQL: SELECT ... FROM `sys_user` a WHERE a.`Id` in (@Id0,@Id1,@Id2)
     /// </code>
     /// </summary>
@@ -296,7 +296,7 @@ public interface IRepository
     /// <param name="whereKeys">主键值或是包含主键的匿名对象或是已有对象，如：1，2或new { Id = 1}或是已有对象userInfo(包含主键栏位Id)的集合对象 </param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
-    Task<List<TEntity>> GetByIdsAsync<TEntity>(IEnumerable whereKeys, CancellationToken cancellationToken = default);
+    Task<List<TEntity>> QueryByIdsAsync<TEntity>(IEnumerable whereKeys, CancellationToken cancellationToken = default);
     #endregion
 
     #region QueryFirst
