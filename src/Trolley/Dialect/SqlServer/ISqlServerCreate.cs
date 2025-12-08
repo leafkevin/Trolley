@@ -36,7 +36,7 @@ public interface ISqlServerCreate<TEntity> : ICreate<TEntity>
 
     #region WithBy
     /// <summary>
-    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出字段不插入
+    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出属性不插入
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new
@@ -50,7 +50,7 @@ public interface ISqlServerCreate<TEntity> : ICreate<TEntity>
     /// </code>
     /// </summary>
     /// <typeparam name="TInsertObject">插入对象类型</typeparam>
-    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出字段不插入，不可为null</param>
+    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出属性不插入，不可为null</param>
     /// <returns>返回插入对象</returns>
     new ISqlServerContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
     #endregion

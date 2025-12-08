@@ -55,30 +55,28 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
 
     #region WithBy
     /// <summary>
-    /// 使用插入对象部分字段插入，单个对象插入，命名或匿名对象都可以
-    /// <para>自动增长的栏位，不需要传入，如：</para>
+    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出属性不插入
     /// <code>
-    /// repository.Create&lt;User&gt;()
-    ///     .WithBy(new
-    ///     {
-    ///         Name = "leafkevin",
-    ///         Age = 25,
-    ///         ...
-    ///     })
-    ///     .Execute();
+    /// .WithBy(new
+    /// {
+    ///     Name = "leafkevin",
+    ///     Age = 25,
+    ///     ...
+    /// })
     /// SQL: INSERT INTO `sys_user` (`Name`,`Age`, ...) VALUES(@Name,@Age, ...)
     /// </code>
     /// </summary>
     /// <typeparam name="TInsertObject">插入对象类型</typeparam>
-    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出字段不插入，不可为null</param>
+    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出属性不插入，不可为null</param>
     /// <returns>返回插入对象</returns>
     new IMySqlContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
     #endregion
 
     #region WithBulk
     /// <summary>
-    /// 批量插入，采用多表值方式，生成的SQL:
+    /// 多条数据插入，自动增长栏位不需要传入，未列出属性不插入，分批次完成，每次插入bulkCount条数，
     /// <code>
+    /// .WithBulk(new []{ new { ... }, new { ... }, new { ... })
     /// INSERT INTO `sys_product` (`ProductNo`,`Name`, ...) VALUES (@ProductNo0,@Name0, ...),(@ProductNo1,@Name1, ...),(@ProductNo2,@Name2, ...)
     /// </code>
     /// </summary>
@@ -170,7 +168,7 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// <returns>返回查询对象</returns>
     new IMySqlFromCommand<TEntity, T> FromQuery<T>(IQuery<T> subQuery);
     /// <summary>
-    /// 使用子查询subQuery作为创建子查询对象，子查询subQuery也可以是CTE表，如：
+    /// 使用子查询多条数据插入，参数subQuery也可以是CTE表，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.Create&lt;Menu&gt;(f =&gt; f.UseQuery(subQuery)).Select( ... )

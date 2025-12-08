@@ -539,7 +539,7 @@ public interface IRepository
     /// <returns>返回插入对象</returns>
     ICreate<TEntity> Create<TEntity>();
     /// <summary>
-    /// 单条数据插入，自动增长栏位不需要传入，未列出字段不插入，不支持分表
+    /// 单条数据插入，自动增长栏位不需要传入，未列出属性不插入，不支持分表
     /// <code>
     /// .Create&lt;User&gt;(new
     /// {
@@ -552,11 +552,11 @@ public interface IRepository
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出字段不插入，不可为null</param>
+    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出属性不插入，不可为null</param>
     /// <returns>返回插入行数</returns>
     int Create<TEntity>(object insertObj);
     /// <summary>
-    /// 单条数据插入，自动增长栏位不需要传入，未列出字段不插入，不支持分表
+    /// 单条数据插入，自动增长栏位不需要传入，未列出属性不插入，不支持分表
     /// <code>
     /// .CreateAsync&lt;User&gt;(new
     /// {
@@ -569,31 +569,31 @@ public interface IRepository
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObj">插入对象，未列出字段不插入，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
+    /// <param name="insertObj">插入对象，未列出属性不插入，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回插入行数</returns>
     Task<int> CreateAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 多条数据插入，自动增长栏位不需要传入，未列出字段不插入，分批次完成，每次插入bulkCount条数，不支持分表
+    /// 多条数据插入，自动增长栏位不需要传入，未列出属性不插入，分批次完成，每次插入bulkCount条数，不支持分表
     /// <code>
     /// .Create&lt;Product&gt;(new []{ new { ... }, new { ... }, new { ... });
     /// SQL: INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObjs">插入对象，未列出字段不插入，可以是匿名对象、实体对象、字典等类型的IEnumerable类型，如：数组、列表、集合等</param>
+    /// <param name="insertObjs">插入对象，未列出属性不插入，可以是匿名对象、实体对象、字典等类型的IEnumerable类型，如：数组、列表、集合等</param>
     /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值</param>
     /// <returns>返回插入行数</returns>
     int Create<TEntity>(IEnumerable insertObjs, int bulkCount);
     /// <summary>
-    /// 多条数据插入，自动增长栏位不需要传入，未列出字段不插入，分批次完成，每次插入bulkCount条数，不支持分表
+    /// 多条数据插入，自动增长栏位不需要传入，未列出属性不插入，分批次完成，每次插入bulkCount条数，不支持分表
     /// <code>
     /// .CreateAsync&lt;Product&gt;(new []{ new { ... }, new { ... }, new { ... });
     /// SQL: INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObjs">插入对象，未列出字段不插入，可以是匿名对象、实体对象、字典等类型的IEnumerable类型，如：数组、列表、集合等</param>
+    /// <param name="insertObjs">插入对象，未列出属性不插入，可以是匿名对象、实体对象、字典等类型的IEnumerable类型，如：数组、列表、集合等</param>
     /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回插入行数</returns>
@@ -603,14 +603,14 @@ public interface IRepository
     /// 单条数据插入，并返回自增长ID，自动增长栏位不需要传入，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObj">插入对象，未列出字段不插入，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
+    /// <param name="insertObj">插入对象，未列出属性不插入，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <returns>返回自增长ID</returns>
     int CreateIdentity<TEntity>(object insertObj);
     /// <summary>
     /// 单条数据插入，并返回自增长ID，自动增长栏位不需要传入，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObj">插入对象，未列出字段不插入，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
+    /// <param name="insertObj">插入对象，未列出属性不插入，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回自增长ID</returns>
     Task<int> CreateIdentityAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default);
@@ -618,14 +618,14 @@ public interface IRepository
     /// 单条数据插入，并返回自增长ID，自动增长栏位不需要传入，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObj">插入对象，未列出字段不插入，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
+    /// <param name="insertObj">插入对象，未列出属性不插入，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <returns>返回自增长ID</returns>
     long CreateIdentityLong<TEntity>(object insertObj);
     /// <summary>
     /// 单条数据插入，并返回自增长ID，自动增长栏位不需要传入，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObj">插入对象，未列出字段不插入，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
+    /// <param name="insertObj">插入对象，未列出属性不插入，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回自增长ID</returns>
     Task<long> CreateIdentityLongAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default);
