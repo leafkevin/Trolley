@@ -14,7 +14,7 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// <returns>返回插入对象</returns>
     new IMySqlCreate<TEntity> UseTable(string tableName);
     /// <summary>
-    /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="TEntity"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回插入对象</returns>
@@ -28,7 +28,7 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// <returns>返回插入对象</returns>
     new IMySqlCreate<TEntity> UseTable<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter);
     /// <summary>
-    /// 手动指定分表规则依赖的批量插入参数(WithBulk方法中的参数)外的其他参数值，Trolley会自动结合otherFieldValues和批量插入参数(WithBulk方法中的参数)中分表依赖字段值确定分表名，otherFieldValues字段值数组中的顺序与配置的依赖字段(批量插入参数中的依赖字段除外)顺序一致，自插入到多个分表中，此方法只能用于批量场景。
+    /// 手动指定分表规则除WithBulk方法外的其他参数值，Trolley会自动结合otherFieldValues和WithBulk方法中的参数值确定分表名，otherFieldValues字段值数组中的顺序与配置的依赖字段(除WithBulk方法中依赖参数外)顺序一致，自插入到多个分表中，此方法只能用于批量场景。
     /// 如：假如分表规则根据租户ID+CreatedAt时间确定分表名，.UseTableByOthers([125])，125是租户ID，批量插入参数(WithBulk方法中的参数)中包含CreatedAt时间字段值
     /// </summary>
     /// <param name="otherFieldValues">分表依赖字段值获取委托</param>
@@ -74,7 +74,7 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
 
     #region WithBulk
     /// <summary>
-    /// 多条数据插入，自动增长栏位不需要传入，未列出属性不插入，分批次完成，每次插入bulkCount条数，
+    /// 多条数据插入，自动增长栏位不需要传入，未列出属性不插入，分批次完成，每次插入bulkCount条数，适用于小批量数据插入
     /// <code>
     /// .WithBulk(new []{ new { ... }, new { ... }, new { ... })
     /// INSERT INTO `sys_product` (`ProductNo`,`Name`, ...) VALUES (@ProductNo0,@Name0, ...),(@ProductNo1,@Name1, ...),(@ProductNo2,@Name2, ...)
@@ -88,7 +88,7 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
 
     #region WithBulkCopy
     /// <summary>
-    /// 批量插入，采用SqlBulkCopy方式，不生成SQL
+    /// 大批量数据插入，自动增长栏位不需要传入，未列出属性不插入，采用SqlBulkCopy方式，不生成SQL
     /// </summary>
     /// <param name="insertObjs">插入的对象集合</param>
     /// <param name="timeoutSeconds">超时时间，单位秒</param>

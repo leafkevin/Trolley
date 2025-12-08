@@ -8,19 +8,27 @@ public interface IPostgreSqlCreate<TEntity> : ICreate<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 手动指定<typeparamref name="TEntity"/>表分表名，如：.UseTable("sys_order_202001")
+    /// 手动指定分表名，如：.UseTable("sys_order_202001")
     /// </summary>
     /// <param name="tableName">完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回插入对象</returns>
     new IPostgreSqlCreate<TEntity> UseTable(string tableName);
     /// <summary>
-    /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="TEntity"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回插入对象</returns>
     new IPostgreSqlCreate<TEntity> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表规则依赖的批量插入参数(WithBulk方法中的参数)外的其他参数值，Trolley会自动结合otherFieldValues和批量插入参数(WithBulk方法中的参数)中分表依赖字段值确定分表名，otherFieldValues字段值数组中的顺序与配置的依赖字段(批量插入参数中的依赖字段除外)顺序一致，自插入到多个分表中，此方法只能用于批量场景。
+    /// 手动指定分表名获取委托，执行委托获取分表名，在批量插入场景，插入对象的值自动插入对应分表中，此方法只适用批量场景。
+    /// 第一个参数是原始表名，第二个参数是插入的实体对象，返回值是分表名，如：.UseTable((tableName, insertObj) =&gt; $"{tableName}_{insertObj.CreatedAt:yyyyMM}")
+    /// </summary>
+    /// <typeparam name="TInsertObj">插入的实体类型</typeparam>
+    /// <param name="tableNameGetter">分表名获取委托</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlCreate<TEntity> UseTable<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter);
+    /// <summary>
+    /// 手动指定分表规则除WithBulk方法外的其他参数值，Trolley会自动结合otherFieldValues和WithBulk方法中的参数值确定分表名，otherFieldValues字段值数组中的顺序与配置的依赖字段(除WithBulk方法中依赖参数外)顺序一致，自插入到多个分表中，此方法只能用于批量场景。
     /// 如：假如分表规则根据租户ID+CreatedAt时间确定分表名，.UseTableByOthers([125])，125是租户ID，批量插入参数(WithBulk方法中的参数)中包含CreatedAt时间字段值
     /// </summary>
     /// <param name="otherFieldValues">分表依赖字段值获取委托</param>
@@ -29,6 +37,11 @@ public interface IPostgreSqlCreate<TEntity> : ICreate<TEntity>
     #endregion
 
     #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
     new IPostgreSqlCreate<TEntity> UseTableSchema(string tableSchema);
     #endregion
 
@@ -36,14 +49,12 @@ public interface IPostgreSqlCreate<TEntity> : ICreate<TEntity>
     /// <summary>
     /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出属性不插入
     /// <code>
-    /// repository.Create&lt;User&gt;()
-    ///     .WithBy(new
-    ///     {
-    ///         Name = "leafkevin",
-    ///         Age = 25,
-    ///         ...
-    ///     })
-    ///     .Execute();
+    /// .WithBy(new
+    /// {
+    ///     Name = "leafkevin",
+    ///     Age = 25,
+    ///     ...
+    /// })
     /// SQL: INSERT INTO "sys_user" ("Name","Age", ...) VALUES(@Name,@Age, ...)
     /// </code>
     /// </summary>
@@ -55,9 +66,10 @@ public interface IPostgreSqlCreate<TEntity> : ICreate<TEntity>
 
     #region WithBulk
     /// <summary>
-    /// 批量插入，采用多表值方式，生成的SQL:
+    /// 多条数据插入，自动增长栏位不需要传入，未列出属性不插入，分批次完成，每次插入bulkCount条数，适用于小批量数据插入
     /// <code>
-    /// INSERT INTO [sys_product] ([ProductNo],[Name], ...) VALUES (@ProductNo0,@Name0, ...),(@ProductNo1,@Name1, ...),(@ProductNo2,@Name2, ...)
+    /// .WithBulk(new []{ new { ... }, new { ... }, new { ... })
+    /// INSERT INTO "sys_product" ("ProductNo","Name", ...) VALUES (@ProductNo0,@Name0, ...),(@ProductNo1,@Name1, ...),(@ProductNo2,@Name2, ...)
     /// </code>
     /// </summary>
     /// <param name="insertObjs">插入的对象集合</param>
@@ -68,7 +80,7 @@ public interface IPostgreSqlCreate<TEntity> : ICreate<TEntity>
 
     #region WithBulkCopy
     /// <summary>
-    /// 批量插入，采用SqlBulkCopy方式，不生成SQL
+    /// 大批量数据插入，自动增长栏位不需要传入，未列出属性不插入，采用SqlBulkCopy方式，不生成SQL
     /// </summary>
     /// <param name="insertObjs">插入的对象集合</param>
     /// <returns>返回插入对象</returns>
@@ -147,7 +159,7 @@ public interface IPostgreSqlCreate<TEntity> : ICreate<TEntity>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<TEntity, T> FromQuery<T>(IQuery<T> subQuery);
     /// <summary>
-    /// 使用子查询subQuery作为创建子查询对象，子查询subQuery也可以是CTE表，如：
+    /// 使用子查询多条数据插入，参数subQuery也可以是CTE表，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.Create&lt;Menu&gt;(f =&gt; f.UseQuery(subQuery)).Select( ... )

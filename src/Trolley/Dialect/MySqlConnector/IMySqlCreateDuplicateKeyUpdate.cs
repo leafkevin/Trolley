@@ -50,7 +50,7 @@ public interface IMySqlCreateDuplicateKeyUpdate<TEntity>
     /// <summary>
     // VALUES多个字段更新，如：
     /// <code>
-    /// 不使用别名 .WithBy( ... ).OnDuplicateKeyUpdate(x =>x.Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
+    /// 不使用别名 .WithBy( ... ).OnDuplicateKeyUpdate(x =>x.Set(f => new { TotalAmount = x.Values(f.TotalAmount) }))
     /// SQL: INSERT INTO ... VALUES ( ... ) ON DUPLICATE KEY UPDATE `TotalAmount`=VALUES(`TotalAmount`)
     /// 使用别名 .WithBy( ... ).OnDuplicateKeyUpdate(x => x.Alias().Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
     /// SQL: INSERT INTO ... VALUES ( ... ) AS newRow ON DUPLICATE KEY UPDATE `TotalAmount`=`TotalAmount`+newRow.TotalAmount

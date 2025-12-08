@@ -74,7 +74,9 @@ public interface IMySqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
 
     #region OnDuplicateKeyUpdate
     /// <summary>
-    /// 插入或更新，相同主键或唯一索引存在时执行更新，INSERT INTO ... ON DUPLICATE KEY UPDATE
+    /// 插入或更新，相同主键或唯一索引存在时执行更新，INSERT INTO ... ON DUPLICATE KEY UPDATE，如：
+    /// .OnDuplicateKeyUpdate(x =&gt; x.Set(f =&gt; new { TotalAmount = x.Values(f.TotalAmount) })) 
+    /// 或是 .OnDuplicateKeyUpdate(x =&gt; x.Set(f =&gt; f.TotalAmount, f =&gt; f.TotalAmount + 500))
     /// </summary>
     /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
     /// <param name="fieldsAssignment">要更新的字段赋值表达式</param>
@@ -84,14 +86,14 @@ public interface IMySqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
 
     #region Returning
     /// <summary>
-    /// 返回结果，仅mariadb数据库支持
+    /// 返回插入数据，仅mariadb数据库支持
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldNames">返回字段列表, 如果有函数调用、表达式或是常量值需要带有AS子句</param>
     /// <returns>返回插入的部分对象值</returns>
     IMySqlCreated<TEntity, TResult> Returning<TResult>(string fieldNames);
     /// <summary>
-    /// 返回结果，仅mariadb数据库支持
+    /// 返回插入数据，仅mariadb数据库支持
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldsSelector">返回字段名称列表</param>
@@ -169,7 +171,9 @@ public interface IMySqlBulkContinuedCreate<TEntity> : IContinuedCreate<TEntity>
 
     #region OnDuplicateKeyUpdate
     /// <summary>
-    /// 插入或更新，相同主键或唯一索引存在时执行更新，INSERT INTO ... ON DUPLICATE KEY UPDATE
+    /// 插入或更新，相同主键或唯一索引存在时执行更新，INSERT INTO ... ON DUPLICATE KEY UPDATE，如：
+    /// .OnDuplicateKeyUpdate(x =&gt; x.Set(f =&gt; new { TotalAmount = x.Values(f.TotalAmount) })) 
+    /// 或是 .OnDuplicateKeyUpdate(x =&gt; x.Set(f =&gt; f.TotalAmount, f =&gt; f.TotalAmount + 500))
     /// </summary>
     /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
     /// <param name="fieldsAssignment">要更新的字段赋值表达式</param>
@@ -183,14 +187,14 @@ public interface IMySqlBulkContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldNames">字段名称列表</param>
-    /// <returns>返回插入的部分字段</returns>
+    /// <returns>返回插入对象</returns>
     IMySqlBulkCreated<TEntity, TResult> Returning<TResult>(string fieldNames);
     /// <summary>
     /// 返回插入数据，仅mariadb数据库支持
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldsSelector">字段筛选表达式</param>
-    /// <returns>返回插入的部分字段</returns>
+    /// <returns>返回插入对象</returns>
     IMySqlBulkCreated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
     #endregion
 }

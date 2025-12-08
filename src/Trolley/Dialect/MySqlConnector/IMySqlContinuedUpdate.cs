@@ -7,10 +7,6 @@ namespace Trolley.MySqlConnector;
 /// 更新数据
 /// </summary>
 /// <typeparam name="TEntity">要更新的实体类型</typeparam>
-/// <summary>
-/// 更新数据
-/// </summary>
-/// <typeparam name="TEntity">要更新的实体类型</typeparam>
 public interface IMySqlContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
 {
     #region Set

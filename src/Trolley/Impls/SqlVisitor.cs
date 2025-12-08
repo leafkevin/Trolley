@@ -300,30 +300,26 @@ public class SqlVisitor : ISqlVisitor
 
     public virtual void VisitAndSql(string whereSql, OperationType operationType = OperationType.None)
     {
+        var lastOperationType = this.WhereBuilder.Length > 0 ? OperationType.And : operationType;
         if (this.LastWhereOperationType == OperationType.Or)
         {
             this.WhereBuilder.Insert(0, '(');
             this.WhereBuilder.Append(')');
         }
-        if (this.LastWhereOperationType != OperationType.None)
-        {
+        if (this.WhereBuilder.Length > 0)
             this.WhereBuilder.Append(" AND ");
-            if (operationType == OperationType.Or)
-                whereSql = $"({whereSql})";
-        }
+        if (operationType == OperationType.Or)
+            whereSql = $"({whereSql})";
         this.WhereBuilder.Append(whereSql);
-        if (this.LastWhereOperationType == OperationType.None && operationType == OperationType.Or)
-            this.LastWhereOperationType = OperationType.Or;
-        else this.LastWhereOperationType = OperationType.And;
+        this.LastWhereOperationType = lastOperationType;
     }
     public virtual void VisitOrSql(string whereSql, OperationType operationType = OperationType.None)
     {
-        if (this.LastWhereOperationType != OperationType.None)
+        var lastOperationType = this.WhereBuilder.Length > 0 ? OperationType.Or : operationType;
+        if (this.WhereBuilder.Length > 0)
             this.WhereBuilder.Append(" OR ");
         this.WhereBuilder.Append(whereSql);
-        if (this.LastWhereOperationType == OperationType.None && operationType != OperationType.Or)
-            this.LastWhereOperationType = OperationType.And;
-        else this.LastWhereOperationType = OperationType.Or;
+        this.LastWhereOperationType = lastOperationType;
     }
 
     public virtual SqlFieldSegment VisitAndDeferred(SqlFieldSegment sqlSegment)

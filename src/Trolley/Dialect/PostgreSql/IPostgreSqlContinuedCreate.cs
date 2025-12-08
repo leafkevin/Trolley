@@ -7,13 +7,7 @@ public interface IPostgreSqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
 {
     #region WithBy
     /// <summary>
-    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出属性不插入，如：
-    /// <code>
-    /// repository.Create&lt;User&gt;()
-    ///     .WithBy(new { ... })
-    ///     .WithBy(new { Name = "kevin", Age = 25 }) ...
-    /// SQL: INSERT INTO "sys_user" ( ..., "Name","Age", ... ) VALUES(..., @Name,@Age, ... )
-    /// </code>
+    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出属性不插入，如：.WithBy(new { Name = "kevin", Age = 25 })
     /// </summary>
     /// <typeparam name="TInsertObject">插入数据的对象类型</typeparam>
     /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出属性不插入，不可为null</param>
@@ -21,7 +15,6 @@ public interface IPostgreSqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     new IPostgreSqlContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
     /// <summary>
     /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出属性不插入，condition为true生效，如：.WithBy(true, new { Gender = Gender.Male, ... })
-    /// </summary>
     /// </summary>
     /// <typeparam name="TInsertObject">插入数据的对象类型</typeparam>
     /// <param name="condition">判断条件，为true时生效</param>
@@ -81,7 +74,7 @@ public interface IPostgreSqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
 
     #region OnConflict
     /// <summary>
-    /// 相同主键或唯一索引存在时执行更新动作，INSERT INTO ... ON CONFLICT(...) DO UPDATE
+    /// 插入或更新，相同主键或唯一索引存在时执行更新动作，也可以忽略插入，INSERT INTO ... ON CONFLICT(...) DO UPDATE，如：
     /// </summary>
     /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
     /// <param name="fieldsAssignment">要更新的字段赋值表达式</param>
@@ -91,14 +84,14 @@ public interface IPostgreSqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
 
     #region Returning
     /// <summary>
-    /// 返回结果
+    /// 返回插入数据
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldNames">返回字段列表, 如果有函数调用、表达式或是常量值需要带有AS子句</param>
     /// <returns>返回插入的部分对象值</returns>
     IPostgreSqlCreated<TEntity, TResult> Returning<TResult>(string fieldNames);
     /// <summary>
-    /// 返回结果
+    /// 返回插入数据
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldsSelector">返回字段名称列表</param>
@@ -109,14 +102,7 @@ public interface IPostgreSqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
 public interface IPostgreSqlBulkContinuedCreate<TEntity> : IContinuedCreate<TEntity>
 {
     #region WithBy
-    /// <summary>
-    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出属性不插入，如：
-    /// <code>
-    /// repository.Create&lt;User&gt;()
-    ///     .WithBy(new { ... })
-    ///     .WithBy(new { Name = "kevin", Age = 25 }) ...
-    /// SQL: INSERT INTO [sys_user] ( ..., [Name],[Age], ... ) VALUES(..., @Name,@Age, ... )
-    /// </code>
+    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出属性不插入，如：.WithBy(new { Name = "kevin", Age = 25 })
     /// </summary>
     /// <typeparam name="TInsertObject">插入数据的对象类型</typeparam>
     /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出属性不插入，不可为null</param>
@@ -184,7 +170,7 @@ public interface IPostgreSqlBulkContinuedCreate<TEntity> : IContinuedCreate<TEnt
 
     #region OnConflict
     /// <summary>
-    /// 相同主键或唯一索引存在时执行更新动作，INSERT INTO ... ON CONFLICT(...) DO UPDATE
+    /// 插入或更新，相同主键或唯一索引存在时执行更新动作，也可以忽略插入，INSERT INTO ... ON CONFLICT(...) DO UPDATE，如：
     /// </summary>
     /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
     /// <param name="fieldsAssignment">要更新的字段赋值表达式</param>
@@ -194,18 +180,18 @@ public interface IPostgreSqlBulkContinuedCreate<TEntity> : IContinuedCreate<TEnt
 
     #region Returning
     /// <summary>
-    /// 返回插入后想要返回字段的内容
+    /// 返回插入数据
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldNames">字段名称列表</param>
-    /// <returns>返回插入的部分字段</returns>
+    /// <returns>返回插入对象</returns>
     IPostgreSqlBulkCreated<TEntity, TResult> Returning<TResult>(string fieldNames);
     /// <summary>
-    /// 返回插入后想要返回字段的内容
+    /// 返回插入数据
     /// </summary>
    	/// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldsSelector">字段筛选表达式</param>
-    /// <returns>返回插入的部分字段</returns>
+    /// <returns>返回插入对象</returns>
     IPostgreSqlBulkCreated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
     #endregion
 }

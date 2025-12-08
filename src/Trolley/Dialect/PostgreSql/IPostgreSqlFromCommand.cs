@@ -7,7 +7,7 @@ public interface IPostgreSqlFromCommand<TEntity, T> : IFromCommand<TEntity, T>
 {
     #region Sharding
     /// <summary>
-    /// 直接指定<typeparamref name="T"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 手动指定分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
@@ -19,7 +19,7 @@ public interface IPostgreSqlFromCommand<TEntity, T> : IFromCommand<TEntity, T>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<TEntity, T> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="T"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 手动指定分表规则参数值，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回查询对象</returns>
@@ -552,14 +552,14 @@ public interface IPostgreSqlFromCommand<TEntity, T> : IFromCommand<TEntity, T>
 
     #region Returning
     /// <summary>
-    /// 返回插入后想要返回字段的内容
+    /// 返回插入数据
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldNames">字段名称列表</param>
     /// <returns>返回插入的选择字段值</returns>
     IPostgreSqlBulkCreated<T, TResult> Returning<TResult>(string fieldNames);
     /// <summary>
-    /// 返回插入后想要返回字段的内容
+    /// 返回插入数据
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldsSelector">字段筛选表达式</param>
