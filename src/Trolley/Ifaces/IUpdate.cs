@@ -80,7 +80,7 @@ public interface IUpdate<TEntity>
     /// SQL: SET `Name`=@Name,SourceType=@SourceType WHERE `Id`=@kId</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新，可以是字典或是匿名对象或是现有命名对象</param>
     /// <returns>返回更新对象</returns>
     IContinuedUpdate<TEntity> Set<TUpdateObj>(bool condition, TUpdateObj updateObj);
@@ -116,7 +116,7 @@ public interface IUpdate<TEntity>
     /// <code>.Set(true, x =&gt; x.OrderNo, "ON_111")</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="fieldSelector">筛选单个字段表达式，只能筛选一个字段</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
@@ -150,7 +150,7 @@ public interface IUpdate<TEntity>
     /// </code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="fieldSelector">字段筛选表达式，只能筛选一个字段</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
@@ -192,7 +192,7 @@ public interface IUpdate<TEntity>
     /// </code>
     /// </summary>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="fieldsAssignment">子查询表达式</param>
     /// <returns>返回更新对象</returns>
     IContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
@@ -271,7 +271,7 @@ public interface IContinuedUpdate<TEntity> : IUpdated<TEntity>
     /// .Set(true, new User { Id = 1, ... })  SQL: SET ... //只更新部分字段，可以使用OnlyFields方法，忽略部分字段，可以使用IgnoreFields方法</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新，可以是字典或是匿名对象或是现有命名对象</param>
     /// <returns>返回更新对象</returns>
     IContinuedUpdate<TEntity> Set<TUpdateObj>(bool condition, TUpdateObj updateObj);
@@ -330,7 +330,7 @@ public interface IContinuedUpdate<TEntity> : IUpdated<TEntity>
     /// <code>.Set(true, x =&gt; x.OrderNo, "ON_111")</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="fieldSelector">筛选单个字段表达式，只能筛选一个字段</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
@@ -375,7 +375,7 @@ public interface IContinuedUpdate<TEntity> : IUpdated<TEntity>
     /// </code>
     /// </summary>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="fieldsAssignment">子查询表达式</param>
     /// <returns>返回更新对象</returns>
     IContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
@@ -405,7 +405,7 @@ public interface IContinuedUpdate<TEntity> : IUpdated<TEntity>
     /// </code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="fieldSelector">字段筛选表达式，只能筛选一个字段</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
@@ -652,7 +652,7 @@ public interface IBulkContinuedUpdate<TEntity> : IUpdated<TEntity>
     /// .Set(true, new User { Id = 1, ... })  SQL: SET ... //只更新部分字段，可以使用OnlyFields方法，忽略部分字段，可以使用IgnoreFields方法</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新，可以是字典或是匿名对象或是现有命名对象</param>
     /// <returns>返回更新对象</returns>
     IBulkContinuedUpdate<TEntity> Set<TUpdateObj>(bool condition, TUpdateObj updateObj);
@@ -711,7 +711,7 @@ public interface IBulkContinuedUpdate<TEntity> : IUpdated<TEntity>
     /// <code>.Set(true, x =&gt; x.OrderNo, "ON_111")</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="fieldSelector">筛选单个字段表达式，只能筛选一个字段</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>

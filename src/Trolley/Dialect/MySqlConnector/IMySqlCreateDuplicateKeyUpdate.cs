@@ -43,7 +43,7 @@ public interface IMySqlCreateDuplicateKeyUpdate<TEntity>
     /// .Set(true, new User { Id = 1, ... })  SQL: SET ... //只更新部分字段，可以使用OnlyFields方法，忽略部分字段，可以使用IgnoreFields方法</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新，可以是字典或是匿名对象或是现有命名对象</param>
     /// <returns>返回更新对象</returns>
     IMySqlCreateDuplicateKeyUpdate<TEntity> Set<TUpdateObj>(bool condition, TUpdateObj updateObj);
@@ -64,7 +64,7 @@ public interface IMySqlCreateDuplicateKeyUpdate<TEntity>
     /// 判断condition的值，为true时设置VALUES多个字段更新
     /// </summary>
     /// <typeparam name="TFields">要更新的实体类型</typeparam>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="fieldsAssignment">要更新的字段表达式，尽力使用VALUES</param>
     /// <returns>返回更新对象</returns>
     IMySqlCreateDuplicateKeyUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment);

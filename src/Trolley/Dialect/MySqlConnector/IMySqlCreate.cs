@@ -12,13 +12,21 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// </summary>
     /// <param name="tableName">完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回插入对象</returns>
-    new IMySqlCreate<TEntity> UseTable(string tableName);    
+    new IMySqlCreate<TEntity> UseTable(string tableName);
     /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="TEntity"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回插入对象</returns>
     new IMySqlCreate<TEntity> UseTableBy(params object[] fieldValues);
+    /// <summary>
+    /// 手动指定分表名获取委托，执行委托获取分表名，在批量插入场景，插入对象的值自动插入对应分表中，此方法只适用批量场景。
+    /// 第一个参数是原始表名，第二个参数是插入的实体对象，返回值是分表名，如：.UseTable((tableName, insertObj) =&gt; $"{tableName}_{insertObj.CreatedAt:yyyyMM}")
+    /// </summary>
+    /// <typeparam name="TInsertObj">插入的实体类型</typeparam>
+    /// <param name="tableNameGetter">分表名获取委托</param>
+    /// <returns>返回插入对象</returns>
+    new IMySqlCreate<TEntity> UseTable<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter);
     /// <summary>
     /// 手动指定分表规则依赖的批量插入参数(WithBulk方法中的参数)外的其他参数值，Trolley会自动结合otherFieldValues和批量插入参数(WithBulk方法中的参数)中分表依赖字段值确定分表名，otherFieldValues字段值数组中的顺序与配置的依赖字段(批量插入参数中的依赖字段除外)顺序一致，自插入到多个分表中，此方法只能用于批量场景。
     /// 如：假如分表规则根据租户ID+CreatedAt时间确定分表名，.UseTableByOthers([125])，125是租户ID，批量插入参数(WithBulk方法中的参数)中包含CreatedAt时间字段值
@@ -62,7 +70,7 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// </code>
     /// </summary>
     /// <typeparam name="TInsertObject">插入对象类型</typeparam>
-    /// <param name="insertObj">插入对象，包含想要插入的必需栏位值，命名或匿名对象都可以</param>
+    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出字段不插入，不可为null</param>
     /// <returns>返回插入对象</returns>
     new IMySqlContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
     #endregion

@@ -31,7 +31,7 @@ public interface IMySqlGroupingCommand<TEntity, T, TGrouping> : IGroupingCommand
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     new IMySqlGroupingCommand<TEntity, T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate);
@@ -103,7 +103,7 @@ public interface IMySqlGroupingCommand<TEntity, T1, T2, TGrouping> : IGroupingCo
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     new IMySqlGroupingCommand<TEntity, T1, T2, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, bool>> predicate);
@@ -176,7 +176,7 @@ public interface IMySqlGroupingCommand<TEntity, T1, T2, T3, TGrouping> : IGroupi
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     new IMySqlGroupingCommand<TEntity, T1, T2, T3, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, bool>> predicate);
@@ -250,7 +250,7 @@ public interface IMySqlGroupingCommand<TEntity, T1, T2, T3, T4, TGrouping> : IGr
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     new IMySqlGroupingCommand<TEntity, T1, T2, T3, T4, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, bool>> predicate);
@@ -325,7 +325,7 @@ public interface IMySqlGroupingCommand<TEntity, T1, T2, T3, T4, T5, TGrouping> :
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     new IMySqlGroupingCommand<TEntity, T1, T2, T3, T4, T5, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, bool>> predicate);
@@ -401,7 +401,7 @@ public interface IMySqlGroupingCommand<TEntity, T1, T2, T3, T4, T5, T6, TGroupin
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     new IMySqlGroupingCommand<TEntity, T1, T2, T3, T4, T5, T6, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, bool>> predicate);

@@ -7,7 +7,7 @@ public interface ISqlServerContinuedCreate<TEntity> : IContinuedCreate<TEntity>
 {
     #region WithBy
     /// <summary>
-    /// 使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，命名或匿名对象、字典都可以，如：
+    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出字段不插入，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { ... })
@@ -16,11 +16,11 @@ public interface ISqlServerContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// </code>
     /// </summary>
     /// <typeparam name="TInsertObject">插入数据的对象类型</typeparam>
-    /// <param name="insertObj">插入数据对象，包含想要插入的必需栏位值</param>
+    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出字段不插入，不可为null</param>
     /// <returns>返回插入对象</returns>
     new ISqlServerContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，如：
+    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出字段不插入，condition为true生效，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { Name = "kevin", Age = 25 })
@@ -30,8 +30,8 @@ public interface ISqlServerContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// </code>
     /// </summary>
     /// <typeparam name="TInsertObject">插入数据的对象类型</typeparam>
-    /// <param name="condition">判断条件</param>
-    /// <param name="insertObj">插入数据对象，包含想要插入的必需栏位值</param>
+    /// <param name="condition">判断条件，为true时生效</param>
+    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出字段不插入，不可为null</param>
     /// <returns>返回插入对象</returns>
     new ISqlServerContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
     /// <summary>
@@ -45,7 +45,7 @@ public interface ISqlServerContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// SQL: INSERT INTO [sys_user] ([Name],[Age],[Gender], ... ) VALUES(@Name,@Age,@Gender, ... )
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="fieldSelector">字段选择表达式，只能选择单个字段</param>
     /// <param name="fieldValue">字段值</param>
     /// <returns>返回插入对象</returns>
@@ -54,32 +54,32 @@ public interface ISqlServerContinuedCreate<TEntity> : IContinuedCreate<TEntity>
 
     #region IgnoreFields
     /// <summary>
-    /// 忽略字段，实体属性名称，如：IgnoreFields("Name") | IgnoreFields("Name", "CreatedAt")
+    /// 忽略字段，实体属性名称，如：.IgnoreFields("Name") 或是 .IgnoreFields("Name", "CreatedAt")
     /// </summary>
-    /// <param name="fieldNames">忽略的字段数组，不可为null</param>
+    /// <param name="fieldNames">实体成员名称数组，不可为null</param>
     /// <returns>返回插入对象</returns>
     new ISqlServerContinuedCreate<TEntity> IgnoreFields(params string[] fieldNames);
     /// <summary>
     /// 忽略字段，如：IgnoreFields(f =&gt; f.Name) | IgnoreFields(f =&gt; new {f.Name, f.CreatedAt})
     /// </summary>
-    /// <typeparam name="TFields">单个或多个字段类型</typeparam>
-    /// <param name="fieldsSelector">忽略的字段选择表达式，不可为null</param>
+    /// <typeparam name="TFields">字段类型</typeparam>
+    /// <param name="fieldsSelector">字段选择表达式，单个或多个字段，不可为null</param>
     /// <returns>返回插入对象</returns>
     new ISqlServerContinuedCreate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);
     #endregion
 
     #region OnlyFields
     /// <summary>
-    /// 只插入字段，实体属性名称，如：OnlyFields("Name") | OnlyFields("Name", "CreatedAt")
+    /// 插入字段，未列出字段不插入，实体属性名称，如：.OnlyFields("Name") 或是 .OnlyFields("Name", "CreatedAt")
     /// </summary>
-    /// <param name="fieldNames"></param>
+    /// <param name="fieldNames">实体成员名称数组，不可为null</param>
     /// <returns>返回插入对象</returns>
     new ISqlServerContinuedCreate<TEntity> OnlyFields(params string[] fieldNames);
     /// <summary>
-    /// 只插入字段，如：OnlyFields(f =&gt; f.Name) | OnlyFields(f =&gt; new {f.Name, f.CreatedAt})
+    /// 插入字段，未列出字段不插入，如：.OnlyFields(f =&gt; f.Name) 或是 .OnlyFields(f =&gt; new {f.Name, f.CreatedAt})
     /// </summary>
-    /// <typeparam name="TFields">单个或多个字段类型</typeparam>
-    /// <param name="fieldsSelector">只插入的字段选择表达式，不可为null</param>
+    /// <typeparam name="TFields">字段类型</typeparam>
+    /// <param name="fieldsSelector">字段选择表达式，单个或多个字段，不可为null</param>
     /// <returns>返回插入对象</returns>
     new ISqlServerContinuedCreate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);
     #endregion
@@ -105,7 +105,7 @@ public interface ISqlServerBulkContinuedCreate<TEntity> : IContinuedCreate<TEnti
 {
     #region WithBy
     /// <summary>
-    /// 使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，命名或匿名对象、字典都可以，如：
+    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出字段不插入，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { ... })
@@ -114,11 +114,11 @@ public interface ISqlServerBulkContinuedCreate<TEntity> : IContinuedCreate<TEnti
     /// </code>
     /// </summary>
     /// <typeparam name="TInsertObject">插入数据的对象类型</typeparam>
-    /// <param name="insertObj">插入数据对象，包含想要插入的必需栏位值</param>
+    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出字段不插入，不可为null</param>
     /// <returns>返回插入对象</returns>
     new ISqlServerBulkContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，如：
+    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出字段不插入，condition为true生效，如：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { Name = "kevin", Age = 25 })
@@ -128,8 +128,8 @@ public interface ISqlServerBulkContinuedCreate<TEntity> : IContinuedCreate<TEnti
     /// </code>
     /// </summary>
     /// <typeparam name="TInsertObject">插入数据的对象类型</typeparam>
-    /// <param name="condition">判断条件</param>
-    /// <param name="insertObj">插入数据对象，包含想要插入的必需栏位值</param>
+    /// <param name="condition">判断条件，为true时生效</param>
+    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出字段不插入，不可为null</param>
     /// <returns>返回插入对象</returns>
     new ISqlServerBulkContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
     /// <summary>
@@ -143,7 +143,7 @@ public interface ISqlServerBulkContinuedCreate<TEntity> : IContinuedCreate<TEnti
     /// SQL: INSERT INTO [sys_user] ([Name],[Age],[Gender], ... ) VALUES(@Name,@Age,@Gender, ... )
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="fieldSelector">字段选择表达式，只能选择单个字段</param>
     /// <param name="fieldValue">字段值</param>
     /// <returns>返回插入对象</returns>
@@ -152,32 +152,32 @@ public interface ISqlServerBulkContinuedCreate<TEntity> : IContinuedCreate<TEnti
 
     #region IgnoreFields
     /// <summary>
-    /// 忽略字段，实体属性名称，如：IgnoreFields("Name") | IgnoreFields("Name", "CreatedAt")
+    /// 忽略字段，实体属性名称，如：.IgnoreFields("Name") 或是 .IgnoreFields("Name", "CreatedAt")
     /// </summary>
-    /// <param name="fieldNames">忽略的字段数组，不可为null</param>
+    /// <param name="fieldNames">实体成员名称数组，不可为null</param>
     /// <returns>返回插入对象</returns>
     new ISqlServerBulkContinuedCreate<TEntity> IgnoreFields(params string[] fieldNames);
     /// <summary>
     /// 忽略字段，如：IgnoreFields(f =&gt; f.Name) | IgnoreFields(f =&gt; new {f.Name, f.CreatedAt})
     /// </summary>
-    /// <typeparam name="TFields">单个或多个字段类型</typeparam>
-    /// <param name="fieldsSelector">忽略的字段选择表达式，不可为null</param>
+    /// <typeparam name="TFields">字段类型</typeparam>
+    /// <param name="fieldsSelector">字段选择表达式，单个或多个字段，不可为null</param>
     /// <returns>返回插入对象</returns>
     new ISqlServerBulkContinuedCreate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);
     #endregion
 
     #region OnlyFields
     /// <summary>
-    /// 只插入字段，实体属性名称，如：OnlyFields("Name") | OnlyFields("Name", "CreatedAt")
+    /// 插入字段，未列出字段不插入，实体属性名称，如：.OnlyFields("Name") 或是 .OnlyFields("Name", "CreatedAt")
     /// </summary>
-    /// <param name="fieldNames"></param>
+    /// <param name="fieldNames">实体成员名称数组，不可为null</param>
     /// <returns>返回插入对象</returns>
     new ISqlServerBulkContinuedCreate<TEntity> OnlyFields(params string[] fieldNames);
     /// <summary>
-    /// 只插入字段，如：OnlyFields(f =&gt; f.Name) | OnlyFields(f =&gt; new {f.Name, f.CreatedAt})
+    /// 插入字段，未列出字段不插入，如：.OnlyFields(f =&gt; f.Name) 或是 .OnlyFields(f =&gt; new {f.Name, f.CreatedAt})
     /// </summary>
-    /// <typeparam name="TFields">单个或多个字段类型</typeparam>
-    /// <param name="fieldsSelector">只插入的字段选择表达式，不可为null</param>
+    /// <typeparam name="TFields">字段类型</typeparam>
+    /// <param name="fieldsSelector">字段选择表达式，单个或多个字段，不可为null</param>
     /// <returns>返回插入对象</returns>
     new ISqlServerBulkContinuedCreate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);
     #endregion

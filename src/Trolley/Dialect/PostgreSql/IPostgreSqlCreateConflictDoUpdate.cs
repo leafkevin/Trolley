@@ -48,7 +48,7 @@ public interface IPostgreSqlCreateConflictDoUpdate<TEntity>
     /// </code>
     /// </summary>
     /// <typeparam name="TFields">要更新的实体类型</typeparam>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="fieldsAssignment">要更新的字段表达式，尽力使用VALUES</param>
     /// <returns>返回更新对象</returns>
     IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment);

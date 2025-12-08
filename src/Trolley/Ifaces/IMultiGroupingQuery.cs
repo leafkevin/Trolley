@@ -32,7 +32,7 @@ public interface IMultiGroupingQuery<T, TGrouping> : IMultiGroupingQueryBase<TGr
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate);
@@ -112,7 +112,7 @@ public interface IMultiGroupingQuery<T1, T2, TGrouping> : IMultiGroupingQueryBas
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, bool>> predicate);
@@ -193,7 +193,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, TGrouping> : IMultiGroupingQuer
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, bool>> predicate);
@@ -275,7 +275,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, TGrouping> : IMultiGrouping
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, bool>> predicate);
@@ -358,7 +358,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IMultiGrou
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, bool>> predicate);
@@ -442,7 +442,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : IMulti
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, bool>> predicate);
@@ -527,7 +527,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : IM
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, bool>> predicate);
@@ -613,7 +613,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> 
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate);
@@ -700,7 +700,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGroupi
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate);
@@ -788,7 +788,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TG
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate);
@@ -877,7 +877,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate);
@@ -967,7 +967,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate);
@@ -1058,7 +1058,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate);
@@ -1150,7 +1150,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate);
@@ -1243,7 +1243,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
     /// <summary>
     /// Having操作，condition为true时生效，如: .Having(true, (x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate);

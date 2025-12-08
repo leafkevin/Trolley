@@ -271,7 +271,7 @@ public interface IRepository
     /// </summary>
     /// <typeparam name="TValue">返回值类型</typeparam>
     /// <param name="rawSql">原始SQL语句</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <param name="commandType">rawSql原始语句的类型，默认是CommandType.Text</param>
     /// <returns>返回单个值</returns>
     TValue QueryScalar<TValue>(string rawSql, object parameters, CommandType commandType = CommandType.Text);
@@ -280,7 +280,7 @@ public interface IRepository
     /// </summary>
     /// <typeparam name="TValue">返回值类型</typeparam>
     /// <param name="rawSql">原始SQL语句</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <param name="commandType">rawSql原始语句的类型，默认是CommandType.Text</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回单个值</returns>
@@ -347,7 +347,7 @@ public interface IRepository
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="rawSql">原始SQL</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <param name="commandType">命令类型，默认是文本</param>
     /// <returns>返回查询结果，没有数据返回默认值null</returns>
     TEntity QueryFirst<TEntity>(string rawSql, object parameters, CommandType commandType = CommandType.Text);
@@ -356,7 +356,7 @@ public interface IRepository
     /// </summary>
     /// <typeparam name="TEntity">返回的实体类型</typeparam>
     /// <param name="rawSql">查询SQL</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <param name="commandType">命令类型，默认是文本</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回查询结果，没有数据返回默认值null</returns>
@@ -382,14 +382,14 @@ public interface IRepository
     /// 条件查询，同名属性值作为查询条件，没有数据返回null，whereObj为null时返回表中第一条记录，不支持分表，如：.QueryFirst&lt;User&gt;(new { Name = "kevin" })
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="whereObj">条件参数，可以是命名对象、匿名对象或是Dictionary类型对象，可为null</param>
+    /// <param name="whereObj">条件参数，可以是命名对象、匿名对象或是字典类型对象，可为null</param>
     /// <returns>返回查询结果，没有数据返回默认值null</returns>
     TEntity QueryFirst<TEntity>(object whereObj = null);
     /// <summary>
     /// 条件查询，同名属性值作为查询条件，没有数据返回null，whereObj为null时返回表中第一条记录，不支持分表，如：.QueryFirstAsync&lt;User&gt;(new { Name = "kevin" })
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="whereObj">条件参数，可以是命名对象、匿名对象或是Dictionary类型对象，可为null</param>
+    /// <param name="whereObj">条件参数，可以是命名对象、匿名对象或是字典类型对象，可为null</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回查询结果，没有数据返回默认值null</returns>
     Task<TEntity> QueryFirstAsync<TEntity>(object whereObj = null, CancellationToken cancellationToken = default);
@@ -436,7 +436,7 @@ public interface IRepository
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="rawSql">原始SQL</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <param name="commandType">命令类型，默认是文本</param>
     /// <returns>返回查询结果，没有数据返回List&lt;<typeparamref name="TEntity"/>&gt;类型空列表</returns>
     List<TEntity> Query<TEntity>(string rawSql, object parameters, CommandType commandType = CommandType.Text);
@@ -445,7 +445,7 @@ public interface IRepository
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="rawSql">原始SQL</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <param name="commandType">命令类型，默认是文本</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回查询结果，没有数据返回List&lt;<typeparamref name="TEntity"/>&gt;类型空列表</returns>
@@ -471,14 +471,14 @@ public interface IRepository
     /// 条件查询，同名属性值作为查询条件，没有数据返回List&lt;<typeparamref name="TEntity"/>&gt;类型空列表，whereObj为null时返回表中所有记录，不支持分表，如：.Query&lt;User&gt;(new { Name = "kevin" })
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="whereObj">条件对象，同名属性值作为查询条件，可以是命名对象、匿名对象或是Dictionary类型对象，可为null</param>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，可以是命名对象、匿名对象或是字典类型对象，可为null</param>
     /// <returns>返回查询结果，没有数据返回List&lt;<typeparamref name="TEntity"/>&gt;类型空列表</returns>
     List<TEntity> Query<TEntity>(object whereObj = null);
     /// <summary>
     /// 条件查询，同名属性值作为查询条件，没有数据返回List&lt;<typeparamref name="TEntity"/>&gt;类型空列表，whereObj为null时返回表中所有记录，不支持分表，如：.QueryAsync&lt;User&gt;(new { Name = "kevin" })
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="whereObj">条件对象，同名属性值作为查询条件，可以是命名对象、匿名对象或是Dictionary类型对象，可为null</param>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，可以是命名对象、匿名对象或是字典类型对象，可为null</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回查询结果，没有数据返回List&lt;<typeparamref name="TEntity"/>&gt;类型空列表</returns>
     Task<List<TEntity>> QueryAsync<TEntity>(object whereObj = null, CancellationToken cancellationToken = default);
@@ -552,7 +552,7 @@ public interface IRepository
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
+    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出字段不插入，不可为null</param>
     /// <returns>返回插入行数</returns>
     int Create<TEntity>(object insertObj);
     /// <summary>
@@ -569,63 +569,63 @@ public interface IRepository
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
+    /// <param name="insertObj">插入对象，未列出字段不插入，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回插入行数</returns>
     Task<int> CreateAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 多条数据插入，自动增长栏位不需要传入，未列出字段不插入，分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，不支持分表
+    /// 多条数据插入，自动增长栏位不需要传入，未列出字段不插入，分批次完成，每次插入bulkCount条数，不支持分表
     /// <code>
     /// .Create&lt;Product&gt;(new []{ new { ... }, new { ... }, new { ... });
     /// SQL: INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObjs">插入对象，可以是匿名对象、实体对象、字典等类型的IEnumerable类型，如：数组、列表、集合等</param>
+    /// <param name="insertObjs">插入对象，未列出字段不插入，可以是匿名对象、实体对象、字典等类型的IEnumerable类型，如：数组、列表、集合等</param>
     /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值</param>
     /// <returns>返回插入行数</returns>
     int Create<TEntity>(IEnumerable insertObjs, int bulkCount);
     /// <summary>
-    /// 多条数据插入，自动增长栏位不需要传入，未列出字段不插入，分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，不支持分表
+    /// 多条数据插入，自动增长栏位不需要传入，未列出字段不插入，分批次完成，每次插入bulkCount条数，不支持分表
     /// <code>
     /// .CreateAsync&lt;Product&gt;(new []{ new { ... }, new { ... }, new { ... });
     /// SQL: INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObjs">插入对象，可以是匿名对象、实体对象、字典等类型的IEnumerable类型，如：数组、列表、集合等</param>
+    /// <param name="insertObjs">插入对象，未列出字段不插入，可以是匿名对象、实体对象、字典等类型的IEnumerable类型，如：数组、列表、集合等</param>
     /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回插入行数</returns>
     Task<int> CreateAsync<TEntity>(IEnumerable insertObjs, int bulkCount, CancellationToken cancellationToken = default);
 
     /// <summary>
-    ///  单条数据插入，并返回自增长ID，自动增长栏位不需要传入，支持分表，在分表的情况下，会根据分表依赖的字段把数据自动插入到指定的分表中，如果插入的参数未包含分表的字段则会抛出异常
+    /// 单条数据插入，并返回自增长ID，自动增长栏位不需要传入，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObj">插入对象，可以是匿名对象、实体对象、字典</param>
+    /// <param name="insertObj">插入对象，未列出字段不插入，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <returns>返回自增长ID</returns>
     int CreateIdentity<TEntity>(object insertObj);
     /// <summary>
-    ///  使用插入对象部分字段插入，并返回自增长ID，自动增长栏位，不需要传入，支持分表，在分表的情况下，会根据分表依赖的字段把数据自动插入到指定的分表中，如果插入的参数未包含分表的字段则会抛出异常
+    /// 单条数据插入，并返回自增长ID，自动增长栏位不需要传入，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObj">插入对象，可以是匿名对象、实体对象、字典</param>
+    /// <param name="insertObj">插入对象，未列出字段不插入，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回自增长ID</returns>
     Task<int> CreateIdentityAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default);
     /// <summary>
-    ///  使用插入对象部分字段插入，并返回自增长ID，自动增长栏位，不需要传入，支持分表，在分表的情况下，会根据分表依赖的字段把数据自动插入到指定的分表中，如果插入的参数未包含分表的字段则会抛出异常
+    /// 单条数据插入，并返回自增长ID，自动增长栏位不需要传入，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObj">插入对象，可以是匿名对象、实体对象、字典</param>
+    /// <param name="insertObj">插入对象，未列出字段不插入，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <returns>返回自增长ID</returns>
     long CreateIdentityLong<TEntity>(object insertObj);
     /// <summary>
-    ///  使用插入对象部分字段插入，并返回自增长ID，自动增长栏位，不需要传入，支持分表，在分表的情况下，会根据分表依赖的字段把数据自动插入到指定的分表中，如果插入的参数未包含分表的字段则会抛出异常
+    /// 单条数据插入，并返回自增长ID，自动增长栏位不需要传入，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObj">插入对象，可以是匿名对象、实体对象、字典</param>
+    /// <param name="insertObj">插入对象，未列出字段不插入，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回自增长ID</returns>
     Task<long> CreateIdentityLongAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default);
@@ -741,7 +741,7 @@ public interface IRepository
     /// 执行原始SQL，并返回影响行数
     /// </summary>
     /// <param name="rawSql">要执行的SQL</param>
-    /// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，可以为null</param>
+    /// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是字典类型对象，可以为null</param>
     /// <param name="commandType">命令类型，默认是文本</param>
     /// <returns>返回影响行数</returns>
     int Execute(string rawSql, object parameters = null, CommandType commandType = CommandType.Text);
@@ -749,7 +749,7 @@ public interface IRepository
     /// 执行原始SQL，并返回影响行数
     /// </summary>
     /// <param name="rawSql">要执行的SQL</param>
-    /// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，可以为null</param>
+    /// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是字典类型对象，可以为null</param>
     /// <param name="commandType">命令类型，默认是文本</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回影响行数</returns>

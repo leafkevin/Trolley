@@ -195,7 +195,7 @@ public interface IMultipleQuery : IDisposable
     /// </summary>
     /// <typeparam name="TValue">返回值类型</typeparam>
     /// <param name="rawSql">原始SQL语句</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <returns>返回单个值</returns>
     IMultipleQuery QueryScalar<TValue>(string rawSql, object parameters);
     /// <summary>
@@ -255,7 +255,7 @@ public interface IMultipleQuery : IDisposable
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
     /// <param name="rawSql">原始SQL</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     IMultipleQuery QueryFirst<TEntity>(string rawSql, object parameters);
     /// <summary>
@@ -273,7 +273,7 @@ public interface IMultipleQuery : IDisposable
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
-    /// <param name="whereObj">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
+    /// <param name="whereObj">参数，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     IMultipleQuery QueryFirst<TEntity>(object whereObj);
     #endregion
@@ -291,7 +291,7 @@ public interface IMultipleQuery : IDisposable
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
     /// <param name="rawSql">原始SQL</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
     IMultipleQuery Query<TEntity>(string rawSql, object parameters);
     /// <summary>
@@ -309,7 +309,7 @@ public interface IMultipleQuery : IDisposable
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
-    /// <param name="whereObj">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
+    /// <param name="whereObj">参数，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
     IMultipleQuery Query<TEntity>(object whereObj);
     #endregion

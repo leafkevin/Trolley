@@ -520,7 +520,7 @@ public interface IMySqlFromCommand<TEntity, T> : IFromCommand<TEntity, T>
 
     #region OnDuplicateKeyUpdate
     /// <summary>
-    /// 相同主键或唯一索引存在时执行更新动作，INSERT INTO ... ON DUPLICATE KEY UPDATE
+    /// 插入或更新，相同主键或唯一索引存在时执行更新，INSERT INTO ... ON DUPLICATE KEY UPDATE
     /// </summary>
     /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
     /// <param name="fieldsAssignment">要更新的字段赋值表达式</param>
@@ -530,14 +530,14 @@ public interface IMySqlFromCommand<TEntity, T> : IFromCommand<TEntity, T>
 
     #region Returning
     /// <summary>
-    /// 返回插入后想要返回字段的内容，仅mariadb数据库支持
+    /// 返回插入数据，仅mariadb数据库支持
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldNames">字段名称列表</param>
     /// <returns>返回插入的选择字段值</returns>
     IMySqlBulkCreated<TEntity, TResult> Returning<TResult>(string fieldNames);
     /// <summary>
-    /// 返回插入后想要返回字段的内容，仅mariadb数据库支持
+    /// 返回插入数据，仅mariadb数据库支持
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldsSelector">字段筛选表达式</param>

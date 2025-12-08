@@ -66,31 +66,30 @@ public interface ICreate<TEntity>
 
     #region WithBy
     /// <summary>
-    /// 使用插入对象部分字段插入，单个对象插入，命名或匿名对象都可以
-    /// <para>自动增长的栏位，不需要传入，如：</para>
+    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出字段不插入
     /// <code>
-    /// repository.Create&lt;User&gt;()
-    ///     .WithBy(new
-    ///     {
-    ///         Name = "leafkevin",
-    ///         Age = 25,
-    ///         ...
-    ///     })
-    ///     .Execute();
-    /// SQL: INSERT INTO `sys_user` (`Name`,`Age`, ...) VALUES(@Name,@Age, ...)
+    /// .WithBy(new
+    /// {
+    ///     Name = "leafkevin",
+    ///     Age = 25,
+    ///     UpdatedAt = DateTime.Now,
+    ///     UpdatedBy = 1
+    /// });
+    /// SQL: INSERT INTO `sys_user` (`Name`,`Age`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@UpdatedAt,@UpdatedBy)
     /// </code>
     /// </summary>
     /// <typeparam name="TInsertObject">插入对象类型</typeparam>
-    /// <param name="insertObj">插入对象，包含想要插入的必需栏位值，命名或匿名对象都可以</param>
+    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出字段不插入，不可为null</param>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
     #endregion
 
     #region WithBulk
     /// <summary>
-    /// 批量插入，采用多表值方式，生成的SQL:
+    /// 多条数据插入，自动增长栏位不需要传入，未列出字段不插入，分批次完成，每次插入bulkCount条数，
     /// <code>
-    /// INSERT INTO `sys_product` (`ProductNo`,`Name`, ...) VALUES (@ProductNo0,@Name0, ...),(@ProductNo1,@Name1, ...),(@ProductNo2,@Name2, ...)
+    /// .WithBulk(new []{ new { ... }, new { ... }, new { ... })
+    /// SQL: INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
     /// </code>
     /// </summary>
     /// <param name="insertObjs">插入的对象集合</param>
@@ -159,7 +158,7 @@ public interface ICreate<TEntity>
 
     #region FromQuery
     /// <summary>
-    /// 使用子查询subQuery作为创建子查询对象，子查询subQuery也可以是CTE表，如：
+    /// 使用子查询多条数据插入，参数subQuery也可以是CTE表，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.Create&lt;Menu&gt;().FromQuery(subQuery)
@@ -171,7 +170,7 @@ public interface ICreate<TEntity>
     /// <returns>返回查询对象</returns>
     IFromCommand<TEntity, T> FromQuery<T>(IQuery<T> subQuery);
     /// <summary>
-    /// 使用子查询subQuery作为创建子查询对象，子查询subQuery也可以是CTE表，如：
+    /// 使用子查询多条数据插入，参数subQuery也可以是CTE表，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.Create&lt;Menu&gt;(f =&gt; f.UseQuery(subQuery)).Select( ... )
@@ -192,7 +191,13 @@ public interface ICreate<TEntity>
 public interface ICreated<TEntity>
 {
     #region Properties
+    /// <summary>
+    /// 获取DbContext对象
+    /// </summary>
     DbContext DbContext { get; }
+    /// <summary>
+    /// 获取Visitor对象
+    /// </summary
     ICreateVisitor Visitor { get; }
     #endregion
 
@@ -212,23 +217,23 @@ public interface ICreated<TEntity>
 
     #region ExecuteIdentity
     /// <summary>
-    /// 执行插入操作，并返回自增长主键值
+    /// 执行插入操作，并返回自增长ID
     /// </summary>
     /// <returns>返回自增长主键值</returns>
     int ExecuteIdentity();
     /// <summary>
-    /// 执行插入操作，并返回自增长主键值
+    /// 执行插入操作，并返回自增长ID
     /// </summary>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回自增长主键值</returns>
     Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default);
     /// <summary>
-    /// 执行插入操作，并返回自增长主键值
+    /// 执行插入操作，并返回自增长ID
     /// </summary>
     /// <returns>返回自增长主键值</returns>
     long ExecuteIdentityLong();
     /// <summary>
-    /// 执行插入操作，并返回自增长主键值
+    /// 执行插入操作，并返回自增长ID
     /// </summary>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回自增长主键值</returns>
@@ -237,7 +242,7 @@ public interface ICreated<TEntity>
 
     #region ToSql
     /// <summary>
-    /// 返回当前查询的SQL和参数列表
+    /// 返回生成的SQL和参数列表
     /// </summary>
     /// <param name="dbParameters">参数列表</param>
     /// <returns>当前查询的SQL</returns>
@@ -251,43 +256,22 @@ public interface ICreated<TEntity>
 public interface IContinuedCreate<TEntity> : ICreated<TEntity>
 {
     #region WithBy
-    /// <summary>
-    /// 使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，命名或匿名对象、字典都可以，如：
-    /// <code>
-    /// repository.Create&lt;User&gt;()
-    ///     .WithBy(new { ... })
-    ///     .WithBy(new { Name = "kevin", Age = 25 }) ...
-    /// SQL: INSERT INTO `sys_user` ( ..., `Name`,`Age`, ... ) VALUES(..., @Name,@Age, ... )
-    /// </code>
+    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出字段不插入，如：.WithBy(new { Name = "kevin", Age = 25 })
     /// </summary>
     /// <typeparam name="TInsertObject">插入数据的对象类型</typeparam>
-    /// <param name="insertObj">插入数据对象，包含想要插入的必需栏位值</param>
+    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出字段不插入，不可为null</param>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，如：
-    /// <code>
-    /// repository.Create&lt;User&gt;()
-    ///     .WithBy(new { Name = "kevin", Age = 25 })
-    ///     .WithBy(true, new { Gender = Gender.Male, ... })
-    ///     .Execute();
-    /// SQL: INSERT INTO `sys_user` (`Name`,`Age`,`Gender`, ... ) VALUES(@Name,@Age,@Gender, ... )
-    /// </code>
+    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出字段不插入，condition为true生效，如：.WithBy(true, new { Gender = Gender.Male, ... })
     /// </summary>
     /// <typeparam name="TInsertObject">插入数据的对象类型</typeparam>
-    /// <param name="condition">判断条件</param>
-    /// <param name="insertObj">插入数据对象，包含想要插入的必需栏位值</param>
+    /// <param name="condition">判断条件，为true时生效</param>
+    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出字段不插入，不可为null</param>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
     /// <summary>
-    /// 单个字段插入，可多次调用，如：
-    /// <code>
-    /// repository.Create&lt;User&gt;()
-    ///     .WithBy(new { Name = "kevin", Age = 25 })
-    ///     .WithBy(f =&gt; f.Gender, Gender.Female)
-    ///     ...
-    ///     .Execute();
-    /// SQL: INSERT INTO `sys_user` (`Name`,`Age`,`Gender`, ... ) VALUES(@Name,@Age,@Gender, ... )
+    /// 单个字段插入，可多次调用，如：.WithBy(f =&gt; f.Gender, Gender.Female).WithBy(f =&gt; f.Gender, Gender.Female)
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldSelector">字段选择表达式，只能选择单个字段</param>
@@ -295,17 +279,10 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     /// <summary>
-    /// 单个字段插入，可多次调用，condition为true有效，如：
-    /// <code>
-    /// repository.Create&lt;User&gt;()
-    ///     .WithBy(new { Name = "kevin", Age = 25 })
-    ///     .WithBy(true, f =&gt; f.Gender, Gender.Female)
-    ///     ...
-    ///     .Execute();
-    /// SQL: INSERT INTO `sys_user` (`Name`,`Age`,`Gender`, ... ) VALUES(@Name,@Age,@Gender, ... )
+    /// 单个字段插入，可多次调用，condition为true生效，如：.WithBy(f =&gt; f.Gender, Gender.Female)
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
+    /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="fieldSelector">字段选择表达式，只能选择单个字段</param>
     /// <param name="fieldValue">字段值</param>
     /// <returns>返回插入对象</returns>
@@ -314,32 +291,32 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
 
     #region IgnoreFields
     /// <summary>
-    /// 忽略字段，实体属性名称，如：IgnoreFields("Name") | IgnoreFields("Name", "CreatedAt")
+    /// 忽略字段，实体属性名称，如：.IgnoreFields("Name") 或是 .IgnoreFields("Name", "CreatedAt")
     /// </summary>
-    /// <param name="fieldNames">忽略的字段数组，不可为null</param>
+    /// <param name="fieldNames">实体成员名称数组，不可为null</param>
     /// <returns></returns>
     IContinuedCreate<TEntity> IgnoreFields(params string[] fieldNames);
     /// <summary>
-    /// 忽略字段，如：IgnoreFields(f =&gt; f.Name) | IgnoreFields(f =&gt; new {f.Name, f.CreatedAt})
+    /// 忽略字段，如：.IgnoreFields(f =&gt; f.Name) 或是 .IgnoreFields(f =&gt; new {f.Name, f.CreatedAt})
     /// </summary>
-    /// <typeparam name="TFields">单个或多个字段类型</typeparam>
-    /// <param name="fieldsSelector">忽略的字段选择表达式，不可为null</param>
+    /// <typeparam name="TFields">字段类型</typeparam>
+    /// <param name="fieldsSelector">字段选择表达式，单个或多个字段，不可为null</param>
     /// <returns></returns>
     IContinuedCreate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);
     #endregion
 
     #region OnlyFields
     /// <summary>
-    /// 只插入字段，实体属性名称，如：OnlyFields("Name") | OnlyFields("Name", "CreatedAt")
+    /// 插入字段，未列出字段不插入，实体属性名称，如：.OnlyFields("Name") 或是 .OnlyFields("Name", "CreatedAt")
     /// </summary>
-    /// <param name="fieldNames"></param>
+    /// <param name="fieldNames">实体成员名称数组，不可为null</param>
     /// <returns></returns>
     IContinuedCreate<TEntity> OnlyFields(params string[] fieldNames);
     /// <summary>
-    /// 只插入字段，如：OnlyFields(f =&gt; f.Name) | OnlyFields(f =&gt; new {f.Name, f.CreatedAt})
+    /// 插入字段，未列出字段不插入，如：.OnlyFields(f =&gt; f.Name) 或是 .OnlyFields(f =&gt; new {f.Name, f.CreatedAt})
     /// </summary>
-    /// <typeparam name="TFields">单个或多个字段类型</typeparam>
-    /// <param name="fieldsSelector">只插入的字段选择表达式，不可为null</param>
+    /// <typeparam name="TFields">字段类型</typeparam>
+    /// <param name="fieldsSelector">字段选择表达式，单个或多个字段，不可为null</param>
     /// <returns></returns>
     IContinuedCreate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);
     #endregion

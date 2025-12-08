@@ -34,8 +34,7 @@ public interface IPostgreSqlCreate<TEntity> : ICreate<TEntity>
 
     #region WithBy
     /// <summary>
-    /// 使用插入对象部分字段插入，单个对象插入，命名或匿名对象都可以
-    /// <para>自动增长的栏位，不需要传入，如：</para>
+    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出字段不插入
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new
@@ -49,7 +48,7 @@ public interface IPostgreSqlCreate<TEntity> : ICreate<TEntity>
     /// </code>
     /// </summary>
     /// <typeparam name="TInsertObject">插入对象类型</typeparam>
-    /// <param name="insertObj">插入对象，包含想要插入的必需栏位值，命名或匿名对象都可以</param>
+    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出字段不插入，不可为null</param>
     /// <returns>返回插入对象</returns>
     new IPostgreSqlContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
     #endregion

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Linq.Expressions;
 
 namespace Trolley.MySqlConnector;
@@ -37,23 +38,48 @@ public interface IMySqlDelete<TEntity> : IDelete<TEntity>
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回删除对象</returns>
     new IMySqlDelete<TEntity> UseTableSchema(string tableSchema);
-    #endregion
+    #endregion 
 
     #region Where
     /// <summary>
-    /// 主键删除，单条也可多条，keys可以是主键值也可以是包含主键值的匿名对象，也可以是对应的集合，如：
-    /// <code>
-    /// 单个删除,下面两个方法等效
-    /// repository.Delete&lt;User&gt;(1);
-    /// repository.Delete&lt;User&gt;(new { Id = 1});
-    /// 批量删除,下面两个方法等效
-    /// repository.Delete&lt;User&gt;(new[] { 1, 2 });
-    /// repository.Delete&lt;User&gt;(new[] { new { Id = 1 }, new { Id = 2 } });
-    /// </code>
+    /// 条件删除，如：.WhereBy(new { IsEnabled = true})，whereObj不能为null
     /// </summary>
-    /// <param name="keys">主键值，可以是一个值或是一个匿名对象，也可以是多个值或是多个匿名对象</param>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
     /// <returns>返回删除对象</returns>
-    new IMySqlDelete<TEntity> Where(object keys);
+    new IMySqlDelete<TEntity> WhereBy(object whereObj);
+    /// <summary>
+    /// 条件删除，如：.WhereBy(new { IsEnabled = true})，whereObj不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns></returns>
+    new IMySqlDelete<TEntity> WhereBy(bool condition, object whereObj);
+    /// <summary>
+    /// 主键条件删除，如：.WhereById(1) 或是 .WhereById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回删除对象</returns>
+    new IMySqlDelete<TEntity> WhereById(object whereKey);
+    /// <summary>
+    /// 主键条件删除，如：.WhereById(1) 或是 .WhereById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回删除对象</returns>
+    new IMySqlDelete<TEntity> WhereById(bool condition, object whereKey);
+    /// <summary>
+    /// 多主键条件查询，如：.WhereByIds(new int[]{1,2,3}) 或是 .WhereByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回删除对象</returns>
+    new IMySqlDelete<TEntity> WhereByIds(IEnumerable whereKeys);
+    /// <summary>
+    /// 多主键条件删除，如：.WhereByIds(new int[]{1,2,3}) 或是 .WhereByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回删除对象</returns>
+    new IMySqlDelete<TEntity> WhereByIds(bool condition, IEnumerable whereKeys);
     /// <summary>
     /// 条件删除，predicate为null时不生成任何条件
     /// </summary>
@@ -78,6 +104,45 @@ public interface IMySqlDelete<TEntity> : IDelete<TEntity>
 
     #region And
     /// <summary>
+    /// 条件删除，并与已有的条件AND操作，如：.AndBy(new { IsEnabled = true})，whereObj不能为null
+    /// </summary>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns>返回删除对象</returns>
+    new IMySqlDelete<TEntity> AndBy(object whereObj);
+    /// <summary>
+    /// 条件删除，并与已有的条件AND操作，如：.AndBy(new { IsEnabled = true})，whereObj不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns></returns>
+    new IMySqlDelete<TEntity> AndBy(bool condition, object whereObj);
+    /// <summary>
+    /// 主键条件删除，并与已有的条件AND操作，如：.AndById(1) 或是 .AndById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回删除对象</returns>
+    new IMySqlDelete<TEntity> AndById(object whereKey);
+    /// <summary>
+    /// 主键条件删除，并与已有的条件AND操作，如：.AndById(1) 或是 .AndById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回删除对象</returns>
+    new IMySqlDelete<TEntity> AndById(bool condition, object whereKey);
+    /// <summary>
+    /// 多主键条件删除，并与已有的条件AND操作，如：.AndByIds(new int[]{1,2,3}) 或是 .AndByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回删除对象</returns>
+    new IMySqlDelete<TEntity> AndByIds(IEnumerable whereKeys);
+    /// <summary>
+    /// 多主键条件删除，并与已有的条件AND操作，如：.AndByIds(new int[]{1,2,3}) 或是 .AndByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回删除对象</returns>
+    new IMySqlDelete<TEntity> AndByIds(bool condition, IEnumerable whereKeys);
+    /// <summary>
     /// 条件删除，并与已有的条件AND操作，predicate为null时不生成任何条件
     /// </summary>
     /// <param name="predicate">条件表达式，predicate为null时不生成任何条件</param>
@@ -100,6 +165,45 @@ public interface IMySqlDelete<TEntity> : IDelete<TEntity>
     #endregion
 
     #region Or
+    /// <summary>
+    /// 条件删除，并与已有的条件OR操作，如：.OrBy(new { IsEnabled = true})，whereObj不能为null
+    /// </summary>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns>返回删除对象</returns>
+    new IMySqlDelete<TEntity> OrBy(object whereObj);
+    /// <summary>
+    /// 条件删除，并与已有的条件OR操作，如：.OrBy(new { IsEnabled = true})，whereObj不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereObj">条件对象，同名属性值作为查询条件，whereObj不能为null</param>
+    /// <returns></returns>
+    new IMySqlDelete<TEntity> OrBy(bool condition, object whereObj);
+    /// <summary>
+    /// 主键条件删除，并与已有的条件OR操作，如：.OrById(1) 或是 .OrById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回删除对象</returns>
+    new IMySqlDelete<TEntity> OrById(object whereKey);
+    /// <summary>
+    /// 主键条件删除，并与已有的条件OR操作，如：.OrById(1) 或是 .OrById(new { Id = 1})，whereKey不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKey">主键值或是包含主键的对象</param>
+    /// <returns>返回删除对象</returns>
+    new IMySqlDelete<TEntity> OrById(bool condition, object whereKey);
+    /// <summary>
+    /// 多主键条件删除，并与已有的条件OR操作，如：.OrByIds(new int[]{1,2,3}) 或是 .OrByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回删除对象</returns>
+    new IMySqlDelete<TEntity> OrByIds(IEnumerable whereKeys);
+    /// <summary>
+    /// 多主键条件删除，并与已有的条件OR操作，如：.OrByIds(new int[]{1,2,3}) 或是 .OrByIds(new []{new { Id = 1}, new { Id = 2}, new { Id = 3} })，whereKeys不能为null
+    /// </summary>
+    /// <param name="condition">判断条件，为true时条件生效</param>
+    /// <param name="whereKeys">多个主键值或是包含主键的对象集合</param>
+    /// <returns>返回删除对象</returns>
+    new IMySqlDelete<TEntity> OrByIds(bool condition, IEnumerable whereKeys);
     /// <summary>
     /// 条件删除，并与已有的条件OR操作，predicate为null时不生成任何条件
     /// </summary>
