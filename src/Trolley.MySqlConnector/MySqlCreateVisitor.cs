@@ -89,12 +89,6 @@ public class MySqlCreateVisitor : CreateVisitor
                         case "WithByField":
                             this.VisitWithByField(deferredSegment.Value);
                             break;
-                        case "SetObject":
-                            this.VisitSetObject(deferredSegment.Value);
-                            break;
-                        case "SetExpression":
-                            this.VisitSetExpression(deferredSegment.Value as LambdaExpression);
-                            break;
                     }
                 }
                 var entityType = tableSegment.EntityType;
@@ -180,18 +174,6 @@ public class MySqlCreateVisitor : CreateVisitor
                         break;
                     case "WithByField":
                         this.VisitWithByField(deferredSegment.Value);
-                        break;
-                    case "SetObject":
-                        this.VisitSetObject(deferredSegment.Value);
-                        break;
-                    case "SetExpression":
-                        this.VisitSetExpression(deferredSegment.Value as LambdaExpression);
-                        break;
-                    case "OutputFields":
-                        this.VisitOutputFields(deferredSegment.Value as string);
-                        break;
-                    case "OutputExpression":
-                        this.VisitOutputExpression(deferredSegment.Value as LambdaExpression);
                         break;
                     default: throw new NotSupportedException("批量插入后，只支持WithBy/IgnoreFields/OnlyFields/OnDuplicateKeyUpdate/Returning操作");
 
@@ -462,21 +444,14 @@ public class MySqlCreateVisitor : CreateVisitor
     {
         if (this.ActionMode == ActionMode.Bulk)
             throw new NotSupportedException("批量插入时，不支持此方法的调用，请使用OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment)方法");
+
         this.UpdateBuilder = new();
-        this.deferredSegments.Add(new CommandSegment
-        {
-            Type = "SetObject",
-            Value = updateObj
-        });
+        this.VisitSetObject(updateObj);
     }
-    public void OnDuplicateKeyUpdate(Expression updateExpr)
+    public void OnDuplicateKeyUpdate(LambdaExpression updateExpr)
     {
         this.UpdateBuilder = new();
-        this.deferredSegments.Add(new CommandSegment
-        {
-            Type = "SetExpression",
-            Value = updateExpr
-        });
+        this.VisitSetExpression(updateExpr);
     }
     public string BuildHeadSql()
     {
@@ -683,8 +658,6 @@ public class MySqlCreateVisitor : CreateVisitor
     public override IQueryVisitor CreateQueryVisitor(char? tableAsStart = null)
     {
         var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAsStart, this.DbParameters) as MySqlQueryVisitor;
-        queryVisitor.IsMultiple = this.IsMultiple;
-        queryVisitor.CommandIndex = this.CommandIndex;
         queryVisitor.RefQueries = this.RefQueries;
         queryVisitor.ShardingTables = this.ShardingTables;
         queryVisitor.RefTableAliases = this.RefTableAliases;
