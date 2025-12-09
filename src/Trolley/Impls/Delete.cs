@@ -206,7 +206,7 @@ public class Deleted<TEntity> : IDeleted<TEntity>
             throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        command.CommandText = this.Visitor.BuildCommand(command, out _);
+        command.CommandText = this.Visitor.BuildSql(command, out _);
         connection.Open();
         var result = command.ExecuteNonQuery(CommandSqlType.Delete);
 
@@ -220,7 +220,7 @@ public class Deleted<TEntity> : IDeleted<TEntity>
             throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        command.CommandText = this.Visitor.BuildCommand(command, out _);
+        command.CommandText = this.Visitor.BuildSql(command, out _);
         await connection.OpenAsync(cancellationToken);
         var result = await command.ExecuteNonQueryAsync(CommandSqlType.Delete, cancellationToken);
 
@@ -234,7 +234,7 @@ public class Deleted<TEntity> : IDeleted<TEntity>
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        var sql = this.Visitor.BuildCommand(command, out _);
+        var sql = this.Visitor.BuildSql(command, out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         this.Visitor.Dispose();

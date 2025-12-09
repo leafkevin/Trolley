@@ -14,7 +14,7 @@ public class PostgreSqlDeleteVisitor : DeleteVisitor
     public PostgreSqlDeleteVisitor(DbContext dbContext, char tableAsStart = 'a')
         : base(dbContext, tableAsStart) { }
 
-    public override string BuildCommand(ITheaCommand command, out List<SqlFieldSegment> readerFields)
+    public override string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
         string sql = null;
         this.DbParameters ??= command.Parameters;

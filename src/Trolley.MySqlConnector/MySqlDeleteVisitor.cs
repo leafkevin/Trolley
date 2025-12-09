@@ -16,7 +16,7 @@ public class MySqlDeleteVisitor : DeleteVisitor
     public MySqlDeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
         : base(entityType, dbContext, tableAsStart) { }
 
-    public override string BuildCommand(ITheaCommand command, out List<SqlFieldSegment> readerFields)
+    public override string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
         string sql = null;
         this.DbParameters ??= command.Parameters;

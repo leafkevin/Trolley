@@ -18,7 +18,6 @@ public interface IUpdateVisitor : IDisposable
     List<TableSegment> Tables { get; }
     List<TableSegment> ShardingTables { get; set; }
 
-    string BuildCommand(ITheaCommand command, out List<SqlFieldSegment> readerFields);
     string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields);
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>, Action<IDataParameterCollection,
         StringBuilder, DbContext, string, object, string>, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command);

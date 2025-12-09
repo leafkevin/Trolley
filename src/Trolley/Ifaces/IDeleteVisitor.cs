@@ -16,7 +16,7 @@ public interface IDeleteVisitor : IDisposable
     bool HasWhere { get; }
     List<TableSegment> ShardingTables { get; }
 
-    string BuildCommand(ITheaCommand command, out List<SqlFieldSegment> readerFields);
+    string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields);
 
     void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
     void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);

@@ -186,7 +186,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                 break;
             default:
                 //默认单条
-                command.CommandText = this.Visitor.BuildCommand(command, out _);
+                command.CommandText = this.Visitor.BuildSql(command, out _);
                 connection.Open();
                 result = command.ExecuteNonQuery(CommandSqlType.Insert);
                 break;
@@ -251,7 +251,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                 break;
             default:
                 //默认单条
-                command.CommandText = this.Visitor.BuildCommand(command, out _);
+                command.CommandText = this.Visitor.BuildSql(command, out _);
                 await connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
                 break;
@@ -259,6 +259,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
+        this.Visitor.Dispose();
         return result;
     }
     #endregion
@@ -276,7 +277,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        var sql = this.Visitor.BuildCommand(command, out _);
+        var sql = this.Visitor.BuildSql(command, out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         this.Visitor.Dispose();

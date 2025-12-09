@@ -17,7 +17,6 @@ public interface ICreateVisitor : IDisposable
     List<TableSegment> Tables { get; }
     bool IsReturnIdentity { get; set; }
 
-    string BuildCommand(ITheaCommand command, out List<SqlFieldSegment> readerFields);
     string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields);
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command);

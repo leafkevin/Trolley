@@ -29,7 +29,7 @@ public class MySqlDeleted<TEntity, TResult> : Deleted<TEntity>, IMySqlDeleted<TE
 
         var result = new List<TResult>();
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        command.CommandText = this.Visitor.BuildCommand(command, out var readerFields);
+        command.CommandText = this.Visitor.BuildSql(command, out var readerFields);
         connection.Open();
 
         using var reader = command.ExecuteReader(CommandSqlType.Delete, CommandBehavior.SequentialAccess);
@@ -56,7 +56,7 @@ public class MySqlDeleted<TEntity, TResult> : Deleted<TEntity>, IMySqlDeleted<TE
 
         var result = new List<TResult>();
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        command.CommandText = this.Visitor.BuildCommand(command, out var readerFields);
+        command.CommandText = this.Visitor.BuildSql(command, out var readerFields);
         await connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Delete, CommandBehavior.SequentialAccess, cancellationToken);
         var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);

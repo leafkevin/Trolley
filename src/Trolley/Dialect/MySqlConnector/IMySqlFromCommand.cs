@@ -512,7 +512,9 @@ public interface IMySqlFromCommand<TEntity, T> : IFromCommand<TEntity, T>
 
     #region OnDuplicateKeyUpdate
     /// <summary>
-    /// 插入或更新，相同主键或唯一索引存在时执行更新，INSERT INTO ... ON DUPLICATE KEY UPDATE
+    /// 插入或更新，相同主键或唯一索引存在时执行更新，INSERT INTO ... ON DUPLICATE KEY UPDATE，如：
+    /// .OnDuplicateKeyUpdate(x =&gt; x.Set(f =&gt; new { TotalAmount = x.Values(f.TotalAmount) })) 
+    /// 或是 .OnDuplicateKeyUpdate(x =&gt; x.Set(f =&gt; f.TotalAmount, f =&gt; f.TotalAmount + 500))
     /// </summary>
     /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
     /// <param name="fieldsAssignment">要更新的字段赋值表达式</param>

@@ -39,7 +39,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (this.TryGetTableShardingInfo(entityType, TableShardingUsageMode.WriteOnly, out var tableShardingInfo))
             this.Tables[0].TableShardingInfo = tableShardingInfo;
     }
-    public virtual string BuildCommand(ITheaCommand command, out List<SqlFieldSegment> readerFields)
+    public virtual string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
         string sql = null;
         readerFields = null;
@@ -47,6 +47,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.hasIgnoreFields = this.IgnoreFieldNames != null && this.IgnoreFieldNames.Count > 0;
         if (this.HasWhere) this.WhereBuilder = new();
 
+        var builder = new StringBuilder();
         switch (this.ActionMode)
         {
             case ActionMode.Bulk:
@@ -54,7 +55,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                    var loopSqlSetter, readerFields) = this.BuildWithBulk(command);
 
                 int index = 0;
-                var builder = new StringBuilder();
                 fixedSqlSetter?.Invoke(command.Parameters);
                 if (shardingType == ShardingTableType.SplitTables)
                 {
@@ -92,12 +92,95 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     }
                 }
                 sql = builder.ToString();
-                builder.Clear();
                 break;
             case ActionMode.Single:
-                sql = this.BuildSql(command, out readerFields);
+                this.FieldsBuilder = new();
+                this.DbParameters = command.Parameters;
+                var tableSegment = this.Tables[0];
+                var entityType = tableSegment.EntityType;
+                if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding)
+                {
+                    this.IsNeedSplitShardingTables = true;
+                    this.ShardingValues = new();
+                }
+                Func<IDataParameterCollection, DbContext, object, string> whereSqlInitializer = null;
+                foreach (var deferredSegment in this.deferredSegments)
+                {
+                    switch (deferredSegment.Type)
+                    {
+                        case "Set":
+                            this.VisitSet(deferredSegment.Value as Expression);
+                            break;
+                        case "SetFrom":
+                            this.VisitSet(deferredSegment.Value as Expression);
+                            break;
+                        case "SetField":
+                            this.VisitSetField(deferredSegment.Value);
+                            break;
+                        case "SetWith":
+                            this.VisitSetWith(deferredSegment.Value);
+                            break;
+                        case "SetFromField":
+                            this.VisitSetFromField(deferredSegment.Value);
+                            break;
+                        case "AndBy":
+                            whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, false, false, false);
+                            this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                            break;
+                        case "AndById":
+                            whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, false);
+                            this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                            break;
+                        case "AndByIds":
+                            whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, true);
+                            this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                            break;
+                        case "And":
+                            this.VisitAnd(deferredSegment.Value as Expression);
+                            break;
+                        case "OrBy":
+                            whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, false, false, false);
+                            this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                            break;
+                        case "OrById":
+                            whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, false);
+                            this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                            break;
+                        case "OrByIds":
+                            whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, true);
+                            this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                            break;
+                        case "Or":
+                            this.VisitOr(deferredSegment.Value as Expression);
+                            break;
+                    }
+                }
+
+                builder.Append($"UPDATE {this.GetTableName(tableSegment)}");
+                if (this.IsNeedTableAlias) builder.Append($" {this.Tables[0].AliasName}");
+                if (this.IsJoin)
+                {
+                    for (var i = 1; i < this.Tables.Count; i++)
+                    {
+                        var myTableSegment = this.Tables[i];
+                        var tableName = this.GetTableName(myTableSegment);
+                        builder.Append($" {myTableSegment.JoinType} {tableName} {myTableSegment.AliasName} ON {myTableSegment.OnExpr}");
+                    }
+                }
+
+                builder.Append(" SET ");
+                builder.Append(this.FieldsBuilder.ToString());
+                if (this.WhereBuilder != null && this.WhereBuilder.Length > 0)
+                {
+                    builder.Append(" WHERE ");
+                    builder.Append(this.WhereBuilder);
+                }
+                sql = builder.ToString();
+                if (this.ShardingTables != null && this.ShardingTables.Count > 0)
+                    sql = this.DbContext.BuildShardingTablesSqlByFormat(this, sql, ";");
                 break;
         }
+        builder.Clear();
         return sql;
     }
     public virtual (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>,
@@ -127,6 +210,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string> loopSqlSetter = null;
         if (this.deferredSegments.Count > 1)
         {
+            this.FieldsBuilder = new();
             if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding
                 && tableSegment.ShardingTableGetter == null && !tableSegment.IsUseOtherValuesTableSharding)
             {
@@ -242,96 +326,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             }
         }
         return (shardingType, shardingTables, updateObjs, bulkCount, firstSqlSetter, loopSqlSetter, null);
-    }
-    public virtual string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
-    {
-        readerFields = null;
-        this.FieldsBuilder = new();
-        this.DbParameters = command.Parameters;
-        var tableSegment = this.Tables[0];
-        var entityType = tableSegment.EntityType;
-        if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding)
-        {
-            this.IsNeedSplitShardingTables = true;
-            this.ShardingValues = new();
-        }
-        Func<IDataParameterCollection, DbContext, object, string> whereSqlInitializer = null;
-        foreach (var deferredSegment in this.deferredSegments)
-        {
-            switch (deferredSegment.Type)
-            {
-                case "Set":
-                    this.VisitSet(deferredSegment.Value as Expression);
-                    break;
-                case "SetFrom":
-                    this.VisitSet(deferredSegment.Value as Expression);
-                    break;
-                case "SetField":
-                    this.VisitSetField(deferredSegment.Value);
-                    break;
-                case "SetWith":
-                    this.VisitSetWith(deferredSegment.Value);
-                    break;
-                case "SetFromField":
-                    this.VisitSetFromField(deferredSegment.Value);
-                    break;
-                case "AndBy":
-                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, false, false, false);
-                    this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
-                    break;
-                case "AndById":
-                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, false);
-                    this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
-                    break;
-                case "AndByIds":
-                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, true);
-                    this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
-                    break;
-                case "And":
-                    this.VisitAnd(deferredSegment.Value as Expression);
-                    break;
-                case "OrBy":
-                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, false, false, false);
-                    this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
-                    break;
-                case "OrById":
-                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, false);
-                    this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
-                    break;
-                case "OrByIds":
-                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, true);
-                    this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
-                    break;
-                case "Or":
-                    this.VisitOr(deferredSegment.Value as Expression);
-                    break;
-            }
-        }
-
-        var builder = new StringBuilder($"UPDATE {this.GetTableName(tableSegment)}");
-        if (this.IsNeedTableAlias) builder.Append($" {this.Tables[0].AliasName}");
-        if (this.IsJoin)
-        {
-            for (var i = 1; i < this.Tables.Count; i++)
-            {
-                var myTableSegment = this.Tables[i];
-                var tableName = this.GetTableName(myTableSegment);
-                builder.Append($" {myTableSegment.JoinType} {tableName} {myTableSegment.AliasName} ON {myTableSegment.OnExpr}");
-            }
-        }
-
-        builder.Append(" SET ");
-        builder.Append(this.FieldsBuilder.ToString());
-        if (this.WhereBuilder != null && this.WhereBuilder.Length > 0)
-        {
-            builder.Append(" WHERE ");
-            builder.Append(this.WhereBuilder);
-        }
-        var sql = builder.ToString();
-        if (this.ShardingTables != null && this.ShardingTables.Count > 0)
-            sql = this.DbContext.BuildShardingTablesSqlByFormat(this, sql, ";");
-        builder.Clear();
-        return sql;
     }
     public virtual void Join(string joinType, Type entityType, Expression joinOn)
     {

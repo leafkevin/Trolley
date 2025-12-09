@@ -32,7 +32,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>
         {
             case ActionMode.BulkCopy:
                 {
-                    (var insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
+                    (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
                     Type insertObjType = null;
                     object firstInsertObj = null;
                     foreach (var insertObj in insertObjs)
@@ -61,58 +61,56 @@ public class MySqlCreated<TEntity> : Created<TEntity>
                 }
             case ActionMode.Bulk:
                 {
+                    (var shardingType, var shardingTables, var insertObjs, var bulkCount, var firstSqlSetter,
+                    var loopSqlSetter, _, var readerFields) = this.Visitor.BuildWithBulk(command);
+
+                    int index = 0;
                     var builder = new StringBuilder();
-                    (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
-                    int Execute(string tableName, IEnumerable insertObjs)
+                    void TabledExecute(string tableName, IEnumerable insertObjs)
                     {
-                        int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
                         {
-                            if (index > 0) builder.Append(',');
                             loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
                             index++;
-
                             if (index >= bulkCount)
                             {
+                                builder.Remove(builder.Length - 1, 1);
                                 command.CommandText = builder.ToString();
-                                count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                                result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
                                 builder.Clear();
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                                 index = 0;
                             }
                         }
-                        if (index > 0)
-                        {
-                            command.CommandText = builder.ToString();
-                            count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
-                            builder.Clear();
-                            command.Parameters.Clear();
-                        }
-                        return count;
                     }
-
                     connection.Open();
-                    if (tabledInsertObjs != null)
+                    if (shardingType == ShardingTableType.SplitTables)
                     {
-                        foreach (var tabledInsertObj in tabledInsertObjs)
+                        var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
+                        foreach (var tableName in tabledInsertObjs.Keys)
                         {
-                            firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                            result += Execute(tabledInsertObj.Key, tabledInsertObj.Value);
+                            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                            var tableParameters = tabledInsertObjs[tableName];
+                            TabledExecute(tableName, tableParameters);
                         }
                     }
                     else
                     {
+                        var tableName = shardingTables as string;
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                        result = Execute(tableName, insertObjs);
+                        TabledExecute(tableName, insertObjs);
+                    }
+                    if (index > 0)
+                    {
+                        command.CommandText = builder.ToString();
+                        result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
                     }
                     builder.Clear();
                     break;
                 }
             default:
-                //默认单条
-                command.CommandText = this.Visitor.BuildCommand(command, false, out _);
+                command.CommandText = this.Visitor.BuildSql(command, out _);
                 connection.Open();
                 result = command.ExecuteNonQuery(CommandSqlType.Insert);
                 break;
