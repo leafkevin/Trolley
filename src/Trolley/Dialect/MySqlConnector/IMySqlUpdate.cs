@@ -135,6 +135,7 @@ public interface IMySqlUpdate<TEntity> : IUpdate<TEntity>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
     new IMySqlContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
+
     /// <summary>
     /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，如：
     /// <code>

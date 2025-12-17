@@ -524,25 +524,20 @@ public partial class MySqlProvider : BaseOrmProvider
             return tableNames.FindAll(f => tableNameSelector(f));
         return tableNames;
     }
-    public int ExecuteBulkCopy(bool isUpdate, DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
+    public MySqlBulkCopy CreateBulkCopy(MySqlConnection connection, MySqlTransaction transaction, List<MemberMap> memberMappers, int? timeoutSeconds)
     {
-        var entityMapper = visitor.Tables[0].Mapper;
-        var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper, isUpdate);
-        var dataTable = visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
-        if (dataTable.Rows.Count == 0) return 0;
-
-        connection.Open();
-        var dbConnection = connection.BaseConnection as MySqlConnection;
-        var transaction = dbContext.Transaction?.BaseTransaction as MySqlTransaction;
-        var bulkCopy = new MySqlBulkCopy(dbConnection, transaction);
+        var bulkCopy = new MySqlBulkCopy(connection, transaction);
         if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
-        bulkCopy.DestinationTableName = dataTable.TableName;
-        for (int i = 0; i < dataTable.Columns.Count; i++)
+        for (int i = 0; i < memberMappers.Count; i++)
         {
-            bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
+            bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, memberMappers[i].FieldName));
         }
-
+        return bulkCopy;
+    }
+    public int ExecuteBulkCopy(string tableName, MySqlBulkCopy bulkCopyObj, ITheaConnection connection, DbContext dbContext, DataTable data)
+    {
         var createdAt = DateTime.Now;
+        bulkCopyObj.DestinationTableName = tableName;
         dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
         {
             DbKey = dbContext.DbKey,
@@ -554,7 +549,7 @@ public partial class MySqlProvider : BaseOrmProvider
         Exception exception = null;
         try
         {
-            var bulkCopyResult = bulkCopy.WriteToServer(dataTable);
+            var bulkCopyResult = bulkCopyObj.WriteToServer(data);
             recordsAffected = bulkCopyResult.RowsInserted;
         }
         catch (Exception ex)
@@ -577,30 +572,15 @@ public partial class MySqlProvider : BaseOrmProvider
         }
         if (!isSuccess)
         {
-            if (transaction == null) connection.Close();
+            if (dbContext.Transaction == null) dbContext.Connection.Close();
             throw exception;
         }
         return recordsAffected;
     }
-    public async Task<int> ExecuteBulkCopyAsync(bool isUpdate, DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, CancellationToken cancellationToken = default, string tableName = null)
+    public async Task<int> ExecuteBulkCopyAsync(string tableName, MySqlBulkCopy bulkCopyObj, ITheaConnection connection, DbContext dbContext, DataTable data, CancellationToken cancellationToken = default)
     {
-        var entityMapper = visitor.Tables[0].Mapper;
-        var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper, isUpdate);
-        var dataTable = visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
-        if (dataTable.Rows.Count == 0) return 0;
-
-        await connection.OpenAsync(cancellationToken);
-        var dbConnection = connection.BaseConnection as MySqlConnection;
-        var transaction = dbContext.Transaction?.BaseTransaction as MySqlTransaction;
-        var bulkCopy = new MySqlBulkCopy(dbConnection, transaction);
-        if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
-        bulkCopy.DestinationTableName = dataTable.TableName;
-        for (int i = 0; i < dataTable.Columns.Count; i++)
-        {
-            bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
-        }
-
         var createdAt = DateTime.Now;
+        bulkCopyObj.DestinationTableName = tableName;
         dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
         {
             DbKey = dbContext.DbKey,
@@ -612,7 +592,7 @@ public partial class MySqlProvider : BaseOrmProvider
         Exception exception = null;
         try
         {
-            var bulkCopyResult = await bulkCopy.WriteToServerAsync(dataTable);
+            var bulkCopyResult = await bulkCopyObj.WriteToServerAsync(data, cancellationToken);
             recordsAffected = bulkCopyResult.RowsInserted;
         }
         catch (Exception ex)
@@ -635,7 +615,7 @@ public partial class MySqlProvider : BaseOrmProvider
         }
         if (!isSuccess)
         {
-            if (transaction == null) await connection.CloseAsync();
+            if (dbContext.Transaction == null) await connection.CloseAsync();
             throw exception;
         }
         return recordsAffected;

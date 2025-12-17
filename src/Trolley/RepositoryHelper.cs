@@ -19,7 +19,7 @@ public static class RepositoryHelper
     private static readonly ConcurrentDictionary<int, Func<object, object>> memberGetterCache = new();
     private static readonly ConcurrentDictionary<int, Action<object, object>> memberSetterCache = new();
 
-    private static readonly ConcurrentDictionary<int, Func<object, object[], string>> shardingTableNameBulkGetters = new();
+    private static readonly ConcurrentDictionary<int, object> shardingTableGetters = new();
 
     private static readonly ConcurrentDictionary<int, Action<IDataParameterCollection, IOrmProvider, object>> queryRawSqlCommandInitializerCache = new();
 
@@ -669,14 +669,13 @@ public static class RepositoryHelper
         return valueSetters;
     }
 
-
-    public static object BuildTypedCommandInitializer(DbContext dbContext, Type entityType, Type parameterType, int commandType, bool isFunc, bool isSplitSharding, bool hasIdentity, List<string> onlyFields, List<string> ignoreFields)
+    public static object BuildTypedCommandInitializer(DbContext dbContext, Type entityType, Type parameterType, int commandType, bool isFunc, bool hasIdentity, List<string> onlyFields, List<string> ignoreFields)
     {
         var hasOnlyFields = onlyFields != null && onlyFields.Count > 0;
         var hasIgnoreFields = ignoreFields != null && ignoreFields.Count > 0;
         var onlyFieldsKey = hasOnlyFields ? string.Join("-", onlyFields) : "";
         var ignoreFieldsKey = hasIgnoreFields ? string.Join("-", ignoreFields) : "";
-        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, parameterType, isSplitSharding, hasIdentity, onlyFieldsKey, ignoreFieldsKey);
+        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, parameterType, hasIdentity, onlyFieldsKey, ignoreFieldsKey);
         var commandInitializerCache = commandType == 1 ? createWithCommandInitializerCache : updateWithCommandInitializerCache;
         return commandInitializerCache.GetOrAdd(cacheKey, f =>
         {
@@ -693,10 +692,6 @@ public static class RepositoryHelper
             blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
             blockBodies.Add(Expression.Assign(ormProviderExpr, Expression.Property(dbContextExpr, nameof(DbContext.OrmProvider))));
 
-            ParameterExpression valueBuilderExpr = null;
-            ParameterExpression shardingValuesExpr = null;
-
-            List<string> shardingMembers = null;
             var ormProvider = dbContext.OrmProvider;
             var entityMapper = dbContext.EntityMapProvider.GetEntityMap(entityType);
 
@@ -706,6 +701,7 @@ public static class RepositoryHelper
             var dictItemPropertyInfo = typeof(IDictionary<string, object>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
                 .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(string)).First();
 
+            ParameterExpression valueBuilderExpr = null;
             if (commandType == 1)
             {
                 if (isFunc)
@@ -733,13 +729,6 @@ public static class RepositoryHelper
                 blockBodies.Add(Expression.Call(valueBuilderExpr, appendMethodInfo, Expression.Constant(" WHERE ")));
             }
 
-            if (isSplitSharding)
-            {
-                shardingValuesExpr = Expression.Parameter(typeof(IDictionary<string, object>), "shardingValues");
-                if (!dbContext.TableShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
-                    throw new InvalidOperationException($"实体表{tableShardingInfo.EntityType.FullName}未配置分表信息，原表名：{entityMapper.TableName}");
-                shardingMembers = tableShardingInfo.DependOnMembers;
-            }
             int index = 0, whereIndex = 0;
             var targetMemberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                 .Where(f => (f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field)).ToList();
@@ -747,6 +736,14 @@ public static class RepositoryHelper
             foreach (var memberMapper in entityMapper.MemberMaps)
             {
                 if (!targetMemberInfos.TryFind(memberMapper.MemberName, out var memberInfo))
+                    continue;
+                if (memberMapper.IsIgnore || memberMapper.IsNavigation || memberMapper.IsRowVersion
+                   || (commandType == 1 && (memberMapper.IsIgnoreInsert || memberMapper.IsAutoIncrement))
+                   || (commandType == 2 && memberMapper.IsIgnoreUpdate))
+                    continue;
+                if (hasOnlyFields && !onlyFields.Contains(memberMapper.MemberName.ToLower()))
+                    continue;
+                if (hasIgnoreFields && ignoreFields.Contains(memberMapper.MemberName.ToLower()))
                     continue;
 
                 var parameterValueExpr = Expression.PropertyOrField(typedParameterExpr, memberInfo.Name);
@@ -756,29 +753,6 @@ public static class RepositoryHelper
                 var memberType = memberInfo.GetMemberType();
                 var lowerMemberNameExpr = Expression.Constant(memberMapper.MemberName.ToLower());
                 Expression memberValueExpr = null;
-
-                //shardingValues[memberMapper.MemberName] = memberValue;
-                if (isSplitSharding && shardingMembers.Contains(memberMapper.MemberName))
-                {
-                    memberValueExpr = parameterValueExpr;
-                    if (memberType != memberMapper.UnderlyingType && memberType.ToUnderlyingType() != memberMapper.UnderlyingType)
-                    {
-                        var valueGetter = ormProvider.GetParameterValueGetter(memberType, memberMapper.UnderlyingType, !memberMapper.IsRequired, dbContext);
-                        memberValueExpr = Expression.Invoke(Expression.Constant(valueGetter), parameterValueExpr);
-                    }
-                    methodInfo = dictItemPropertyInfo.GetSetMethod();
-                    blockBodies.Add(Expression.Call(shardingValuesExpr, methodInfo, memberNameExpr, memberValueExpr));
-                }
-                if (memberMapper.IsAutoIncrement || memberMapper.IsIgnore
-                    || memberMapper.IsNavigation || memberMapper.IsRowVersion
-                    || (commandType == 1 && memberMapper.IsIgnoreInsert)
-                    || (commandType == 2 && memberMapper.IsIgnoreUpdate))
-                    continue;
-
-                if (hasOnlyFields && !onlyFields.Contains(memberMapper.MemberName.ToLower()))
-                    continue;
-                if (hasIgnoreFields && ignoreFields.Contains(memberMapper.MemberName.ToLower()))
-                    continue;
 
                 if (commandType == 1)
                 {
@@ -831,23 +805,20 @@ public static class RepositoryHelper
                 var fieldValueExpr = Expression.Variable(typeof(object), $"{memberMapper.MemberName.ToCamel()}Value");
                 blockParameters.Add(fieldValueExpr);
 
-                if (memberValueExpr == null)
+                if (memberMapper.TypeHandler != null)
                 {
-                    if (memberMapper.TypeHandler != null)
-                    {
-                        var typeHandlerMethodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
-                        var typeHandlerExpr = Expression.Constant(memberMapper.TypeHandler);
-                        memberValueExpr = Expression.Call(typeHandlerExpr, typeHandlerMethodInfo, parameterValueExpr);
-                    }
+                    var typeHandlerMethodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
+                    var typeHandlerExpr = Expression.Constant(memberMapper.TypeHandler);
+                    memberValueExpr = Expression.Call(typeHandlerExpr, typeHandlerMethodInfo, parameterValueExpr);
+                }
+                else
+                {
+                    if (memberType.ToUnderlyingType() == memberMapper.MappedTargetType)
+                        memberValueExpr = parameterValueExpr;
                     else
                     {
-                        if (memberType.ToUnderlyingType() == memberMapper.MappedTargetType)
-                            memberValueExpr = parameterValueExpr;
-                        else
-                        {
-                            var valueGetter = ormProvider.GetParameterValueGetter(memberType, memberMapper.MappedTargetType, !memberMapper.IsRequired, dbContext);
-                            memberValueExpr = Expression.Invoke(Expression.Constant(valueGetter), parameterValueExpr);
-                        }
+                        var valueGetter = ormProvider.GetParameterValueGetter(memberType, memberMapper.MappedTargetType, !memberMapper.IsRequired, dbContext);
+                        memberValueExpr = Expression.Invoke(Expression.Constant(valueGetter), parameterValueExpr);
                     }
                 }
                 blockBodies.Add(Expression.Assign(fieldValueExpr, memberValueExpr));
@@ -884,22 +855,12 @@ public static class RepositoryHelper
                 blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(string))));
             }
 
-            if (isSplitSharding)
-            {
-                if (commandType == 1) return Expression.Lambda<Action<IDataParameterCollection, StringBuilder, StringBuilder, IDictionary<string, object>, DbContext, object>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, fieldBuilderExpr, valueBuilderExpr, shardingValuesExpr, dbContextExpr, parameterExpr).Compile();
-                else return Expression.Lambda<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, DbContext, object>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, fieldBuilderExpr, shardingValuesExpr, dbContextExpr, parameterExpr).Compile();
-            }
-            else
-            {
-                if (isFunc) return Expression.Lambda<Func<IDataParameterCollection, DbContext, object, string>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, parameterExpr).Compile();
-                if (commandType == 1) return Expression.Lambda<Action<IDataParameterCollection, StringBuilder, StringBuilder, DbContext, object>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, fieldBuilderExpr, valueBuilderExpr, dbContextExpr, parameterExpr).Compile();
-                else return Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, object>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, fieldBuilderExpr, dbContextExpr, parameterExpr).Compile();
-            }
+            if (isFunc) return Expression.Lambda<Func<IDataParameterCollection, DbContext, object, string>>(
+                Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, parameterExpr).Compile();
+            if (commandType == 1) return Expression.Lambda<Action<IDataParameterCollection, StringBuilder, StringBuilder, DbContext, object>>(
+                Expression.Block(blockParameters, blockBodies), dbParametersExpr, fieldBuilderExpr, valueBuilderExpr, dbContextExpr, parameterExpr).Compile();
+            else return Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, object>>(
+                Expression.Block(blockParameters, blockBodies), dbParametersExpr, fieldBuilderExpr, dbContextExpr, parameterExpr).Compile();
         });
     }
     public static object BuildTypedBulkCommandInitializer(DbContext dbContext, Type entityType, Type parameterType, int commandType, List<string> onlyFields, List<string> ignoreFields)
@@ -1073,60 +1034,89 @@ public static class RepositoryHelper
         }
     }
 
+    public static Func<string, object, string> BuildShardingTableNameGetter(DbContext dbContext, Type entityType, Type parameterType, object parameterSample)
+    {
+        var isDictionary = false;
+        List<string> itemKeys = null;
+        var entityMapProvider = dbContext.EntityMapProvider;
+        if (parameterSample is IDictionary<string, object> dict)
+        {
+            isDictionary = true;
+            itemKeys = new List<string>();
+            parameterType = typeof(IDictionary<string, object>);
+            if (!dbContext.TableShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
+                throw new Exception($"实体表{entityType.FullName}未配置分表信息");
+            var entityMapper = entityMapProvider.GetEntityMap(entityType);
+            foreach (var memberName in tableShardingInfo.DependOnMembers)
+            {
+                if (!dict.TryGetKeyIgnoreCase(memberName, out var itemKey))
+                    throw new ArgumentException($"参数中缺少实体表{entityMapper.EntityType.FullName}分表依赖成员{memberName}");
+                itemKeys.Add(itemKey);
+            }
+        }
+        var cacheKey = GetCacheKey(entityMapProvider, dbContext.TableShardingProvider, entityType, parameterType);
+        var tableGetter = shardingTableGetters.GetOrAdd(cacheKey, f =>
+        {
+            List<MemberInfo> memberInfos = null;
+            if (!isDictionary) memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
+            if (!dbContext.TableShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
+                throw new Exception($"实体表{entityType.FullName}未配置分表信息");
+
+            var origNameExpr = Expression.Parameter(typeof(string), "origName");
+            var parameterExpr = Expression.Parameter(typeof(object), "parameter");
+            var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
+            ParameterExpression itemKeysExpr = null;
+            var blockParameters = new List<Expression>() { typedParameterExpr };
+            var blockBodies = new List<Expression>();
+            if (isDictionary) itemKeysExpr = Expression.Parameter(typeof(List<string>), "itemKeys");
+
+            blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
+            var ruleParametersExprs = new List<Expression>();
+            var listItemPropertyInfo = typeof(List<string>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(int)).First();
+            var dictItemPropertyInfo = typeof(IDictionary<string, object>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(string)).First();
+            var entityMapper = entityMapProvider.GetEntityMap(entityType);
+
+            int index = 0;
+            foreach (var memberName in tableShardingInfo.DependOnMembers)
+            {
+                MemberInfo memberInfo = null;
+                if (isDictionary)
+                {
+                    var itemKeyExpr = Expression.Property(itemKeysExpr, listItemPropertyInfo, Expression.Constant(index));
+                    ruleParametersExprs.Add(Expression.Property(typedParameterExpr, dictItemPropertyInfo, itemKeyExpr));
+                }
+                else
+                {
+                    if (!memberInfos.TryFind(memberName, out memberInfo))
+                        throw new ArgumentException($"参数中缺少实体表{entityMapper.EntityType.FullName}分表依赖成员{memberName}");
+
+                    var memberMapper = entityMapper.GetMemberMap(memberName);
+                    var memberType = memberInfo.GetMemberType();
+                    var memberValueExpr = Expression.PropertyOrField(typedParameterExpr, memberInfo.Name);
+                    //这里假设参数值与实体成员类型一致，或是对获取分表名无影响的类型                    
+                    ruleParametersExprs.Add(memberValueExpr);
+                }
+            }
+            var ruleExpr = Expression.Constant(tableShardingInfo.Rule);
+            var ruleParametersExpr = Expression.NewArrayInit(typeof(object[]), ruleParametersExprs);
+            var bodyExpr = Expression.Invoke(ruleExpr, [origNameExpr, ruleParametersExpr]);
+            if (isDictionary) return Expression.Lambda<Func<string, List<string>, object, string>>(bodyExpr, origNameExpr, itemKeysExpr, parameterExpr).Compile();
+            else return Expression.Lambda<Func<string, object, string>>(bodyExpr, origNameExpr, parameterExpr).Compile();
+        });
+        if (isDictionary)
+        {
+            var typedTableGetter = tableGetter as Func<string, List<string>, object, string>;
+            return (origName, parameter) => typedTableGetter.Invoke(origName, itemKeys, parameter);
+        }
+        else return tableGetter as Func<string, object, string>;
+    }
     public static List<MemberInfo> GetMembers(Type entityType)
     {
         return typeMemberInfos.GetOrAdd(entityType, f => entityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
             .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList());
-    }
-    public static Func<object, object[], string> BuildBulkShardingTableNameGetter(DbContext dbContext, Type entityType, Type parameterType)
-    {
-        var entityMapProvider = dbContext.EntityMapProvider;
-        var cacheKey = RepositoryHelper.GetCacheKey(entityMapProvider, dbContext.TableShardingProvider, entityType, parameterType);
-        return shardingTableNameBulkGetters.GetOrAdd(cacheKey, f =>
-        {
-            //字典尽力不要使用此方法，性能较差
-            if (typeof(IDictionary<string, object>).IsAssignableFrom(parameterType))
-                throw new NotSupportedException("使用字典类型参数时，请使用.UseTable<TParameter>(Func<string, TParameter, string> tableNameGetter)方法性能高");
-
-            if (!dbContext.TableShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
-                throw new Exception($"实体表{entityType.FullName}未配置分表信息");
-
-            var parameterExpr = Expression.Parameter(typeof(object), "f");
-            var otherParametersExpr = Expression.Parameter(typeof(object[]), "others");
-            var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
-            var blockParameters = new List<Expression>() { typedParameterExpr };
-            var blockBodies = new List<Expression>();
-
-            var entityMapper = entityMapProvider.GetEntityMap(entityType);
-            blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
-            var memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
-
-            var index = 0;
-            var ruleParameterExprs = new List<Expression>();
-            foreach (var memberName in tableShardingInfo.DependOnMembers)
-            {
-                var memberInfo = memberInfos.Find(f => f.Name == memberName);
-                if (memberInfo != null)
-                {
-                    var memberMapper = entityMapper.GetMemberMap(memberName);
-                    var memberType = memberInfo.GetMemberType();
-                    var memberValueExpr = Expression.PropertyOrField(typedParameterExpr, memberName);
-                    //这里假设参数值与实体成员类型一致，或是对获取分表名无影响的类型                    
-                    ruleParameterExprs.Add(memberValueExpr);
-                }
-                else
-                {
-                    ruleParameterExprs.Add(Expression.ArrayIndex(otherParametersExpr, Expression.Constant(index)));
-                    index++;
-                }
-            }
-            var ruleExpr = Expression.Constant(tableShardingInfo.Rule);
-            var orgNameExpr = Expression.Constant(entityMapper.TableName);
-            var ruleParametersExpr = Expression.NewArrayInit(typeof(object[]), ruleParameterExprs);
-            var bodyExpr = Expression.Invoke(ruleExpr, [orgNameExpr, ruleParametersExpr]);
-            return Expression.Lambda<Func<object, object[], string>>(bodyExpr, parameterExpr, otherParametersExpr).Compile();
-        });
     }
     public static object CreateInstance(Type targetType)
     {

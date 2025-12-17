@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Linq.Expressions;
 
 namespace Trolley.MySqlConnector;
@@ -31,17 +32,39 @@ public class MySqlDelete<TEntity> : Delete<TEntity>, IMySqlDelete<TEntity>
     #endregion
 
     #region Where
-    public new IMySqlDelete<TEntity> Where(object keys)
-        => base.WhereBy(keys) as IMySqlDelete<TEntity>;
+    public new IMySqlDelete<TEntity> WhereBy(object whereObj)
+        => this.AndBy(whereObj);
+    public new IMySqlDelete<TEntity> WhereBy(bool condition, object whereObj)
+        => this.AndBy(condition, whereObj);
+    public new IMySqlDelete<TEntity> WhereById(object whereKey)
+        => this.AndById(whereKey);
+    public new IMySqlDelete<TEntity> WhereById(bool condition, object whereKey)
+        => this.AndById(condition, whereKey);
+    public new IMySqlDelete<TEntity> WhereByIds(IEnumerable whereKeys)
+        => this.AndByIds(whereKeys);
+    public new IMySqlDelete<TEntity> WhereByIds(bool condition, IEnumerable whereKeys)
+        => this.AndByIds(condition, whereKeys);
     public new IMySqlDelete<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
-        => this.Where(true, predicate);
+        => this.And(true, predicate);
     public new IMySqlDelete<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
-        => base.Where(condition, ifPredicate, elsePredicate) as IMySqlDelete<TEntity>;
+        => this.And(condition, ifPredicate, elsePredicate);
     public new IMySqlDelete<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
-        => base.WherePredicate(predicateInitializer) as IMySqlDelete<TEntity>;
+        => this.AndPredicate(predicateInitializer);
     #endregion
 
     #region And
+    public new IMySqlDelete<TEntity> AndBy(object whereObj)
+       => base.AndBy(whereObj) as IMySqlDelete<TEntity>;
+    public new IMySqlDelete<TEntity> AndBy(bool condition, object whereObj)
+        => base.AndBy(condition, whereObj) as IMySqlDelete<TEntity>;
+    public new IMySqlDelete<TEntity> AndById(object whereKey)
+        => base.AndById(whereKey) as IMySqlDelete<TEntity>;
+    public new IMySqlDelete<TEntity> AndById(bool condition, object whereKey)
+        => base.AndById(condition, whereKey) as IMySqlDelete<TEntity>;
+    public new IMySqlDelete<TEntity> AndByIds(IEnumerable whereKeys)
+        => base.AndByIds(whereKeys) as IMySqlDelete<TEntity>;
+    public new IMySqlDelete<TEntity> AndByIds(bool condition, IEnumerable whereKeys)
+        => base.AndByIds(condition, whereKeys) as IMySqlDelete<TEntity>;
     public new IMySqlDelete<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
     public new IMySqlDelete<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -51,6 +74,18 @@ public class MySqlDelete<TEntity> : Delete<TEntity>, IMySqlDelete<TEntity>
     #endregion
 
     #region Or
+    public new IMySqlDelete<TEntity> OrBy(object whereObj)
+        => base.OrBy(whereObj) as IMySqlDelete<TEntity>;
+    public new IMySqlDelete<TEntity> OrBy(bool condition, object whereObj)
+        => base.OrBy(condition, whereObj) as IMySqlDelete<TEntity>;
+    public new IMySqlDelete<TEntity> OrById(object whereKey)
+        => base.OrById(whereKey) as IMySqlDelete<TEntity>;
+    public new IMySqlDelete<TEntity> OrById(bool condition, object whereKey)
+        => base.OrById(condition, whereKey) as IMySqlDelete<TEntity>;
+    public new IMySqlDelete<TEntity> OrByIds(IEnumerable whereKeys)
+        => base.OrByIds(whereKeys) as IMySqlDelete<TEntity>;
+    public new IMySqlDelete<TEntity> OrByIds(bool condition, IEnumerable whereKeys)
+        => base.OrByIds(condition, whereKeys) as IMySqlDelete<TEntity>;
     public new IMySqlDelete<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
         => this.Or(true, predicate);
     public new IMySqlDelete<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)

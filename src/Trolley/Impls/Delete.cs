@@ -16,7 +16,10 @@ public class Delete<TEntity> : Deleted<TEntity>, IDelete<TEntity>
     #endregion
 
     #region Constructor
-    public Delete(DbContext dbContext) : base(dbContext) { }
+    public Delete(DbContext dbContext) : base(dbContext)
+    {
+        this.Visitor = this.DbContext.OrmProvider.NewDeleteVisitor(typeof(TEntity), dbContext);
+    }
     #endregion
 
     #region Sharding
@@ -195,7 +198,6 @@ public class Deleted<TEntity> : IDeleted<TEntity>
     public Deleted(DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.Visitor = this.DbContext.OrmProvider.NewDeleteVisitor(typeof(TEntity), dbContext);
     }
     #endregion
 

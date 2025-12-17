@@ -893,7 +893,7 @@ public sealed class DbContext
                 throw new NotSupportedException("此方法只支持单条数据插入");
 
             var parameterType = insertObj.GetType();
-            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this, entityType, parameterType, 1, true, false, hasIdentity, null, null)
+            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this, entityType, parameterType, 1, true, hasIdentity, null, null)
                 as Func<IDataParameterCollection, DbContext, object, string>;
             command.CommandText = commandInitializer.Invoke(command.Parameters, this, insertObj);
         }
@@ -1015,7 +1015,6 @@ public sealed class DbContext
         reader.Dispose();
         command.Dispose();
         if (isNeedClose) connection.Close();
-        visitor.Dispose();
         return result;
     }
     public async Task<TResult> CreateIdentityAsync<TResult>(ICreateVisitor visitor, CancellationToken cancellationToken = default)
@@ -1033,7 +1032,6 @@ public sealed class DbContext
         await reader.DisposeAsync();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
-        visitor.Dispose();
         return result;
     }
 
@@ -1052,7 +1050,6 @@ public sealed class DbContext
         reader.Dispose();
         command.Dispose();
         if (isNeedClose) connection.Close();
-        visitor.Dispose();
         return result;
     }
     public async Task<TResult> CreateResultAsync<TResult>(ICreateVisitor visitor, CancellationToken cancellationToken = default)
@@ -1070,7 +1067,6 @@ public sealed class DbContext
         await reader.DisposeAsync();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
-        visitor.Dispose();
         return result;
     }
     #endregion
@@ -1110,8 +1106,8 @@ public sealed class DbContext
             var whereBuilder = new StringBuilder();
             foreach (var key in dict.Keys)
             {
-                if (!entityMapper.TryGetMemberMap(key, out var memberMapper) || memberMapper.IsIgnore
-                    || memberMapper.IsAutoIncrement || memberMapper.IsNavigation
+                if (!entityMapper.TryGetMemberMap(key, out var memberMapper)
+                    || memberMapper.IsIgnore || memberMapper.IsNavigation
                     || memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion)
                     continue;
 
@@ -1146,7 +1142,7 @@ public sealed class DbContext
                 throw new NotSupportedException("此方法只支持单条数据更新");
 
             var parameterType = updateObj.GetType();
-            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this, entityType, parameterType, 2, true, false, false, null, null)
+            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this, entityType, parameterType, 2, true, false, null, null)
                 as Func<IDataParameterCollection, DbContext, object, string>;
             command.CommandText = commandInitializer.Invoke(command.Parameters, this, updateObj);
         }

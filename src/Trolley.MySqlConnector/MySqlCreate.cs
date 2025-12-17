@@ -23,10 +23,8 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
         => base.UseTable(tableName) as IMySqlCreate<TEntity>;
     public new IMySqlCreate<TEntity> UseTableBy(params object[] fieldValues)
         => base.UseTableBy(fieldValues) as IMySqlCreate<TEntity>;
-    public new IMySqlCreate<TEntity> UseTable<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter)
+    public new IMySqlCreate<TEntity> UseTable(Func<string, object, string> tableNameGetter)
         => base.UseTable(tableNameGetter) as IMySqlCreate<TEntity>;
-    public new IMySqlCreate<TEntity> UseTableByOthers(params object[] otherFieldValues)
-        => base.UseTableByOthers(otherFieldValues) as IMySqlCreate<TEntity>;
     #endregion
 
     #region UseTableSchema
@@ -79,10 +77,6 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
-
-        if (insertObjs is IDictionary<string, object>)
-            throw new NotSupportedException("批量插入，单个对象类型只支持命名对象、匿名对象或是字典对象");
-
         bool isEmpty = true;
         foreach (var insertObj in insertObjs)
         {

@@ -82,23 +82,21 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
 
         if (tableSegment.ShardingType > ShardingTableType.SingleTable)
         {
-            var builder = new StringBuilder();
+            var whereSql = this.WhereBuilder.ToString();
+            this.WhereBuilder.Clear();
+            var builder = this.WhereBuilder;
             var tableNames = tableSegment.TableNames;
             for (int i = 0; i < tableNames.Count; i++)
             {
                 if (i > 0) builder.Append(';');
                 builder.Append("DELETE FROM ");
-                builder.Append(this.OrmProvider.GetTableName(tableNames[i]));
+                builder.Append(this.GetTableName(tableSegment));
                 builder.Append(" WHERE ");
-                builder.Append(this.WhereBuilder.ToString());
+                builder.Append(whereSql);
             }
             sql = builder.ToString();
         }
-        else
-        {
-            var tableName = tableSegment.Body ?? tableSegment.Mapper.TableName;
-            sql = $"DELETE FROM {this.OrmProvider.GetTableName(tableName)} WHERE {this.WhereBuilder.ToString()}";
-        }
+        else sql = $"DELETE FROM {this.GetTableName(tableSegment)} WHERE {this.WhereBuilder.ToString()}";
         return sql;
     }
     public virtual void AndBy(object whereObj)

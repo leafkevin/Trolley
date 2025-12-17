@@ -23,7 +23,7 @@ public class MySqlQueryVisitor : QueryVisitor
         if (this.IsUseIgnoreInto)
             builder.Append("INSERT IGNORE INTO");
         else builder.Append("INSERT INTO");
-        builder.Append($" {this.GetTableName(this.Tables[0])} (");
+        builder.Append($" {this.GetFormatTableName(this.Tables[0])} (");
         int index = 0;
         //如果是FromQuery查询，ReaderFields通常是从查询中获取的字段
         if (this.ReaderFields == null && this.IsFromQuery)
@@ -85,7 +85,7 @@ public class MySqlQueryVisitor : QueryVisitor
             for (int i = 1; i < this.Tables.Count; i++)
             {
                 var tableSegment = this.Tables[i];
-                string tableName = this.GetTableName(tableSegment);
+                string tableName = this.GetFormatTableName(tableSegment);
                 if (i > 1)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))
@@ -212,36 +212,6 @@ public class MySqlQueryVisitor : QueryVisitor
 
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         tableSegment.TableSchema = tableSchema;
-    }
-    public override string BuildTableShardingsSql()
-    {
-        var builder = new StringBuilder($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND ");
-        var schemaBuilders = new Dictionary<string, StringBuilder>();
-        var defaultSchemaName = this.dialectProvider.GetDefaultSchemaName(this.DbContext);
-        foreach (var tableSegment in this.ShardingTables)
-        {
-            if (tableSegment.ShardingType > ShardingTableType.MultiTable)
-            {
-                var tableSchema = tableSegment.TableSchema ?? defaultSchemaName;
-                if (!schemaBuilders.TryGetValue(tableSchema, out var tableBuilder))
-                    schemaBuilders.Add(tableSchema, tableBuilder = new StringBuilder());
-
-                if (tableBuilder.Length > 0) tableBuilder.Append(" OR ");
-                tableBuilder.Append($"TABLE_NAME LIKE '{tableSegment.Mapper.TableName}%'");
-            }
-        }
-        if (schemaBuilders.Count > 1)
-            builder.Append('(');
-        int index = 0;
-        foreach (var schemaBuilder in schemaBuilders)
-        {
-            if (index > 0) builder.Append(" OR ");
-            builder.Append($"TABLE_SCHEMA='{schemaBuilder.Key}' AND ({schemaBuilder.Value.ToString()})");
-            index++;
-        }
-        if (schemaBuilders.Count > 1)
-            builder.Append(')');
-        return builder.ToString();
     }
     public override SqlFieldSegment VisitGroupConcatMethodCall(SqlFieldSegment sqlSegment)
     {

@@ -110,7 +110,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>
                 }
             default:
                 //默认单条
-                command.CommandText = this.Visitor.BuildCommand(command, false, out _);
+                command.CommandText = this.Visitor.BuildSql(command,  out _);
                 connection.Open();
                 result = command.ExecuteNonQuery(CommandSqlType.Insert);
                 break;
@@ -208,7 +208,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>
                 }
             default:
                 //默认单条
-                command.CommandText = this.Visitor.BuildCommand(command, false, out _);
+                command.CommandText = this.Visitor.BuildSql(command,  out _);
                 await connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
                 break;
@@ -281,7 +281,7 @@ public class PostgreSqlBulkCreated<TEntity, TResult> : Created<TEntity>, IPostgr
             if (dialectVisitor.IsNeedFetchShardingTables)
                 this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
 
-            command.CommandText = dialectVisitor.BuildCommand(command, false, out var readerFields);
+            command.CommandText = dialectVisitor.BuildSql(command,  out var readerFields);
             connection.Open();
             using var reader = command.ExecuteReader(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess);
             var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
@@ -368,7 +368,7 @@ public class PostgreSqlBulkCreated<TEntity, TResult> : Created<TEntity>, IPostgr
             if (dialectVisitor.IsNeedFetchShardingTables)
                 await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
 
-            command.CommandText = dialectVisitor.BuildCommand(command, false, out var readerFields);
+            command.CommandText = dialectVisitor.BuildSql(command,  out var readerFields);
             await connection.OpenAsync(cancellationToken);
             using var reader = await command.ExecuteReaderAsync(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess, cancellationToken);
             var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);

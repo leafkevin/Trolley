@@ -25,8 +25,7 @@ public interface ICreateVisitor : IDisposable
 
     void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
     void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
-    void UseTable<TParameter>(TableShardingUsageMode usageMode, Func<string, TParameter, string> tableNameGetter);
-    void UseTableByOthers(TableShardingUsageMode usageMode, params object[] otherFieldValues);
+    void UseTable(TableShardingUsageMode usageMode, Func<string, object, string> tableNameGetter);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
     void WithBy(object insertObj);
@@ -36,7 +35,7 @@ public interface ICreateVisitor : IDisposable
     void IgnoreFields(Expression fieldsSelector);
     void OnlyFields(string[] fieldNames);
     void OnlyFields(Expression fieldsSelector);
-    DataTable ToDataTable(Type insertObjType, IEnumerable entities, List<(MemberMap, Func<object, object>)> memberMappers, string tableName = null);
-    List<(MemberMap, Func<object, object>)> GetRefMemberMappers(Type insertObjType, EntityMap refEntityMapper, bool isUpdate = false);
-    Dictionary<string, List<object>> SplitShardingParameters(Type paramterType, IEnumerable parameters, Dictionary<string, object> shardingValues);
+    DataTable ToDataTable(string tableName, Type parameterType, IEnumerable entities, List<MemberMap> memberMappers, List<Func<object, object>> valueGetters);
+    (List<MemberMap>, List<Func<object, object>>) GetRefMemberMappers(Type parameterType, EntityMap entityMapper, object parameterSample, bool isUpdate = false);
+    Dictionary<string, List<object>> SplitShardingParameters(Type paramterType, IEnumerable parameters, object parameterSample);
 }

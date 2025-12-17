@@ -18,7 +18,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
     public SqlServerCreateVisitor(DbContext dbContext, char tableAsStart = 'a')
         : base(dbContext, tableAsStart) { }
 
-    public override string BuildCommand(ITheaCommand command, bool isReturnIdentity, out List<SqlFieldSegment> readerFields)
+    public override string BuildSql(ITheaCommand command, bool isReturnIdentity, out List<SqlFieldSegment> readerFields)
     {
         string sql = null;
         this.IsReturnIdentity = isReturnIdentity;

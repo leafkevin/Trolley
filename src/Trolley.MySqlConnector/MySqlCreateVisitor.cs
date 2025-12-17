@@ -59,6 +59,7 @@ public class MySqlCreateVisitor : CreateVisitor
                         index++;
                     }
                 }
+                builder.Remove(builder.Length - 1, 1);
                 this.FromSql = builder.ToString();
                 break;
             case ActionMode.Single:
@@ -179,13 +180,10 @@ public class MySqlCreateVisitor : CreateVisitor
 
                 }
             }
-            if (this.ValuesBuilder.Length > 1)
-            {
-                this.FieldsBuilder.Append(',');
-                this.ValuesBuilder.Append(',');
-                fixedValuesSql = this.ValuesBuilder.ToString();
-                this.ValuesBuilder.Clear();
-            }
+            this.FieldsBuilder.Append(',');
+            this.ValuesBuilder.Append(',');
+            fixedValuesSql = this.ValuesBuilder.ToString();
+            this.ValuesBuilder.Clear();
             if (this.DbParameters.Count > 0)
                 fixedDbParameters = tempDbParameters.ToList();
             this.DbParameters = command.Parameters;
@@ -248,13 +246,10 @@ public class MySqlCreateVisitor : CreateVisitor
         {
             if (tableSegment.IsSharding)
             {
-                if (!string.IsNullOrEmpty(tableSegment.Body))
-                {
-                    shardingTables = tableSegment.Body;
-                    shardingType = ShardingTableType.SingleTable;
-                }
-                else if (tableSegment.TableNames != null && tableSegment.TableNames.Count > 0)
+                shardingType = tableSegment.ShardingType;
+                if (shardingType > ShardingTableType.SingleTable)
                     throw new NotSupportedException($"实体表{entityType.FullName}已设置分表，数据插入不能设置多个分表，原始表：{tableSegment.Mapper.TableName}");
+                shardingTables = tableSegment.Body;
             }
             else
             {
@@ -403,7 +398,7 @@ public class MySqlCreateVisitor : CreateVisitor
             Value = (insertObjs, timeoutSeconds)
         });
     }
-    public (ShardingTableType, object, IEnumerable, int?) BuildWithBulkCopy()
+    public (ShardingTableType, object, Type, IEnumerable, int?, List<MemberMap>, List<Func<object, object>>) BuildWithBulkCopy()
     {
         (var insertObjs, int? timeoutSeconds) = ((IEnumerable, int?))this.deferredSegments[0].Value;
         object firstInsertObj = null;
@@ -418,7 +413,7 @@ public class MySqlCreateVisitor : CreateVisitor
         var entityType = tableSegment.EntityType;
         this.FieldsBuilder.Append('(');
 
-        var shardingType = ShardingTableType.None;
+        var shardingType = tableSegment.ShardingType;
         object shardingTables = tableSegment.Mapper.TableName;
         if (tableSegment.TableShardingInfo != null)
         {
@@ -435,10 +430,12 @@ public class MySqlCreateVisitor : CreateVisitor
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(insertObjType, insertObjs, this.ShardingValues);
+                shardingTables = this.SplitShardingParameters(insertObjType, insertObjs, firstInsertObj);
             }
         }
-        return (shardingType, shardingTables, insertObjs, timeoutSeconds);
+        (var memberMappers, var valueGetters) = this.GetRefMemberMappers(insertObjType, tableSegment.Mapper, firstInsertObj, false);
+
+        return (shardingType, shardingTables, insertObjType, insertObjs, timeoutSeconds, memberMappers, valueGetters);
     }
     public void OnDuplicateKeyUpdate(object updateObj)
     {

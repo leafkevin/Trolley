@@ -163,7 +163,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     for (var i = 1; i < this.Tables.Count; i++)
                     {
                         var myTableSegment = this.Tables[i];
-                        var tableName = this.GetTableName(myTableSegment);
+                        var tableName = this.GetFormatTableName(myTableSegment);
                         builder.Append($" {myTableSegment.JoinType} {tableName} {myTableSegment.AliasName} ON {myTableSegment.OnExpr}");
                     }
                 }
@@ -306,7 +306,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             };
         }
 
-        var shardingType = tableSegment.ShardingType;
+        var shardingType =  ShardingTableType.None;
         object shardingTables = tableSegment.Mapper.TableName;
         if (tableSegment.TableShardingInfo != null)
         {

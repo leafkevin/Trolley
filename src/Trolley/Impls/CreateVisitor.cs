@@ -83,11 +83,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 this.DbParameters = command.Parameters;
                 this.ValuesBuilder = new();
                 var tableSegment = this.Tables[0];
-                if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding)
-                {
-                    this.IsNeedSplitShardingTables = true;
-                    this.ShardingValues = new();
-                }
                 foreach (var deferredSegment in this.deferredSegments)
                 {
                     switch (deferredSegment.Type)
@@ -183,12 +178,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (this.deferredSegments.Count > 1)
         {
             this.ValuesBuilder = new StringBuilder("(");
-            if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding
-                && tableSegment.ShardingTableGetter == null && !tableSegment.IsUseOtherValuesTableSharding)
-            {
-                this.IsNeedSplitShardingTables = true;
-                this.ShardingValues = new();
-            }
             var tempDbParameters = new TheaDbParameterCollection();
             this.DbParameters = tempDbParameters;
             for (int i = 1; i < this.deferredSegments.Count; i++)
@@ -271,18 +260,13 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         {
             if (tableSegment.IsSharding)
             {
-                if (!string.IsNullOrEmpty(tableSegment.Body))
-                {
-                    shardingTables = tableSegment.Body;
-                    shardingType = ShardingTableType.SingleTable;
-                }
-                else if (tableSegment.TableNames != null && tableSegment.TableNames.Count > 0)
-                    throw new NotSupportedException($"实体表{entityType.FullName}已设置分表，数据插入不能设置多个分表，原始表：{tableSegment.Mapper.TableName}");
+                shardingType = tableSegment.ShardingType;
+                shardingTables = tableSegment.Body;
             }
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(insertObjType, insertObjs, this.ShardingValues);
+                shardingTables = this.SplitShardingParameters(insertObjType, insertObjs, firstInsertObj);
             }
         }
         return (shardingType, shardingTables, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, null, null);
@@ -299,11 +283,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             {
                 if (!entityMapper.TryGetMemberMap(key, out var memberMapper))
                     continue;
-
-                var fieldValue = dict[key];
-                if (this.IsNeedSplitShardingTables && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
-                    this.ShardingValues[memberMapper.MemberName] = fieldValue;
-
                 if (memberMapper.IsIgnore || memberMapper.IsAutoIncrement
                     || memberMapper.IsNavigation || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
                     continue;
@@ -316,6 +295,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                         continue;
                 }
 
+                var fieldValue = dict[key];
                 if (this.FieldsBuilder.Length > 0)
                 {
                     this.FieldsBuilder.Append(',');
@@ -342,17 +322,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         }
         else
         {
-            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this.DbContext, entityType, insertObjType, 1, false, this.IsNeedSplitShardingTables, false, this.OnlyFieldNames, this.IgnoreFieldNames);
-            if (this.IsNeedSplitShardingTables)
-            {
-                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, StringBuilder, IDictionary<string, object>, DbContext, object>;
-                typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.ValuesBuilder, this.ShardingValues, this.DbContext, insertObj);
-            }
-            else
-            {
-                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, StringBuilder, DbContext, object>;
-                typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.ValuesBuilder, this.DbContext, insertObj);
-            }
+            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this.DbContext, entityType, insertObjType, 1, false, false, this.OnlyFieldNames, this.IgnoreFieldNames);
+            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, StringBuilder, DbContext, object>;
+            typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.ValuesBuilder, this.DbContext, insertObj);
         }
     }
     public virtual void VisitWithByField(object deferredSegmentValue)

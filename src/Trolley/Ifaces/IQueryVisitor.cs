@@ -59,7 +59,6 @@ public interface IQueryVisitor : ICloneable, IDisposable
     string BuildShardingSql(string formatSql);
     string BuildCteTableSql(string tableName, out List<SqlFieldSegment> readerFields);
 
-    string BuildTableShardingsSql();
     void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
     void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
     void UseTableMap(TableShardingUsageMode usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter);

@@ -61,7 +61,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             for (int i = 0; i < this.Tables.Count; i++)
             {
                 var tableSegment = this.Tables[i];
-                string tableName = this.GetTableName(tableSegment);
+                string tableName = this.GetFormatTableName(tableSegment);
                 if (i > 0)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))
@@ -202,7 +202,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
     {
         var builder = new StringBuilder("INSERT INTO");
         var entityMapper = this.Tables[0].Mapper;
-        builder.Append($" {this.GetTableName(this.Tables[0])}");
+        builder.Append($" {this.GetFormatTableName(this.Tables[0])}");
         if (this.IsNeedCommandTableAlias) builder.Append($" AS {this.Tables[0].AliasName}");
         builder.Append(" (");
         int index = 0;
@@ -265,7 +265,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             for (int i = 1; i < this.Tables.Count; i++)
             {
                 var tableSegment = this.Tables[i];
-                string tableName = this.GetTableName(tableSegment);
+                string tableName = this.GetFormatTableName(tableSegment);
                 if (i > 1)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))
@@ -388,35 +388,6 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         sql = builder.ToString();
         builder.Clear();
         return sql;
-    }
-    public override string BuildTableShardingsSql()
-    {
-        var builder = new StringBuilder($"SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND ");
-        var schemaBuilders = new Dictionary<string, StringBuilder>();
-        foreach (var tableSegment in this.ShardingTables)
-        {
-            if (tableSegment.ShardingType > ShardingTableType.MultiTable)
-            {
-                var tableSchema = tableSegment.TableSchema ?? this.DefaultTableSchema;
-                if (!schemaBuilders.TryGetValue(tableSchema, out var tableBuilder))
-                    schemaBuilders.Add(tableSchema, tableBuilder = new StringBuilder());
-
-                if (tableBuilder.Length > 0) tableBuilder.Append(" OR ");
-                tableBuilder.Append($"a.relname LIKE '{tableSegment.Mapper.TableName}%'");
-            }
-        }
-        if (schemaBuilders.Count > 1)
-            builder.Append('(');
-        int index = 0;
-        foreach (var schemaBuilder in schemaBuilders)
-        {
-            if (index > 0) builder.Append(" OR ");
-            builder.Append($"b.nspname='{schemaBuilder.Key}' AND ({schemaBuilder.Value.ToString()})");
-            index++;
-        }
-        if (schemaBuilders.Count > 1)
-            builder.Append(')');
-        return builder.ToString();
     }
     public override void Distinct()
     {

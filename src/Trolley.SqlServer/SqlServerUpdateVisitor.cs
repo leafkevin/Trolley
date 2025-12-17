@@ -37,7 +37,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
             });
         }
     }
-    public override string BuildCommand(DbContext dbContext, ITheaCommand command, out List<SqlFieldSegment> readerFields)
+    public override string BuildSql(DbContext dbContext, ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
         string sql = null;
         readerFields = null;
@@ -140,11 +140,11 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                                 index++;
                             }
                         }
-                        builder.Append($" FROM {this.GetTableName(this.Tables[0])} {aliasName}");
+                        builder.Append($" FROM {this.GetFormatTableName(this.Tables[0])} {aliasName}");
                         for (var i = 1; i < this.Tables.Count; i++)
                         {
                             var tableSegment = this.Tables[i];
-                            var tableName = this.GetTableName(tableSegment);
+                            var tableName = this.GetFormatTableName(tableSegment);
                             builder.Append($" {tableSegment.JoinType} {tableName} {tableSegment.AliasName}");
                             builder.Append($" ON {tableSegment.OnExpr}");
                         }

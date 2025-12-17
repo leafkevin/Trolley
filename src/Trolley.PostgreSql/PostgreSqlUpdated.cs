@@ -175,7 +175,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
+                    command.CommandText = this.Visitor.BuildSql(command, out _);
                     connection.Open();
                     result = command.ExecuteNonQuery(CommandSqlType.Update);
                 }
@@ -339,7 +339,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
+                    command.CommandText = this.Visitor.BuildSql(command, out _);
                     await connection.OpenAsync(cancellationToken);
                     result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
                 }
@@ -434,7 +434,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>
                 builder.Append(';');
             }
             (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-            sql = this.Visitor.BuildCommand(this.DbContext, command, out _);
+            sql = this.Visitor.BuildSql(command, out _);
             if (this.Visitor.IsNeedFetchShardingTables)
             {
                 builder.Append(sql);
@@ -544,7 +544,7 @@ public class PostgreSqlUpdated<TEntity, TResult> : Updated<TEntity>, IPostgreSql
                 throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
             connection.Open();
-            var sql = this.Visitor.BuildCommand(this.DbContext, command, out var readerFields);
+            var sql = this.Visitor.BuildSql(this.DbContext, command, out var readerFields);
             readerExecuter.Invoke(CommandSqlType.Update, sql, readerFields);
         }
 
@@ -632,7 +632,7 @@ public class PostgreSqlUpdated<TEntity, TResult> : Updated<TEntity>, IPostgreSql
                 throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
             await connection.OpenAsync(cancellationToken);
-            var sql = this.Visitor.BuildCommand(this.DbContext, command, out var readerFields);
+            var sql = this.Visitor.BuildSql(this.DbContext, command, out var readerFields);
             await readerExecuter.Invoke(CommandSqlType.Update, sql, readerFields);
         }
 
@@ -656,7 +656,7 @@ public class PostgreSqlUpdated<TEntity, TResult> : Updated<TEntity>, IPostgreSql
             builder.Append(';');
         }
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        sql = this.Visitor.BuildCommand(this.DbContext, command, out _);
+        sql = this.Visitor.BuildSql(command, out _);
         if (this.Visitor.IsNeedFetchShardingTables)
         {
             builder.Append(sql);

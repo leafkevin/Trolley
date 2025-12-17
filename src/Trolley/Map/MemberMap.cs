@@ -50,6 +50,7 @@ public class MemberMap
     /// </summary>
     public ITypeHandler TypeHandler { get; set; }
     public Type TypeHandlerType { get; set; }
+    public object DefaultValue { get; set; }
 
     public MemberMap(EntityMap parent, MemberInfo memberInfo)
     {

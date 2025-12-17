@@ -169,7 +169,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>
                     if (!this.Visitor.HasWhere)
                         throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
-                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
+                    command.CommandText = this.Visitor.BuildSql(command, out _);
                     connection.Open();
                     result = command.ExecuteNonQuery(CommandSqlType.Update);
                 }
@@ -325,7 +325,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>
                     if (!this.Visitor.HasWhere)
                         throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
-                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
+                    command.CommandText = this.Visitor.BuildSql(command, out _);
                     await connection.OpenAsync(cancellationToken);
                     result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
                 }
@@ -410,7 +410,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>
         else
         {
             (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-            sql = this.Visitor.BuildCommand(this.DbContext, command, out _);
+            sql = this.Visitor.BuildSql(command, out _);
             dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
             command.Dispose();
             if (isNeedClose) connection.Close();

@@ -90,7 +90,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             for (int i = startIndex; i < this.Tables.Count; i++)
             {
                 var tableSegment = this.Tables[i];
-                string tableName = this.GetTableName(tableSegment);
+                string tableName = this.GetFormatTableName(tableSegment);
                 if (i > startIndex)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))
@@ -228,7 +228,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         var builder = new StringBuilder();
         var entityMapper = this.Tables[0].Mapper;
-        builder.Append($"INSERT INTO {this.GetTableName(this.Tables[0])} (");
+        builder.Append($"INSERT INTO {this.GetFormatTableName(this.Tables[0])} (");
         int index = 0;
         //如果ReaderFields没有设置，通常是从Query中来的，ReaderFields是从Query中获取的
         if (this.ReaderFields == null && this.IsFromQuery)
@@ -289,7 +289,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             for (int i = 1; i < this.Tables.Count; i++)
             {
                 var tableSegment = this.Tables[i];
-                string tableName = this.GetTableName(tableSegment);
+                string tableName = this.GetFormatTableName(tableSegment);
                 if (i > 1)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))
@@ -583,7 +583,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         foreach (var entityType in entityTypes)
         {
             int tableIndex = tableAsStart + this.Tables.Count;
-            this.AddTable(new TableSegment
+            var tableSegment = new TableSegment
             {
                 EntityType = entityType,
                 Mapper = this.MapProvider.GetEntityMap(entityType),
@@ -591,7 +591,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 Path = $"{(char)tableIndex}",
                 TableType = TableType.Entity,
                 IsMaster = true
-            });
+            };
+            this.AddTable(tableSegment);
+            if (this.TryGetTableShardingInfo(entityType, TableShardingUsageMode.ReadOnly, out var tableShardingInfo))
+                tableSegment.TableShardingInfo = tableShardingInfo;
         }
     }
     public virtual void AddTable(params Type[] entityTypes)
@@ -600,7 +603,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         foreach (var entityType in entityTypes)
         {
             if (entityType == null) continue;
-            this.AddTable(new TableSegment
+            var tableSegment = new TableSegment
             {
                 EntityType = entityType,
                 Mapper = this.MapProvider.GetEntityMap(entityType),
@@ -608,7 +611,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 Path = $"{(char)tableIndex}",
                 TableType = TableType.Entity,
                 IsMaster = true
-            });
+            };
+            this.AddTable(tableSegment);
+            if (this.TryGetTableShardingInfo(entityType, TableShardingUsageMode.ReadOnly, out var tableShardingInfo))
+                tableSegment.TableShardingInfo = tableShardingInfo;
         }
     }
     public TableSegment UseNewQuery(Type targetType, Expression subQueryExpr, bool isFirstTable)
@@ -781,7 +787,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var firstMember = rootReaderField.TargetMember;
 
             (var headSql, var sqlInitializer) = this.BuildIncludeSqlGetter(targetType, firstMember, includeTableSegment);
-            headSql = string.Format(headSql, this.GetTableName(includeTableSegment));
+            headSql = string.Format(headSql, this.GetFormatTableName(includeTableSegment));
 
             if (includeTableSegment.IsSharding && includeTableSegment.TableNames.Count > 0)
             {

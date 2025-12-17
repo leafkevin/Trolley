@@ -26,8 +26,7 @@ public interface IUpdateVisitor : IDisposable
     void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
     void UseTableMap(TableShardingUsageMode usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter);
     void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
-    void UseTable<TUpdateObj>(TableShardingUsageMode usageMode, Func<string, TUpdateObj, string> tableNameGetter);
-    void UseTableByOthers(TableShardingUsageMode usageMode, params object[] otherFieldValues);
+    void UseTable(TableShardingUsageMode usageMode, Func<string, object, string> tableNameGetter);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
     void Join(string joinType, Type entityType, Expression joinOn);
@@ -51,9 +50,8 @@ public interface IUpdateVisitor : IDisposable
     void OrByIds(IEnumerable whereKeys);
     void Or(Expression whereExpr);
 
-    DataTable ToDataTable(Type updateObjType, IEnumerable entities, List<(MemberMap, Func<object, object>)> memberMappers, string tableName = null);
-    List<(MemberMap, Func<object, object>)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper, bool isUpdate = false);
-    string BuildTableShardingsSql();
-    string GetTableName(TableSegment tableSegment);
+    DataTable ToDataTable(string tableName, IEnumerable entities, List<MemberMap> memberMappers, List<Func<object, object>> valueGetters);
+    (List<MemberMap>, List<Func<object, object>>) GetRefMemberMappers(Type parameterType, EntityMap entityMapper, object parameterSample, bool isUpdate = false);
     bool IsMemberVisit(Expression expr);
+    string GetTableName(TableSegment tableSegment);
 }

@@ -147,7 +147,7 @@ public class SqlServerContinuedCreate<TEntity> : ContinuedCreate<TEntity>, ISqlS
                 }
             default:
                 //默认单条
-                command.CommandText = this.Visitor.BuildCommand(command, false, out _);
+                command.CommandText = this.Visitor.BuildSql(command,  out _);
                 connection.Open();
                 result = command.ExecuteNonQuery(CommandSqlType.Insert);
                 break;
@@ -244,7 +244,7 @@ public class SqlServerContinuedCreate<TEntity> : ContinuedCreate<TEntity>, ISqlS
                 }
             default:
                 //默认单条
-                command.CommandText = this.Visitor.BuildCommand(command, false, out _);
+                command.CommandText = this.Visitor.BuildSql(command,  out _);
                 await connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
                 break;
@@ -396,7 +396,7 @@ public class SqlServerBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, I
                 }
             default:
                 //默认单条
-                command.CommandText = this.Visitor.BuildCommand(command, false, out _);
+                command.CommandText = this.Visitor.BuildSql(command,  out _);
                 connection.Open();
                 result = command.ExecuteNonQuery(CommandSqlType.Insert);
                 break;
@@ -493,7 +493,7 @@ public class SqlServerBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, I
                 }
             default:
                 //默认单条
-                command.CommandText = this.Visitor.BuildCommand(command, false, out _);
+                command.CommandText = this.Visitor.BuildSql(command,  out _);
                 await connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
                 break;

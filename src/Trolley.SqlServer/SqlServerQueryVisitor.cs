@@ -52,7 +52,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             for (int i = 0; i < this.Tables.Count; i++)
             {
                 var tableSegment = this.Tables[i];
-                string tableName = this.GetTableName(tableSegment);
+                string tableName = this.GetFormatTableName(tableSegment);
                 if (i > 0)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))
@@ -188,7 +188,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
     {
         var builder = new StringBuilder();
         var entityMapper = this.Tables[0].Mapper;
-        builder.Append($"INSERT INTO {this.GetTableName(this.Tables[0])} (");
+        builder.Append($"INSERT INTO {this.GetFormatTableName(this.Tables[0])} (");
         int index = 0;
         if (this.ReaderFields == null && this.IsFromQuery)
             this.ReaderFields = this.Tables[1].Fields;
@@ -247,7 +247,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             for (int i = 1; i < this.Tables.Count; i++)
             {
                 var tableSegment = this.Tables[i];
-                string tableName = this.GetTableName(tableSegment);
+                string tableName = this.GetFormatTableName(tableSegment);
                 if (i > 1)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))

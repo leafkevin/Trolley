@@ -32,31 +32,16 @@ public class MySqlCreated<TEntity> : Created<TEntity>
         {
             case ActionMode.BulkCopy:
                 {
-                    (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
-                    Type insertObjType = null;
-                    object firstInsertObj = null;
-                    foreach (var insertObj in insertObjs)
-                    {
-                        insertObjType = insertObj.GetType();
-                        firstInsertObj = insertObj;
-                        break;
-                    }
+                    (var shardingType, var shardingTables, var insertObjType, var insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
-                    if (this.DbContext.TableShardingProvider != null && this.DbContext.TableShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
+                    if (shardingType == ShardingTableType.SplitTables)
                     {
-                        var isNeedSplit = this.Visitor.Tables[0].Body == null;
-                        if (isNeedSplit)
-                        {
-                            var tabledInsertObjs = this.Visitor.SplitShardingParameters(insertObjType, tableShardingInfo, insertObjs, firstInsertObj);
-                            foreach (var tabledInsertObj in tabledInsertObjs)
-                            {
-                                result += dialectOrmProvider.ExecuteBulkCopy(false, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
-                            }
-                        }
-                        else result = dialectOrmProvider.ExecuteBulkCopy(false, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds, this.Visitor.Tables[0].Body);
+                        var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
+                        foreach (var tabledInsertObj in tabledInsertObjs)
+                            result += dialectOrmProvider.ExecuteBulkCopy(false, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
                     }
-                    else result = dialectOrmProvider.ExecuteBulkCopy(false, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds);
+                    else result = dialectOrmProvider.ExecuteBulkCopy(false, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds, shardingTables as string);
                     break;
                 }
             case ActionMode.Bulk:
@@ -103,6 +88,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>
                     }
                     if (index > 0)
                     {
+                        builder.Remove(builder.Length - 1, 1);
                         command.CommandText = builder.ToString();
                         result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
                     }
@@ -119,6 +105,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>
         command.Dispose();
         if (isNeedClose) connection.Close();
         this.Visitor.Dispose();
+        this.Visitor = null;
         return result;
     }
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
@@ -130,87 +117,70 @@ public class MySqlCreated<TEntity> : Created<TEntity>
         {
             case ActionMode.BulkCopy:
                 {
-                    (var insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
-                    Type insertObjType = null;
-                    object firstInsertObj = null;
-                    foreach (var insertObj in insertObjs)
-                    {
-                        insertObjType = insertObj.GetType();
-                        firstInsertObj = insertObj;
-                        break;
-                    }
+                    (var shardingType, var shardingTables, var insertObjType, var insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
-                    if (this.DbContext.TableShardingProvider != null && this.DbContext.TableShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
+                    if (shardingType == ShardingTableType.SplitTables)
                     {
-                        var isNeedSplit = this.Visitor.Tables[0].Body == null;
-                        if (isNeedSplit)
-                        {
-                            var tabledInsertObjs = this.Visitor.SplitShardingParameters(insertObjType, tableShardingInfo, insertObjs, firstInsertObj);
-                            foreach (var tabledInsertObj in tabledInsertObjs)
-                            {
-                                result += await dialectOrmProvider.ExecuteBulkCopyAsync(false, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
-                            }
-                        }
-                        else result = await dialectOrmProvider.ExecuteBulkCopyAsync(false, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds, cancellationToken, this.Visitor.Tables[0].Body);
+                        var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
+                        foreach (var tabledInsertObj in tabledInsertObjs)
+                            result += await dialectOrmProvider.ExecuteBulkCopyAsync(false, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
                     }
-                    else result = await dialectOrmProvider.ExecuteBulkCopyAsync(false, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds, cancellationToken);
+                    else result = await dialectOrmProvider.ExecuteBulkCopyAsync(false, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds, cancellationToken, shardingTables as string);
                     break;
                 }
             case ActionMode.Bulk:
                 {
+                    (var shardingType, var shardingTables, var insertObjs, var bulkCount, var firstSqlSetter,
+                        var loopSqlSetter, _, var readerFields) = this.Visitor.BuildWithBulk(command);
+
+                    int index = 0;
                     var builder = new StringBuilder();
-                    (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
-                    async Task<int> Executor(string tableName, IEnumerable insertObjs)
+                    async Task TabledExecute(string tableName, IEnumerable insertObjs, CancellationToken cancellationToken)
                     {
-                        int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
                         {
-                            if (index > 0) builder.Append(',');
                             loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
                             index++;
-
                             if (index >= bulkCount)
                             {
+                                builder.Remove(builder.Length - 1, 1);
                                 command.CommandText = builder.ToString();
-                                count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                                result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
                                 builder.Clear();
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                                 index = 0;
                             }
                         }
-                        if (index > 0)
-                        {
-                            command.CommandText = builder.ToString();
-                            count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
-                            builder.Clear();
-                            command.Parameters.Clear();
-                        }
-                        return count;
                     }
-
                     await connection.OpenAsync(cancellationToken);
-                    if (tabledInsertObjs != null)
+                    if (shardingType == ShardingTableType.SplitTables)
                     {
-                        foreach (var tabledInsertObj in tabledInsertObjs)
+                        var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
+                        foreach (var tableName in tabledInsertObjs.Keys)
                         {
-                            firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                            result += await Executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                            await TabledExecute(tableName, tabledInsertObjs[tableName], cancellationToken);
                         }
                     }
                     else
                     {
+                        var tableName = shardingTables as string;
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                        result = await Executor(tableName, insertObjs);
+                        await TabledExecute(tableName, insertObjs, cancellationToken);
+                    }
+                    if (index > 0)
+                    {
+                        builder.Remove(builder.Length - 1, 1);
+                        command.CommandText = builder.ToString();
+                        result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
                     }
                     builder.Clear();
                     break;
                 }
             default:
-                //默认单条
-                command.CommandText = this.Visitor.BuildCommand(command, false, out _);
+                command.CommandText = this.Visitor.BuildSql(command, out _);
                 await connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
                 break;
@@ -219,6 +189,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         this.Visitor.Dispose();
+        this.Visitor = null;
         return result;
     }
     #endregion
@@ -231,9 +202,20 @@ public class MySqlCreated<TEntity, TResult> : Created<TEntity>, IMySqlCreated<TE
     #endregion
 
     #region Execute
-    public new TResult Execute() => this.DbContext.CreateResult<TResult>(this.Visitor);
+    public new TResult Execute()
+    {
+        var result = this.DbContext.CreateResult<TResult>(this.Visitor);
+        this.Visitor.Dispose();
+        this.Visitor = null;
+        return result;
+    }
     public new async Task<TResult> ExecuteAsync(CancellationToken cancellationToken)
-        => await this.DbContext.CreateResultAsync<TResult>(this.Visitor, cancellationToken);
+    {
+        var result = await this.DbContext.CreateResultAsync<TResult>(this.Visitor, cancellationToken);
+        this.Visitor.Dispose();
+        this.Visitor = null;
+        return result;
+    }
     #endregion
 
     #region ExecuteIdentity
@@ -278,82 +260,80 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
         var result = new List<TResult>();
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         var dialectVisitor = this.Visitor as MySqlCreateVisitor;
-        if (!string.IsNullOrEmpty(dialectVisitor.FromSql))
+
+        if (this.Visitor.ActionMode == ActionMode.Bulk)
         {
-            command.CommandText = dialectVisitor.BuildCommand(command, false, out var readerFields);
-            connection.Open();
-            using var reader = command.ExecuteReader(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess);
-            var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
-            while (reader.Read())
-                result.Add((TResult)readerDeserializer.Invoke(reader));
-        }
-        else
-        {
-            (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount, var firstSqlSetter,
+            (var shardingType, var shardingTables, var insertObjs, var bulkCount, var firstSqlSetter,
                 var loopSqlSetter, var tailSql, var readerFields) = this.Visitor.BuildWithBulk(command);
 
-            var entityType = typeof(TEntity);
-            var resultType = typeof(TResult);
+            int index = 0;
             var builder = new StringBuilder();
             Func<ITheaDataReader, object> readerDeserializer = null;
-
-            void Execute(string tableName, IEnumerable insertObjs)
+            void TabledExecute(string tableName, IEnumerable insertObjs)
             {
-                int index = 0;
                 foreach (var insertObj in insertObjs)
                 {
-                    if (index > 0) builder.Append(',');
                     loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
                     index++;
-
                     if (index >= bulkCount)
                     {
+                        builder.Remove(builder.Length - 1, 1);
                         builder.Append(tailSql);
                         command.CommandText = builder.ToString();
                         using var reader = command.ExecuteReader(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess);
                         readerDeserializer ??= reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
                         while (reader.Read())
                             result.Add((TResult)readerDeserializer.Invoke(reader));
-                        reader.Dispose();
+
                         builder.Clear();
                         command.Parameters.Clear();
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                         index = 0;
                     }
                 }
-                if (index > 0)
-                {
-                    builder.Append(tailSql);
-                    command.CommandText = builder.ToString();
-                    using var reader = command.ExecuteReader(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess);
-                    readerDeserializer ??= reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
-                    while (reader.Read())
-                        result.Add((TResult)readerDeserializer.Invoke(reader));
-                    reader.Dispose();
-                    builder.Clear();
-                    command.Parameters.Clear();
-                }
             }
-
             connection.Open();
-            if (tabledInsertObjs != null)
+            if (shardingType == ShardingTableType.SplitTables)
             {
-                foreach (var tabledInsertObj in tabledInsertObjs)
+                var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
+                foreach (var tableName in tabledInsertObjs.Keys)
                 {
-                    firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                    Execute(tabledInsertObj.Key, tabledInsertObj.Value);
+                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                    var tableParameters = tabledInsertObjs[tableName];
+                    TabledExecute(tableName, tableParameters);
                 }
             }
             else
             {
+                var tableName = shardingTables as string;
                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                Execute(tableName, insertObjs);
+                TabledExecute(tableName, insertObjs);
+            }
+            if (index > 0)
+            {
+                builder.Remove(builder.Length - 1, 1);
+                builder.Append(tailSql);
+                command.CommandText = builder.ToString();
+                using var reader = command.ExecuteReader(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess);
+                while (reader.Read())
+                    result.Add((TResult)readerDeserializer.Invoke(reader));
             }
             builder.Clear();
         }
+        else
+        {
+            command.CommandText = dialectVisitor.BuildSql(command, out var readerFields);
+            connection.Open();
+            using var reader = command.ExecuteReader(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess);
+            var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
+            while (reader.Read())
+                result.Add((TResult)readerDeserializer.Invoke(reader));
+        }
+
         command.Dispose();
         if (isNeedClose) connection.Close();
         this.Visitor.Dispose();
+        this.Visitor = null;
         return result;
     }
     public new async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken)
@@ -362,79 +342,75 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
 
         var dialectVisitor = this.Visitor as MySqlCreateVisitor;
-        if (!string.IsNullOrEmpty(dialectVisitor.FromSql))
+        if (this.Visitor.ActionMode == ActionMode.Bulk)
         {
-            command.CommandText = dialectVisitor.BuildCommand(command, false, out var readerFields);
-            await connection.OpenAsync(cancellationToken);
-            using var reader = await command.ExecuteReaderAsync(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess, cancellationToken);
-            var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
-            while (await reader.ReadAsync(cancellationToken))
-                result.Add((TResult)readerDeserializer.Invoke(reader));
-        }
-        else
-        {
-            (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount, var firstSqlSetter,
+            (var shardingType, var shardingTables, var insertObjs, var bulkCount, var firstSqlSetter,
                 var loopSqlSetter, var tailSql, var readerFields) = this.Visitor.BuildWithBulk(command);
 
-            var entityType = typeof(TEntity);
-            var resultType = typeof(TResult);
+            int index = 0;
             var builder = new StringBuilder();
             Func<ITheaDataReader, object> readerDeserializer = null;
-
-            async Task Execute(string tableName, IEnumerable insertObjs)
+            async Task TabledExecute(string tableName, IEnumerable insertObjs, CancellationToken cancellationToken)
             {
-                int index = 0;
                 foreach (var insertObj in insertObjs)
                 {
-                    if (index > 0) builder.Append(',');
                     loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
                     index++;
-
                     if (index >= bulkCount)
                     {
+                        builder.Remove(builder.Length - 1, 1);
                         builder.Append(tailSql);
                         command.CommandText = builder.ToString();
                         using var reader = await command.ExecuteReaderAsync(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess, cancellationToken);
                         readerDeserializer ??= reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
                         while (await reader.ReadAsync(cancellationToken))
                             result.Add((TResult)readerDeserializer.Invoke(reader));
-                        await reader.DisposeAsync();
+
                         builder.Clear();
                         command.Parameters.Clear();
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                         index = 0;
                     }
                 }
-                if (index > 0)
-                {
-                    builder.Append(tailSql);
-                    command.CommandText = builder.ToString();
-                    using var reader = await command.ExecuteReaderAsync(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess, cancellationToken);
-                    readerDeserializer ??= reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
-                    while (await reader.ReadAsync(cancellationToken))
-                        result.Add((TResult)readerDeserializer.Invoke(reader));
-                    await reader.DisposeAsync();
-                    builder.Clear();
-                    command.Parameters.Clear();
-                }
             }
-
             await connection.OpenAsync(cancellationToken);
-            if (tabledInsertObjs != null)
+            if (shardingType == ShardingTableType.SplitTables)
             {
-                foreach (var tabledInsertObj in tabledInsertObjs)
+                var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
+                foreach (var tableName in tabledInsertObjs.Keys)
                 {
-                    firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                    await Execute(tabledInsertObj.Key, tabledInsertObj.Value);
+                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                    var tableParameters = tabledInsertObjs[tableName];
+                    await TabledExecute(tableName, tableParameters, cancellationToken);
                 }
             }
             else
             {
+                var tableName = shardingTables as string;
                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                await Execute(tableName, insertObjs);
+                await TabledExecute(tableName, insertObjs, cancellationToken);
+            }
+            if (index > 0)
+            {
+                builder.Remove(builder.Length - 1, 1);
+                builder.Append(tailSql);
+                command.CommandText = builder.ToString();
+                using var reader = await command.ExecuteReaderAsync(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess, cancellationToken);
+                while (await reader.ReadAsync(cancellationToken))
+                    result.Add((TResult)readerDeserializer.Invoke(reader));
             }
             builder.Clear();
         }
+        else
+        {
+            command.CommandText = dialectVisitor.BuildSql(command, out var readerFields);
+            await connection.OpenAsync(cancellationToken);
+            using var reader = await command.ExecuteReaderAsync(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess, cancellationToken);
+            var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
+            while (await reader.ReadAsync(cancellationToken))
+                result.Add((TResult)readerDeserializer.Invoke(reader));
+        }
+
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         this.Visitor.Dispose();

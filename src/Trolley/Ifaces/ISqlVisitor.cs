@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
-using System.Security.Cryptography;
 
 namespace Trolley;
 
@@ -17,7 +16,7 @@ public interface ISqlVisitor : IDisposable
     void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
     void UseTableMap(TableShardingUsageMode usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter);
     void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
-    void UseTableByOthers(TableShardingUsageMode usageMode, params object[] otherFieldValues);
+    void UseTable(TableShardingUsageMode usageMode, Func<string, object, string> tableNameGetter);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
     SqlFieldSegment VisitAndDeferred(SqlFieldSegment sqlSegment);
@@ -47,8 +46,8 @@ public interface ISqlVisitor : IDisposable
     string VisitConditionExpr(Expression conditionExpr, out OperationType operationType);
     List<Expression> ConvertFormatToConcatList(Expression[] argsExprs);
     List<Expression> SplitConcatList(Expression[] argsExprs);
-    DataTable ToDataTable(Type entityType, IEnumerable entities, List<(MemberMap, Func<object, object>)> memberMappers, string tableName = null);
-    List<(MemberMap, Func<object, object>)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper, bool isUpdate = false);
+    DataTable ToDataTable(string tableName, IEnumerable entities, List<MemberMap> memberMappers, List<Func<object, object>> valueGetters);
+    (List<MemberMap>, List<Func<object, object>>) GetRefMemberMappers(Type parameterType, EntityMap entityMapper, object parameterSample, bool isUpdate = false);
     SqlFieldSegment BuildDeferredSqlSegment(MethodCallExpression methodCallExpr, SqlFieldSegment sqlSegment);
     SqlFieldSegment ToEnumString(SqlFieldSegment sqlSegment);
 }

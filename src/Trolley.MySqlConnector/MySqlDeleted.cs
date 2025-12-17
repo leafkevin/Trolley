@@ -15,8 +15,9 @@ public class MySqlDeleted<TEntity, TResult> : Deleted<TEntity>, IMySqlDeleted<TE
 
     #region Constructor
     public MySqlDeleted(DbContext dbContext, IDeleteVisitor visitor)
-        : base(dbContext, visitor)
+        : base(dbContext)
     {
+        this.Visitor = visitor;
         this.DialectVisitor = this.Visitor as MySqlDeleteVisitor;
     }
     #endregion

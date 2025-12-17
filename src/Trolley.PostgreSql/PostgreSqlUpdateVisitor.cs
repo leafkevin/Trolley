@@ -14,7 +14,7 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
 
     public PostgreSqlUpdateVisitor(DbContext dbContext, char tableAsStart = 'a')
         : base(dbContext, tableAsStart) { }
-    public override string BuildCommand(DbContext dbContext, ITheaCommand command, out List<SqlFieldSegment> readerFields)
+    public override string BuildSql(DbContext dbContext, ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
         string sql = null;
         readerFields = null;
@@ -127,7 +127,7 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                         for (var i = 1; i < this.Tables.Count; i++)
                         {
                             var tableSegment = this.Tables[i];
-                            var tableName = this.GetTableName(this.Tables[i]);
+                            var tableName = this.GetFormatTableName(this.Tables[i]);
                             if (i > 1)
                             {
                                 builder.Append(',');
@@ -152,7 +152,7 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
 
                     if (this.IsJoin)
                     {
-                        builder.Append($"UPDATE {this.GetTableName(this.Tables[0])} {sql}");
+                        builder.Append($"UPDATE {this.GetFormatTableName(this.Tables[0])} {sql}");
                         sql = builder.ToString();
                         if (this.ShardingTables != null && this.ShardingTables.Count > 0)
                             sql = dbContext.BuildShardingTablesSqlByFormat(this, sql, ";");

@@ -1,11 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 
 namespace Trolley;
 
 public static class Sql
 {
+    /// <summary>
+    /// 将当前对象转换为指定类型T，只做字段映射解析，不实现
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="fields"></param>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    public static T As<T>(this object fields) => throw new NotImplementedException();
     /// <summary>
     /// 原始SQL，可以做任何代码片段，解决Trolley无法完成的部分，可以是作为Select字段，Where条件，SQL函数调用，...任何位置的一部分，如：
     /// .Select(f =&gt; new { RowNumber = Sql.Raw("ROW_NUMBER() OVER(ORDER BY e.CREATE_TIME DESC) AS RowNumber")})， .Returning(f =&gt; Sql.Raw&lt;string&gt;("myMethod(a.name,a.amount)+upper(a.order_no)")

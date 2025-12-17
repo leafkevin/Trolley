@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -19,141 +18,76 @@ public class MySqlDeleteVisitor : DeleteVisitor
     public override string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
         string sql = null;
-        this.DbParameters ??= command.Parameters;
+        readerFields = null;
+        this.DbParameters = command.Parameters;
+
+        var tableSegment = this.Tables[0];
+        var entityType = tableSegment.EntityType;
+        if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding)
+            throw new NotSupportedException($"实体表{entityType.FullName}已设置分表，但未指定分表，原始表：{tableSegment.Mapper.TableName}");
+
+        if (this.HasWhere) this.WhereBuilder = new();
+        Func<IDataParameterCollection, DbContext, object, string> whereSqlInitializer = null;
         foreach (var deferredSegment in this.deferredSegments)
         {
             switch (deferredSegment.Type)
             {
-                case "Where":
-                    this.VisitWhere(deferredSegment.Value as Expression);
+                case "AndBy":
+                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, false, false, false);
+                    this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                    break;
+                case "AndById":
+                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, false);
+                    this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                    break;
+                case "AndByIds":
+                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, true);
+                    this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
                     break;
                 case "And":
                     this.VisitAnd(deferredSegment.Value as Expression);
                     break;
-                case "OutputFields":
-                    this.VisitOutputFields(deferredSegment.Value as string);
+                case "OrBy":
+                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, false, false, false);
+                    this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
                     break;
-                case "OutputExpression":
-                    this.VisitOutputExpression(deferredSegment.Value as LambdaExpression);
+                case "OrById":
+                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, false);
+                    this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                    break;
+                case "OrByIds":
+                    whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, true);
+                    this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                    break;
+                case "Or":
+                    this.VisitOr(deferredSegment.Value as Expression);
                     break;
             }
         }
-        readerFields = this.ReaderFields;
 
-        if (this.IsWhereKeys)
+        if (tableSegment.ShardingType > ShardingTableType.SingleTable)
         {
-            var entityType = this.Tables[0].EntityType;
-            var whereKeys = this.deferredSegments[0].Value;
-            Type whereObjType = null;
-            var isBulk = whereKeys is IEnumerable && whereKeys is not string && whereKeys is not IDictionary<string, object>;
-            IEnumerable entities = null;
-            if (isBulk)
+            var whereSql = this.WhereBuilder.ToString();
+            this.WhereBuilder.Clear();
+            var builder = this.WhereBuilder;
+            var tableNames = tableSegment.TableNames;
+            for (int i = 0; i < tableNames.Count; i++)
             {
-                entities = whereKeys as IEnumerable;
-                foreach (var entity in entities)
-                {
-                    whereObjType = entity.GetType();
-                    break;
-                }
-            }
-            else whereObjType = whereKeys.GetType();
-            (var isMultiKeys, var origName, var headSqlSetter, var whereSqlSetter) = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, entityType, whereObjType, isBulk);
-
-            int index = 0;
-            var builder = new StringBuilder();
-            var whereSqlBuilder = new StringBuilder();
-            Action sqlExecuter = null;
-            if (isBulk)
-            {
-                var typedWhereSqlSetter = whereSqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-                Action<object, int> loopExecute = (entity, index) => typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, entity, $"{index}");
-                if (isMultiKeys && !string.IsNullOrEmpty(this.OutputSql))
-                {
-                    loopExecute = (entity, index) =>
-                    {
-                        typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, entity, $"{index}");
-                        whereSqlBuilder.Append(this.OutputSql);
-                    };
-                }
-                sqlExecuter = () =>
-                {
-                    var jointMark = isMultiKeys ? " OR " : ",";
-                    foreach (var entity in entities)
-                    {
-                        if (index > 0) whereSqlBuilder.Append(jointMark);
-                        loopExecute.Invoke(entity, index);
-                        index++;
-                    }
-                    if (!isMultiKeys)
-                    {
-                        whereSqlBuilder.Append(')');
-                        if (!string.IsNullOrEmpty(this.OutputSql))
-                            whereSqlBuilder.Append(this.OutputSql);
-                    }
-                };
-            }
-            else
-            {
-                var typedWhereSqlSetter = whereSqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
-                if (!string.IsNullOrEmpty(this.OutputSql))
-                {
-                    sqlExecuter = () =>
-                    {
-                        typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, whereKeys);
-                        whereSqlBuilder.Append(this.OutputSql);
-                    };
-                }
-                else sqlExecuter = () => typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, whereKeys);
-            }
-            if (!string.IsNullOrEmpty(this.Tables[0].TableSchema))
-                headSqlSetter = (builder, tableName) => headSqlSetter.Invoke(builder, this.Tables[0].TableSchema + "." + tableName);
-            if (this.ShardingTables != null && this.ShardingTables.Count > 0)
-            {
-                var tableNames = this.ShardingTables[0].TableNames;
-                sqlExecuter.Invoke();
-                for (int i = 0; i < tableNames.Count; i++)
-                {
-                    if (i > 0) builder.Append(';');
-                    headSqlSetter.Invoke(builder, tableNames[i]);
-                    builder.Append(whereSqlBuilder);
-                }
-            }
-            else
-            {
-                sqlExecuter.Invoke();
-                headSqlSetter.Invoke(builder, this.Tables[0].Body ?? origName);
-                builder.Append(whereSqlBuilder);
-            }
-            sql = builder.ToString();
-            builder.Clear();
-            whereSqlBuilder.Clear();
-        }
-        else
-        {
-            var builder = new StringBuilder();
-            if (this.ShardingTables != null && this.ShardingTables.Count > 0)
-            {
-                var tableSegment = this.ShardingTables[0];
-                var tableNames = tableSegment.TableNames;
-                for (int i = 0; i < tableNames.Count; i++)
-                {
-                    if (i > 0) builder.Append(';');
-                    builder.Append("DELETE FROM ");
-                    builder.Append(this.OrmProvider.GetTableName(tableNames[i]));
-                    builder.Append(" WHERE ");
-                    builder.Append(this.WhereBuilder);
-                    if (!string.IsNullOrEmpty(this.OutputSql))
-                        builder.Append(this.OutputSql);
-                }
-            }
-            else
-            {
-                var tableName = this.Tables[0].Body ?? this.Tables[0].Mapper.TableName;
-                builder.Append($"DELETE FROM {this.OrmProvider.GetTableName(tableName)} WHERE {this.WhereBuilder}");
+                if (i > 0) builder.Append(';');
+                builder.Append("DELETE FROM ");
+                builder.Append(this.GetTableName(tableSegment));
+                builder.Append(" WHERE ");
+                builder.Append(whereSql);
                 if (!string.IsNullOrEmpty(this.OutputSql))
                     builder.Append(this.OutputSql);
             }
             sql = builder.ToString();
+        }
+        else
+        {
+            if (!string.IsNullOrEmpty(this.OutputSql))
+                this.WhereBuilder.Append(this.OutputSql);
+            sql = $"DELETE FROM {this.GetTableName(tableSegment)} WHERE {this.WhereBuilder.ToString()}";
         }
         return sql;
     }
@@ -161,57 +95,10 @@ public class MySqlDeleteVisitor : DeleteVisitor
     {
         var defaultSchemaName = this.dialectProvider.GetDefaultSchemaName(this.DbContext);
         if (tableSchema == defaultSchemaName) return;
-
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         tableSegment.TableSchema = tableSchema;
     }
-    public override string BuildTableShardingsSql()
-    {
-        var builder = new StringBuilder($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND ");
-        var schemaBuilders = new Dictionary<string, StringBuilder>();
-        var defaultSchemaName = this.dialectProvider.GetDefaultSchemaName(this.DbContext);
-        foreach (var tableSegment in this.ShardingTables)
-        {
-            if (tableSegment.ShardingType > ShardingTableType.MultiTable)
-            {
-                var tableSchema = tableSegment.TableSchema ?? defaultSchemaName;
-                if (!schemaBuilders.TryGetValue(tableSchema, out var tableBuilder))
-                    schemaBuilders.Add(tableSchema, tableBuilder = new StringBuilder());
-
-                if (tableBuilder.Length > 0) tableBuilder.Append(" OR ");
-                tableBuilder.Append($"TABLE_NAME LIKE '{tableSegment.Mapper.TableName}%'");
-            }
-        }
-        if (schemaBuilders.Count > 1)
-            builder.Append('(');
-        int index = 0;
-        foreach (var schemaBuilder in schemaBuilders)
-        {
-            if (index > 0) builder.Append(" OR ");
-            builder.Append($"TABLE_SCHEMA='{schemaBuilder.Key}' AND ({schemaBuilder.Value.ToString()})");
-            index++;
-        }
-        if (schemaBuilders.Count > 1)
-            builder.Append(')');
-        return builder.ToString();
-    }
     public void Returning(string fieldNames)
-    {
-        this.deferredSegments.Add(new CommandSegment
-        {
-            Type = "OutputFields",
-            Value = fieldNames
-        });
-    }
-    public virtual void Returning(Expression fieldsSelector)
-    {
-        this.deferredSegments.Add(new CommandSegment
-        {
-            Type = "OutputExpression",
-            Value = fieldsSelector
-        });
-    }
-    public void VisitOutputFields(string fieldNames)
     {
         this.ReaderFields = new();
         this.OutputSql = $" RETURNING {fieldNames}";
@@ -245,7 +132,7 @@ public class MySqlDeleteVisitor : DeleteVisitor
             });
         }
     }
-    public void VisitOutputExpression(LambdaExpression fieldsSelector)
+    public virtual void Returning(LambdaExpression fieldsSelector)
     {
         this.ReaderFields = new();
         var entityMapper = this.Tables[0].Mapper;

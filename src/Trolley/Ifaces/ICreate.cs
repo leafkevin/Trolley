@@ -39,20 +39,11 @@ public interface ICreate<TEntity>
     /// <returns>返回插入对象</returns>
     ICreate<TEntity> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表名获取委托，执行委托获取分表名，在批量插入场景，插入对象的值自动插入对应分表中，此方法只适用批量场景。
-    /// 第一个参数是原始表名，第二个参数是插入的实体对象，返回值是分表名，如：.UseTable((tableName, insertObj) =&gt; $"{tableName}_{insertObj.CreatedAt:yyyyMM}")
+    /// 手动指定分表名获取委托，执行委托获取分表名，插入对象的值自动插入对应分表中，只适用于批量操作。第一个参数是原始表名，第二个参数是WithBulk批量插入对象的值，返回值是分表名，如：.UseTable((tableName, insertObj) =&gt; $"{tableName}_{((User)insertObj).CreatedAt:yyyyMM}")
     /// </summary>
-    /// <typeparam name="TInsertObj">插入的实体类型</typeparam>
     /// <param name="tableNameGetter">分表名获取委托</param>
     /// <returns>返回插入对象</returns>
-    ICreate<TEntity> UseTable<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter);
-    /// <summary>
-    /// 手动指定分表规则除WithBulk方法外的其他参数值，Trolley会自动结合otherFieldValues和WithBulk方法中的参数值确定分表名，otherFieldValues字段值数组中的顺序与配置的依赖字段(除WithBulk方法中依赖参数外)顺序一致，自插入到多个分表中，此方法只能用于批量场景。
-    /// 如：假如分表规则根据租户ID+CreatedAt时间确定分表名，.UseTableByOthers([125])，125是租户ID，批量插入参数(WithBulk方法中的参数)中包含CreatedAt时间字段值
-    /// </summary>
-    /// <param name="otherFieldValues">分表依赖字段值获取委托</param>
-    /// <returns>返回更新对象</returns>
-    ICreate<TEntity> UseTableByOthers(params object[] otherFieldValues);
+    ICreate<TEntity> UseTable(Func<string, object, string> tableNameGetter);
     #endregion
 
     #region UseTableSchema

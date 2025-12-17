@@ -182,11 +182,9 @@ public class MySqlFromCommand<TEntity, T> : FromCommand<TEntity, T>, IMySqlFromC
 
     protected virtual MySqlCreateVisitor NewCreateVisitor(string fromSql = null)
     {
-        var createVisiter = new MySqlCreateVisitor(this.DbContext, this.Visitor.TableAsStart);
+        var createVisiter = new MySqlCreateVisitor(this.Visitor.Tables[0].EntityType, this.DbContext, this.Visitor.TableAsStart);
         createVisiter.Tables = this.Visitor.Tables;
         createVisiter.DbParameters = this.Visitor.DbParameters;
-        createVisiter.IsMultiple = this.Visitor.IsMultiple;
-        createVisiter.CommandIndex = this.Visitor.CommandIndex;
         createVisiter.RefQueries = this.Visitor.RefQueries;
         createVisiter.ShardingTables = this.Visitor.ShardingTables;
         createVisiter.RefTableAliases = this.Visitor.RefTableAliases;

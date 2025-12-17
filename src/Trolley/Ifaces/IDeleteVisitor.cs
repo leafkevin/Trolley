@@ -25,13 +25,10 @@ public interface IDeleteVisitor : IDisposable
 
     void AndBy(object whereObj);
     void AndById(object whereKey);
-    void AndByIds(IEnumerable whereKeys); 
+    void AndByIds(IEnumerable whereKeys);
     void And(Expression whereExpr);
     void OrBy(object whereObj);
     void OrById(object whereKey);
     void OrByIds(IEnumerable whereKeys);
     void Or(Expression whereExpr);
-
-    string GetTableName(TableSegment tableSegment);
-    string BuildTableShardingsSql();
 }

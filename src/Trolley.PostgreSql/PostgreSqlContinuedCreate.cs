@@ -156,7 +156,7 @@ public class PostgreSqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPos
                 }
             default:
                 //默认单条
-                command.CommandText = this.Visitor.BuildCommand(command, false, out _);
+                command.CommandText = this.Visitor.BuildSql(command,  out _);
                 connection.Open();
                 result = command.ExecuteNonQuery(CommandSqlType.Insert);
                 break;
@@ -253,7 +253,7 @@ public class PostgreSqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPos
                 }
             default:
                 //默认单条
-                command.CommandText = this.Visitor.BuildCommand(command, false, out _);
+                command.CommandText = this.Visitor.BuildSql(command,  out _);
                 await connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
                 break;
@@ -430,7 +430,7 @@ public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, 
                 }
             default:
                 //默认单条
-                command.CommandText = this.Visitor.BuildCommand(command, false, out _);
+                command.CommandText = this.Visitor.BuildSql(command,  out _);
                 connection.Open();
                 result = command.ExecuteNonQuery(CommandSqlType.Insert);
                 break;
@@ -544,7 +544,7 @@ public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, 
                 }
             default:
                 //默认单条
-                command.CommandText = this.Visitor.BuildCommand(command, false, out _);
+                command.CommandText = this.Visitor.BuildSql(command,  out _);
                 await connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
                 break;

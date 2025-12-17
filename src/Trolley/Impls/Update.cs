@@ -37,14 +37,9 @@ public class Update<TEntity> : IUpdate<TEntity>
         this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
-    public virtual IUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
+    public virtual IUpdate<TEntity> UseTable(Func<string, object, string> tableNameGetter)
     {
         this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, tableNameGetter);
-        return this;
-    }
-    public virtual IUpdate<TEntity> UseTableByOthers(params object[] otherFieldValues)
-    {
-        this.Visitor.UseTableByOthers(TableShardingUsageMode.WriteOnly, otherFieldValues);
         return this;
     }
     public virtual IUpdate<TEntity> UseTableByRange(params object[] fieldValues)
@@ -73,7 +68,6 @@ public class Update<TEntity> : IUpdate<TEntity>
                 throw new ArgumentNullException(nameof(setObj));
             if (!typeof(TFields).IsEntityType(out _))
                 throw new NotSupportedException("Set方法参数setObj支持实体类对象，不支持基础类型，可以是匿名对、命名对象或是字典");
-
             this.Visitor.SetWith(setObj);
         }
         return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
@@ -113,23 +107,6 @@ public class Update<TEntity> : IUpdate<TEntity>
     #endregion
 
     #region SetFrom    
-    public virtual IContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
-        => this.SetFrom(true, fieldSelector, valueSelector);
-    public virtual IContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
-    {
-        if (condition)
-        {
-            if (fieldSelector == null)
-                throw new ArgumentNullException(nameof(fieldSelector));
-            if (valueSelector == null)
-                throw new ArgumentNullException(nameof(valueSelector));
-            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
-                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
-
-            this.Visitor.SetFrom(fieldSelector, valueSelector);
-        }
-        return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
-    }
     public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
         => this.SetFrom(true, fieldsAssignment);
     public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)

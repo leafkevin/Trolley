@@ -19,6 +19,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     protected static readonly ConcurrentDictionary<Type, ITypeHandler> typeHandlers = new();
     protected static readonly ConcurrentDictionary<int, Func<object, object>> parameterValueGetters = new();
     protected static readonly ConcurrentDictionary<int, Func<object, object>> readerValueGetters = new();
+
     static BaseOrmProvider()
     {
         typeHandlers.TryAdd(typeof(JsonTypeHandler), new JsonTypeHandler());

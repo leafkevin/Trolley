@@ -406,12 +406,12 @@ public static class Extensions
         return false;
     }
 #endif
-    public static bool TryGetKeyIgnoreCase(this IDictionary<string, object> dict, string lowerKey, out string itemKey)
+    public static bool TryGetKeyIgnoreCase(this IDictionary<string, object> dict, string memberName, out string itemKey)
     {
         itemKey = null;
         foreach (var dictKey in dict.Keys)
         {
-            if (lowerKey != dictKey.ToLower())
+            if (!string.Equals(memberName, dictKey, StringComparison.OrdinalIgnoreCase))
                 continue;
             itemKey = dictKey;
             return true;
@@ -440,11 +440,11 @@ public static class Extensions
     //    }
     //    return isContainsKey;
     //}
-    public static bool TryFind(this List<MemberInfo> memberInfos, string lowerMemberName, out MemberInfo memberInfo)
+    public static bool TryFind(this List<MemberInfo> memberInfos, string memberName, out MemberInfo memberInfo)
     {
         foreach (var myMemberInfo in memberInfos)
         {
-            if (string.Equals(myMemberInfo.Name, lowerMemberName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(myMemberInfo.Name, memberName, StringComparison.OrdinalIgnoreCase))
             {
                 memberInfo = myMemberInfo;
                 return true;

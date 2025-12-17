@@ -137,6 +137,9 @@ public class EntityMap
                 throw new NotSupportedException($"实体类{this.EntityType.FullName}成员{memberMapper.MemberName}的映射字段，配置为必需字段，但是成员类型却是可为null对象");
             if (memberMapper.TypeHandlerType != null && memberMapper.TypeHandler == null)
                 memberMapper.TypeHandler = ormProvider.GetTypeHandler(memberMapper.TypeHandlerType);
+            if (memberMapper.IsRequired && memberMapper.MappedTargetType.IsValueType)
+                memberMapper.DefaultValue = Activator.CreateInstance(memberMapper.MappedTargetType);
+            else memberMapper.DefaultValue = DBNull.Value;
             this.AddFieldMap(memberMapper.FieldName, memberMapper);
         }
         if (!this.memberMaps.IsEmpty)
