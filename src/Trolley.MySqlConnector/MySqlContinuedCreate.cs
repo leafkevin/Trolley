@@ -178,7 +178,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCon
         {
             case ActionMode.BulkCopy:
                 {
-                    (var shardingType, var shardingTables, var insertObjType, var insertObjs, var timeoutSeconds,
+                    (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
                         var memberMappers, var valueGetters) = this.DialectVisitor.BuildWithBulkCopy();
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
                     var mySqlConnection = connection.BaseConnection as MySqlConnection;
@@ -192,14 +192,14 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCon
                         foreach (var tableName in tabledInsertObjs.Keys)
                         {
                             bulkCopyObj.DestinationTableName = tableName;
-                            var data = this.Visitor.ToDataTable(tableName, insertObjType, tabledInsertObjs[tableName], memberMappers, valueGetters);
+                            var data = this.Visitor.ToDataTable(tableName, tabledInsertObjs[tableName], memberMappers, valueGetters);
                             result += await dialectOrmProvider.ExecuteBulkCopyAsync(tableName, bulkCopyObj, connection, this.DbContext, data, cancellationToken);
                         }
                     }
                     else
                     {
                         var tableName = shardingTables as string;
-                        var data = this.Visitor.ToDataTable(tableName, insertObjType, insertObjs, memberMappers, valueGetters);
+                        var data = this.Visitor.ToDataTable(tableName, insertObjs, memberMappers, valueGetters);
                         result = await dialectOrmProvider.ExecuteBulkCopyAsync(shardingTables as string, bulkCopyObj, connection, this.DbContext, data, cancellationToken);
                     }
                     break;

@@ -2472,7 +2472,7 @@ public class SqlVisitor : ISqlVisitor
         }
         return result;
     }
-    public (List<MemberMap>, List<Func<object, object>>) GetRefMemberMappers(Type parameterType, EntityMap entityMapper, object parameterSample, bool isUpdate = false)
+    public (List<MemberMap>, List<Func<object, object>>) GetRefMemberMappers(Type parameterType, EntityMap entityMapper, object parameterSample, bool isUpdate)
     {
         var memberMappers = new List<MemberMap>();
         var valueGetters = new List<Func<object, object>>();
@@ -2613,7 +2613,7 @@ public class SqlVisitor : ISqlVisitor
                 var memberInfos = tableSegment.TableShardingInfo.DependOnMembers;
                 if (memberInfos == null || memberInfos.Count == 0)
                     throw new InvalidOperationException($"实体表{tableSegment.EntityType.FullName}已设置分表，但未指定分表名，也未指定依赖成员，无法确定分表，原表名：{tableName}");
-             
+
                 tableName = tableSegment.TableShardingInfo.Rule.Invoke(tableName, fieldValues);
             }
         }
@@ -2856,11 +2856,11 @@ public class SqlVisitor : ISqlVisitor
         return myExpr.NodeType == ExpressionType.MemberAccess;
     }
 
-    public Dictionary<string, List<object>> SplitShardingParameters(Type paramterType, IEnumerable parameters, object parameterSample)
+    public Dictionary<string, List<object>> SplitShardingParameters(TableShardingInfo tableShardingInfo, Type paramterType, IEnumerable parameters, object parameterSample)
     {
         var tableSegment = this.Tables[0];
         var origTableName = tableSegment.Mapper.TableName;
-        var tableNameGetter = tableSegment.ShardingTableGetter ?? RepositoryHelper.BuildShardingTableNameGetter(this.DbContext, tableSegment.EntityType, paramterType, parameterSample);
+        var tableNameGetter = tableSegment.ShardingTableGetter ?? RepositoryHelper.BuildShardingTableNameGetter(this.DbContext, tableShardingInfo, tableSegment.EntityType, paramterType, parameterSample);
 
         var result = new Dictionary<string, List<object>>();
         foreach (var parameter in parameters)

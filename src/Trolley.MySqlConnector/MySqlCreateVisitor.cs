@@ -75,11 +75,6 @@ public class MySqlCreateVisitor : CreateVisitor
                 else this.DbParameters = command.Parameters;
                 this.ValuesBuilder = new();
                 var tableSegment = this.Tables[0];
-                if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding)
-                {
-                    this.IsNeedSplitShardingTables = true;
-                    this.ShardingValues = new();
-                }
                 foreach (var deferredSegment in this.deferredSegments)
                 {
                     switch (deferredSegment.Type)
@@ -136,13 +131,12 @@ public class MySqlCreateVisitor : CreateVisitor
         (var insertObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
 
         object firstInsertObj = null;
-        Type insertObjType = null;
         foreach (var insertObj in insertObjs)
         {
             firstInsertObj = insertObj;
-            insertObjType = insertObj.GetType();
             break;
         }
+        var insertObjType = firstInsertObj.GetType();
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
         this.FieldsBuilder.Append('(');
@@ -157,12 +151,6 @@ public class MySqlCreateVisitor : CreateVisitor
         if (this.deferredSegments.Count > 1)
         {
             this.ValuesBuilder = new StringBuilder("(");
-            if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding
-                && tableSegment.ShardingTableGetter == null && !tableSegment.IsUseOtherValuesTableSharding)
-            {
-                this.IsNeedSplitShardingTables = true;
-                this.ShardingValues = new();
-            }
             var tempDbParameters = new TheaDbParameterCollection();
             this.DbParameters = tempDbParameters;
             for (int i = 1; i < this.deferredSegments.Count; i++)
@@ -240,13 +228,12 @@ public class MySqlCreateVisitor : CreateVisitor
                 builder.Append(fixedValuesSql);
             };
         }
-        var shardingType = ShardingTableType.None;
+        var shardingType = tableSegment.ShardingType;
         object shardingTables = tableSegment.Mapper.TableName;
         if (tableSegment.TableShardingInfo != null)
         {
             if (tableSegment.IsSharding)
             {
-                shardingType = tableSegment.ShardingType;
                 if (shardingType > ShardingTableType.SingleTable)
                     throw new NotSupportedException($"实体表{entityType.FullName}已设置分表，数据插入不能设置多个分表，原始表：{tableSegment.Mapper.TableName}");
                 shardingTables = tableSegment.Body;
@@ -254,7 +241,7 @@ public class MySqlCreateVisitor : CreateVisitor
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(insertObjType, insertObjs, this.ShardingValues);
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, insertObjType, insertObjs, firstInsertObj);
             }
         }
         string tailSql = null;
@@ -398,20 +385,17 @@ public class MySqlCreateVisitor : CreateVisitor
             Value = (insertObjs, timeoutSeconds)
         });
     }
-    public (ShardingTableType, object, Type, IEnumerable, int?, List<MemberMap>, List<Func<object, object>>) BuildWithBulkCopy()
+    public (ShardingTableType, object, IEnumerable, int?, List<MemberMap>, List<Func<object, object>>) BuildWithBulkCopy()
     {
         (var insertObjs, int? timeoutSeconds) = ((IEnumerable, int?))this.deferredSegments[0].Value;
         object firstInsertObj = null;
-        Type insertObjType = null;
         foreach (var insertObj in insertObjs)
         {
             firstInsertObj = insertObj;
-            insertObjType = insertObj.GetType();
             break;
         }
+        var insertObjType = firstInsertObj.GetType();
         var tableSegment = this.Tables[0];
-        var entityType = tableSegment.EntityType;
-        this.FieldsBuilder.Append('(');
 
         var shardingType = tableSegment.ShardingType;
         object shardingTables = tableSegment.Mapper.TableName;
@@ -420,22 +404,21 @@ public class MySqlCreateVisitor : CreateVisitor
             if (tableSegment.IsSharding)
             {
                 if (!string.IsNullOrEmpty(tableSegment.Body))
-                {
                     shardingTables = tableSegment.Body;
-                    shardingType = ShardingTableType.SingleTable;
-                }
                 else if (tableSegment.TableNames != null && tableSegment.TableNames.Count > 0)
+                {
+                    var entityType = tableSegment.EntityType;
                     throw new NotSupportedException($"实体表{entityType.FullName}已设置分表，数据插入不能设置多个分表，原始表：{tableSegment.Mapper.TableName}");
+                }
             }
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(insertObjType, insertObjs, firstInsertObj);
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, insertObjType, insertObjs, firstInsertObj);
             }
         }
         (var memberMappers, var valueGetters) = this.GetRefMemberMappers(insertObjType, tableSegment.Mapper, firstInsertObj, false);
-
-        return (shardingType, shardingTables, insertObjType, insertObjs, timeoutSeconds, memberMappers, valueGetters);
+        return (shardingType, shardingTables, insertObjs, timeoutSeconds, memberMappers, valueGetters);
     }
     public void OnDuplicateKeyUpdate(object updateObj)
     {

@@ -21,13 +21,6 @@ public interface IMySqlUpdate<TEntity> : IUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new IMySqlUpdate<TEntity> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表规则依赖的批量更新参数(SetBulk方法中的参数)外的其他参数值，Trolley会自动结合otherFieldValues和批量更新参数中分表依赖字段值确定分表名，otherFieldValues字段值数组中的顺序与配置的依赖字段(批量更新参数中的依赖字段除外)顺序一致，自动更新到多个分表中，此方法只能用于批量场景。
-    /// 如：假如分表规则根据租户ID+CreatedAt时间确定分表名，.UseTableByOthers([125])，125是租户ID，批量更新参数(SetBulk方法中的参数)中包含CreatedAt时间字段值
-    /// </summary>
-    /// <param name="otherFieldValues">分表依赖字段值获取委托</param>
-    /// <returns>返回更新对象</returns>
-    new IMySqlUpdate<TEntity> UseTableByOthers(params object[] otherFieldValues);
-    /// <summary>
     /// 手动指定分表范围规则参数值数组，手动指定<typeparamref name="TEntity"/>表分表名执行查询，参数值的顺序与配置的分表范围规则参数值数组元素顺序保持一致，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素，元素个数&gt;=2，最后两个字段值是范围值，并确保fieldValues[n-1] &lt;= fieldValues[n]，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)</param>

@@ -98,11 +98,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 this.DbParameters = command.Parameters;
                 var tableSegment = this.Tables[0];
                 var entityType = tableSegment.EntityType;
-                if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding)
-                {
-                    this.IsNeedSplitShardingTables = true;
-                    this.ShardingValues = new();
-                }
                 Func<IDataParameterCollection, DbContext, object, string> whereSqlInitializer = null;
                 foreach (var deferredSegment in this.deferredSegments)
                 {
@@ -189,13 +184,12 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         (var updateObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
 
         object firstUpdateObj = null;
-        Type updateObjType = null;
         foreach (var updateObj in updateObjs)
         {
             firstUpdateObj = updateObj;
-            updateObjType = updateObj.GetType();
             break;
         }
+        var updateObjType = firstUpdateObj.GetType();
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
 
@@ -211,12 +205,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (this.deferredSegments.Count > 1)
         {
             this.FieldsBuilder = new();
-            if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding
-                && tableSegment.ShardingTableGetter == null && !tableSegment.IsUseOtherValuesTableSharding)
-            {
-                this.IsNeedSplitShardingTables = true;
-                this.ShardingValues = new();
-            }
             var tempDbParameters = new TheaDbParameterCollection();
             this.DbParameters = tempDbParameters;
             Func<IDataParameterCollection, DbContext, object, string> whereSqlInitializer = null;
@@ -281,7 +269,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
         if (firstUpdateObj is IDictionary<string, object> dict)
         {
-            (var valueSetters, var whereSetters) = this.BuildDictBulkCommandInitializer(tableSegment.Mapper, dict);
+            var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(entityType);
+            (var valueSetters, var whereSetters) = this.BuildDictBulkCommandInitializer(entityMapper, dict);
             loopSqlSetter = (dbParameters, builder, dbContext, tableName, updateObj, index) =>
             {
                 var dictObj = updateObj as IDictionary<string, object>;
@@ -306,7 +295,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             };
         }
 
-        var shardingType =  ShardingTableType.None;
+        var shardingType = ShardingTableType.None;
         object shardingTables = tableSegment.Mapper.TableName;
         if (tableSegment.TableShardingInfo != null)
         {
@@ -322,7 +311,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(updateObjType, updateObjs, this.ShardingValues);
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, updateObjType, updateObjs, firstUpdateObj);
             }
         }
         return (shardingType, shardingTables, updateObjs, bulkCount, firstSqlSetter, loopSqlSetter, null);
@@ -564,9 +553,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     continue;
 
                 var fieldValue = dict[key];
-                if (this.IsNeedSplitShardingTables && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
-                    this.ShardingValues[memberMapper.MemberName] = fieldValue;
-
                 if (memberMapper.IsIgnore || memberMapper.IsAutoIncrement || memberMapper.IsNavigation
                     || memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion)
                     continue;
@@ -600,17 +586,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         }
         else
         {
-            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this.DbContext, entityType, updateObjType, 2, false, this.IsNeedSplitShardingTables, false, this.OnlyFieldNames, this.IgnoreFieldNames);
-            if (this.IsNeedSplitShardingTables)
-            {
-                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, DbContext, object>;
-                typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.ShardingValues, this.DbContext, updateObj);
-            }
-            else
-            {
-                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
-                typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.DbContext, updateObj);
-            }
+            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this.DbContext, entityType, updateObjType, 2, false, false, this.OnlyFieldNames, this.IgnoreFieldNames);
+            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
+            typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.DbContext, updateObj);
         }
     }
     public virtual void VisitSet(Expression fieldsAssignment)
@@ -768,9 +746,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             return;
         }
         var fieldValue = isEntity ? memberMapper.Member.Evaluate(memberValue) : memberValue;
-        if (this.IsNeedSplitShardingTables && this.Tables[0].TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
-            this.ShardingValues[memberMapper.MemberName] = fieldValue;
-
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
         if (memberMapper.TypeHandler != null)
             fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
@@ -794,9 +769,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (sqlSegment.IsConstant || sqlSegment.IsVariable)
         {
             var fieldValue = sqlSegment.Value;
-            if (this.IsNeedSplitShardingTables && this.Tables[0].TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
-                this.ShardingValues[memberMapper.MemberName] = sqlSegment.Value;
-
             var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
             if (memberMapper.TypeHandler != null)
                 fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
@@ -853,8 +825,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     {
                         var fieldValue = valueGetter.Invoke(insertObj);
                         var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
-                        builder.Append(" AND ");
-                        builder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+                        builder.Append($" AND {this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
                         dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                     };
                 }
@@ -878,8 +849,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     {
                         var fieldValue = valueGetter.Invoke(insertObj);
                         var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
-                        builder.Append(',');
-                        builder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+                        builder.Append($",{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
                         dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                     };
                 }

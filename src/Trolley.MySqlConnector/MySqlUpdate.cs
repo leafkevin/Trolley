@@ -21,10 +21,10 @@ public class MySqlUpdate<TEntity> : Update<TEntity>, IMySqlUpdate<TEntity>
     #region Sharding
     public new IMySqlUpdate<TEntity> UseTable(params string[] tableNames)
         => base.UseTable(tableNames) as IMySqlUpdate<TEntity>;
-    public new IMySqlUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
-        => base.UseTable(tableNameGetter) as IMySqlUpdate<TEntity>;
     public new IMySqlUpdate<TEntity> UseTableBy(params object[] fieldValues)
         => base.UseTableBy(fieldValues) as IMySqlUpdate<TEntity>;
+    public new IMySqlUpdate<TEntity> UseTable(Func<string, object, string> tableNameGetter)
+        => base.UseTable(tableNameGetter) as IMySqlUpdate<TEntity>;
     public new IMySqlUpdate<TEntity> UseTableByRange(params object[] fieldValues)
         => base.UseTableByRange(fieldValues) as IMySqlUpdate<TEntity>;
     #endregion

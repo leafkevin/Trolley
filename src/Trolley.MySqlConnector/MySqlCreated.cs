@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MySqlConnector;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
@@ -32,16 +33,29 @@ public class MySqlCreated<TEntity> : Created<TEntity>
         {
             case ActionMode.BulkCopy:
                 {
-                    (var shardingType, var shardingTables, var insertObjType, var insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
+                    (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
+                        var memberMappers, var valueGetters) = this.DialectVisitor.BuildWithBulkCopy();
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
-                    var sqlVisitor = this.Visitor as SqlVisitor;
+                    var mySqlConnection = connection.BaseConnection as MySqlConnection;
+                    var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;
+                    var bulkCopyObj = new MySqlBulkCopy(mySqlConnection, mySqlTransaction);
+                    if (timeoutSeconds.HasValue)
+                        bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
                     if (shardingType == ShardingTableType.SplitTables)
                     {
                         var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
-                        foreach (var tabledInsertObj in tabledInsertObjs)
-                            result += dialectOrmProvider.ExecuteBulkCopy(false, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
+                        foreach (var tableName in tabledInsertObjs.Keys)
+                        {
+                            var data = this.Visitor.ToDataTable(tableName, tabledInsertObjs[tableName], memberMappers, valueGetters);
+                            result += dialectOrmProvider.ExecuteBulkCopy(tableName, bulkCopyObj, connection, this.DbContext, data);
+                        }
                     }
-                    else result = dialectOrmProvider.ExecuteBulkCopy(false, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds, shardingTables as string);
+                    else
+                    {
+                        var tableName = shardingTables as string;
+                        var data = this.Visitor.ToDataTable(tableName, insertObjs, memberMappers, valueGetters);
+                        result = dialectOrmProvider.ExecuteBulkCopy(shardingTables as string, bulkCopyObj, connection, this.DbContext, data);
+                    }
                     break;
                 }
             case ActionMode.Bulk:
@@ -117,16 +131,29 @@ public class MySqlCreated<TEntity> : Created<TEntity>
         {
             case ActionMode.BulkCopy:
                 {
-                    (var shardingType, var shardingTables, var insertObjType, var insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
+                    (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
+                         var memberMappers, var valueGetters) = this.DialectVisitor.BuildWithBulkCopy();
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
-                    var sqlVisitor = this.Visitor as SqlVisitor;
+                    var mySqlConnection = connection.BaseConnection as MySqlConnection;
+                    var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;
+                    var bulkCopyObj = new MySqlBulkCopy(mySqlConnection, mySqlTransaction);
+                    if (timeoutSeconds.HasValue)
+                        bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
                     if (shardingType == ShardingTableType.SplitTables)
                     {
                         var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
-                        foreach (var tabledInsertObj in tabledInsertObjs)
-                            result += await dialectOrmProvider.ExecuteBulkCopyAsync(false, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
+                        foreach (var tableName in tabledInsertObjs.Keys)
+                        {
+                            var data = this.Visitor.ToDataTable(tableName, tabledInsertObjs[tableName], memberMappers, valueGetters);
+                            result += await dialectOrmProvider.ExecuteBulkCopyAsync(tableName, bulkCopyObj, connection, this.DbContext, data, cancellationToken);
+                        }
                     }
-                    else result = await dialectOrmProvider.ExecuteBulkCopyAsync(false, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds, cancellationToken, shardingTables as string);
+                    else
+                    {
+                        var tableName = shardingTables as string;
+                        var data = this.Visitor.ToDataTable(tableName, insertObjs, memberMappers, valueGetters);
+                        result = await dialectOrmProvider.ExecuteBulkCopyAsync(shardingTables as string, bulkCopyObj, connection, this.DbContext, data, cancellationToken);
+                    }
                     break;
                 }
             case ActionMode.Bulk:

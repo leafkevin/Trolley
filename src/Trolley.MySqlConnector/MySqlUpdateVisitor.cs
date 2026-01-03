@@ -1,9 +1,7 @@
-﻿using MySqlConnector;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace Trolley.MySqlConnector;
 
@@ -30,24 +28,21 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             Value = (updateObjs, timeoutSeconds)
         });
     }
-    public (ShardingTableType, object, Type, EntityMap, IEnumerable, int?) BuildWithBulkCopy()
+    public (ShardingTableType, object, IEnumerable, int?, List<MemberMap>, List<Func<object, object>>) BuildWithBulkCopy()
     {
         (var updateObjs, int? timeoutSeconds) = ((IEnumerable, int?))this.deferredSegments[0].Value;
         object firstUpdateObj = null;
-        Type updateObjType = null;
-        foreach (var insertObj in updateObjs)
+        foreach (var updateObj in updateObjs)
         {
-            firstUpdateObj = insertObj;
-            updateObjType = insertObj.GetType();
+            firstUpdateObj = updateObj;
             break;
         }
+        var updateObjType = firstUpdateObj.GetType();
         var tableSegment = this.Tables[0];
-        var entityType = tableSegment.EntityType;
         var entityMapper = tableSegment.Mapper;
-        this.FieldsBuilder.Append('(');
 
         var shardingType = ShardingTableType.None;
-        object shardingTables = entityMapper.TableName;
+        object shardingTables = tableSegment.ShardingType;
         if (tableSegment.TableShardingInfo != null)
         {
             if (tableSegment.IsSharding)
@@ -62,10 +57,10 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(updateObjType, updateObjs, this.ShardingValues);
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, updateObjType, updateObjs, firstUpdateObj);
             }
         }
-        (var memberMappers, var valueGetters) = this.GetRefMemberMappers(updateObjType, entityMapper, true); 
-        return (shardingType, shardingTables, updateObjType, tableSegment.Mapper, updateObjs, timeoutSeconds);
+        (var memberMappers, var valueGetters) = this.GetRefMemberMappers(updateObjType, entityMapper, firstUpdateObj, true);
+        return (shardingType, shardingTables, updateObjs, timeoutSeconds, memberMappers, valueGetters);
     }
 }

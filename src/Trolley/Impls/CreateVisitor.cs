@@ -157,13 +157,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         (var insertObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
 
         object firstInsertObj = null;
-        Type insertObjType = null;
         foreach (var insertObj in insertObjs)
         {
             firstInsertObj = insertObj;
-            insertObjType = insertObj.GetType();
             break;
         }
+        var insertObjType = firstInsertObj.GetType();
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
         this.FieldsBuilder.Append('(');
@@ -254,19 +253,20 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 builder.Append(fixedValuesSql);
             };
         }
-        var shardingType = ShardingTableType.None;
+        var shardingType = tableSegment.ShardingType;
         object shardingTables = tableSegment.Mapper.TableName;
         if (tableSegment.TableShardingInfo != null)
         {
             if (tableSegment.IsSharding)
             {
-                shardingType = tableSegment.ShardingType;
+                if (shardingType > ShardingTableType.SingleTable)
+                    throw new NotSupportedException($"实体表{entityType.FullName}已设置分表，数据插入不能设置多个分表，原始表：{tableSegment.Mapper.TableName}");
                 shardingTables = tableSegment.Body;
             }
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(insertObjType, insertObjs, firstInsertObj);
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, insertObjType, insertObjs, firstInsertObj);
             }
         }
         return (shardingType, shardingTables, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, null, null);

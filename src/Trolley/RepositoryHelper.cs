@@ -1034,7 +1034,7 @@ public static class RepositoryHelper
         }
     }
 
-    public static Func<string, object, string> BuildShardingTableNameGetter(DbContext dbContext, Type entityType, Type parameterType, object parameterSample)
+    public static Func<string, object, string> BuildShardingTableNameGetter(DbContext dbContext, TableShardingInfo tableShardingInfo, Type entityType, Type parameterType, object parameterSample)
     {
         var isDictionary = false;
         List<string> itemKeys = null;
@@ -1044,8 +1044,6 @@ public static class RepositoryHelper
             isDictionary = true;
             itemKeys = new List<string>();
             parameterType = typeof(IDictionary<string, object>);
-            if (!dbContext.TableShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
-                throw new Exception($"实体表{entityType.FullName}未配置分表信息");
             var entityMapper = entityMapProvider.GetEntityMap(entityType);
             foreach (var memberName in tableShardingInfo.DependOnMembers)
             {
@@ -1054,14 +1052,12 @@ public static class RepositoryHelper
                 itemKeys.Add(itemKey);
             }
         }
-        var cacheKey = GetCacheKey(entityMapProvider, dbContext.TableShardingProvider, entityType, parameterType);
+        var cacheKey = GetCacheKey(entityMapProvider, tableShardingInfo, entityType, parameterType);
         var tableGetter = shardingTableGetters.GetOrAdd(cacheKey, f =>
         {
             List<MemberInfo> memberInfos = null;
             if (!isDictionary) memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                 .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
-            if (!dbContext.TableShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
-                throw new Exception($"实体表{entityType.FullName}未配置分表信息");
 
             var origNameExpr = Expression.Parameter(typeof(string), "origName");
             var parameterExpr = Expression.Parameter(typeof(object), "parameter");

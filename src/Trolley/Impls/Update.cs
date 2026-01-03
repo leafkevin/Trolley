@@ -106,7 +106,24 @@ public class Update<TEntity> : IUpdate<TEntity>
     }
     #endregion
 
-    #region SetFrom    
+    #region SetFrom
+    public virtual IContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
+       => this.SetFrom(true, fieldSelector, valueSelector);
+    public virtual IContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
+    {
+        if (condition)
+        {
+            if (fieldSelector == null)
+                throw new ArgumentNullException(nameof(fieldSelector));
+            if (valueSelector == null)
+                throw new ArgumentNullException(nameof(valueSelector));
+            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
+
+            this.Visitor.SetFrom(fieldSelector, valueSelector);
+        }
+        return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
+    }
     public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
         => this.SetFrom(true, fieldsAssignment);
     public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
@@ -260,7 +277,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
         {
             case ActionMode.Bulk:
                 (var shardingType, var shardingTables, var updateObjs, var bulkCount,
-                   var fixedSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
+                    var fixedSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
 
                 int index = 0;
                 var builder = new StringBuilder();
