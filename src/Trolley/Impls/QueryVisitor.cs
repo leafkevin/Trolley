@@ -2070,20 +2070,22 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         {
             if (readerField.FieldType == SqlFieldType.IncludeRef)
                 continue;
-            if (index > 0) builder.Append(',');
             switch (readerField.FieldType)
             {
                 case SqlFieldType.Entity:
+                    if (index > 0) builder.Append(',');
                     this.AddSelectFieldsSql(builder, readerField.Fields);
                     break;
                 case SqlFieldType.DeferredFields:
                     if (readerField.Fields == null)
                         continue;
+                    if (index > 0) builder.Append(',');
                     body = this.GetQuotedValue(readerField);
                     builder.Append(body);
                     //延迟方法调用字段，不需要加别名
                     break;
                 default:
+                    if (index > 0) builder.Append(',');
                     body = this.GetQuotedValue(readerField);
                     //在前面select时，有可能是多分表并且是AVG操作时，没有包裹AVG函数，现在确认不是多分表，需要加上AVG函数包裹
                     if (this.IsNeedFormatShardingTables && this.AggFieldAlias == "AVG_VALUE" && !this.IsManyShardingTables)
