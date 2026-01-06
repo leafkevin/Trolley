@@ -2579,6 +2579,11 @@ public class SqlVisitor : ISqlVisitor
         }
         return (memberMappers, valueGetters);
     }
+    /// <summary>
+    /// 查询和更新会使用，带有占位符的表名
+    /// </summary>
+    /// <param name="tableSegment"></param>
+    /// <returns></returns>
     public string GetFormatTableName(TableSegment tableSegment)
     {
         string tableName = null;
@@ -2600,29 +2605,7 @@ public class SqlVisitor : ISqlVisitor
             else tableName = this.OrmProvider.GetTableName(tableName);
         }
         return tableName;
-    }
-    public string GetTableName(TableSegment tableSegment)
-    {
-        string tableName = null;
-        if (tableSegment.TableShardingInfo != null)
-        {
-            if (tableSegment.IsSharding)
-                tableName = tableSegment.Body;
-            else
-            {
-                var memberInfos = tableSegment.TableShardingInfo.DependOnMembers;
-                if (memberInfos == null || memberInfos.Count == 0)
-                    throw new InvalidOperationException($"实体表{tableSegment.EntityType.FullName}已设置分表，但未指定分表名，也未指定依赖成员，无法确定分表，原表名：{tableName}");
-
-                tableName = tableSegment.TableShardingInfo.Rule.Invoke(tableName, fieldValues);
-            }
-        }
-        else tableName = tableSegment.Mapper.TableName;
-        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
-            tableName = $"{this.OrmProvider.GetTableName(tableSegment.TableSchema)}.{this.OrmProvider.GetTableName(tableName)}";
-        else tableName = this.OrmProvider.GetTableName(tableName);
-        return tableName;
-    }
+    }   
     public virtual SqlFieldSegment BuildDeferredSqlSegment(MethodCallExpression methodCallExpr, SqlFieldSegment sqlSegment)
     {
         string fields = null;

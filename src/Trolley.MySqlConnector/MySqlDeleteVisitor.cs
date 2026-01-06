@@ -24,7 +24,7 @@ public class MySqlDeleteVisitor : DeleteVisitor
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
         if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding)
-            throw new NotSupportedException($"实体表{entityType.FullName}已设置分表，但未指定分表，原始表：{tableSegment.Mapper.TableName}");
+            throw new InvalidOperationException($"实体表{entityType.FullName}已设置分表，但未指定分表，原始表：{tableSegment.Mapper.TableName}");
 
         if (this.HasWhere) this.WhereBuilder = new();
         Func<IDataParameterCollection, DbContext, object, string> whereSqlInitializer = null;

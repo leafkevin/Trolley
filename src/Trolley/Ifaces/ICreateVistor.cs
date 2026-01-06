@@ -31,10 +31,6 @@ public interface ICreateVisitor : IDisposable
     void WithBy(object insertObj);
     void WithByField(Expression fieldSelector, object fieldValue);
     void WithBulk(IEnumerable insertObjs, int bulkCount);
-    void IgnoreFields(string[] fieldNames);
-    void IgnoreFields(Expression fieldsSelector);
-    void OnlyFields(string[] fieldNames);
-    void OnlyFields(Expression fieldsSelector);
     DataTable ToDataTable(string tableName, IEnumerable entities, List<MemberMap> memberMappers, List<Func<object, object>> valueGetters);
     (List<MemberMap>, List<Func<object, object>>) GetRefMemberMappers(Type parameterType, EntityMap entityMapper, object parameterSample, bool isUpdate = false);
     Dictionary<string, List<object>> SplitShardingParameters(TableShardingInfo tableShardingInfo, Type paramterType, IEnumerable parameters, object parameterSample);

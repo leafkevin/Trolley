@@ -39,7 +39,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
         if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding)
-            throw new NotSupportedException($"实体表{entityType.FullName}已设置分表，但未指定分表，原始表：{tableSegment.Mapper.TableName}");
+            throw new NotSupportedException($"实体表{entityType.FullName}已设置分表，但未指定分表，请使用UseTable/UseTableBy/UseTableByRange方法手动指定分表，原始表：{tableSegment.Mapper.TableName}");
 
         if (this.HasWhere) this.WhereBuilder = new();
         Func<IDataParameterCollection, DbContext, object, string> whereSqlInitializer = null;
@@ -90,7 +90,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             {
                 if (i > 0) builder.Append(';');
                 builder.Append("DELETE FROM ");
-                builder.Append(this.GetTableName(tableSegment));
+                builder.Append(this.GetFormatTableName(tableSegment));
                 builder.Append(" WHERE ");
                 builder.Append(whereSql);
             }

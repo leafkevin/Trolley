@@ -342,7 +342,7 @@ public class Created<TEntity> : ICreated<TEntity>
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (_, _, var command) = this.DbContext.UseMasterCommand();
         var sql = this.Visitor.BuildSql(command, out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();

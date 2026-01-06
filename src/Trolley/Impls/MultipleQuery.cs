@@ -141,7 +141,7 @@ public class MultipleQuery : IMultipleQuery
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
         var entityType = typeof(TEntity);
-        this.CreateQueryReader(whereObj, entityType, entityType, false, 1, true, false, ReaderResultType.Entity);
+        this.CreateQueryReader(whereObj, entityType, entityType, 1, true, false, ReaderResultType.Entity);
         return this;
     }
     #endregion     
@@ -152,7 +152,7 @@ public class MultipleQuery : IMultipleQuery
         if (whereObjs == null)
             throw new ArgumentNullException(nameof(whereObjs));
         var entityType = typeof(TEntity);
-        this.CreateQueryReader(whereObjs, entityType, entityType, false, 1, true, true, ReaderResultType.List);
+        this.CreateQueryReader(whereObjs, entityType, entityType, 1, true, true, ReaderResultType.List);
         return this;
     }
     #endregion
@@ -176,7 +176,7 @@ public class MultipleQuery : IMultipleQuery
     public virtual IMultipleQuery QueryFirst<TEntity>(object whereObj)
     {
         var entityType = typeof(TEntity);
-        this.CreateQueryReader(whereObj, entityType, entityType, false, 1, false, false, ReaderResultType.Entity);
+        this.CreateQueryReader(whereObj, entityType, entityType, 1, false, false, ReaderResultType.Entity);
         return this;
     }
     #endregion
@@ -200,7 +200,7 @@ public class MultipleQuery : IMultipleQuery
     public virtual IMultipleQuery Query<TEntity>(object whereObj)
     {
         var entityType = typeof(TEntity);
-        this.CreateQueryReader(whereObj, entityType, entityType, false, 1, false, false, ReaderResultType.List);
+        this.CreateQueryReader(whereObj, entityType, entityType, 1, false, false, ReaderResultType.List);
         return this;
     }
     #endregion
@@ -208,21 +208,21 @@ public class MultipleQuery : IMultipleQuery
     #region Exists
     public virtual IMultipleQuery ExistsBy<TEntity>(object whereObj)
     {
-        this.CreateQueryReader(whereObj, typeof(TEntity), typeof(bool), true, 2, false, false, ReaderResultType.Value);
+        this.CreateQueryReader(whereObj, typeof(TEntity), typeof(bool), 2, false, false, ReaderResultType.Value);
         return this;
     }
     public virtual IMultipleQuery ExistsById<TEntity>(object whereKey)
     {
         if (whereKey == null)
             throw new ArgumentNullException(nameof(whereKey));
-        this.CreateQueryReader(whereKey, typeof(TEntity), typeof(bool), true, 2, true, false, ReaderResultType.Value);
+        this.CreateQueryReader(whereKey, typeof(TEntity), typeof(bool), 2, true, false, ReaderResultType.Value);
         return this;
     }
     public virtual IMultipleQuery ExistsByIds<TEntity>(IEnumerable whereKeys)
     {
         if (whereKeys == null)
             throw new ArgumentNullException(nameof(whereKeys));
-        this.CreateQueryReader(whereKeys, typeof(TEntity), typeof(bool), true, 2, true, true, ReaderResultType.List);
+        this.CreateQueryReader(whereKeys, typeof(TEntity), typeof(bool), 2, true, true, ReaderResultType.List);
         return this;
     }
     public virtual IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate)
@@ -299,11 +299,11 @@ public class MultipleQuery : IMultipleQuery
         parameters.ForEach(f => this.Command.Parameters.Add(f));
         this.AddReader(targetType, rawSql, resultType, isExists);
     }
-    private void CreateQueryReader(object whereObjs, Type entityType, Type targetType, bool isExists, int commandType, bool isUseKey, bool isBulk, ReaderResultType resultType)
+    private void CreateQueryReader(object whereObjs, Type entityType, Type targetType, int commandType, bool isUseKey, bool isBulk, ReaderResultType resultType)
     {
         var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjs, commandType, isUseKey, true, isBulk);
         var sql = commandInitializer.Invoke(this.Command.Parameters, this.DbContext, whereObjs);
-        this.AddReader(targetType, sql, resultType, isExists);
+        this.AddReader(targetType, sql, resultType, commandType == 2);
     }
     #endregion
 }

@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -11,14 +10,9 @@ namespace Trolley;
 public class CreateVisitor : SqlVisitor, ICreateVisitor
 {
     protected List<CommandSegment> deferredSegments = new();
-    protected bool hasOnlyFields = false;
-    protected bool hasIgnoreFields = false;
 
     public StringBuilder FieldsBuilder { get; set; } = new();
     public StringBuilder ValuesBuilder { get; set; }
-
-    public List<string> OnlyFieldNames { get; set; }
-    public List<string> IgnoreFieldNames { get; set; }
     public ActionMode ActionMode { get; set; }
     public bool IsReturnIdentity { get; set; }
 
@@ -43,9 +37,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     {
         string sql = null;
         readerFields = null;
-        this.hasOnlyFields = this.OnlyFieldNames != null && this.OnlyFieldNames.Count > 0;
-        this.hasIgnoreFields = this.IgnoreFieldNames != null && this.IgnoreFieldNames.Count > 0;
-
         switch (this.ActionMode)
         {
             case ActionMode.Bulk:
@@ -83,6 +74,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 this.DbParameters = command.Parameters;
                 this.ValuesBuilder = new();
                 var tableSegment = this.Tables[0];
+                if (this.deferredSegments.Count > 1 && tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null)
+                {
+                    var entityType = tableSegment.EntityType;
+                    throw new InvalidOperationException($"实体表{entityType.FullName}已设置分表，当多次使用WithBy方法，请使用UseTable/UseTableBy方法手动指定分表");
+                }
+
                 foreach (var deferredSegment in this.deferredSegments)
                 {
                     switch (deferredSegment.Type)
@@ -98,7 +95,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 sql = $"INSERT INTO {this.GetTableName(tableSegment)} ({this.FieldsBuilder}) VALUES ({this.ValuesBuilder})";
                 if (this.IsReturnIdentity)
                 {
-                    var entityMapper = this.Tables[0].Mapper;
+                    var entityMapper = tableSegment.Mapper;
                     if (!entityMapper.IsAutoIncrementKey)
                         throw new NotSupportedException($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
                     var keyFieldName = this.OrmProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName);
@@ -137,20 +134,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             Value = (insertObjs, bulkCount)
         });
     }
-    public virtual void IgnoreFields(string[] fieldNames)
-    {
-        this.IgnoreFieldNames ??= new();
-        this.IgnoreFieldNames.AddRange(fieldNames.Select(f => f.ToLower()));
-    }
-    public virtual void IgnoreFields(Expression fieldsSelector)
-        => this.IgnoreFieldNames = this.VisitFields(fieldsSelector);
-    public virtual void OnlyFields(string[] fieldNames)
-    {
-        this.OnlyFieldNames ??= new();
-        this.OnlyFieldNames.AddRange(fieldNames.Select(f => f.ToLower()));
-    }
-    public virtual void OnlyFields(Expression fieldsSelector)
-        => this.OnlyFieldNames = this.VisitFields(fieldsSelector);
     public virtual (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
     {
@@ -174,8 +157,11 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
 
         string fixedFieldsSql = null;
         string fixedValuesSql = "(";
-        if (this.deferredSegments.Count > 1)
+        if (this.deferredSegments.Count > 0)
         {
+            if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null)
+                throw new InvalidOperationException($"实体表{entityType.FullName}已设置分表，当多次使用WithBy/WithBulk方法，请使用UseTable/UseTableBy方法手动指定分表");
+
             this.ValuesBuilder = new StringBuilder("(");
             var tempDbParameters = new TheaDbParameterCollection();
             this.DbParameters = tempDbParameters;
@@ -221,7 +207,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         else
         {
             (var fieldsSql, var sqlSetter) = ((string, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>))
-                RepositoryHelper.BuildTypedBulkCommandInitializer(this.DbContext, entityType, insertObjType, 1, this.OnlyFieldNames, this.IgnoreFieldNames);
+                RepositoryHelper.BuildTypedBulkCommandInitializer(this.DbContext, entityType, insertObjType, 1, null, null);
             this.FieldsBuilder.Append(fieldsSql);
             loopSqlSetter = (dbParameters, builder, dbContext, insertObj, suffix) =>
             {
@@ -287,14 +273,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     || memberMapper.IsNavigation || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
                     continue;
 
-                if (this.hasOnlyFields || this.hasOnlyFields)
-                {
-                    var lowerMemberName = memberMapper.MemberName.ToLower();
-                    if (this.hasOnlyFields && !this.OnlyFieldNames.Contains(lowerMemberName)
-                        || this.hasIgnoreFields && this.IgnoreFieldNames.Contains(lowerMemberName))
-                        continue;
-                }
-
                 var fieldValue = dict[key];
                 if (this.FieldsBuilder.Length > 0)
                 {
@@ -322,9 +300,14 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         }
         else
         {
-            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this.DbContext, entityType, insertObjType, 1, false, false, this.OnlyFieldNames, this.IgnoreFieldNames);
+            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this.DbContext, entityType, insertObjType, 1, false, false, null, null);
             var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, StringBuilder, DbContext, object>;
             typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.ValuesBuilder, this.DbContext, insertObj);
+        }
+        if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && this.deferredSegments.Count == 1)
+        {
+            tableSegment.ShardingTableGetter = RepositoryHelper.BuildShardingTableNameGetter(this.DbContext, tableSegment.TableShardingInfo, tableSegment.EntityType, insertObjType, insertObj);
+            tableSegment.Body = tableSegment.ShardingTableGetter.Invoke(tableSegment.Mapper.TableName, insertObj);
         }
     }
     public virtual void VisitWithByField(object deferredSegmentValue)
@@ -412,14 +395,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
                 continue;
 
-            if (this.hasOnlyFields || this.hasIgnoreFields)
-            {
-                var lowerMemberName = memberMapper.MemberName.ToLower();
-                if (this.hasOnlyFields && !this.OnlyFieldNames.Contains(lowerMemberName)
-                    || this.hasIgnoreFields && this.IgnoreFieldNames.Contains(lowerMemberName))
-                    continue;
-            }
-
             if (index > 0) this.FieldsBuilder.Append(',');
             this.FieldsBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
 
@@ -465,14 +440,28 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         }
         return valueSetters;
     }
+    public string GetTableName(TableSegment tableSegment)
+    {
+        string tableName = null;
+        if (tableSegment.TableShardingInfo != null)
+        {
+            if (tableSegment.IsSharding)
+                tableName = tableSegment.Body;
+            else if (tableSegment.ShardingTableGetter != null && !string.IsNullOrEmpty(tableSegment.Body))
+                tableName = tableSegment.Body;
+        }
+        else tableName = tableSegment.Mapper.TableName;
+        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
+            tableName = $"{this.OrmProvider.GetTableName(tableSegment.TableSchema)}.{this.OrmProvider.GetTableName(tableName)}";
+        else tableName = this.OrmProvider.GetTableName(tableName);
+        return tableName;
+    }
     public override void Dispose()
     {
         base.Dispose();
         this.deferredSegments = null;
         this.FieldsBuilder = null;
         this.ValuesBuilder = null;
-        this.OnlyFieldNames = null;
-        this.IgnoreFieldNames = null;
     }
     public override IQueryVisitor CreateQueryVisitor(char? tableAsStart = null)
     {

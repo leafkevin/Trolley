@@ -225,11 +225,9 @@ public sealed class DbContext
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
 
-        var result = false;
         connection.Open();
         var objResult = command.ExecuteScalar(CommandSqlType.Select);
-        if (objResult != null && objResult is not DBNull)
-            result = true;
+        var result = objResult != null && objResult is not DBNull;
 
         command.Dispose();
         if (isNeedClose) connection.Close();
@@ -243,11 +241,9 @@ public sealed class DbContext
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
 
-        var result = false;
         await connection.OpenAsync(cancellationToken);
         var objResult = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
-        if (objResult != null && objResult is not DBNull)
-            result = true;
+        var result = objResult != null && objResult is not DBNull;
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();

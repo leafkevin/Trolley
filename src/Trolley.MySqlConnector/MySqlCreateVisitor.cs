@@ -25,8 +25,6 @@ public class MySqlCreateVisitor : CreateVisitor
     {
         string tailSql = null;
         readerFields = this.ReaderFields;
-        this.hasOnlyFields = this.OnlyFieldNames != null && this.OnlyFieldNames.Count > 0;
-        this.hasIgnoreFields = this.IgnoreFieldNames != null && this.IgnoreFieldNames.Count > 0;
 
         switch (this.ActionMode)
         {

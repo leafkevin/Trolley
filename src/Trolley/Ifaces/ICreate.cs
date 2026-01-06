@@ -278,36 +278,4 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     #endregion
-
-    #region IgnoreFields
-    /// <summary>
-    /// 忽略字段，实体属性名称，列出属性不插入，如：.IgnoreFields("Name") 或是 .IgnoreFields("Name", "CreatedAt")
-    /// </summary>
-    /// <param name="fieldNames">实体成员名称数组，不可为null</param>
-    /// <returns>返回插入对象</returns>
-    IContinuedCreate<TEntity> IgnoreFields(params string[] fieldNames);
-    /// <summary>
-    /// 忽略字段，如：.IgnoreFields(f =&gt; f.Name) 或是 .IgnoreFields(f =&gt; new {f.Name, f.CreatedAt})
-    /// </summary>
-    /// <typeparam name="TFields">字段类型</typeparam>
-    /// <param name="fieldsSelector">字段选择表达式，单个或多个字段，不可为null</param>
-    /// <returns>返回插入对象</returns>
-    IContinuedCreate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);
-    #endregion
-
-    #region OnlyFields
-    /// <summary>
-    /// 插入字段，实体属性名称，未列出属性不插入，如：.OnlyFields("Name") 或是 .OnlyFields("Name", "CreatedAt")
-    /// </summary>
-    /// <param name="fieldNames">实体成员名称数组，不可为null</param>
-    /// <returns>返回插入对象</returns>
-    IContinuedCreate<TEntity> OnlyFields(params string[] fieldNames);
-    /// <summary>
-    /// 插入字段，未列出属性不插入，如：.OnlyFields(f =&gt; f.Name) 或是 .OnlyFields(f =&gt; new {f.Name, f.CreatedAt})
-    /// </summary>
-    /// <typeparam name="TFields">字段类型</typeparam>
-    /// <param name="fieldsSelector">字段选择表达式，单个或多个字段，不可为null</param>
-    /// <returns>返回插入对象</returns>
-    IContinuedCreate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);
-    #endregion
 }

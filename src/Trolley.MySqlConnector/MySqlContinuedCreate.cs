@@ -34,20 +34,6 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCon
         => base.WithBy(condition, fieldSelector, fieldValue) as IMySqlContinuedCreate<TEntity>;
     #endregion
 
-    #region IgnoreFields
-    public new IMySqlContinuedCreate<TEntity> IgnoreFields(params string[] fieldNames)
-        => base.IgnoreFields(fieldNames) as IMySqlContinuedCreate<TEntity>;
-    public new IMySqlContinuedCreate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
-        => base.IgnoreFields(fieldsSelector) as IMySqlContinuedCreate<TEntity>;
-    #endregion
-
-    #region OnlyFields
-    public new IMySqlContinuedCreate<TEntity> OnlyFields(params string[] fieldNames)
-        => base.OnlyFields(fieldNames) as IMySqlContinuedCreate<TEntity>;
-    public new IMySqlContinuedCreate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
-        => base.OnlyFields(fieldsSelector) as IMySqlContinuedCreate<TEntity>;
-    #endregion
-
     #region OnDuplicateKeyUpdate
     public IMySqlContinuedCreate<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment)
     {
@@ -292,20 +278,6 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
         => this.WithBy(true, fieldSelector, fieldValue);
     public new IMySqlBulkContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => base.WithBy(condition, fieldSelector, fieldValue) as IMySqlBulkContinuedCreate<TEntity>;
-    #endregion
-
-    #region IgnoreFields
-    public new IMySqlBulkContinuedCreate<TEntity> IgnoreFields(params string[] fieldNames)
-        => base.IgnoreFields(fieldNames) as IMySqlBulkContinuedCreate<TEntity>;
-    public new IMySqlBulkContinuedCreate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
-        => base.IgnoreFields(fieldsSelector) as IMySqlBulkContinuedCreate<TEntity>;
-    #endregion
-
-    #region OnlyFields
-    public new IMySqlBulkContinuedCreate<TEntity> OnlyFields(params string[] fieldNames)
-        => base.OnlyFields(fieldNames) as IMySqlBulkContinuedCreate<TEntity>;
-    public new IMySqlBulkContinuedCreate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
-        => base.OnlyFields(fieldsSelector) as IMySqlBulkContinuedCreate<TEntity>;
     #endregion
 
     #region OnDuplicateKeyUpdate
