@@ -53,5 +53,4 @@ public interface IUpdateVisitor : IDisposable
     DataTable ToDataTable(string tableName, IEnumerable entities, List<MemberMap> memberMappers, List<Func<object, object>> valueGetters);
     (List<MemberMap>, List<Func<object, object>>) GetRefMemberMappers(Type parameterType, EntityMap entityMapper, object parameterSample, bool isUpdate = false);
     bool IsMemberVisit(Expression expr);
-    string GetTableName(TableSegment tableSegment);
 }

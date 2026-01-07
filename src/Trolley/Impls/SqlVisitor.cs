@@ -107,7 +107,7 @@ public class SqlVisitor : ISqlVisitor
         if (tableNames.Length > 1)
         {
             tableSegment.ShardingType = ShardingTableType.MultiTable;
-            tableSegment.TableNames = new List<string>(tableNames);
+            tableSegment.TableNames = [.. tableNames];
             this.ShardingTables ??= new();
             if (this.ShardingTables.Exists(f => f.ShardingType == ShardingTableType.MultiTable))
                 throw new NotSupportedException("不存在多分表的实体表，不能使用此方法，可直接使用首个多分表为MultiTable类型，其余表只能为调用方法UseTableMap与首个多分表表名映射实现多分表");
@@ -2580,7 +2580,7 @@ public class SqlVisitor : ISqlVisitor
         return (memberMappers, valueGetters);
     }
     /// <summary>
-    /// 查询和更新会使用，带有占位符的表名
+    /// 查询、更新、删除都会使用，带有占位符的表名
     /// </summary>
     /// <param name="tableSegment"></param>
     /// <returns></returns>
@@ -2605,7 +2605,7 @@ public class SqlVisitor : ISqlVisitor
             else tableName = this.OrmProvider.GetTableName(tableName);
         }
         return tableName;
-    }   
+    }
     public virtual SqlFieldSegment BuildDeferredSqlSegment(MethodCallExpression methodCallExpr, SqlFieldSegment sqlSegment)
     {
         string fields = null;

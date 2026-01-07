@@ -194,7 +194,7 @@ public class MySqlCreateVisitor : CreateVisitor
         else
         {
             (var fieldsSql, var sqlSetter) = ((string, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>))
-                RepositoryHelper.BuildTypedBulkCommandInitializer(this.DbContext, entityType, insertObjType, 1, this.OnlyFieldNames, this.IgnoreFieldNames);
+                RepositoryHelper.BuildTypedBulkCommandInitializer(this.DbContext, entityType, insertObjType, 1, null, null);
             this.FieldsBuilder.Append(fieldsSql);
             loopSqlSetter = (dbParameters, builder, dbContext, insertObj, suffix) =>
             {
@@ -454,24 +454,13 @@ public class MySqlCreateVisitor : CreateVisitor
                     continue;
 
                 var fieldValue = dict[key];
-                if (this.IsNeedSplitShardingTables && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
-                    this.ShardingValues[memberMapper.MemberName] = fieldValue;
-
                 if (memberMapper.IsIgnore || memberMapper.IsAutoIncrement || memberMapper.IsNavigation
                     || memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion)
                     continue;
 
-                if (this.hasOnlyFields || this.hasIgnoreFields)
-                {
-                    var lowerMemberName = memberMapper.MemberName.ToLower();
-                    if (this.hasOnlyFields && !this.OnlyFieldNames.Contains(lowerMemberName)
-                        || this.hasIgnoreFields && this.IgnoreFieldNames.Contains(lowerMemberName))
-                        continue;
-                }
-
                 var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}";
-                if (this.FieldsBuilder.Length > 0) this.FieldsBuilder.Append(',');
-                this.FieldsBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+                if (this.UpdateBuilder.Length > 0) this.FieldsBuilder.Append(',');
+                this.UpdateBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
 
                 if (memberMapper.TypeHandler != null)
                     fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
@@ -490,17 +479,9 @@ public class MySqlCreateVisitor : CreateVisitor
         }
         else
         {
-            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this.DbContext, entityType, updateObjType, 2, false, this.IsNeedSplitShardingTables, false, this.OnlyFieldNames, this.IgnoreFieldNames);
-            if (this.IsNeedSplitShardingTables)
-            {
-                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, DbContext, object>;
-                typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.ShardingValues, this.DbContext, updateObj);
-            }
-            else
-            {
-                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
-                typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.DbContext, updateObj);
-            }
+            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this.DbContext, entityType, updateObjType, 2, false, false, null, null);
+            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
+            typedCommandInitializer.Invoke(this.DbParameters, this.UpdateBuilder, this.DbContext, updateObj);
         }
     }
     public void VisitSetExpression(LambdaExpression lambdaExpr)

@@ -48,10 +48,13 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (this.HasWhere) this.WhereBuilder = new();
 
         var builder = new StringBuilder();
+        var tableSegment = this.Tables[0];
+        var shardingType = tableSegment.ShardingType;
+        object shardingTables = tableSegment.Mapper.TableName;
         switch (this.ActionMode)
         {
             case ActionMode.Bulk:
-                (var shardingType, var shardingTables, var updateObjs, _, var fixedSqlSetter,
+                (shardingType, shardingTables, var updateObjs, _, var fixedSqlSetter,
                    var loopSqlSetter, readerFields) = this.BuildWithBulk(command);
 
                 int index = 0;
@@ -96,7 +99,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             case ActionMode.Single:
                 this.FieldsBuilder = new();
                 this.DbParameters = command.Parameters;
-                var tableSegment = this.Tables[0];
                 var entityType = tableSegment.EntityType;
                 Func<IDataParameterCollection, DbContext, object, string> whereSqlInitializer = null;
                 foreach (var deferredSegment in this.deferredSegments)
@@ -150,8 +152,24 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                             break;
                     }
                 }
-
-                builder.Append($"UPDATE {this.GetTableName(tableSegment)}");
+                if (tableSegment.TableShardingInfo != null)
+                {
+                    if (tableSegment.IsSharding)
+                    {
+                        shardingTables = shardingType switch
+                        {
+                            ShardingTableType.SingleTable => tableSegment.Body,
+                            ShardingTableType.MultiTable => tableSegment.TableNames,
+                            _ => tableSegment.Mapper.TableName,
+                        };
+                    }
+                    else
+                    {
+                        shardingType = ShardingTableType.SplitTables;
+                        shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, updateObjType, updateObjs, firstUpdateObj);
+                    }
+                }
+                builder.Append($"UPDATE {this.GetFormatTableName(tableSegment)}");
                 if (this.IsNeedTableAlias) builder.Append($" {this.Tables[0].AliasName}");
                 if (this.IsJoin)
                 {
