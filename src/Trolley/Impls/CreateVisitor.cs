@@ -10,6 +10,8 @@ namespace Trolley;
 public class CreateVisitor : SqlVisitor, ICreateVisitor
 {
     protected List<CommandSegment> deferredSegments = new();
+    protected bool isNeedShardingValues = false;
+    protected Dictionary<string, object> shardingValus = null;
 
     public StringBuilder FieldsBuilder { get; set; } = new();
     public StringBuilder ValuesBuilder { get; set; }
@@ -74,10 +76,15 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 this.DbParameters = command.Parameters;
                 this.ValuesBuilder = new();
                 var tableSegment = this.Tables[0];
-                if (this.deferredSegments.Count > 1 && tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null)
+                if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null)
                 {
-                    var entityType = tableSegment.EntityType;
-                    throw new InvalidOperationException($"实体表{entityType.FullName}已设置分表，当多次使用WithBy方法，请使用UseTable/UseTableBy方法手动指定分表");
+                    if (tableSegment.TableShardingInfo.DependOnMembers == null || tableSegment.TableShardingInfo.DependOnMembers.Count == 0)
+                        throw new Exception($"实体表{tableSegment.EntityType.FullName}已设置分表，未指定分表，也未设置依赖字段无法确定分表，请使用UseTable/UseTableBy方法手动指定分表");
+                    if (this.deferredSegments.Count > 1)
+                    {
+                        this.isNeedShardingValues = true;
+                        this.shardingValus = new();
+                    }
                 }
 
                 foreach (var deferredSegment in this.deferredSegments)
@@ -160,7 +167,15 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (this.deferredSegments.Count > 0)
         {
             if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null)
-                throw new InvalidOperationException($"实体表{entityType.FullName}已设置分表，当多次使用WithBy/WithBulk方法，请使用UseTable/UseTableBy方法手动指定分表");
+            {
+                if (tableSegment.TableShardingInfo.DependOnMembers == null || tableSegment.TableShardingInfo.DependOnMembers.Count == 0)
+                    throw new Exception($"实体表{tableSegment.EntityType.FullName}已设置分表，未指定分表，也未设置依赖字段无法确定分表，请使用UseTable/UseTableBy方法手动指定分表");
+                if (this.deferredSegments.Count > 1)
+                {
+                    this.isNeedShardingValues = true;
+                    this.shardingValus = new();
+                }
+            }
 
             this.ValuesBuilder = new StringBuilder("(");
             var tempDbParameters = new TheaDbParameterCollection();
@@ -296,6 +311,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     }
                 }
                 this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                if (this.isNeedShardingValues && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
+                    this.shardingValus[memberMapper.MemberName] = fieldValue;
             }
         }
         else
@@ -304,7 +321,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, StringBuilder, DbContext, object>;
             typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.ValuesBuilder, this.DbContext, insertObj);
         }
-        if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && this.deferredSegments.Count == 1)
+        if (this.isNeedShardingValues && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
         {
             tableSegment.ShardingTableGetter = RepositoryHelper.BuildShardingTableNameGetter(this.DbContext, tableSegment.TableShardingInfo, tableSegment.EntityType, insertObjType, insertObj);
             tableSegment.Body = tableSegment.ShardingTableGetter.Invoke(tableSegment.Mapper.TableName, insertObj);
@@ -315,7 +332,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegmentValue;
         var lambdaExpr = fieldSelector as LambdaExpression;
         var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;
-        var entityMapper = this.Tables[0].Mapper;
+        var tableSegment = this.Tables[0];
+        var entityMapper = tableSegment.Mapper;
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
         if (memberMapper.IsIgnore || memberMapper.IsIgnoreInsert)
             throw new NotSupportedException($"当前字段{memberMapper.FieldName}被忽略插入，IsIgnore：{memberMapper.IsIgnore}，IsIgnoreInsert：{memberMapper.IsIgnoreInsert}");
@@ -339,6 +357,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.FieldsBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
         this.ValuesBuilder.Append(parameterName);
         this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+        if (this.isNeedShardingValues && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
+            this.shardingValus[memberMapper.MemberName] = fieldValue;
     }
     public virtual List<string> VisitFields(Expression fieldsSelector, bool isIgnoreCase = true)
     {
@@ -449,6 +469,14 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 tableName = tableSegment.Body;
             else if (tableSegment.ShardingTableGetter != null && !string.IsNullOrEmpty(tableSegment.Body))
                 tableName = tableSegment.Body;
+            else
+            {
+                tableName = RepositoryHelper.BuildShardingTableNameGetter(this.DbContext, tableSegment.TableShardingInfo,
+                   tableSegment.EntityType, this.shardingValus, tableSegment.Mapper.TableName);
+            }
+
+
+            else tableName = tableSegment.Mapper.TableName;
         }
         else tableName = tableSegment.Mapper.TableName;
         if (!string.IsNullOrEmpty(tableSegment.TableSchema))

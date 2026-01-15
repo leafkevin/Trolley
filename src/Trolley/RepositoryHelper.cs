@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
@@ -20,6 +21,7 @@ public static class RepositoryHelper
     private static readonly ConcurrentDictionary<int, Action<object, object>> memberSetterCache = new();
 
     private static readonly ConcurrentDictionary<int, object> shardingTableGetters = new();
+    private static readonly ConcurrentDictionary<int, (bool, Action<object, IDictionary<string, object>>)> shardingValuesSetters = new();
 
     private static readonly ConcurrentDictionary<int, Action<IDataParameterCollection, IOrmProvider, object>> queryRawSqlCommandInitializerCache = new();
 
@@ -1034,8 +1036,82 @@ public static class RepositoryHelper
         }
     }
 
-    public static Func<string, object, string> BuildShardingTableNameGetter(DbContext dbContext, TableShardingInfo tableShardingInfo, Type entityType, Type parameterType, object parameterSample)
+
+
+
+
+    public static void SetShardingValues(DbContext dbContext, TableShardingInfo tableShardingInfo, Type entityType, Type parameterType, object parameter, IDictionary<string, object> shardingValues)
     {
+        if (parameter is IDictionary<string, object> dict)
+        {
+            foreach (var memberName in tableShardingInfo.DependOnMembers)
+            {
+                if (!dict.TryGetKeyIgnoreCase(memberName, out var itemKey))
+                    continue;
+                shardingValues[memberName] = dict[itemKey];
+            }
+        }
+        else
+        {
+            var entityMapProvider = dbContext.EntityMapProvider;
+            var cacheKey = GetCacheKey(entityMapProvider, tableShardingInfo, entityType, parameterType);
+            (var isContainsShardingValues, var shardingValuesSetter) = shardingValuesSetters.GetOrAdd(cacheKey, f =>
+            {
+                var parameterExpr = Expression.Parameter(typeof(object), "parameter");
+                var shardingValuesExpr = Expression.Parameter(typeof(Dictionary<string, object>), "shardingValues");
+
+                var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
+                var blockParameters = new List<ParameterExpression>() { typedParameterExpr };
+                var blockBodies = new List<Expression>
+                {
+                    Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType))
+                };
+
+                var dictItemPropertyInfo = typeof(IDictionary<string, object>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                    .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(string)).First();
+                var methodInfo = dictItemPropertyInfo.GetSetMethod();
+                var memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                    .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
+                bool isContiansShardingValue = false;
+                foreach (var memberName in tableShardingInfo.DependOnMembers)
+                {
+                    MemberInfo memberInfo = null;
+                    if (!memberInfos.TryFind(memberName, out memberInfo))
+                        continue;
+                    isContiansShardingValue = true;
+                    Expression memberValueExpr = Expression.PropertyOrField(typedParameterExpr, memberInfo.Name);
+                    if (memberValueExpr.Type != typeof(object))
+                        memberValueExpr = Expression.Convert(memberValueExpr, typeof(object));
+                    blockBodies.Add(Expression.Call(shardingValuesExpr, methodInfo, Expression.Constant(memberName), memberValueExpr));
+                }
+                if (!isContiansShardingValue) return (false, null);
+
+                var bodyExpr = Expression.Block(blockParameters, blockBodies);
+                var shardingValueSetter = Expression.Lambda<Action<object, IDictionary<string, object>>>(bodyExpr, parameterExpr, shardingValuesExpr).Compile();
+                return (true, shardingValueSetter);
+            });
+            if (isContainsShardingValues)
+                shardingValuesSetter.Invoke(parameter, shardingValues);
+        }
+    }
+    public static string GetShardingTableName(DbContext dbContext, TableShardingInfo tableShardingInfo, IDictionary<string, object> shardingValues)
+    {
+        if (shardingValues.Count != tableShardingInfo.DependOnMembers.Count)
+            throw new Exception($"参数中缺少实体表{tableShardingInfo.EntityType.FullName}分表依赖成员，无法确定分表，请使用UseTable/UseTableBy方法手动指定分表");
+        var fieldValues = new object[tableShardingInfo.DependOnMembers.Count];
+        for (int i = 0; i < tableShardingInfo.DependOnMembers.Count; i++)
+        {
+            var memberName = tableShardingInfo.DependOnMembers[i];
+            fieldValues[i] = shardingValues[memberName];
+        }
+        var entityMapProvider = dbContext.EntityMapProvider;
+        var entityMapper = entityMapProvider.GetEntityMap(tableShardingInfo.EntityType);
+        return tableShardingInfo.Rule.Invoke(entityMapper.TableName, fieldValues);
+    }
+    public static Func<string, object, Dictionary<string, object>, string> BuildShardingTableNameGetter(DbContext dbContext, TableShardingInfo tableShardingInfo, bool isBulk, Type entityType, Type parameterType, object parameterSample)
+    {
+        //单个实体参数，或是字典参数，直接使用字典来获取分表名
+        //多个实体或是字典参数，使用参数+字段来获取分表名
         var isDictionary = false;
         List<string> itemKeys = null;
         var entityMapProvider = dbContext.EntityMapProvider;
@@ -1048,16 +1124,111 @@ public static class RepositoryHelper
             foreach (var memberName in tableShardingInfo.DependOnMembers)
             {
                 if (!dict.TryGetKeyIgnoreCase(memberName, out var itemKey))
-                    throw new ArgumentException($"参数中缺少实体表{entityMapper.EntityType.FullName}分表依赖成员{memberName}");
+                    //throw new ArgumentException($"参数中缺少实体表{entityMapper.EntityType.FullName}分表依赖成员{memberName}");
+                    continue;
                 itemKeys.Add(itemKey);
             }
+            //if(itemKeys.Count < tableShardingInfo.DependOnMembers.Count )
         }
-        var cacheKey = GetCacheKey(entityMapProvider, tableShardingInfo, entityType, parameterType);
+        var cacheKey = GetCacheKey(entityMapProvider, tableShardingInfo, entityType, parameterType, isBulk);
         var tableGetter = shardingTableGetters.GetOrAdd(cacheKey, f =>
         {
             List<MemberInfo> memberInfos = null;
             if (!isDictionary) memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                 .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
+
+            var origNameExpr = Expression.Parameter(typeof(string), "origName");
+            var parameterExpr = Expression.Parameter(typeof(object), "parameter");
+            var shardingValuesExpr = Expression.Parameter(typeof(Dictionary<string, object>), "shardingValues");
+            var ruleParametersExpr = Expression.Variable(typeof(object[]), "ruleParameters");
+            ParameterExpression typedParameterExpr = null;
+
+            ParameterExpression itemKeysExpr = null;
+            var blockParameters = new List<Expression>() { typedParameterExpr };
+            var blockBodies = new List<Expression>();
+            if (isBulk)
+            {
+                typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
+                blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
+            }
+            if (isDictionary) itemKeysExpr = Expression.Parameter(typeof(List<string>), "itemKeys");
+
+            var countExpr = Expression.Constant(tableShardingInfo.DependOnMembers.Count);
+            blockBodies.Add(Expression.Assign(ruleParametersExpr, Expression.NewArrayBounds(typeof(object), countExpr)));
+
+            var ruleParametersExprs = new List<Expression>();
+            var dictItemPropertyInfo = typeof(IDictionary<string, object>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(string)).First();
+            var entityMapper = entityMapProvider.GetEntityMap(entityType);
+
+            int index = 0;
+            if (isBulk)
+            {
+                foreach (var memberName in tableShardingInfo.DependOnMembers)
+                {
+                    MemberInfo memberInfo = null;
+                    if (isDictionary)
+                    {
+                        var itemKeyExpr = Expression.Property(itemKeysExpr, typeof(List<string>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                            .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(int)).First(), Expression.Constant(index));
+                        ruleParametersExprs.Add(Expression.Property(typedParameterExpr, dictItemPropertyInfo, itemKeyExpr));
+                    }
+                    else
+                    {
+                        Expression memberValueExpr = null;
+                        if (memberInfos.TryFind(memberName, out memberInfo))
+                        {
+                            var memberMapper = entityMapper.GetMemberMap(memberName);
+                            var memberType = memberInfo.GetMemberType();
+                            memberValueExpr = Expression.PropertyOrField(typedParameterExpr, memberInfo.Name);
+                        }
+                        else memberValueExpr = Expression.Property(shardingValuesExpr, dictItemPropertyInfo, Expression.Constant(memberInfo.Name));
+                        ruleParametersExprs.Add(memberValueExpr);
+                    }
+                    index++;
+                }
+            }
+            foreach (var memberName in tableShardingInfo.DependOnMembers)
+            {
+                MemberInfo memberInfo = null;
+                if (isDictionary)
+                {
+                    var itemKeyExpr = Expression.Property(typedParameterExpr, dictItemPropertyInfo, Expression.Constant(index));
+                    ruleParametersExprs.Add(Expression.Property(typedParameterExpr, dictItemPropertyInfo, itemKeyExpr));
+                }
+                else
+                {
+                    Expression memberValueExpr = null;
+                    if (memberInfos.TryFind(memberName, out memberInfo))
+                    {
+                        var memberMapper = entityMapper.GetMemberMap(memberName);
+                        var memberType = memberInfo.GetMemberType();
+                        memberValueExpr = Expression.PropertyOrField(typedParameterExpr, memberInfo.Name);
+                    }
+                    else memberValueExpr = Expression.Property(shardingValuesExpr, dictItemPropertyInfo, Expression.Constant(memberInfo.Name));
+                    ruleParametersExprs.Add(memberValueExpr);
+                }
+                index++;
+            }
+            var ruleExpr = Expression.Constant(tableShardingInfo.Rule);
+            var bodyExpr = Expression.Invoke(ruleExpr, [origNameExpr, ruleParametersExpr]);
+            if (isDictionary) return Expression.Lambda<Func<string, List<string>, object, string>>(bodyExpr, origNameExpr, itemKeysExpr, parameterExpr).Compile();
+            else return Expression.Lambda<Func<string, object, string>>(bodyExpr, origNameExpr, parameterExpr).Compile();
+        });
+        if (isDictionary)
+        {
+            var typedTableGetter = tableGetter as Func<string, List<string>, object, string>;
+            return (origName, parameter) => typedTableGetter.Invoke(origName, itemKeys, parameter);
+        }
+        else return tableGetter as Func<string, object, string>;
+    }
+    public static Func<string, object, string> GetShardingTableName(DbContext dbContext, TableShardingInfo tableShardingInfo, Type entityType, bool isBulk, object parameter, Dictionary<string, object> shardingValues)
+    {
+        var entityMapProvider = dbContext.EntityMapProvider;
+        var cacheKey = GetCacheKey(entityMapProvider, tableShardingInfo, entityType, parameterType);
+        var tableGetter = shardingTableGetters.GetOrAdd(cacheKey, f =>
+        {
+            List<MemberInfo> memberInfos = null;
 
             var origNameExpr = Expression.Parameter(typeof(string), "origName");
             var parameterExpr = Expression.Parameter(typeof(object), "parameter");

@@ -360,24 +360,6 @@ public class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEnti
     #endregion
 
     #region WithBy
-    public virtual IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
-    {
-        if (insertObj == null)
-            throw new ArgumentNullException(nameof(insertObj));
-        if (insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>)
-            throw new NotSupportedException("只能插入单个实体，批量插入请使用WithBulkBy方法");
-        var insertObjType = typeof(TInsertObject);
-        if (!insertObjType.IsEntityType(out _))
-            throw new NotSupportedException($"方法WithBy只支持类对象参数，不支持基础类型参数, insertObj类型: {insertObjType.FullName}");
-
-        this.Visitor.WithBy(insertObj);
-        return this;
-    }
-    public virtual IContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj)
-    {
-        if (!condition) return this;
-        return this.WithBy(insertObj);
-    }
     public virtual IContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
     {
         if (fieldSelector == null)
@@ -389,44 +371,6 @@ public class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEnti
     {
         if (!condition) return this;
         return this.WithBy(fieldSelector, fieldValue);
-    }
-    #endregion
-
-    #region IgnoreFields
-    public virtual IContinuedCreate<TEntity> IgnoreFields(params string[] fieldNames)
-    {
-        if (fieldNames == null)
-            throw new ArgumentNullException(nameof(fieldNames));
-        this.Visitor.IgnoreFields(fieldNames);
-        return this;
-    }
-    public virtual IContinuedCreate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
-    {
-        if (fieldsSelector == null)
-            throw new ArgumentNullException(nameof(fieldsSelector));
-        if (fieldsSelector.Body.NodeType != ExpressionType.New && fieldsSelector.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelector)},只支持New或MemberInit类型表达式");
-        this.Visitor.IgnoreFields(fieldsSelector);
-        return this;
-    }
-    #endregion
-
-    #region OnlyFields
-    public virtual IContinuedCreate<TEntity> OnlyFields(params string[] fieldNames)
-    {
-        if (fieldNames == null)
-            throw new ArgumentNullException(nameof(fieldNames));
-        this.Visitor.OnlyFields(fieldNames);
-        return this;
-    }
-    public virtual IContinuedCreate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
-    {
-        if (fieldsSelector == null)
-            throw new ArgumentNullException(nameof(fieldsSelector));
-        if (fieldsSelector.Body.NodeType != ExpressionType.New && fieldsSelector.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelector)},只支持New或MemberInit类型表达式");
-        this.Visitor.OnlyFields(fieldsSelector);
-        return this;
     }
     #endregion
 }

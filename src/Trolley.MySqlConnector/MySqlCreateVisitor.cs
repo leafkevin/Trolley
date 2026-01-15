@@ -163,7 +163,6 @@ public class MySqlCreateVisitor : CreateVisitor
                         this.VisitWithByField(deferredSegment.Value);
                         break;
                     default: throw new NotSupportedException("批量插入后，只支持WithBy/IgnoreFields/OnlyFields/OnDuplicateKeyUpdate/Returning操作");
-
                 }
             }
             this.FieldsBuilder.Append(',');

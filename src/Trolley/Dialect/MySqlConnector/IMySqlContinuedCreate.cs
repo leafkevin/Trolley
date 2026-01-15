@@ -7,21 +7,6 @@ public interface IMySqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
 {
     #region WithBy
     /// <summary>
-    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出属性不插入，如：.WithBy(new { Name = "kevin", Age = 25 })
-    /// </summary>
-    /// <typeparam name="TInsertObject">插入数据的对象类型</typeparam>
-    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出属性不插入，不可为null</param>
-    /// <returns>返回插入对象</returns>
-    new IMySqlContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
-    /// <summary>
-    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出属性不插入，condition为true生效，如：.WithBy(true, new { Gender = Gender.Male, ... })
-    /// </summary>
-    /// <typeparam name="TInsertObject">插入数据的对象类型</typeparam>
-    /// <param name="condition">判断条件，为true时生效</param>
-    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出属性不插入，不可为null</param>
-    /// <returns>返回插入对象</returns>
-    new IMySqlContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
-    /// <summary>
     /// 单个字段插入，可多次调用，如：.WithBy(f =&gt; f.Gender, Gender.Female)
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -77,7 +62,7 @@ public interface IMySqlBulkContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// <typeparam name="TInsertObject">插入数据的对象类型</typeparam>
     /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出属性不插入，不可为null</param>
     /// <returns>返回插入对象</returns>
-    new IMySqlBulkContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
+    IMySqlBulkContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
     /// <summary>
     /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出属性不插入，condition为true生效，如：.WithBy(true, new { Gender = Gender.Male, ... })
     /// </summary>
@@ -85,7 +70,7 @@ public interface IMySqlBulkContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出属性不插入，不可为null</param>
     /// <returns>返回插入对象</returns>
-    new IMySqlBulkContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
+    IMySqlBulkContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
     /// <summary>
     /// 单个字段插入，可多次调用，如：.WithBy(f =&gt; f.Gender, Gender.Female)
     /// </summary>
