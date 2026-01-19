@@ -20,31 +20,7 @@ public interface IRepository
     DbContext DbContext { get; set; }
     #endregion
 
-    #region ShardingTableNames
-    /// <summary>
-    /// 获取实体<typeparamref name="TEntity"/>满足条件的所有分表名
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="tableNameSelector">分表名选择表达式</param>
-    /// <param name="tableSchema">分表所在的TableSchema</param>
-    /// <returns>返回满足条件的所有分表</returns>
-    List<string> GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector = null, string tableSchema = null);
-    /// <summary>
-    /// 获取实体<typeparamref name="TEntity"/>满足条件的所有分表名
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="tableNameSelector">分表名选择表达式</param>
-    /// <param name="tableSchema">分表所在的TableSchema</param>
-    /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回满足条件的所有分表</returns>
-    Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector = null, string tableSchema = null, CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 根据字段值确定<typeparamref name="TEntity"/>表分表名，字段值的顺序与分表规则设置的顺序保持一致
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="fieldValues">字段值数组，字段值的顺序与分表规则设置的顺序保持一致，不可为null</param>
-    /// <returns>返回分表名</returns>
-    string GetShardingTableNameBy<TEntity>(params object[] fieldValues);
+    #region ShardingTableNames   
     /// <summary>
     /// 在当前数据库中创建实体TEntity的tableName分表，表结构与实体TEntity相同并生成所有索引等信息，fromTableSchema为TEntity表的Schema，为null时是默认当前Schema
     /// </summary>
@@ -62,12 +38,19 @@ public interface IRepository
     /// <returns></returns>
     Task CreateShardingTableAsync<TEntity>(string tableName, string fromTableSchema = null, CancellationToken cancellationToken = default);
     /// <summary>
+    /// 根据字段值确定<typeparamref name="TEntity"/>表分表名，字段值的顺序与分表规则设置的顺序保持一致
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="fieldValues">字段值数组，字段值的顺序与分表规则设置的顺序保持一致，不可为null</param>
+    /// <returns>返回分表名</returns>
+    string GetShardingTableName<TEntity>(params object[] fieldValues);
+    /// <summary>
     /// 在当前数据库中创建实体TEntity的tableName分表，根据字段值确定<typeparamref name="TEntity"/>表分表名，字段值的顺序与配置的字段顺序保持一致，表结构与实体TEntity相同并生成所有索引等信息
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="fieldValues">字段值数组，字段值的顺序与分表规则设置的顺序保持一致，不可为null</param>
     /// <param name="fromTableSchema">实体表所在的TableSchema，为null时是默认当前Schema</param>
-    void CreateShardingTableBy<TEntity>(object[] fieldValues, string fromTableSchema = null);
+    void CreateShardingTable<TEntity>(object[] fieldValues, string fromTableSchema = null);
     /// <summary>
     /// 在当前数据库中创建实体TEntity的tableName分表，根据字段值确定<typeparamref name="TEntity"/>表分表名，字段值的顺序与配置的字段顺序保持一致，表结构与实体TEntity相同并生成所有索引等信息
     /// </summary>
@@ -76,7 +59,7 @@ public interface IRepository
     /// <param name="fromTableSchema">实体表所在的TableSchema，为null时是默认当前Schema</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns></returns>
-    Task CreateShardingTableByAsync<TEntity>(object[] fieldValues, string fromTableSchema = null, CancellationToken cancellationToken = default);
+    Task CreateShardingTableAsync<TEntity>(object[] fieldValues, string fromTableSchema = null, CancellationToken cancellationToken = default);
     #endregion
 
     #region ShardingDatabase

@@ -2189,8 +2189,8 @@ public class UnitTest6 : UnitTestBase
         var tenantId = "104";
         var now = DateTime.Now;
         var repository = this.dbFactory.Create();
-        var tableName1 = repository.GetShardingTableNameBy<OrderDetail>(tenantId, now);
-        var tableName2 = repository.GetShardingTableNameBy<OrderDetail>(tenantId, now.AddMonths(1));
+        var tableName1 = repository.GetShardingTableName<OrderDetail>(tenantId, now);
+        var tableName2 = repository.GetShardingTableName<OrderDetail>(tenantId, now.AddMonths(1));
         var tableNames = new List<string> { tableName1, tableName2 };
         var existedTableNames = repository.GetShardingTableNames<OrderDetail>(f => tableNames.Contains(f));
         string sql = null;

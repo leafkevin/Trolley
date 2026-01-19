@@ -126,11 +126,12 @@ partial class BaseOrmProvider
     public virtual ICreate<TEntity> NewCreate<TEntity>(DbContext dbContext) => new Create<TEntity>(dbContext);
     public virtual ICreated<TEntity> NewCreated<TEntity>(DbContext dbContext, ICreateVisitor visitor) => new Created<TEntity>(dbContext, visitor);
     public virtual IContinuedCreate<TEntity> NewContinuedCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor) => new ContinuedCreate<TEntity>(dbContext, visitor);
-
+    public virtual IBulkContinuedCreate<TEntity> NewBulkContinuedCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor) => new BulkContinuedCreate<TEntity>(dbContext, visitor);
     public virtual IUpdate<TEntity> NewUpdate<TEntity>(DbContext dbContext) => new Update<TEntity>(dbContext);
     public virtual IUpdated<TEntity> NewUpdated<TEntity>(DbContext dbContext, IUpdateVisitor visitor) => new Updated<TEntity>(dbContext, visitor);
     public virtual IContinuedUpdate<TEntity> NewContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor) => new ContinuedUpdate<TEntity>(dbContext, visitor);
     public virtual IBulkContinuedUpdate<TEntity> NewBulkContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor) => new BulkContinuedUpdate<TEntity>(dbContext, visitor);
+    public virtual IBulkCopyContinuedUpdate<TEntity> NewBulkCopyContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor) => new BulkCopyContinuedUpdate<TEntity>(dbContext, visitor);
     public virtual IUpdateJoin<TEntity, T1> NewUpdateJoin<TEntity, T1>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateJoin<TEntity, T1>(dbContext, visitor);
     public virtual IUpdateJoin<TEntity, T1, T2> NewUpdateJoin<TEntity, T1, T2>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateJoin<TEntity, T1, T2>(dbContext, visitor);
     public virtual IUpdateJoin<TEntity, T1, T2, T3> NewUpdateJoin<TEntity, T1, T2, T3>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateJoin<TEntity, T1, T2, T3>(dbContext, visitor);

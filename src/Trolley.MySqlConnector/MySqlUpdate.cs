@@ -23,7 +23,7 @@ public class MySqlUpdate<TEntity> : Update<TEntity>, IMySqlUpdate<TEntity>
         => base.UseTable(tableNames) as IMySqlUpdate<TEntity>;
     public new IMySqlUpdate<TEntity> UseTableBy(params object[] fieldValues)
         => base.UseTableBy(fieldValues) as IMySqlUpdate<TEntity>;
-    public new IMySqlUpdate<TEntity> UseTable(Func<string, object, string> tableNameGetter)
+    public new IMySqlUpdate<TEntity> UseTable(Func<object, string> tableNameGetter)
         => base.UseTable(tableNameGetter) as IMySqlUpdate<TEntity>;
     public new IMySqlUpdate<TEntity> UseTableByRange(params object[] fieldValues)
         => base.UseTableByRange(fieldValues) as IMySqlUpdate<TEntity>;
@@ -81,7 +81,7 @@ public class MySqlUpdate<TEntity> : Update<TEntity>, IMySqlUpdate<TEntity>
     #endregion
 
     #region WithBulkCopy
-    public IUpdated<TEntity> SetBulkCopy(IEnumerable updateObjs, int? timeoutSeconds = null)
+    public IMySqlBulkCopyContinuedUpdate<TEntity> SetBulkCopy(IEnumerable updateObjs, int? timeoutSeconds = null)
     {
         if (updateObjs == null)
             throw new ArgumentNullException(nameof(updateObjs));
@@ -97,7 +97,7 @@ public class MySqlUpdate<TEntity> : Update<TEntity>, IMySqlUpdate<TEntity>
         }
         if (isEmpty) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
         this.DialectVisitor.WithBulkCopy(updateObjs, timeoutSeconds);
-        return this.OrmProvider.NewUpdated<TEntity>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewBulkCopyContinuedUpdate<TEntity>(this.DbContext, this.Visitor) as IMySqlBulkCopyContinuedUpdate<TEntity>;
     }
     #endregion
 }

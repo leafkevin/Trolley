@@ -37,7 +37,7 @@ public class Create<TEntity> : ICreate<TEntity>
         this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
-    public virtual ICreate<TEntity> UseTable(Func<string, object, string> tableNameGetter)
+    public virtual ICreate<TEntity> UseTable(Func<object, string> tableNameGetter)
     {
         this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, tableNameGetter);
         return this;
@@ -69,7 +69,7 @@ public class Create<TEntity> : ICreate<TEntity>
     #endregion
 
     #region WithBulk
-    public virtual IContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500)
+    public virtual IBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
@@ -85,7 +85,7 @@ public class Create<TEntity> : ICreate<TEntity>
         if (isEmpty) throw new Exception("批量插入，insertObjs参数至少要有一条数据");
 
         this.Visitor.WithBulk(insertObjs, bulkCount);
-        return this.OrmProvider.NewContinuedCreate<TEntity>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewBulkContinuedCreate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -368,6 +368,46 @@ public class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEnti
         return this;
     }
     public virtual IContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    {
+        if (!condition) return this;
+        return this.WithBy(fieldSelector, fieldValue);
+    }
+    #endregion
+}
+public class BulkContinuedCreate<TEntity> : Created<TEntity>, IBulkContinuedCreate<TEntity>
+{
+    #region Constructor
+    public BulkContinuedCreate(DbContext dbContext, ICreateVisitor visitor)
+        : base(dbContext, visitor) { }
+    #endregion
+
+    #region WithBy
+    public virtual IBulkContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
+    {
+        if (insertObj == null)
+            throw new ArgumentNullException(nameof(insertObj));
+        if (insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>)
+            throw new NotSupportedException("只能插入单个实体，批量插入请使用WithBulkBy方法");
+        var insertObjType = typeof(TInsertObject);
+        if (!insertObjType.IsEntityType(out _))
+            throw new NotSupportedException($"方法WithBy只支持类对象参数，不支持基础类型参数, insertObj类型: {insertObjType.FullName}");
+
+        this.Visitor.WithBy(insertObj);
+        return this;
+    }
+    public virtual IBulkContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj)
+    {
+        if (!condition) return this;
+        return this.WithBy(insertObj);
+    }
+    public virtual IBulkContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    {
+        if (fieldSelector == null)
+            throw new ArgumentNullException(nameof(fieldSelector));
+        this.Visitor.WithByField(fieldSelector, fieldValue);
+        return this;
+    }
+    public virtual IBulkContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
     {
         if (!condition) return this;
         return this.WithBy(fieldSelector, fieldValue);

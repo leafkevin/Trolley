@@ -136,11 +136,11 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     }
     #endregion
 
-    #region GetShardingTableNames
-    public virtual IMultipleQuery GetShardingTableNames(Func<string, bool> tableNameSelector)
+    #region GetShardingTableName
+    public virtual IMultipleQuery GetShardingTableName(params object[] fieldValues)
     {
         var tableSchema = this.Visitor.Tables[0].TableSchema;
-        return this.MultipleQuery.GetShardingTableNames<T>(tableNameSelector, tableSchema);
+        return this.MultipleQuery.GetShardingTableName<T>(fieldValues);
     }
     #endregion
 

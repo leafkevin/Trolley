@@ -25,7 +25,7 @@ public class MySqlQueryVisitor : QueryVisitor
         else builder.Append("INSERT INTO");
         builder.Append($" {this.GetFormatTableName(this.Tables[0])} (");
         int index = 0;
-        //如果是FromQuery查询，ReaderFields通常是从查询中获取的字段
+        //如果ReaderFields没有设置，通常是从Query中来的，ReaderFields是从Query中获取的
         if (this.ReaderFields == null && this.IsFromQuery)
             this.ReaderFields = this.Tables[1].Fields;
         foreach (var readerField in this.ReaderFields)
@@ -96,7 +96,7 @@ public class MySqlQueryVisitor : QueryVisitor
                     else builder.Append(',');
                 }
                 builder.Append(tableName);
-                //子查询要设置表别名               
+                //子查询要设置表别名
                 builder.Append(" " + tableSegment.AliasName);
                 if (!string.IsNullOrEmpty(tableSegment.SuffixRawSql))
                     builder.Append(" " + tableSegment.SuffixRawSql);
@@ -147,8 +147,8 @@ public class MySqlQueryVisitor : QueryVisitor
         }
 
         this.AddSelectFieldsSql(builder, this.ReaderFields);
-        if (this.IsManyShardingTables && this.AggFieldAlias != null)
-            builder.Append($" AS {this.AggFieldAlias}");
+        if (this.IsManyShardingTables && this.IsNeedFormatShardingTables && this.AggFieldAlias != null)
+            builder.Append($" AS {this.AggFieldAlias},COUNT(*) AS AVG_COUNT");
 
         string selectSql = null;
         if (this.IsDistinct)
@@ -156,12 +156,13 @@ public class MySqlQueryVisitor : QueryVisitor
         else selectSql = builder.ToString();
 
         builder.Clear();
-        if (!string.IsNullOrEmpty(this.WhereBuilder))
-            builder.Append($" WHERE {this.WhereBuilder}");
-
+        if (this.WhereBuilder != null && this.WhereBuilder.Length > 0)
+            builder.Append($" WHERE {this.WhereBuilder.ToString()}");
+        //有多分表还有Group By操作，每个分表语句中做Group By操作，Union All语句后，还要再做Group By操作
         if (!string.IsNullOrEmpty(this.GroupBySql))
             builder.Append($" GROUP BY {this.GroupBySql}");
-        if (!string.IsNullOrEmpty(this.HavingSql))
+        //有多分表还有Group By+Having操作，每个分表语句中只做Group By操作，不做Having操作，在Union All语句后，再做Group By+Having操作
+        if (!this.IsManyShardingTables && !string.IsNullOrEmpty(this.HavingSql))
             builder.Append($" HAVING {this.HavingSql}");
 
         string orderBy = null;
@@ -186,11 +187,20 @@ public class MySqlQueryVisitor : QueryVisitor
             pageSql = pageSql.Replace("/**fields**/", selectSql);
             pageSql = pageSql.Replace("/**tables**/", tableSql);
             pageSql = pageSql.Replace(" /**others**/", others);
+
+            if (this.IsNeedPaging && this.offset.HasValue && this.limit.HasValue)
+            {
+                var myTableSql = $"{tableSql}{others}";
+                if (this.HasAggFields || !string.IsNullOrEmpty(this.GroupBySql))
+                    myTableSql = $"(SELECT {selectSql} FROM {tableSql}{others}) a";
+                builder.Append($"SELECT COUNT(*) FROM {myTableSql};");
+            }
             builder.Append($"{pageSql}");
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql) || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue))
+        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql)
+            || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue || this.HasAggFields))
             this.IsNeedUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确

@@ -1552,7 +1552,7 @@ public sealed class DbContext
         builder.Clear();
         return result;
     }
-    public string GetShardingTableBy(Type entityType, params object[] fieldValues)
+    public string GetShardingTable(Type entityType, params object[] fieldValues)
     {
         if (fieldValues == null || fieldValues.Length == 0)
             throw new ArgumentNullException(nameof(fieldValues), "参数fieldValues不能为null或是空元素");

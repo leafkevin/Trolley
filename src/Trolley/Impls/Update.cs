@@ -37,7 +37,7 @@ public class Update<TEntity> : IUpdate<TEntity>
         this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
-    public virtual IUpdate<TEntity> UseTable(Func<string, object, string> tableNameGetter)
+    public virtual IUpdate<TEntity> UseTable(Func<object, string> tableNameGetter)
     {
         this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, tableNameGetter);
         return this;
@@ -379,19 +379,7 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
         : base(dbContext, visitor) { }
     #endregion
 
-    #region Set
-    public virtual IContinuedUpdate<TEntity> Set<TUpdateObj>(TUpdateObj updateObj)
-       => this.Set(true, updateObj);
-    public virtual IContinuedUpdate<TEntity> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
-    {
-        if (condition)
-        {
-            if (updateObj == null)
-                throw new ArgumentNullException(nameof(updateObj));
-            this.Visitor.SetWith(updateObj);
-        }
-        return this;
-    }
+    #region Set  
     public virtual IContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
     public virtual IContinuedUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
@@ -406,21 +394,6 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
                 throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
 
             this.Visitor.SetField(fieldSelector, fieldValue);
-        }
-        return this;
-    }
-    public virtual IContinuedUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
-       => this.Set(true, fieldsAssignment);
-    public virtual IContinuedUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
-    {
-        if (condition)
-        {
-            if (fieldsAssignment == null)
-                throw new ArgumentNullException(nameof(fieldsAssignment));
-            if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
-                throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
-
-            this.Visitor.Set(fieldsAssignment);
         }
         return this;
     }
@@ -869,6 +842,68 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
         return this;
     }
     public virtual IBulkContinuedUpdate<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+    {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
+        var builder = new PredicateBuilder<TEntity>();
+        return this.Or(predicateInitializer.Invoke(builder));
+    }
+    #endregion
+}
+public class BulkCopyContinuedUpdate<TEntity> : Updated<TEntity>, IBulkCopyContinuedUpdate<TEntity>
+{
+    #region Constructor
+    public BulkCopyContinuedUpdate(DbContext dbContext, IUpdateVisitor visitor)
+        : base(dbContext, visitor) { }
+    #endregion
+
+    #region Where
+    public virtual IBulkCopyContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
+        => this.And(true, predicate);
+    public virtual IBulkCopyContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+        => this.And(condition, ifPredicate, elsePredicate);
+    public virtual IBulkCopyContinuedUpdate<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+        => this.AndPredicate(predicateInitializer);
+    #endregion
+
+    #region And
+    public virtual IBulkCopyContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
+        => this.And(true, predicate);
+    public virtual IBulkCopyContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+    {
+        if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
+            this.Visitor.And(ifPredicate);
+        }
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
+        return this;
+    }
+    public virtual IBulkCopyContinuedUpdate<TEntity> AndPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+    {
+        if (predicateInitializer == null)
+            throw new ArgumentNullException(nameof(predicateInitializer));
+        var builder = new PredicateBuilder<TEntity>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
+    #endregion
+
+    #region Or
+    public virtual IBulkCopyContinuedUpdate<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
+        => this.Or(true, predicate);
+    public virtual IBulkCopyContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+    {
+        if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
+            this.Visitor.Or(ifPredicate);
+        }
+        else if (elsePredicate != null) this.Visitor.Or(elsePredicate);
+        return this;
+    }
+    public virtual IBulkCopyContinuedUpdate<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
     {
         if (predicateInitializer == null)
             throw new ArgumentNullException(nameof(predicateInitializer));

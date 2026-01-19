@@ -17,14 +17,13 @@ public class MySqlDeleteVisitor : DeleteVisitor
 
     public override string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
-        string sql = null;
         readerFields = null;
         this.DbParameters = command.Parameters;
 
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
         if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding)
-            throw new InvalidOperationException($"实体表{entityType.FullName}已设置分表，但未指定分表，原始表：{tableSegment.Mapper.TableName}");
+            throw new NotSupportedException($"实体表{entityType.FullName}已设置分表，但未指定分表，请使用UseTable/UseTableBy/UseTableByRange方法手动指定分表，原始表：{tableSegment.Mapper.TableName}");
 
         if (this.HasWhere) this.WhereBuilder = new();
         Func<IDataParameterCollection, DbContext, object, string> whereSqlInitializer = null;
@@ -64,31 +63,28 @@ public class MySqlDeleteVisitor : DeleteVisitor
                     break;
             }
         }
+        var whereSql = this.WhereBuilder.ToString();
+        this.WhereBuilder.Clear();
 
+        var builder = this.WhereBuilder;
+        builder.Append($"DELETE FROM {this.GetFormatTableName(tableSegment)}");
+        if (this.HasWhere) builder.Append($" WHERE {whereSql}");
+        if (!string.IsNullOrEmpty(this.OutputSql))
+            builder.Append(this.OutputSql);
+
+        var sql = builder.ToString();
         if (tableSegment.ShardingType > ShardingTableType.SingleTable)
         {
-            var whereSql = this.WhereBuilder.ToString();
-            this.WhereBuilder.Clear();
-            var builder = this.WhereBuilder;
+            builder.Clear();
             var tableNames = tableSegment.TableNames;
             for (int i = 0; i < tableNames.Count; i++)
             {
                 if (i > 0) builder.Append(';');
-                builder.Append("DELETE FROM ");
-                builder.Append(this.GetTableName(tableSegment));
-                builder.Append(" WHERE ");
-                builder.Append(whereSql);
-                if (!string.IsNullOrEmpty(this.OutputSql))
-                    builder.Append(this.OutputSql);
+                builder.Append(sql);
             }
             sql = builder.ToString();
         }
-        else
-        {
-            if (!string.IsNullOrEmpty(this.OutputSql))
-                this.WhereBuilder.Append(this.OutputSql);
-            sql = $"DELETE FROM {this.GetTableName(tableSegment)} WHERE {this.WhereBuilder.ToString()}";
-        }
+        builder.Clear();
         return sql;
     }
     public override void UseTableSchema(bool isIncludeMany, string tableSchema)

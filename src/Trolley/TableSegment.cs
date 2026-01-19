@@ -125,7 +125,7 @@ public class TableSegment
     /// <summary>
     /// 在批量插入和更新命令中，获取分表名委托
     /// </summary>
-    public Func<string, object, string> ShardingTableGetter { get; set; }
+    public Func<object, string> ShardingTableGetter { get; set; }
     /// <summary>
     /// 是否IncludeMany表分表
     /// </summary>

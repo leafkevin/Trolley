@@ -11,7 +11,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
 {
     protected List<CommandSegment> deferredSegments = new();
     protected bool isNeedShardingValues = false;
-    protected Dictionary<string, object> shardingValus = null;
+    protected Dictionary<string, object> shardingValues = null;
 
     public StringBuilder FieldsBuilder { get; set; } = new();
     public StringBuilder ValuesBuilder { get; set; }
@@ -43,7 +43,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         {
             case ActionMode.Bulk:
                 (var shardingType, var shardingTables, var insertObjs, _, var firstSqlSetter,
-                    var loopSqlSetter, var tailSql, readerFields) = this.BuildWithBulk(command);
+                    var loopSqlSetter, _, readerFields) = this.BuildWithBulk(command);
 
                 int index = 0;
                 var builder = new StringBuilder();
@@ -70,6 +70,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                         index++;
                     }
                 }
+                builder.Remove(builder.Length - 1, 1);
                 sql = builder.ToString();
                 break;
             case ActionMode.Single:
@@ -83,7 +84,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     if (this.deferredSegments.Count > 1)
                     {
                         this.isNeedShardingValues = true;
-                        this.shardingValus = new();
+                        this.shardingValues = new();
                     }
                 }
 
@@ -116,7 +117,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual void WithBy(object insertObj)
     {
-        this.ActionMode = ActionMode.Single;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "WithBy",
@@ -125,7 +125,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual void WithByField(Expression fieldSelector, object fieldValue)
     {
-        this.ActionMode = ActionMode.Single;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "WithByField",
@@ -164,44 +163,43 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
 
         string fixedFieldsSql = null;
         string fixedValuesSql = "(";
-        if (this.deferredSegments.Count > 0)
-        {
-            if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null)
-            {
-                if (tableSegment.TableShardingInfo.DependOnMembers == null || tableSegment.TableShardingInfo.DependOnMembers.Count == 0)
-                    throw new Exception($"实体表{tableSegment.EntityType.FullName}已设置分表，未指定分表，也未设置依赖字段无法确定分表，请使用UseTable/UseTableBy方法手动指定分表");
-                if (this.deferredSegments.Count > 1)
-                {
-                    this.isNeedShardingValues = true;
-                    this.shardingValus = new();
-                }
-            }
 
-            this.ValuesBuilder = new StringBuilder("(");
-            var tempDbParameters = new TheaDbParameterCollection();
-            this.DbParameters = tempDbParameters;
-            for (int i = 1; i < this.deferredSegments.Count; i++)
+        if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null)
+        {
+            if (tableSegment.TableShardingInfo.DependOnMembers == null || tableSegment.TableShardingInfo.DependOnMembers.Count == 0)
+                throw new Exception($"实体表{tableSegment.EntityType.FullName}已设置分表，未指定分表，也未设置依赖字段无法确定分表，请使用UseTable/UseTableBy方法手动指定分表，或是设置分表依赖字段");
+            if (this.deferredSegments.Count > 1)
             {
-                var deferredSegment = this.deferredSegments[i];
-                switch (deferredSegment.Type)
-                {
-                    case "WithBy":
-                        this.VisitWithBy(deferredSegment.Value);
-                        break;
-                    case "WithByField":
-                        this.VisitWithByField(deferredSegment.Value);
-                        break;
-                    default: throw new NotSupportedException("批量插入后，只支持WithBy/IgnoreFields/OnlyFields操作");
-                }
+                this.isNeedShardingValues = true;
+                this.shardingValues = new();
             }
-            this.FieldsBuilder.Append(',');
-            this.ValuesBuilder.Append(',');
-            fixedValuesSql = this.ValuesBuilder.ToString();
-            this.ValuesBuilder.Clear();
-            if (this.DbParameters.Count > 0)
-                fixedDbParameters = tempDbParameters.ToList();
-            this.DbParameters = command.Parameters;
         }
+
+        this.ValuesBuilder = new StringBuilder("(");
+        var tempDbParameters = new TheaDbParameterCollection();
+        this.DbParameters = tempDbParameters;
+        for (int i = 1; i < this.deferredSegments.Count; i++)
+        {
+            var deferredSegment = this.deferredSegments[i];
+            switch (deferredSegment.Type)
+            {
+                case "WithBy":
+                    this.VisitWithBy(deferredSegment.Value);
+                    break;
+                case "WithByField":
+                    this.VisitWithByField(deferredSegment.Value);
+                    break;
+                default: throw new NotSupportedException("批量插入后，只支持WithBy操作");
+            }
+        }
+        this.FieldsBuilder.Append(',');
+        this.ValuesBuilder.Append(',');
+        fixedValuesSql = this.ValuesBuilder.ToString();
+        this.ValuesBuilder.Clear();
+        if (this.DbParameters.Count > 0)
+            fixedDbParameters = tempDbParameters.ToList();
+        this.DbParameters = command.Parameters;
+
 
         Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string> loopSqlSetter = null;
@@ -267,7 +265,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, insertObjType, insertObjs, firstInsertObj);
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, insertObjType, insertObjs, firstInsertObj, this.shardingValues);
             }
         }
         return (shardingType, shardingTables, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, null, null);
@@ -312,7 +310,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 }
                 this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                 if (this.isNeedShardingValues && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
-                    this.shardingValus[memberMapper.MemberName] = fieldValue;
+                    this.shardingValues[memberMapper.MemberName] = fieldValue;
             }
         }
         else
@@ -321,11 +319,15 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, StringBuilder, DbContext, object>;
             typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.ValuesBuilder, this.DbContext, insertObj);
         }
-        if (this.isNeedShardingValues && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
+
+        if (this.ActionMode == ActionMode.Single && tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter != null)
         {
-            tableSegment.ShardingTableGetter = RepositoryHelper.BuildShardingTableNameGetter(this.DbContext, tableSegment.TableShardingInfo, tableSegment.EntityType, insertObjType, insertObj);
-            tableSegment.Body = tableSegment.ShardingTableGetter.Invoke(tableSegment.Mapper.TableName, insertObj);
+            tableSegment.Body = tableSegment.ShardingTableGetter.Invoke(insertObj);
+            tableSegment.ShardingType = ShardingTableType.SingleTable;
+            tableSegment.IsSharding = true;
         }
+        if (this.isNeedShardingValues) RepositoryHelper.SetShardingValues(this.DbContext,
+            tableSegment.TableShardingInfo, tableSegment.EntityType, insertObjType, insertObj, this.shardingValues);
     }
     public virtual void VisitWithByField(object deferredSegmentValue)
     {
@@ -358,7 +360,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.ValuesBuilder.Append(parameterName);
         this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
         if (this.isNeedShardingValues && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
-            this.shardingValus[memberMapper.MemberName] = fieldValue;
+            this.shardingValues[memberMapper.MemberName] = fieldValue;
     }
     public virtual List<string> VisitFields(Expression fieldsSelector, bool isIgnoreCase = true)
     {
@@ -465,18 +467,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         string tableName = null;
         if (tableSegment.TableShardingInfo != null)
         {
-            if (tableSegment.IsSharding)
-                tableName = tableSegment.Body;
-            else if (tableSegment.ShardingTableGetter != null && !string.IsNullOrEmpty(tableSegment.Body))
-                tableName = tableSegment.Body;
-            else
-            {
-                tableName = RepositoryHelper.BuildShardingTableNameGetter(this.DbContext, tableSegment.TableShardingInfo,
-                   tableSegment.EntityType, this.shardingValus, tableSegment.Mapper.TableName);
-            }
-
-
-            else tableName = tableSegment.Mapper.TableName;
+            if (tableSegment.IsSharding) tableName = tableSegment.Body;
+            else tableName = RepositoryHelper.GetShardingTableName(this.DbContext, tableSegment.TableShardingInfo, this.shardingValues);
         }
         else tableName = tableSegment.Mapper.TableName;
         if (!string.IsNullOrEmpty(tableSegment.TableSchema))

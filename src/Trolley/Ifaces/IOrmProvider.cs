@@ -150,11 +150,13 @@ public interface IOrmProvider
     ICreate<TEntity> NewCreate<TEntity>(DbContext dbContext);
     ICreated<TEntity> NewCreated<TEntity>(DbContext dbContext, ICreateVisitor visitor);
     IContinuedCreate<TEntity> NewContinuedCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor);
+    IBulkContinuedCreate<TEntity> NewBulkContinuedCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor);
 
     IUpdate<TEntity> NewUpdate<TEntity>(DbContext dbContext);
     IUpdated<TEntity> NewUpdated<TEntity>(DbContext dbContext, IUpdateVisitor visitor);
     IContinuedUpdate<TEntity> NewContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor);
     IBulkContinuedUpdate<TEntity> NewBulkContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor);
+    IBulkCopyContinuedUpdate<TEntity> NewBulkCopyContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor);
     IUpdateJoin<TEntity, T1> NewUpdateJoin<TEntity, T1>(DbContext dbContext, IUpdateVisitor visitor);
     IUpdateJoin<TEntity, T1, T2> NewUpdateJoin<TEntity, T1, T2>(DbContext dbContext, IUpdateVisitor visitor);
     IUpdateJoin<TEntity, T1, T2, T3> NewUpdateJoin<TEntity, T1, T2, T3>(DbContext dbContext, IUpdateVisitor visitor);

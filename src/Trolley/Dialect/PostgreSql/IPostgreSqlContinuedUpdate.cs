@@ -166,38 +166,6 @@ public interface IPostgreSqlContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     new IPostgreSqlContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     #endregion
 
-    #region IgnoreFields
-    /// <summary>
-    /// 不更新指定字段，如：IgnoreFields("Id","Age");IgnoreFields("Id");
-    /// </summary>
-    /// <param name="fieldNames">忽略更新的字段列表</param>
-    /// <returns>返回更新对象</returns>
-    new IPostgreSqlContinuedUpdate<TEntity> IgnoreFields(params string[] fieldNames);
-    /// <summary>
-    /// 不更新指定字段，如：.IgnoreFields(f =&gt; new { f.Id, f.Age}); .IgnoreFields(f =&gt; f.Id);
-    /// </summary>
-    /// <typeparam name="TFields">字段类型</typeparam>
-    /// <param name="fieldsSelector">字段选择表达式，支持MemberAccess、New或MemberInit类型表达式</param>
-    /// <returns></returns>
-    new IPostgreSqlContinuedUpdate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);
-    #endregion
-
-    #region OnlyFields
-    /// <summary>
-    /// 只更新指定字段，如：.OnlyFields("Name","Gender"); .OnlyFields("Name");
-    /// </summary>
-    /// <param name="fieldNames">忽略更新的字段列表</param>
-    /// <returns>返回更新对象</returns>
-    new IPostgreSqlContinuedUpdate<TEntity> OnlyFields(params string[] fieldNames);
-    /// <summary>
-    /// 只更新指定字段，如：.OnlyFields(f =&gt; new { f.Name, f.Gender}); .OnlyFields(f =&gt; f.Name);
-    /// </summary>
-    /// <typeparam name="TFields">字段类型</typeparam>
-    /// <param name="fieldsSelector">字段选择表达式，支持MemberAccess、New或MemberInit类型表达式</param>
-    /// <returns>返回更新对象</returns>
-    new IPostgreSqlContinuedUpdate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);
-    #endregion
-
     #region Where
     /// <summary>
     /// 条件查询，predicate为null时不生成任何条件
@@ -207,7 +175,7 @@ public interface IPostgreSqlContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     new IPostgreSqlContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
     /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -231,7 +199,7 @@ public interface IPostgreSqlContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     new IPostgreSqlContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
     /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -255,7 +223,7 @@ public interface IPostgreSqlContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     new IPostgreSqlContinuedUpdate<TEntity> Or(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
     /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -375,38 +343,6 @@ public interface IPostgreSqlBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<
     new IPostgreSqlBulkContinuedUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     #endregion
 
-    #region IgnoreFields
-    /// <summary>
-    /// 不更新指定字段，如：IgnoreFields("Id","Age");IgnoreFields("Id");
-    /// </summary>
-    /// <param name="fieldNames">忽略更新的字段列表</param>
-    /// <returns>返回更新对象</returns>
-    new IPostgreSqlBulkContinuedUpdate<TEntity> IgnoreFields(params string[] fieldNames);
-    /// <summary>
-    /// 不更新指定字段，如：.IgnoreFields(f =&gt; new { f.Id, f.Age}); .IgnoreFields(f =&gt; f.Id);
-    /// </summary>
-    /// <typeparam name="TFields">字段类型</typeparam>
-    /// <param name="fieldsSelector">字段选择表达式，支持MemberAccess、New或MemberInit类型表达式</param>
-    /// <returns></returns>
-    new IPostgreSqlBulkContinuedUpdate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);
-    #endregion
-
-    #region OnlyFields
-    /// <summary>
-    /// 只更新指定字段，如：.OnlyFields("Name","Gender"); .OnlyFields("Name");
-    /// </summary>
-    /// <param name="fieldNames">忽略更新的字段列表</param>
-    /// <returns>返回更新对象</returns>
-    new IPostgreSqlBulkContinuedUpdate<TEntity> OnlyFields(params string[] fieldNames);
-    /// <summary>
-    /// 只更新指定字段，如：.OnlyFields(f =&gt; new { f.Name, f.Gender}); .OnlyFields(f =&gt; f.Name);
-    /// </summary>
-    /// <typeparam name="TFields">字段类型</typeparam>
-    /// <param name="fieldsSelector">字段选择表达式，支持MemberAccess、New或MemberInit类型表达式</param>
-    /// <returns>返回更新对象</returns>
-    new IPostgreSqlBulkContinuedUpdate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);
-    #endregion
-
     #region Where
     /// <summary>
     /// 条件查询，predicate为null时不生成任何条件
@@ -416,7 +352,7 @@ public interface IPostgreSqlBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<
     new IPostgreSqlBulkContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
     /// 条件查询，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -440,7 +376,7 @@ public interface IPostgreSqlBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<
     new IPostgreSqlBulkContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
     /// 条件查询，并与已有的条件AND操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -464,7 +400,7 @@ public interface IPostgreSqlBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<
     new IPostgreSqlBulkContinuedUpdate<TEntity> Or(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
     /// 条件查询，并与已有的条件OR操作，condition为true，ifPredicate条件生效，否则elsePredicate条件生效，elsePredicate可为null
-    
+
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>

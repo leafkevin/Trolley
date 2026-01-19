@@ -32,7 +32,6 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     }
     public virtual string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
-        string sql = null;
         readerFields = null;
         this.DbParameters = command.Parameters;
 
@@ -79,24 +78,26 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                     break;
             }
         }
+        var whereSql = this.WhereBuilder.ToString();
+        this.WhereBuilder.Clear();
 
+        var builder = this.WhereBuilder;
+        builder.Append($"DELETE FROM {this.GetFormatTableName(tableSegment)}");
+        if (this.HasWhere) builder.Append($" WHERE {whereSql}");
+
+        var sql = builder.ToString();
         if (tableSegment.ShardingType > ShardingTableType.SingleTable)
         {
-            var whereSql = this.WhereBuilder.ToString();
-            this.WhereBuilder.Clear();
-            var builder = this.WhereBuilder;
+            builder.Clear();
             var tableNames = tableSegment.TableNames;
             for (int i = 0; i < tableNames.Count; i++)
             {
                 if (i > 0) builder.Append(';');
-                builder.Append("DELETE FROM ");
-                builder.Append(this.GetFormatTableName(tableSegment));
-                builder.Append(" WHERE ");
-                builder.Append(whereSql);
+                builder.Append(sql);
             }
             sql = builder.ToString();
         }
-        else sql = $"DELETE FROM {this.GetTableName(tableSegment)} WHERE {this.WhereBuilder.ToString()}";
+        builder.Clear();
         return sql;
     }
     public virtual void AndBy(object whereObj)

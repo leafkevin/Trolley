@@ -7,7 +7,6 @@ partial class MySqlProvider
 {
     public override IRepository CreateRepository(DbContext dbContext) => new MySqlRepository(dbContext);
 
-    public override IMultipleQuery NewMultipleQuery(DbContext dbContext) => new MySqlMultipleQuery(dbContext);
     public override IQuery<T> NewQuery<T>(DbContext dbContext, IQueryVisitor visitor) => new MySqlQuery<T>(dbContext, visitor);
 
     public override IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
@@ -41,11 +40,9 @@ partial class MySqlProvider
 
     public override ICreate<TEntity> NewCreate<TEntity>(DbContext dbContext) => new MySqlCreate<TEntity>(dbContext);
     public override IContinuedCreate<TEntity> NewContinuedCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor)
-    {
-        if (visitor.ActionMode == ActionMode.Bulk)
-            return new MySqlBulkContinuedCreate<TEntity>(dbContext, visitor);
-        else return new MySqlContinuedCreate<TEntity>(dbContext, visitor);
-    }
+        => new MySqlContinuedCreate<TEntity>(dbContext, visitor);
+    public override IBulkContinuedCreate<TEntity> NewBulkContinuedCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor)
+        => new MySqlBulkContinuedCreate<TEntity>(dbContext, visitor);
     public override ICreated<TEntity> NewCreated<TEntity>(DbContext dbContext, ICreateVisitor visitor)
         => new MySqlCreated<TEntity>(dbContext, visitor);
     public override ICreateVisitor NewCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
@@ -55,6 +52,8 @@ partial class MySqlProvider
         => new MySqlContinuedUpdate<TEntity>(dbContext, visitor);
     public override IBulkContinuedUpdate<TEntity> NewBulkContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor)
         => new MySqlBulkContinuedUpdate<TEntity>(dbContext, visitor);
+    public override IBulkCopyContinuedUpdate<TEntity> NewBulkCopyContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor)
+        => new MySqlBulkCopyContinuedUpdate<TEntity>(dbContext, visitor);
     public override IUpdated<TEntity> NewUpdated<TEntity>(DbContext dbContext, IUpdateVisitor visitor)
         => new MySqlUpdated<TEntity>(dbContext, visitor);
     public override IDelete<TEntity> NewDelete<TEntity>(DbContext dbContext)

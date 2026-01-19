@@ -42,7 +42,7 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
         var entityMapper = tableSegment.Mapper;
 
         var shardingType = ShardingTableType.None;
-        object shardingTables = tableSegment.ShardingType;
+        object shardingTables = tableSegment.Mapper.TableName;
         if (tableSegment.TableShardingInfo != null)
         {
             if (tableSegment.IsSharding)
@@ -57,7 +57,7 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, updateObjType, updateObjs, firstUpdateObj);
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, updateObjType, updateObjs, firstUpdateObj, this.shardingValues);
             }
         }
         (var memberMappers, var valueGetters) = this.GetRefMemberMappers(updateObjType, entityMapper, firstUpdateObj, true);

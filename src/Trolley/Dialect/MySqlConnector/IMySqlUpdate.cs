@@ -216,6 +216,6 @@ public interface IMySqlUpdate<TEntity> : IUpdate<TEntity>
     /// <param name="updateObjs">更新的对象集合，可以不是TEntity类型，包含更新字段和主键栏位即可</param>
     /// <param name="timeoutSeconds">超时时间，单位秒</param>
     /// <returns>返更新对象</returns>
-    IUpdated<TEntity> SetBulkCopy(IEnumerable updateObjs, int? timeoutSeconds = null);
+    IMySqlBulkCopyContinuedUpdate<TEntity> SetBulkCopy(IEnumerable updateObjs, int? timeoutSeconds = null);
     #endregion
 }

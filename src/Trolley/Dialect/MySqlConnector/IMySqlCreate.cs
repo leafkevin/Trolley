@@ -20,11 +20,11 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// <returns>返回插入对象</returns>
     new IMySqlCreate<TEntity> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表名获取委托，执行委托获取分表名，插入对象的值自动插入对应分表中，只适用于批量操作。第一个参数是原始表名，第二个参数是WithBulk批量插入对象的值，返回值是分表名，如：.UseTable((tableName, insertObj) =&gt; $"{tableName}_{((User)insertObj).CreatedAt:yyyyMM}")
+    /// 手动指定分表名获取委托，执行委托获取分表名，插入对象的值自动插入对应分表中。参数是插入对象的值，返回值是分表名，如：.UseTable(insertObj =&gt; $"sys_user_{((User)insertObj).CreatedAt:yyyyMM}")
     /// </summary>
     /// <param name="tableNameGetter">分表名获取委托</param>
     /// <returns>返回插入对象</returns>
-    new IMySqlCreate<TEntity> UseTable(Func<string, object, string> tableNameGetter);
+    new IMySqlCreate<TEntity> UseTable(Func<object, string> tableNameGetter);
     #endregion
 
     #region UseTableSchema

@@ -73,6 +73,17 @@ public class MySqlCreateVisitor : CreateVisitor
                 else this.DbParameters = command.Parameters;
                 this.ValuesBuilder = new();
                 var tableSegment = this.Tables[0];
+
+                if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null)
+                {
+                    if (tableSegment.TableShardingInfo.DependOnMembers == null || tableSegment.TableShardingInfo.DependOnMembers.Count == 0)
+                        throw new Exception($"实体表{tableSegment.EntityType.FullName}已设置分表，未指定分表，也未设置依赖字段无法确定分表，请使用UseTable/UseTableBy方法手动指定分表");
+                    if (this.deferredSegments.Count > 1)
+                    {
+                        this.isNeedShardingValues = true;
+                        this.shardingValues = new();
+                    }
+                }
                 foreach (var deferredSegment in this.deferredSegments)
                 {
                     switch (deferredSegment.Type)
@@ -146,6 +157,16 @@ public class MySqlCreateVisitor : CreateVisitor
 
         string fixedFieldsSql = null;
         string fixedValuesSql = "(";
+        if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null)
+        {
+            if (tableSegment.TableShardingInfo.DependOnMembers == null || tableSegment.TableShardingInfo.DependOnMembers.Count == 0)
+                throw new Exception($"实体表{tableSegment.EntityType.FullName}已设置分表，未指定分表，也未设置依赖字段无法确定分表，请使用UseTable/UseTableBy方法手动指定分表，或是设置分表依赖字段");
+            if (this.deferredSegments.Count > 1)
+            {
+                this.isNeedShardingValues = true;
+                this.shardingValues = new();
+            }
+        }
         if (this.deferredSegments.Count > 1)
         {
             this.ValuesBuilder = new StringBuilder("(");
@@ -162,7 +183,7 @@ public class MySqlCreateVisitor : CreateVisitor
                     case "WithByField":
                         this.VisitWithByField(deferredSegment.Value);
                         break;
-                    default: throw new NotSupportedException("批量插入后，只支持WithBy/IgnoreFields/OnlyFields/OnDuplicateKeyUpdate/Returning操作");
+                    default: throw new NotSupportedException("批量插入后，只支持WithBy/OnDuplicateKeyUpdate/Returning操作");
                 }
             }
             this.FieldsBuilder.Append(',');
@@ -238,7 +259,7 @@ public class MySqlCreateVisitor : CreateVisitor
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, insertObjType, insertObjs, firstInsertObj);
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, insertObjType, insertObjs, firstInsertObj, this.shardingValues);
             }
         }
         string tailSql = null;
@@ -411,7 +432,7 @@ public class MySqlCreateVisitor : CreateVisitor
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, insertObjType, insertObjs, firstInsertObj);
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, insertObjType, insertObjs, firstInsertObj, this.shardingValues);
             }
         }
         (var memberMappers, var valueGetters) = this.GetRefMemberMappers(insertObjType, tableSegment.Mapper, firstInsertObj, false);

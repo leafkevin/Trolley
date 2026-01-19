@@ -14,22 +14,14 @@ public interface IMultipleQuery : IDisposable
     List<ReaderAfter> ReaderAfters { get; }
     #endregion
 
-    #region GetShardingTableNames
-    /// <summary>
-    /// 获取实体<typeparamref name="TEntity"/>满足条件的所有分表名
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="tableNameSelector">分表名选择表达式</param>
-    /// <param name="tableSchema">分表所在的TableSchema</param>
-    /// <returns>返回满足条件的所有分表</returns>
-    IMultipleQuery GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector = null, string tableSchema = null);
+    #region GetShardingTableName
     /// <summary>
     /// 根据字段值确定<typeparamref name="TEntity"/>表分表名，字段值的顺序与分表规则设置的顺序保持一致
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="fieldValues">字段值数组，字段值的顺序与分表规则设置的顺序保持一致，不可为null</param>
     /// <returns>返回满足条件的分表名</returns>
-    IMultipleQuery GetShardingTableNameBy<TEntity>(params object[] fieldValues);
+    IMultipleQuery GetShardingTableName<TEntity>(params object[] fieldValues);
     #endregion
 
     #region From

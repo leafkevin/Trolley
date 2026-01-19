@@ -26,7 +26,7 @@ public interface IUpdateVisitor : IDisposable
     void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
     void UseTableMap(TableShardingUsageMode usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter);
     void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
-    void UseTable(TableShardingUsageMode usageMode, Func<string, object, string> tableNameGetter);
+    void UseTable(TableShardingUsageMode usageMode, Func<object, string> tableNameGetter);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
     void Join(string joinType, Type entityType, Expression joinOn);

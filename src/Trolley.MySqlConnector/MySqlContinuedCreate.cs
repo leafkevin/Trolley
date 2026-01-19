@@ -24,12 +24,8 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCon
     #endregion
 
     #region WithBy
-    public new IMySqlContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
-        => this.WithBy(true, insertObj);
-    public new IMySqlContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj)
-        => base.WithBy(condition, insertObj) as IMySqlContinuedCreate<TEntity>;
     public new IMySqlContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-        => this.WithBy(true, fieldSelector, fieldValue);
+       => this.WithBy(true, fieldSelector, fieldValue);
     public new IMySqlContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => base.WithBy(condition, fieldSelector, fieldValue) as IMySqlContinuedCreate<TEntity>;
     #endregion
@@ -65,7 +61,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCon
         {
             case ActionMode.BulkCopy:
                 {
-                    (var shardingType, var shardingTables, var insertObjType, var insertObjs, var timeoutSeconds,
+                    (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
                         var memberMappers, var valueGetters) = this.DialectVisitor.BuildWithBulkCopy();
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
                     var mySqlConnection = connection.BaseConnection as MySqlConnection;
@@ -78,15 +74,14 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCon
                         var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
                         foreach (var tableName in tabledInsertObjs.Keys)
                         {
-                            bulkCopyObj.DestinationTableName = tableName;
-                            var data = this.Visitor.ToDataTable(tableName, insertObjType, tabledInsertObjs[tableName], memberMappers, valueGetters);
+                            var data = this.Visitor.ToDataTable(tableName, tabledInsertObjs[tableName], memberMappers, valueGetters);
                             result += dialectOrmProvider.ExecuteBulkCopy(tableName, bulkCopyObj, connection, this.DbContext, data);
                         }
                     }
                     else
                     {
                         var tableName = shardingTables as string;
-                        var data = this.Visitor.ToDataTable(tableName, insertObjType, insertObjs, memberMappers, valueGetters);
+                        var data = this.Visitor.ToDataTable(tableName, insertObjs, memberMappers, valueGetters);
                         result = dialectOrmProvider.ExecuteBulkCopy(shardingTables as string, bulkCopyObj, connection, this.DbContext, data);
                     }
                     break;
@@ -255,7 +250,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCon
     }
     #endregion
 }
-public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlBulkContinuedCreate<TEntity>
+public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>, IMySqlBulkContinuedCreate<TEntity>
 {
     #region Properties
     public MySqlCreateVisitor DialectVisitor { get; private set; }
@@ -311,7 +306,7 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
         {
             case ActionMode.BulkCopy:
                 {
-                    (var shardingType, var shardingTables, var insertObjType, var insertObjs, var timeoutSeconds,
+                    (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
                          var memberMappers, var valueGetters) = this.DialectVisitor.BuildWithBulkCopy();
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
                     var mySqlConnection = connection.BaseConnection as MySqlConnection;
@@ -324,16 +319,15 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
                         var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
                         foreach (var tableName in tabledInsertObjs.Keys)
                         {
-                            bulkCopyObj.DestinationTableName = tableName;
-                            var data = this.Visitor.ToDataTable(tableName, insertObjType, tabledInsertObjs[tableName], memberMappers, valueGetters);
+                            var data = this.Visitor.ToDataTable(tableName, tabledInsertObjs[tableName], memberMappers, valueGetters);
                             result += dialectOrmProvider.ExecuteBulkCopy(tableName, bulkCopyObj, connection, this.DbContext, data);
                         }
                     }
                     else
                     {
                         var tableName = shardingTables as string;
-                        var data = this.Visitor.ToDataTable(tableName, insertObjType, insertObjs, memberMappers, valueGetters);
-                        result = dialectOrmProvider.ExecuteBulkCopy(shardingTables as string, bulkCopyObj, connection, this.DbContext, data);
+                        var data = this.Visitor.ToDataTable(tableName, insertObjs, memberMappers, valueGetters);
+                        result = dialectOrmProvider.ExecuteBulkCopy(tableName, bulkCopyObj, connection, this.DbContext, data);
                     }
                     break;
                 }
@@ -410,8 +404,8 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
         {
             case ActionMode.BulkCopy:
                 {
-                    (var shardingType, var shardingTables, var insertObjType, var insertObjs, var timeoutSeconds,
-                        var memberMappers, var valueGetters) = this.DialectVisitor.BuildWithBulkCopy();
+                    (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
+                      var memberMappers, var valueGetters) = this.DialectVisitor.BuildWithBulkCopy();
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
                     var mySqlConnection = connection.BaseConnection as MySqlConnection;
                     var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;
@@ -424,14 +418,14 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
                         foreach (var tableName in tabledInsertObjs.Keys)
                         {
                             bulkCopyObj.DestinationTableName = tableName;
-                            var data = this.Visitor.ToDataTable(tableName, insertObjType, tabledInsertObjs[tableName], memberMappers, valueGetters);
+                            var data = this.Visitor.ToDataTable(tableName, tabledInsertObjs[tableName], memberMappers, valueGetters);
                             result += await dialectOrmProvider.ExecuteBulkCopyAsync(tableName, bulkCopyObj, connection, this.DbContext, data, cancellationToken);
                         }
                     }
                     else
                     {
                         var tableName = shardingTables as string;
-                        var data = this.Visitor.ToDataTable(tableName, insertObjType, insertObjs, memberMappers, valueGetters);
+                        var data = this.Visitor.ToDataTable(tableName, insertObjs, memberMappers, valueGetters);
                         result = await dialectOrmProvider.ExecuteBulkCopyAsync(shardingTables as string, bulkCopyObj, connection, this.DbContext, data, cancellationToken);
                     }
                     break;

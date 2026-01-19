@@ -161,12 +161,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else selectSql = builder.ToString();
 
         builder.Clear();
-        string whereSql = null;
         if (this.WhereBuilder != null && this.WhereBuilder.Length > 0)
-        {
-            whereSql = $" WHERE {this.WhereBuilder.ToString()}";
-            builder.Append(whereSql);
-        }
+            builder.Append($" WHERE {this.WhereBuilder.ToString()}");
         //有多分表还有Group By操作，每个分表语句中做Group By操作，Union All语句后，还要再做Group By操作
         if (!string.IsNullOrEmpty(this.GroupBySql))
             builder.Append($" GROUP BY {this.GroupBySql}");
@@ -300,7 +296,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     else builder.Append(',');
                 }
                 builder.Append(tableName);
-                //子查询要设置表别名               
+                //子查询要设置表别名
                 builder.Append(" " + tableSegment.AliasName);
                 if (!string.IsNullOrEmpty(tableSegment.SuffixRawSql))
                     builder.Append(" " + tableSegment.SuffixRawSql);
@@ -362,10 +358,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         builder.Clear();
         if (this.WhereBuilder != null && this.WhereBuilder.Length > 0)
             builder.Append($" WHERE {this.WhereBuilder.ToString()}");
-
+        //有多分表还有Group By操作，每个分表语句中做Group By操作，Union All语句后，还要再做Group By操作
         if (!string.IsNullOrEmpty(this.GroupBySql))
             builder.Append($" GROUP BY {this.GroupBySql}");
-        if (!string.IsNullOrEmpty(this.HavingSql))
+        //有多分表还有Group By+Having操作，每个分表语句中只做Group By操作，不做Having操作，在Union All语句后，再做Group By+Having操作
+        if (!this.IsManyShardingTables && !string.IsNullOrEmpty(this.HavingSql))
             builder.Append($" HAVING {this.HavingSql}");
 
         string orderBy = null;
@@ -390,6 +387,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             pageSql = pageSql.Replace("/**fields**/", selectSql);
             pageSql = pageSql.Replace("/**tables**/", tableSql);
             pageSql = pageSql.Replace(" /**others**/", others);
+
+            if (this.IsNeedPaging && this.offset.HasValue && this.limit.HasValue)
+            {
+                var myTableSql = $"{tableSql}{others}";
+                if (this.HasAggFields || !string.IsNullOrEmpty(this.GroupBySql))
+                    myTableSql = $"(SELECT {selectSql} FROM {tableSql}{others}) a";
+                builder.Append($"SELECT COUNT(*) FROM {myTableSql};");
+            }
             builder.Append($"{pageSql}");
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");

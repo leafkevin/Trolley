@@ -39,11 +39,11 @@ public interface ICreate<TEntity>
     /// <returns>返回插入对象</returns>
     ICreate<TEntity> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 手动指定分表名获取委托，执行委托获取分表名，插入对象的值自动插入对应分表中，只适用于批量操作。第一个参数是原始表名，第二个参数是WithBulk批量插入对象的值，返回值是分表名，如：.UseTable((tableName, insertObj) =&gt; $"{tableName}_{((User)insertObj).CreatedAt:yyyyMM}")
+    /// 手动指定分表名获取委托，执行委托获取分表名，插入对象的值自动插入对应分表中。参数是插入对象的值，返回值是分表名，如：.UseTable(insertObj =&gt; $"sys_user_{((User)insertObj).CreatedAt:yyyyMM}")
     /// </summary>
     /// <param name="tableNameGetter">分表名获取委托</param>
     /// <returns>返回插入对象</returns>
-    ICreate<TEntity> UseTable(Func<string, object, string> tableNameGetter);
+    ICreate<TEntity> UseTable(Func<object, string> tableNameGetter);
     #endregion
 
     #region UseTableSchema
@@ -85,7 +85,7 @@ public interface ICreate<TEntity>
     /// <param name="insertObjs">插入的对象集合</param>
     /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
     /// <returns>返回插入对象</returns>
-    IContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500);
+    IBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500);
     #endregion
 
     #region From
@@ -263,5 +263,63 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
     /// <param name="fieldValue">字段值</param>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
+    #endregion
+}
+/// <summary>
+/// 插入数据
+/// </summary>
+/// <typeparam name="TEntity">要插入的实体类型</typeparam>
+public interface IBulkContinuedCreate<TEntity> : ICreated<TEntity>
+{
+    #region WithBy
+    /// <summary>
+    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出属性不插入
+    /// <code>
+    /// .WithBy(new
+    /// {
+    ///     Name = "leafkevin",
+    ///     Age = 25,
+    ///     ...
+    /// })
+    /// SQL: INSERT INTO `sys_user` (`Name`,`Age`, ...) VALUES(@Name,@Age, ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TInsertObject">插入对象类型</typeparam>
+    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出属性不插入，不可为null</param>
+    /// <returns>返回插入对象</returns>
+    IBulkContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
+    /// <summary>
+    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出属性不插入
+    /// <code>
+    /// .WithBy(new
+    /// {
+    ///     Name = "leafkevin",
+    ///     Age = 25,
+    ///     ...
+    /// })
+    /// SQL: INSERT INTO `sys_user` (`Name`,`Age`, ...) VALUES(@Name,@Age, ...)
+    /// </summary>
+    /// <typeparam name="TInsertObject">插入对象类型</typeparam>
+    /// <param name="condition">判断条件，为true时生效</param>
+    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出属性不插入，不可为null</param>
+    /// <returns>返回插入对象</returns>
+    IBulkContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
+    /// <summary>
+    /// 单个字段插入，可多次调用，如：.WithBy(f =&gt; f.Gender, Gender.Female)
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldSelector">字段选择表达式，只能选择单个字段</param>
+    /// <param name="fieldValue">字段值</param>
+    /// <returns>返回插入对象</returns>
+    IBulkContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
+    /// <summary>
+    /// 单个字段插入，可多次调用，condition为true生效，如：.WithBy(f =&gt; f.Gender, Gender.Female)
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="condition">判断条件，为true时生效</param>
+    /// <param name="fieldSelector">字段选择表达式，只能选择单个字段</param>
+    /// <param name="fieldValue">字段值</param>
+    /// <returns>返回插入对象</returns>
+    IBulkContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     #endregion
 }

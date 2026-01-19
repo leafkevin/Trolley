@@ -13,6 +13,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     protected List<CommandSegment> deferredSegments = new();
     protected bool hasOnlyFields = false;
     protected bool hasIgnoreFields = false;
+    protected bool isNeedShardingValues = false;
+    protected Dictionary<string, object> shardingValues = null;
 
     public List<string> OnlyFieldNames { get; set; }
     public List<string> IgnoreFieldNames { get; set; }
@@ -55,7 +57,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         {
             case ActionMode.Bulk:
                 (shardingType, shardingTables, var updateObjs, _, var fixedSqlSetter,
-                   var loopSqlSetter, readerFields) = this.BuildWithBulk(command);
+                    var loopSqlSetter, readerFields) = this.BuildWithBulk(command);
 
                 int index = 0;
                 fixedSqlSetter?.Invoke(command.Parameters);
@@ -152,23 +154,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                             break;
                     }
                 }
-                if (tableSegment.TableShardingInfo != null)
-                {
-                    if (tableSegment.IsSharding)
-                    {
-                        shardingTables = shardingType switch
-                        {
-                            ShardingTableType.SingleTable => tableSegment.Body,
-                            ShardingTableType.MultiTable => tableSegment.TableNames,
-                            _ => tableSegment.Mapper.TableName,
-                        };
-                    }
-                    else
-                    {
-                        shardingType = ShardingTableType.SplitTables;
-                        shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, updateObjType, updateObjs, firstUpdateObj);
-                    }
-                }
                 builder.Append($"UPDATE {this.GetFormatTableName(tableSegment)}");
                 if (this.IsNeedTableAlias) builder.Append($" {this.Tables[0].AliasName}");
                 if (this.IsJoin)
@@ -225,7 +210,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             this.FieldsBuilder = new();
             var tempDbParameters = new TheaDbParameterCollection();
             this.DbParameters = tempDbParameters;
-            Func<IDataParameterCollection, DbContext, object, string> whereSqlInitializer = null;
             for (int i = 1; i < this.deferredSegments.Count; i++)
             {
                 var deferredSegment = this.deferredSegments[i];
@@ -240,32 +224,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     case "SetWith":
                         this.VisitSetWith(deferredSegment.Value);
                         break;
-                    case "AndBy":
-                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, false, false, false);
-                        this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
-                        break;
-                    case "AndById":
-                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, false);
-                        this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
-                        break;
-                    case "AndByIds":
-                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, true);
-                        this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
-                        break;
                     case "And":
                         this.VisitAnd(deferredSegment.Value as Expression);
-                        break;
-                    case "OrBy":
-                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, false, false, false);
-                        this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
-                        break;
-                    case "OrById":
-                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, false);
-                        this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
-                        break;
-                    case "OrByIds":
-                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, true);
-                        this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
                         break;
                     case "Or":
                         this.VisitOr(deferredSegment.Value as Expression);
@@ -329,7 +289,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, updateObjType, updateObjs, firstUpdateObj);
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, updateObjType, updateObjs, firstUpdateObj, this.shardingValues);
             }
         }
         return (shardingType, shardingTables, updateObjs, bulkCount, firstSqlSetter, loopSqlSetter, null);
@@ -608,6 +568,14 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
             typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.DbContext, updateObj);
         }
+        if (this.ActionMode == ActionMode.Single && tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter != null)
+        {
+            tableSegment.Body = tableSegment.ShardingTableGetter.Invoke(updateObj);
+            tableSegment.ShardingType = ShardingTableType.SingleTable;
+            tableSegment.IsSharding = true;
+        }
+        if (this.isNeedShardingValues) RepositoryHelper.SetShardingValues(this.DbContext,
+            tableSegment.TableShardingInfo, tableSegment.EntityType, updateObjType, updateObj, this.shardingValues);
     }
     public virtual void VisitSet(Expression fieldsAssignment)
     {
@@ -775,6 +743,13 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         }
         this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
         this.FieldsBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+
+        if (this.isNeedShardingValues)
+        {
+            var tableSegment = this.Tables[0];
+            if (!tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName)) return;
+            this.shardingValues[memberMapper.MemberName] = fieldValue;
+        }
     }
     public virtual void AddMemberElement(SqlFieldSegment sqlSegment, MemberMap memberMapper)
     {
@@ -909,5 +884,19 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             this.TableAliases.Add(parameterExpr.Name, this.Tables[index]);
             index++;
         }
+    }
+    public string GetTableName(TableSegment tableSegment)
+    {
+        string tableName = null;
+        if (tableSegment.TableShardingInfo != null)
+        {
+            if (tableSegment.IsSharding) tableName = tableSegment.Body;
+            else tableName = RepositoryHelper.GetShardingTableName(this.DbContext, tableSegment.TableShardingInfo, this.shardingValues);
+        }
+        else tableName = tableSegment.Mapper.TableName;
+        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
+            tableName = $"{this.OrmProvider.GetTableName(tableSegment.TableSchema)}.{this.OrmProvider.GetTableName(tableName)}";
+        else tableName = this.OrmProvider.GetTableName(tableName);
+        return tableName;
     }
 }

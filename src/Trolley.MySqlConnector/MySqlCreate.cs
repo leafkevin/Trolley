@@ -22,7 +22,7 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
         => base.UseTable(tableName) as IMySqlCreate<TEntity>;
     public new IMySqlCreate<TEntity> UseTableBy(params object[] fieldValues)
         => base.UseTableBy(fieldValues) as IMySqlCreate<TEntity>;
-    public new IMySqlCreate<TEntity> UseTable(Func<string, object, string> tableNameGetter)
+    public new IMySqlCreate<TEntity> UseTable(Func<object, string> tableNameGetter)
         => base.UseTable(tableNameGetter) as IMySqlCreate<TEntity>;
     #endregion
 
@@ -45,7 +45,7 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
     #endregion
 
     #region WithBulk
-    public new IMySqlBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount)
+    public new IMySqlBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500)
         => base.WithBulk(insertObjs, bulkCount) as IMySqlBulkContinuedCreate<TEntity>;
     #endregion
 

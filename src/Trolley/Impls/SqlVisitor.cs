@@ -233,7 +233,7 @@ public class SqlVisitor : ISqlVisitor
     /// </summary>
     /// <param name="tableNameGetter"></param>
     /// <exception cref="ArgumentNullException"></exception>
-    public void UseTable(TableShardingUsageMode usageMode, Func<string, object, string> tableNameGetter)
+    public void UseTable(TableShardingUsageMode usageMode, Func<object, string> tableNameGetter)
     {
         if (tableNameGetter == null)
             throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
@@ -2596,7 +2596,7 @@ public class SqlVisitor : ISqlVisitor
             //单个明确分表或是有分表的子查询
             else tableName = tableSegment.Body;
         }
-        else tableName = tableSegment.Body ?? tableSegment.Mapper.TableName;
+        else tableName = tableSegment.Mapper.TableName;
 
         if (tableSegment.TableType != TableType.FromQuery)
         {
@@ -2839,16 +2839,14 @@ public class SqlVisitor : ISqlVisitor
         return myExpr.NodeType == ExpressionType.MemberAccess;
     }
 
-    public Dictionary<string, List<object>> SplitShardingParameters(TableShardingInfo tableShardingInfo, Type paramterType, IEnumerable parameters, object parameterSample)
+    public Dictionary<string, List<object>> SplitShardingParameters(TableShardingInfo tableShardingInfo, Type paramterType, IEnumerable parameters, object parameterSample, IDictionary<string, object> shardingValues)
     {
         var tableSegment = this.Tables[0];
-        var origTableName = tableSegment.Mapper.TableName;
-        var tableNameGetter = tableSegment.ShardingTableGetter ?? RepositoryHelper.BuildShardingTableNameGetter(this.DbContext, tableShardingInfo, tableSegment.EntityType, paramterType, parameterSample);
-
+        var tableNameGetter = tableSegment.ShardingTableGetter ?? RepositoryHelper.BuildShardingTableNameGetter(this.DbContext, tableShardingInfo, tableSegment.EntityType, paramterType, parameterSample, shardingValues);
         var result = new Dictionary<string, List<object>>();
         foreach (var parameter in parameters)
         {
-            var tableName = tableNameGetter.Invoke(origTableName, parameter);
+            var tableName = tableNameGetter.Invoke(parameter);
             if (!result.ContainsKey(tableName))
                 result[tableName] = new List<object>();
             result[tableName].Add(parameter);
