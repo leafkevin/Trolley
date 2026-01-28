@@ -13,7 +13,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
 {
     #region Properties
     public SqlServerUpdateVisitor DialectVisitor { get; private set; }
-    public IOrmProvider OrmProvider => this.Visitor.OrmProvider;
+    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Constructor
@@ -518,7 +518,7 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
 {
     #region Properties
     public SqlServerUpdateVisitor DialectVisitor { get; private set; }
-    public IOrmProvider OrmProvider => this.Visitor.OrmProvider;
+    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Constructor

@@ -853,7 +853,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             typeHandler = value =>
                             {
                                 if (value is DBNull) return null;
-                                return Enum.Parse(underlyingType, (string)value);
+                                return Enum.Parse(underlyingType, (string)value, true);
                             };
                         }
                         else
@@ -861,7 +861,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             typeHandler = value =>
                             {
                                 if (value is DBNull) return Enum.ToObject(underlyingType, 0);
-                                return Enum.Parse(underlyingType, (string)value);
+                                return Enum.Parse(underlyingType, (string)value, true);
                             };
                         }
                     }
@@ -2098,7 +2098,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         {
                             var args0Segment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
                             if (args0Segment.IsConstant || args0Segment.IsVariable)
-                                return args0Segment.ChangeValue(Enum.Parse(enumType, args0Segment.Value.ToString()));
+                                return args0Segment.ChangeValue(Enum.Parse(enumType, args0Segment.Value.ToString(), true));
 
                             throw new NotSupportedException("不支持的表达式访问，Enum.Parse方法只支持常量、变量参数");
                         });
@@ -2159,7 +2159,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         {
                             var args0Segment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
                             if (args0Segment.IsConstant || args0Segment.IsVariable)
-                                return args0Segment.ChangeValue(Enum.Parse(enumType, args0Segment.Value.ToString()));
+                                return args0Segment.ChangeValue(Enum.Parse(enumType, args0Segment.Value.ToString(), true));
 
                             throw new NotSupportedException("不支持的表达式访问，Enum.Parse方法只支持常量、变量参数");
                         });

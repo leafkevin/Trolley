@@ -11,16 +11,17 @@ namespace Trolley.MySqlConnector;
 
 public class MySqlUpdated : Updated
 {
+    private MySqlUpdateVisitor dialectVisitor;
+
     #region Properties
-    public MySqlUpdateVisitor DialectVisitor { get; protected set; }
-    public IOrmProvider OrmProvider => this.Visitor.OrmProvider;
+    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Constructor
     public MySqlUpdated(DbContext dbContext, IUpdateVisitor visitor)
         : base(dbContext, visitor)
     {
-        this.DialectVisitor = this.Visitor as MySqlUpdateVisitor;
+        this.dialectVisitor = this.Visitor as MySqlUpdateVisitor;
     }
     #endregion
 
@@ -34,7 +35,7 @@ public class MySqlUpdated : Updated
             case ActionMode.BulkCopy:
                 {
                     (var shardingType, var shardingTables, var updateObjs, var timeoutSeconds,
-                        var memberMappers, var valueGetters) = this.DialectVisitor.BuildSetBulkCopy();
+                        var memberMappers, var valueGetters) = this.dialectVisitor.BuildSetBulkCopy();
 
                     var tableId = $"{Guid.NewGuid():N}";
                     var pkFields = memberMappers.Where(f => f.IsKey).Select(f => this.OrmProvider.GetFieldName(f.FieldName)).ToList();
@@ -227,7 +228,7 @@ public class MySqlUpdated : Updated
             case ActionMode.BulkCopy:
                 {
                     (var shardingType, var shardingTables, var updateObjs, var timeoutSeconds,
-                        var memberMappers, var valueGetters) = this.DialectVisitor.BuildSetBulkCopy();
+                        var memberMappers, var valueGetters) = this.dialectVisitor.BuildSetBulkCopy();
 
                     var tableId = $"{Guid.NewGuid():N}";
                     var pkFields = memberMappers.Where(f => f.IsKey).Select(f => this.OrmProvider.GetFieldName(f.FieldName)).ToList();
@@ -423,7 +424,7 @@ public class MySqlUpdated : Updated
         if (this.Visitor.ActionMode == ActionMode.BulkCopy)
         {
             (var shardingType, var shardingTables, var updateObjs, var timeoutSeconds,
-                var memberMappers, var valueGetters) = this.DialectVisitor.BuildSetBulkCopy();
+                var memberMappers, var valueGetters) = this.dialectVisitor.BuildSetBulkCopy();
 
             var tableId = $"{Guid.NewGuid():N}";
             var pkFields = memberMappers.Where(f => f.IsKey).Select(f => this.OrmProvider.GetFieldName(f.FieldName)).ToList();

@@ -9,15 +9,13 @@ namespace Trolley.MySqlConnector;
 
 public class MySqlCreated : Created
 {
-    #region Properties
-    public MySqlCreateVisitor DialectVisitor { get; protected set; }
-    #endregion
+    private MySqlCreateVisitor dialectVisitor;
 
     #region Constructor
     public MySqlCreated(DbContext dbContext, ICreateVisitor visitor)
         : base(dbContext, visitor)
     {
-        this.DialectVisitor = this.Visitor as MySqlCreateVisitor;
+        this.dialectVisitor = this.Visitor as MySqlCreateVisitor;
     }
     #endregion
 
@@ -32,7 +30,7 @@ public class MySqlCreated : Created
             case ActionMode.BulkCopy:
                 {
                     (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
-                        var memberMappers, var valueGetters) = this.DialectVisitor.BuildWithBulkCopy();
+                        var memberMappers, var valueGetters) = this.dialectVisitor.BuildWithBulkCopy();
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
                     var mySqlConnection = connection.BaseConnection as MySqlConnection;
                     var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;
@@ -130,7 +128,7 @@ public class MySqlCreated : Created
             case ActionMode.BulkCopy:
                 {
                     (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
-                        var memberMappers, var valueGetters) = this.DialectVisitor.BuildWithBulkCopy();
+                        var memberMappers, var valueGetters) = this.dialectVisitor.BuildWithBulkCopy();
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
                     var mySqlConnection = connection.BaseConnection as MySqlConnection;
                     var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;
@@ -221,15 +219,13 @@ public class MySqlCreated : Created
 }
 public class MySqlIdentitiedCreated : IdentitiedCreated
 {
-    #region Properties
-    public MySqlCreateVisitor DialectVisitor { get; protected set; }
-    #endregion
+    private MySqlCreateVisitor dialectVisitor;
 
     #region Constructor
     public MySqlIdentitiedCreated(DbContext dbContext, ICreateVisitor visitor)
         : base(dbContext, visitor)
     {
-        this.DialectVisitor = this.Visitor as MySqlCreateVisitor;
+        this.dialectVisitor = this.Visitor as MySqlCreateVisitor;
     }
     #endregion
 
@@ -244,7 +240,7 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
             case ActionMode.BulkCopy:
                 {
                     (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
-                        var memberMappers, var valueGetters) = this.DialectVisitor.BuildWithBulkCopy();
+                        var memberMappers, var valueGetters) = this.dialectVisitor.BuildWithBulkCopy();
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
                     var mySqlConnection = connection.BaseConnection as MySqlConnection;
                     var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;
@@ -342,7 +338,7 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
             case ActionMode.BulkCopy:
                 {
                     (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
-                         var memberMappers, var valueGetters) = this.DialectVisitor.BuildWithBulkCopy();
+                         var memberMappers, var valueGetters) = this.dialectVisitor.BuildWithBulkCopy();
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
                     var mySqlConnection = connection.BaseConnection as MySqlConnection;
                     var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;

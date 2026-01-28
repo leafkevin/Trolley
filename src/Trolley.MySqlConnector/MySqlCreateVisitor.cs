@@ -92,6 +92,9 @@ public class MySqlCreateVisitor : CreateVisitor
                         case "WithByField":
                             this.VisitWithByField(deferredSegment.Value);
                             break;
+                        case "WithByFieldExpr":
+                            this.VisitWithByFieldExpr(deferredSegment.Value);
+                            break;
                     }
                 }
                 var entityType = tableSegment.EntityType;
@@ -181,6 +184,9 @@ public class MySqlCreateVisitor : CreateVisitor
                     case "WithByField":
                         this.VisitWithByField(deferredSegment.Value);
                         break;
+                    case "WithByFieldExpr":
+                        this.VisitWithByFieldExpr(deferredSegment.Value);
+                        break;
                     default: throw new NotSupportedException("批量插入后，只支持WithBy/OnDuplicateKeyUpdate/Returning操作");
                 }
             }
@@ -267,7 +273,16 @@ public class MySqlCreateVisitor : CreateVisitor
             tailSql += this.OutputSql;
         return (shardingType, shardingTables, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, tailSql, this.ReaderFields);
     }
-    public void Returning(string fieldNames)
+    public virtual void WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds)
+    {
+        this.ActionMode = ActionMode.BulkCopy;
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "WithBulkCopy",
+            Value = (insertObjs, timeoutSeconds)
+        });
+    }
+    public virtual void Returning(string fieldNames)
     {
         this.ReaderFields = new();
         this.OutputSql = $" RETURNING {fieldNames}";
@@ -427,12 +442,12 @@ public class MySqlCreateVisitor : CreateVisitor
         (var memberMappers, var valueGetters) = this.GetRefMemberMappers(insertObjType, tableSegment.Mapper, firstInsertObj, false);
         return (shardingType, shardingTables, insertObjs, timeoutSeconds, memberMappers, valueGetters);
     }
-    public string BuildHeadSql()
+    public virtual string BuildHeadSql()
     {
         if (this.IsUseIgnoreInto) return "INSERT IGNORE INTO";
         return "INSERT INTO";
     }
-    public void VisitSetObject(object updateObj)
+    public virtual void VisitSetObject(object updateObj)
     {
         if (this.ActionMode == ActionMode.Bulk)
             throw new NotSupportedException("批量插入时，不支持此方法的调用，请使用OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment)方法");
@@ -482,7 +497,7 @@ public class MySqlCreateVisitor : CreateVisitor
     }
     public override SqlFieldSegment VisitNew(SqlFieldSegment sqlSegment)
     {
-        //只有OnDuplicateKeyUpdate.Set时，才会走到此场景，如：.Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
+        //只有OnDuplicateKeyUpdate.Set时，才会走到此场景，如：.Set(f => new { TotalAmount = f.TotalAmount + f.Values(f.TotalAmount) })
         //INSERT INTO ... SELECT ... FROM ... 由FromCommand单独处理了，FromCommand走的是QueryVisitor的解析
         var newExpr = sqlSegment.Expression as NewExpression;
         if (newExpr.Type.Name.StartsWith("<>"))
@@ -543,7 +558,7 @@ public class MySqlCreateVisitor : CreateVisitor
         queryVisitor.IsUseIgnoreInto = this.IsUseIgnoreInto;
         return queryVisitor;
     }
-    public void InitTableAlias(LambdaExpression lambdaExpr)
+    public virtual void InitTableAlias(LambdaExpression lambdaExpr)
     {
         this.TableAliases.Clear();
         lambdaExpr.Body.GetParameters(out var parameters);
@@ -558,7 +573,7 @@ public class MySqlCreateVisitor : CreateVisitor
             this.TableAliases.Add(parameterExpr.Name, this.Tables[0]);
         }
     }
-    public void AddMemberElement(SqlFieldSegment sqlSegment, MemberMap memberMapper)
+    public virtual void AddMemberElement(SqlFieldSegment sqlSegment, MemberMap memberMapper)
     {
         if (this.UpdateBuilder.Length > 0) this.UpdateBuilder.Append(',');
         var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
@@ -587,9 +602,9 @@ public class MySqlCreateVisitor : CreateVisitor
         //.Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
         else this.UpdateBuilder.Append($"{fieldName}={sqlSegment.Body}");
     }
-    public void VisitSetExpression(Expression assignmentExpr)
+    public virtual void VisitSetExpression(Expression assignmentExpr)
         => this.VisitAndDeferred(new SqlFieldSegment { Expression = assignmentExpr });
-    public void VisitWithSetField(Expression fieldSelector, object fieldValue)
+    public virtual void VisitWithSetField(Expression fieldSelector, object fieldValue)
     {
         var lambdaExpr = this.EnsureLambda(fieldSelector);
         var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;

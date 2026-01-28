@@ -3,7 +3,7 @@ using System.Linq.Expressions;
 
 namespace Trolley.MySqlConnector;
 
-public class MySqlCreateDuplicateKeyUpdate<TEntity> : ContinuedCreate<TEntity>, IMySqlCreateDuplicateKeyUpdate<TEntity>
+public class MySqlCreateDuplicateKeyUpdate<TEntity> : MySqlIdentitiedCreated, IMySqlCreateDuplicateKeyUpdate<TEntity>
 {
     private MySqlCreateVisitor dialectVisitor;
 
@@ -49,8 +49,13 @@ public class MySqlCreateDuplicateKeyUpdate<TEntity> : ContinuedCreate<TEntity>, 
         if (condition) this.Set(fieldSelector, fieldValue);
         return this;
     }
+    public IResultCommand<TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
+    {
+        this.dialectVisitor.Returning(fieldsSelector);
+        return dialectVisitor.OrmProvider.NewResultCreated<TResult>(this.DbContext, this.Visitor);
+    }
 }
-public class MySqlBulkCreateDuplicateKeyUpdate<TEntity> : BulkContinuedCreate<TEntity>, IMySqlBulkCreateDuplicateKeyUpdate<TEntity>
+public class MySqlBulkCreateDuplicateKeyUpdate<TEntity> : MySqlCreated, IMySqlBulkCreateDuplicateKeyUpdate<TEntity>
 {
     private MySqlCreateVisitor dialectVisitor;
 
@@ -96,5 +101,10 @@ public class MySqlBulkCreateDuplicateKeyUpdate<TEntity> : BulkContinuedCreate<TE
     {
         if (condition) this.Set(fieldSelector, fieldValue);
         return this;
+    }
+    public IBulkResultCommand<TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
+    {
+        this.dialectVisitor.Returning(fieldsSelector);
+        return dialectVisitor.OrmProvider.NewBulkResultCreated<TResult>(this.DbContext, this.Visitor);
     }
 }

@@ -162,10 +162,10 @@ public interface IOrmProvider
     IResultCommand<TResult> NewResultCreated<TResult>(DbContext dbContext, ICreateVisitor visitor);
     IBulkResultCommand<TResult> NewBulkResultCreated<TResult>(DbContext dbContext, ICreateVisitor visitor);
 
-
     IUpdate NewUpdate(Type entityType, DbContext dbContext);
     IUpdate<TEntity> NewUpdate<TEntity>(DbContext dbContext);
     IUpdated NewUpdated(DbContext dbContext, IUpdateVisitor visitor);
+    IBulkResultCommand<TResult> NewResultUpdated<TResult>(DbContext dbContext, IUpdateVisitor visitor); 
 
     IContinuedUpdate NewContinuedUpdate(DbContext dbContext, IUpdateVisitor visitor);
     IContinuedUpdate<TEntity> NewContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor);

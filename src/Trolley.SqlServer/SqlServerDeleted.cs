@@ -10,7 +10,7 @@ public class SqlServerDeleted<TEntity, TResult> : Deleted<TEntity>, ISqlServerDe
 {
     #region Properties
     public SqlServerDeleteVisitor DialectVisitor { get; protected set; }
-    public IOrmProvider OrmProvider => this.Visitor.OrmProvider;
+    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Constructor

@@ -3,7 +3,7 @@ using System.Linq.Expressions;
 
 namespace Trolley.MySqlConnector;
 
-public interface IMySqlCreateDuplicateKeyUpdate<TEntity> : IContinuedCreate<TEntity>
+public interface IMySqlCreateDuplicateKeyUpdate<TEntity> : IIdentitiedCreated
 {
     #region UseAlias
     /// <summary>
@@ -60,23 +60,27 @@ public interface IMySqlCreateDuplicateKeyUpdate<TEntity> : IContinuedCreate<TEnt
     /// <summary>
     /// 单个字段更新
     /// </summary>
-    /// <typeparam name="TField"></typeparam>
-    /// <param name="fieldSelector"></param>
-    /// <param name="fieldValue"></param>
-    /// <returns></returns>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldSelector">字段选择表达式</param>
+    /// <param name="fieldValue">字段值</param>
+    /// <returns>返回更新对象</returns>
     IMySqlCreateDuplicateKeyUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     /// <summary>
     /// 单个字段更新
     /// </summary>
-    /// <typeparam name="TField"></typeparam>
-    /// <param name="condition"></param>
-    /// <param name="fieldSelector"></param>
-    /// <param name="fieldValue"></param>
-    /// <returns></returns>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="condition">判断条件，为true时生效</param>
+    /// <param name="fieldSelector">字段选择表达式</param>
+    /// <param name="fieldValue">字段值</param>
+    /// <returns>返回更新对象</returns>
     IMySqlCreateDuplicateKeyUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     #endregion
+
+    #region Set
+    IResultCommand<TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
+    #endregion
 }
-public interface IMySqlBulkCreateDuplicateKeyUpdate<TEntity> : IBulkContinuedCreate<TEntity>
+public interface IMySqlBulkCreateDuplicateKeyUpdate<TEntity> : ICreated
 {
     #region UseAlias
     /// <summary>
@@ -133,19 +137,23 @@ public interface IMySqlBulkCreateDuplicateKeyUpdate<TEntity> : IBulkContinuedCre
     /// <summary>
     /// 单个字段更新
     /// </summary>
-    /// <typeparam name="TField"></typeparam>
-    /// <param name="fieldSelector"></param>
-    /// <param name="fieldValue"></param>
-    /// <returns></returns>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldSelector">字段选择表达式</param>
+    /// <param name="fieldValue">字段值</param>
+    /// <returns>返回更新对象</returns>
     IMySqlBulkCreateDuplicateKeyUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     /// <summary>
     /// 单个字段更新
     /// </summary>
-    /// <typeparam name="TField"></typeparam>
-    /// <param name="condition"></param>
-    /// <param name="fieldSelector"></param>
-    /// <param name="fieldValue"></param>
-    /// <returns></returns>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="condition">判断条件，为true时生效</param>
+    /// <param name="fieldSelector">字段选择表达式</param>
+    /// <param name="fieldValue">字段值</param>
+    /// <returns>返回更新对象</returns>
     IMySqlBulkCreateDuplicateKeyUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
+    #endregion
+
+    #region Set
+    IBulkResultCommand<TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
     #endregion
 }

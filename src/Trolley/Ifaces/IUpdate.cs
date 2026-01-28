@@ -466,7 +466,6 @@ public interface IBulkCopyContinuedUpdate : IUpdated
     #endregion
 }
 
-
 /// <summary>
 /// 更新数据
 /// </summary>

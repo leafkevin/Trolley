@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -12,51 +11,63 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
 {
     public string OutputSql { get; set; }
 
-    public PostgreSqlUpdateVisitor(DbContext dbContext, char tableAsStart = 'a')
-        : base(dbContext, tableAsStart) { }
-    public override string BuildSql(DbContext dbContext, ITheaCommand command, out List<SqlFieldSegment> readerFields)
+    public PostgreSqlUpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
+        : base(entityType, dbContext, tableAsStart) { }
+    public override string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
         string sql = null;
         readerFields = null;
+        this.hasOnlyFields = this.OnlyFieldNames != null && this.OnlyFieldNames.Count > 0;
+        this.hasIgnoreFields = this.IgnoreFieldNames != null && this.IgnoreFieldNames.Count > 0;
+        if (this.HasWhere) this.WhereBuilder = new();
+
         var builder = new StringBuilder();
+        var tableSegment = this.Tables[0];
+        var shardingType = tableSegment.ShardingType;
+        object shardingTables = tableSegment.Mapper.TableName;
         switch (this.ActionMode)
         {
             case ActionMode.Bulk:
                 {
-                    //此SQL只能用在多命令查询时和返回ToSql两个场景
-                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, readerFields) = this.BuildSetBulk(command);
-                    Func<int, string> suffixGetter = index => this.IsMultiple ? $"_m{this.CommandIndex}{index}" : $"{index}";
-                    Action<object, int> sqlExecute = null;
-                    if (this.ShardingTables != null && this.ShardingTables.Count > 0)
-                    {
-                        sqlExecute = (updateObj, index) =>
-                        {
-                            if (index > 0) builder.Append(';');
-                            var tableNames = this.ShardingTables[0].TableNames;
-                            firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableNames[0], updateObj, suffixGetter.Invoke(index));
+                    (shardingType, shardingTables, var updateObjs, _, var fixedSqlSetter,
+                        var loopSqlSetter, readerFields) = this.BuildSetBulk(command);
 
-                            for (int i = 1; i < tableNames.Count; i++)
+                    int index = 0;
+                    fixedSqlSetter?.Invoke(command.Parameters);
+                    if (shardingType == ShardingTableType.SplitTables)
+                    {
+                        var tabledUpdateObjs = shardingTables as Dictionary<string, List<object>>;
+                        foreach (var tableName in tabledUpdateObjs.Keys)
+                        {
+                            var tableParameters = tabledUpdateObjs[tableName];
+                            foreach (var updateObj in tableParameters)
                             {
-                                builder.Append(';');
-                                sqlSetter.Invoke(builder, this.DbContext, tableNames[i], updateObj, suffixGetter.Invoke(index));
+                                loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, index.ToString());
+                                index++;
                             }
-                        };
+                        }
                     }
                     else
                     {
-                        sqlExecute = (updateObj, index) =>
+                        foreach (var updateObj in updateObjs)
                         {
-                            if (index > 0) builder.Append(';');
-                            firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, suffixGetter.Invoke(index));
-                        };
-                    }
-
-                    int index = 0;
-                    fixedParameterSetter?.Invoke(command.Parameters);
-                    foreach (var updateObj in updateObjs)
-                    {
-                        sqlExecute.Invoke(updateObj, index);
-                        index++;
+                            switch (shardingType)
+                            {
+                                case ShardingTableType.None:
+                                case ShardingTableType.SingleTable:
+                                    loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, shardingTables as string, updateObj, index.ToString());
+                                    break;
+                                case ShardingTableType.MultiTable:
+                                case ShardingTableType.ShardingTableMap:
+                                    var tableNames = shardingTables as List<string>;
+                                    foreach (var tableName in tableNames)
+                                    {
+                                        loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, index.ToString());
+                                    }
+                                    break;
+                            }
+                            index++;
+                        }
                     }
                     sql = builder.ToString();
                 }
@@ -64,7 +75,9 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             case ActionMode.Single:
                 {
                     this.FieldsBuilder = new();
-                    this.DbParameters ??= command.Parameters;
+                    this.DbParameters = command.Parameters;
+                    var entityType = tableSegment.EntityType;
+                    Func<IDataParameterCollection, DbContext, object, string> whereSqlInitializer = null;
                     foreach (var deferredSegment in this.deferredSegments)
                     {
                         switch (deferredSegment.Type)
@@ -73,140 +86,119 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                                 this.VisitSet(deferredSegment.Value as Expression);
                                 break;
                             case "SetFrom":
-                                this.IsNeedTableAlias = true;
                                 this.VisitSet(deferredSegment.Value as Expression);
                                 break;
                             case "SetField":
                                 this.VisitSetField(deferredSegment.Value);
                                 break;
+                            case "SetFieldExpr":
+                                this.VisitSetFieldExpr(deferredSegment.Value);
+                                break;
                             case "SetWith":
                                 this.VisitSetWith(deferredSegment.Value);
                                 break;
                             case "SetFromField":
-                                this.IsNeedTableAlias = true;
                                 this.VisitSetFromField(deferredSegment.Value);
                                 break;
-                            case "Where":
-                                this.VisitWhere(deferredSegment.Value as Expression);
+                            case "AndBy":
+                                whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, false, false, false);
+                                this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
                                 break;
-                            case "WhereWith":
-                                this.VisitWhereWith(deferredSegment.Value);
+                            case "AndById":
+                                whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, false);
+                                this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                                break;
+                            case "AndByIds":
+                                whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, true);
+                                this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
                                 break;
                             case "And":
                                 this.VisitAnd(deferredSegment.Value as Expression);
                                 break;
-                            case "OutputFields":
-                                this.VisitOutputFields(deferredSegment.Value as string);
+                            case "OrBy":
+                                whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, false, false, false);
+                                this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
                                 break;
-                            case "OutputExpression":
-                                this.VisitOutputExpression(deferredSegment.Value as LambdaExpression);
+                            case "OrById":
+                                whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, false);
+                                this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                                break;
+                            case "OrByIds":
+                                whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, true);
+                                this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                                break;
+                            case "Or":
+                                this.VisitOr(deferredSegment.Value as Expression);
                                 break;
                         }
                     }
-                    readerFields = this.ReaderFields;
-                    var aliasName = this.Tables[0].AliasName;
-                    if (this.IsNeedTableAlias)
-                        builder.Append($"{aliasName} ");
+                    builder.Append($"UPDATE {this.GetFormatTableName(tableSegment)}");
+                    if (this.IsNeedTableAlias) builder.Append($" AS {this.Tables[0].AliasName}");
+                    builder.Append(" SET ");
+                    if (this.FieldsBuilder.Length > 0)
+                        builder.Append(this.FieldsBuilder.ToString());
 
-                    int index = 0;
-                    builder.Append("SET ");
-                    if (this.FieldsBuilder.Count > 0)
-                    {
-                        foreach (var setField in this.FieldsBuilder)
-                        {
-                            if (index > 0) builder.Append(',');
-                            builder.Append(setField);
-                            index++;
-                        }
-                    }
-                    string whereSql = this.WhereBuilder;
+                    var whereSql = string.Empty;
                     if (this.IsJoin)
                     {
                         builder.Append(" FROM ");
-                        var whereBuildr = new StringBuilder();
+                        if (this.HasWhere) this.WhereBuilder.Append(" AND ");
+                        else
+                        {
+                            this.WhereBuilder = new();
+                            this.HasWhere = true;
+                        }
+
                         for (var i = 1; i < this.Tables.Count; i++)
                         {
-                            var tableSegment = this.Tables[i];
-                            var tableName = this.GetFormatTableName(this.Tables[i]);
-                            if (i > 1)
-                            {
-                                builder.Append(',');
-                                whereBuildr.Append(" AND ");
-                            }
-                            builder.Append($"{tableName} {tableSegment.AliasName}");
-                            whereBuildr.Append(tableSegment.OnExpr);
+                            var myTableSegment = this.Tables[i];
+                            var tableName = this.GetFormatTableName(myTableSegment);
+                            builder.Append($"{tableName} AS {myTableSegment.AliasName}");
+                            this.WhereBuilder.Append(tableSegment.OnExpr);
                         }
-                        if (!string.IsNullOrEmpty(this.WhereBuilder))
-                        {
-                            whereBuildr.Append(" AND ");
-                            whereBuildr.Append(this.WhereBuilder);
-                        }
-                        whereSql = whereBuildr.ToString();
                     }
-                    if (!string.IsNullOrEmpty(whereSql))
-                        builder.Append($" WHERE {whereSql}");
+                    if (this.HasWhere)
+                        builder.Append($" WHERE {this.WhereBuilder.ToString()}");
                     if (!string.IsNullOrEmpty(this.OutputSql))
                         builder.Append(this.OutputSql);
                     sql = builder.ToString();
-                    builder.Clear();
-
-                    if (this.IsJoin)
-                    {
-                        builder.Append($"UPDATE {this.GetFormatTableName(this.Tables[0])} {sql}");
-                        sql = builder.ToString();
-                        if (this.ShardingTables != null && this.ShardingTables.Count > 0)
-                            sql = dbContext.BuildShardingTablesSqlByFormat(this, sql, ";");
-                    }
-                    else
-                    {
-                        Action<string> headSqlSetter = null;
-                        var tableSchema = this.Tables[0].TableSchema;
-                        if (!string.IsNullOrEmpty(tableSchema))
-                            headSqlSetter = tableName => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableSchema + "." + tableName)} ");
-                        else headSqlSetter = tableName => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableName)} ");
-                        if (this.ShardingTables != null && this.ShardingTables.Count > 0)
-                        {
-                            var tableNames = this.ShardingTables[0].TableNames;
-                            for (int i = 0; i < tableNames.Count; i++)
-                            {
-                                if (i > 0) builder.Append(';');
-                                headSqlSetter.Invoke(tableNames[i]);
-                                builder.Append(sql);
-                            }
-                        }
-                        else
-                        {
-                            var tableName = this.Tables[0].Mapper.TableName;
-                            headSqlSetter.Invoke(this.Tables[0].Body ?? tableName);
-                            builder.Append(sql);
-                        }
-                        sql = builder.ToString();
-                    }
+                    if (this.ShardingTables != null && this.ShardingTables.Count > 0)
+                        sql = this.DbContext.BuildShardingTablesSqlByFormat(this, sql, ";");
                 }
                 break;
         }
         builder.Clear();
         return sql;
     }
-    public override (IEnumerable, int, string, Action<IDataParameterCollection>, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>,
-        Action<StringBuilder, DbContext, string, object, string>, List<SqlFieldSegment>) BuildSetBulk(ITheaCommand command)
+    public override (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>,
+        Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>, List<SqlFieldSegment>) BuildSetBulk(ITheaCommand command)
     {
-        Type updateObjType = null;
         (var updateObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
+        object firstUpdateObj = null;
         foreach (var updateObj in updateObjs)
         {
-            updateObjType = updateObj.GetType();
+            firstUpdateObj = updateObj;
             break;
         }
-        var builder = new StringBuilder();
+        var updateObjType = firstUpdateObj.GetType();
+        var tableSegment = this.Tables[0];
+        var entityType = tableSegment.EntityType;
+
+        var headSql = "UPDATE";
+        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
+            headSql += $" {this.OrmProvider.GetTableName(tableSegment.TableSchema)}.";
+        var fixedHeadSql = "SET ";
+        var fixedTailSql = ";";
+
         List<IDbDataParameter> fixedDbParameters = null;
-        string fixedSql = null;
-        int index = 0;
+        Action<IDataParameterCollection> firstSqlSetter = null;
+        Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string> loopSqlSetter = null;
         if (this.deferredSegments.Count > 1)
         {
-            this.DbParameters = new TheaDbParameterCollection();
-            //先解析其他sql，生成固定sql
             this.FieldsBuilder = new();
+            var tempDbParameters = new TheaDbParameterCollection();
+            this.DbParameters = tempDbParameters;
+            Func<IDataParameterCollection, DbContext, object, string> whereSqlInitializer = null;
             for (int i = 1; i < this.deferredSegments.Count; i++)
             {
                 var deferredSegment = this.deferredSegments[i];
@@ -215,142 +207,115 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     case "Set":
                         this.VisitSet(deferredSegment.Value as Expression);
                         break;
+                    case "SetFrom":
+                        this.VisitSet(deferredSegment.Value as Expression);
+                        break;
                     case "SetField":
                         this.VisitSetField(deferredSegment.Value);
+                        break;
+                    case "SetFieldExpr":
+                        this.VisitSetFieldExpr(deferredSegment.Value);
                         break;
                     case "SetWith":
                         this.VisitSetWith(deferredSegment.Value);
                         break;
-                    case "OutputFields":
-                        this.VisitOutputFields(deferredSegment.Value as string);
+                    case "SetFromField":
+                        this.VisitSetFromField(deferredSegment.Value);
                         break;
-                    case "OutputExpression":
-                        this.VisitOutputExpression(deferredSegment.Value as LambdaExpression);
+                    case "AndBy":
+                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, false, false, false);
+                        this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                        break;
+                    case "AndById":
+                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, false);
+                        this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                        break;
+                    case "AndByIds":
+                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, true);
+                        this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                        break;
+                    case "And":
+                        this.VisitAnd(deferredSegment.Value as Expression);
+                        break;
+                    case "OrBy":
+                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, false, false, false);
+                        this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                        break;
+                    case "OrById":
+                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, false);
+                        this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                        break;
+                    case "OrByIds":
+                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, true);
+                        this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                        break;
+                    case "Or":
+                        this.VisitOr(deferredSegment.Value as Expression);
                         break;
                     default: throw new NotSupportedException("SetBulk操作后，只支持Set/IgnoreFields/OnlyFields/Returning操作");
                 }
             }
-            if (this.FieldsBuilder.Count > 0)
-            {
-                foreach (var setField in this.FieldsBuilder)
-                {
-                    if (index > 0) builder.Append(',');
-                    builder.Append(setField);
-                    index++;
-                }
-                builder.Append(',');
-                fixedSql = builder.ToString();
-            }
             if (this.DbParameters.Count > 0)
-                fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
+            {
+                fixedDbParameters = tempDbParameters.ToList();
+                firstSqlSetter = dbParameters => fixedDbParameters.ForEach(f => dbParameters.Add(f));
+            }
+            if (this.FieldsBuilder.Length > 0)
+                fixedHeadSql = $"SET {this.FieldsBuilder.ToString()},";
+            if (this.WhereBuilder.Length > 0)
+                fixedTailSql = $" AND {this.WhereBuilder.ToString()};";
             this.DbParameters = command.Parameters;
-            this.FieldsBuilder.Clear();
-            builder.Clear();
         }
-        //多命令查询时，第二次以后，DbParameters有值，不能再赋值
-        else this.DbParameters ??= command.Parameters;
-
-        builder.Append("UPDATE ");
-        var tableSegment = this.Tables[0];
-        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
-            builder.Append($" {this.OrmProvider.GetTableName(tableSegment.TableSchema)}.");
-        var headSql = builder.ToString();
-
-        var entityType = tableSegment.EntityType;
-        (var bulkSqlSetter, var shardingSqlSetter) = RepositoryHelper.BuildUpdateBulkSetWithSqlParametersPart(this.DbContext, entityType, updateObjType, this.IsMultiple, false, this.OnlyFieldNames, this.IgnoreFieldNames);
-        //处理有tableSchema的场景
-        Action<IDataParameterCollection> fixedParametersSetter = null;
-        if (fixedDbParameters != null)
-            fixedParametersSetter = dbParameters => fixedDbParameters.ForEach(f => dbParameters.Add(f));
-        Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string> firstSqlSetter = null;
-        Action<StringBuilder, DbContext, string, object, string> sqlSetter = null;
-        if (!string.IsNullOrEmpty(this.OutputSql))
+        if (firstUpdateObj is IDictionary<string, object> dict)
         {
-            firstSqlSetter = (dbParameters, builder, dbContext, tableName, updateObj, suffix) =>
+            var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(entityType);
+            (var valueSetters, var whereSetters) = this.BuildDictBulkCommandInitializer(entityMapper, dict);
+            loopSqlSetter = (dbParameters, builder, dbContext, tableName, updateObj, index) =>
             {
-                builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} SET {fixedSql}");
-                bulkSqlSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
-                builder.Append(this.OutputSql);
-            };
-            sqlSetter = (builder, dbContext, tableName, updateObj, suffix) =>
-            {
-                builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} SET {fixedSql}");
-                shardingSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
-                builder.Append(this.OutputSql);
+                var dictObj = updateObj as IDictionary<string, object>;
+                builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} {fixedHeadSql}");
+                foreach (var valueSetter in valueSetters)
+                    valueSetter.Invoke(dbParameters, builder, dictObj, index.ToString());
+                builder.Append(" WHERE ");
+                foreach (var valueSetter in whereSetters)
+                    valueSetter.Invoke(dbParameters, builder, dictObj, index.ToString());
+                builder.Append(fixedTailSql);
             };
         }
         else
         {
-            firstSqlSetter = (dbParameters, builder, dbContext, tableName, updateObj, suffix) =>
+            var commandInitializer = RepositoryHelper.BuildTypedBulkCommandInitializer(this.DbContext, entityType, updateObjType, 2, this.OnlyFieldNames, this.IgnoreFieldNames)
+                as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+            loopSqlSetter = (dbParameters, builder, dbContext, tableName, updateObj, index) =>
             {
-                builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} SET {fixedSql}");
-                bulkSqlSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
-            };
-            sqlSetter = (builder, dbContext, tableName, updateObj, suffix) =>
-            {
-                builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} SET {fixedSql}");
-                shardingSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
+                builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} {fixedHeadSql}");
+                commandInitializer.Invoke(dbParameters, builder, dbContext, updateObj, index.ToString());
+                builder.Append(fixedTailSql);
             };
         }
-        var tableName = tableSegment.Mapper.TableName;
-        return (updateObjs, bulkCount, tableName, fixedParametersSetter, firstSqlSetter, sqlSetter, this.ReaderFields);
-    }
-    public override string BuildTableShardingsSql()
-    {
-        var builder = new StringBuilder($"SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND ");
-        var schemaBuilders = new Dictionary<string, StringBuilder>();
-        foreach (var tableSegment in this.ShardingTables)
-        {
-            if (tableSegment.ShardingType > ShardingTableType.MultiTable)
-            {
-                var tableSchema = tableSegment.TableSchema ?? this.DefaultTableSchema;
-                if (!schemaBuilders.TryGetValue(tableSchema, out var tableBuilder))
-                    schemaBuilders.Add(tableSchema, tableBuilder = new StringBuilder());
 
-                if (tableBuilder.Length > 0) tableBuilder.Append(" OR ");
-                tableBuilder.Append($"a.relname LIKE '{tableSegment.Mapper.TableName}%'");
+        var shardingType = ShardingTableType.None;
+        object shardingTables = tableSegment.Mapper.TableName;
+        if (tableSegment.TableShardingInfo != null)
+        {
+            if (tableSegment.IsSharding)
+            {
+                shardingTables = shardingType switch
+                {
+                    ShardingTableType.SingleTable => tableSegment.Body,
+                    ShardingTableType.MultiTable => tableSegment.TableNames,
+                    _ => tableSegment.Mapper.TableName,
+                };
+            }
+            else
+            {
+                shardingType = ShardingTableType.SplitTables;
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, updateObjType, updateObjs, firstUpdateObj, this.ShardingValues);
             }
         }
-        if (schemaBuilders.Count > 1)
-            builder.Append('(');
-        int index = 0;
-        foreach (var schemaBuilder in schemaBuilders)
-        {
-            if (index > 0) builder.Append(" OR ");
-            builder.Append($"b.nspname='{schemaBuilder.Key}' AND ({schemaBuilder.Value.ToString()})");
-            index++;
-        }
-        if (schemaBuilders.Count > 1)
-            builder.Append(')');
-        return builder.ToString();
+        return (shardingType, shardingTables, updateObjs, bulkCount, firstSqlSetter, loopSqlSetter, this.ReaderFields);
     }
-    public void Returning(string fieldNames)
-    {
-        this.deferredSegments.Add(new CommandSegment
-        {
-            Type = "OutputFields",
-            Value = fieldNames
-        });
-    }
-    public void Returning(Expression fieldsSelector)
-    {
-        this.deferredSegments.Add(new CommandSegment
-        {
-            Type = "OutputExpression",
-            Value = fieldsSelector
-        });
-    }
-    public void WithBulkCopy(IEnumerable updateObjs)
-    {
-        this.ActionMode = ActionMode.BulkCopy;
-        this.deferredSegments.Add(new CommandSegment
-        {
-            Type = "WithBulkCopy",
-            Value = updateObjs
-        });
-    }
-    public IEnumerable BuildWithBulkCopy() => (IEnumerable)this.deferredSegments[0].Value;
-    public void VisitOutputFields(string fieldNames)
+    public virtual void Returning(string fieldNames)
     {
         this.ReaderFields = new();
         this.OutputSql = $" RETURNING {fieldNames}";
@@ -384,7 +349,7 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             });
         }
     }
-    public void VisitOutputExpression(LambdaExpression fieldsSelector)
+    public virtual void Returning(LambdaExpression fieldsSelector)
     {
         this.ReaderFields = new();
         var entityMapper = this.Tables[0].Mapper;
@@ -474,5 +439,49 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
         }
         this.OutputSql = builder.ToString();
         builder.Clear();
+    }
+    public virtual void SetBulkCopy(IEnumerable updateObjs)
+    {
+        this.ActionMode = ActionMode.BulkCopy;
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "WithBulkCopy",
+            Value = updateObjs
+        });
+    }
+    public (ShardingTableType, object, IEnumerable, List<MemberMap>, List<Func<object, object>>) BuildSetBulkCopy()
+    {
+        var updateObjs = this.deferredSegments[0].Value as IEnumerable;
+        object firstUpdateObj = null;
+        foreach (var updateObj in updateObjs)
+        {
+            firstUpdateObj = updateObj;
+            break;
+        }
+        var updateObjType = firstUpdateObj.GetType();
+        var tableSegment = this.Tables[0];
+        var entityMapper = tableSegment.Mapper;
+
+        var shardingType = ShardingTableType.None;
+        object shardingTables = tableSegment.Mapper.TableName;
+        if (tableSegment.TableShardingInfo != null)
+        {
+            if (tableSegment.IsSharding)
+            {
+                shardingTables = shardingType switch
+                {
+                    ShardingTableType.SingleTable => tableSegment.Body,
+                    ShardingTableType.MultiTable => tableSegment.TableNames,
+                    _ => tableSegment.Mapper.TableName,
+                };
+            }
+            else
+            {
+                shardingType = ShardingTableType.SplitTables;
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, updateObjType, updateObjs, firstUpdateObj, this.ShardingValues);
+            }
+        }
+        (var memberMappers, var valueGetters) = this.GetRefMemberMappers(updateObjType, entityMapper, firstUpdateObj, true);
+        return (shardingType, shardingTables, updateObjs, memberMappers, valueGetters);
     }
 }

@@ -8,18 +8,19 @@ using System.Threading.Tasks;
 
 namespace Trolley.PostgreSql;
 
-public class PostgreSqlUpdated<TEntity> : Updated<TEntity>
+public class PostgreSqlUpdated : Updated
 {
+    private PostgreSqlUpdateVisitor dialectVisitor;
+
     #region Properties
-    public PostgreSqlUpdateVisitor DialectVisitor { get; protected set; }
-    public IOrmProvider OrmProvider => this.Visitor.OrmProvider;
+    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Constructor
     public PostgreSqlUpdated(DbContext dbContext, IUpdateVisitor visitor)
         : base(dbContext, visitor)
     {
-        this.DialectVisitor = this.Visitor as PostgreSqlUpdateVisitor;
+        this.dialectVisitor = this.Visitor as PostgreSqlUpdateVisitor;
     }
     #endregion
 
@@ -32,7 +33,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>
         {
             case ActionMode.BulkCopy:
                 {
-                    var updateObjs = this.DialectVisitor.BuildWithBulkCopy();
+                    var updateObjs = this.dialectVisitor.BuildWithBulkCopy();
                     Type updateObjType = null;
                     foreach (var updateObj in updateObjs)
                     {
@@ -194,7 +195,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>
         {
             case ActionMode.BulkCopy:
                 {
-                    var updateObjs = this.DialectVisitor.BuildWithBulkCopy();
+                    var updateObjs = this.dialectVisitor.BuildWithBulkCopy();
                     Type updateObjType = null;
                     foreach (var updateObj in updateObjs)
                     {
@@ -360,7 +361,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>
         var builder = new StringBuilder();
         if (this.Visitor.ActionMode == ActionMode.BulkCopy)
         {
-            var updateObjs = this.DialectVisitor.BuildWithBulkCopy();
+            var updateObjs = this.dialectVisitor.BuildWithBulkCopy();
             Type updateObjType = null;
             foreach (var updateObj in updateObjs)
             {
@@ -449,23 +450,27 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>
     }
     #endregion
 }
-public class PostgreSqlUpdated<TEntity, TResult> : Updated<TEntity>, IPostgreSqlUpdated<TEntity, TResult>
+public class PostgreSqlResultUpdated<TResult> : IBulkResultCommand<TResult>
 {
+    private PostgreSqlUpdateVisitor dialectVisitor;
+
     #region Properties
-    public PostgreSqlUpdateVisitor DialectVisitor { get; protected set; }
-    public IOrmProvider OrmProvider => this.Visitor.OrmProvider;
+    public DbContext DbContext { get; set; }
+    public IUpdateVisitor Visitor { get; set; }
+    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Constructor
-    public PostgreSqlUpdated(DbContext dbContext, IUpdateVisitor visitor)
-        : base(dbContext, visitor)
+    public PostgreSqlResultUpdated(DbContext dbContext, IUpdateVisitor visitor)
     {
-        this.DialectVisitor = this.Visitor as PostgreSqlUpdateVisitor;
+        this.DbContext = dbContext;
+        this.Visitor = visitor;
+        this.dialectVisitor = visitor as PostgreSqlUpdateVisitor;
     }
     #endregion
 
     #region Execute
-    public new List<TResult> Execute()
+    public List<TResult> Execute()
     {
         var result = new List<TResult>();
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
@@ -553,7 +558,7 @@ public class PostgreSqlUpdated<TEntity, TResult> : Updated<TEntity>, IPostgreSql
         this.Visitor.Dispose();
         return result;
     }
-    public new async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken = default)
+    public async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         var result = new List<TResult>();
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();

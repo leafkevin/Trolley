@@ -155,16 +155,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             Type = "WithBulk",
             Value = (insertObjs, bulkCount)
         });
-    }
-    public virtual void WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds)
-    {
-        this.ActionMode = ActionMode.BulkCopy;      
-        this.deferredSegments.Add(new CommandSegment
-        {
-            Type = "WithBulkCopy",
-            Value = (insertObjs, timeoutSeconds)
-        });
-    }
+    }  
     public virtual (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
     {

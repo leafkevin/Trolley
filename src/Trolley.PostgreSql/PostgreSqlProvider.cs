@@ -1147,7 +1147,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                             typeHandler = value =>
                             {
                                 if (value is DBNull) return null;
-                                return Enum.Parse(underlyingType, (string)value);
+                                return Enum.Parse(underlyingType, (string)value, true);
                             };
                         }
                         else
@@ -1155,7 +1155,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                             typeHandler = value =>
                             {
                                 if (value is DBNull) return Enum.ToObject(underlyingType, 0);
-                                return Enum.Parse(underlyingType, (string)value);
+                                return Enum.Parse(underlyingType, (string)value, true);
                             };
                         }
                     }

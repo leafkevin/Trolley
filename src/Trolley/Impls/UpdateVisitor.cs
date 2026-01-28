@@ -13,8 +13,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     protected List<CommandSegment> deferredSegments = new();
     protected bool hasOnlyFields = false;
     protected bool hasIgnoreFields = false;
-    protected bool isNeedShardingValues = false;
-    protected Dictionary<string, object> shardingValues = null;
 
     public List<string> OnlyFieldNames { get; set; }
     public List<string> IgnoreFieldNames { get; set; }
@@ -23,6 +21,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public bool IsJoin { get; set; }
     public StringBuilder FieldsBuilder { get; set; }
     public bool HasWhere { get; protected set; }
+    public bool IsNeedShardingValues { get; set; }
+    public Dictionary<string, object> ShardingValues { get; set; }
+
 
     public UpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
     {
@@ -292,7 +293,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, updateObjType, updateObjs, firstUpdateObj, this.shardingValues);
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, updateObjType, updateObjs, firstUpdateObj, this.ShardingValues);
             }
         }
         return (shardingType, shardingTables, updateObjs, bulkCount, firstSqlSetter, loopSqlSetter, null);
@@ -394,15 +395,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         {
             Type = "SetBulk",
             Value = (updateObjs, bulkCount)
-        });
-    }
-    public virtual void SetBulkCopy(IEnumerable updateObjs, int? timeoutSeconds)
-    {
-        this.ActionMode = ActionMode.BulkCopy;
-        this.deferredSegments.Add(new CommandSegment
-        {
-            Type = "SetBulkCopy",
-            Value = (updateObjs, timeoutSeconds)
         });
     }
     public virtual void AndBy(object whereObj)
@@ -607,8 +599,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             tableSegment.ShardingType = ShardingTableType.SingleTable;
             tableSegment.IsSharding = true;
         }
-        if (this.isNeedShardingValues) RepositoryHelper.SetShardingValues(this.DbContext,
-            tableSegment.TableShardingInfo, tableSegment.EntityType, updateObjType, updateObj, this.shardingValues);
+        if (this.IsNeedShardingValues) RepositoryHelper.SetShardingValues(this.DbContext,
+            tableSegment.TableShardingInfo, tableSegment.EntityType, updateObjType, updateObj, this.ShardingValues);
     }
     public virtual void VisitSet(Expression fieldsAssignment)
     {
@@ -777,11 +769,11 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
         this.FieldsBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
 
-        if (this.isNeedShardingValues)
+        if (this.IsNeedShardingValues)
         {
             var tableSegment = this.Tables[0];
             if (!tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName)) return;
-            this.shardingValues[memberMapper.MemberName] = fieldValue;
+            this.ShardingValues[memberMapper.MemberName] = fieldValue;
         }
     }
     public virtual void AddMemberElement(SqlFieldSegment sqlSegment, MemberMap memberMapper)
@@ -924,7 +916,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (tableSegment.TableShardingInfo != null)
         {
             if (tableSegment.IsSharding) tableName = tableSegment.Body;
-            else tableName = RepositoryHelper.GetShardingTableName(this.DbContext, tableSegment.TableShardingInfo, this.shardingValues);
+            else tableName = RepositoryHelper.GetShardingTableName(this.DbContext, tableSegment.TableShardingInfo, this.ShardingValues);
         }
         else tableName = tableSegment.Mapper.TableName;
         if (!string.IsNullOrEmpty(tableSegment.TableSchema))

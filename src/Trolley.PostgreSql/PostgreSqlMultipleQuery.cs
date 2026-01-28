@@ -51,7 +51,4 @@ public class PostgreSqlMultipleQuery : MultipleQuery
         return this;
     }
     #endregion
-
-
-
 }
