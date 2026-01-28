@@ -275,6 +275,7 @@ public class Repository : IRepository
     #endregion
 
     #region Create
+    public virtual ICreate Create(Type entityType) => this.OrmProvider.NewCreate(entityType, this.DbContext);
     public virtual ICreate<TEntity> Create<TEntity>() => this.OrmProvider.NewCreate<TEntity>(this.DbContext);
     public virtual int Create<TEntity>(object insertObj) => this.DbContext.Create<TEntity>(insertObj);
     public virtual int Create<TEntity>(IEnumerable insertObjs, int bulkCount)
@@ -303,8 +304,10 @@ public class Repository : IRepository
     #endregion
 
     #region Delete
+    public virtual IDelete Delete(Type entityType) => this.OrmProvider.NewDelete(entityType, this.DbContext);
     public virtual IDelete<TEntity> Delete<TEntity>() => this.OrmProvider.NewDelete<TEntity>(this.DbContext);
-    public virtual int DeleteBy<TEntity>(object whereObj) => this.DbContext.Delete<TEntity>(whereObj, false, false);
+    public virtual int DeleteBy<TEntity>(object whereObj)
+        => this.DbContext.Delete<TEntity>(whereObj, false, false);
     public virtual async Task<int> DeleteByAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
         => await this.DbContext.DeleteAsync<TEntity>(whereObj, false, false, cancellationToken);
     public virtual int DeleteById<TEntity>(object whereKey) => this.DbContext.Delete<TEntity>(whereKey, true, false);

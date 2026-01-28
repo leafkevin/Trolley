@@ -147,24 +147,43 @@ public interface IOrmProvider
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(IMultipleQuery multiQuery, IQueryVisitor visitor);
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping> NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(IMultipleQuery multiQuery, IQueryVisitor visitor);
 
+    ICreate NewCreate(Type entityType, DbContext dbContext);
     ICreate<TEntity> NewCreate<TEntity>(DbContext dbContext);
-    ICreated<TEntity> NewCreated<TEntity>(DbContext dbContext, ICreateVisitor visitor);
+
+    IContinuedCreate NewContinuedCreate(DbContext dbContext, ICreateVisitor visitor);
     IContinuedCreate<TEntity> NewContinuedCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor);
+
+    IBulkContinuedCreate NewBulkContinuedCreate(DbContext dbContext, ICreateVisitor visitor);
     IBulkContinuedCreate<TEntity> NewBulkContinuedCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor);
 
+    IIdentitiedCreated NewIdentitiedCreated(DbContext dbContext, ICreateVisitor visitor);
+    ICreated NewCreated(DbContext dbContext, ICreateVisitor visitor);
+
+    IResultCommand<TResult> NewResultCreated<TResult>(DbContext dbContext, ICreateVisitor visitor);
+    IBulkResultCommand<TResult> NewBulkResultCreated<TResult>(DbContext dbContext, ICreateVisitor visitor);
+
+
+    IUpdate NewUpdate(Type entityType, DbContext dbContext);
     IUpdate<TEntity> NewUpdate<TEntity>(DbContext dbContext);
-    IUpdated<TEntity> NewUpdated<TEntity>(DbContext dbContext, IUpdateVisitor visitor);
+    IUpdated NewUpdated(DbContext dbContext, IUpdateVisitor visitor);
+
+    IContinuedUpdate NewContinuedUpdate(DbContext dbContext, IUpdateVisitor visitor);
     IContinuedUpdate<TEntity> NewContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor);
+    IBulkContinuedUpdate NewBulkContinuedUpdate(DbContext dbContext, IUpdateVisitor visitor);
     IBulkContinuedUpdate<TEntity> NewBulkContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor);
     IBulkCopyContinuedUpdate<TEntity> NewBulkCopyContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor);
+
     IUpdateJoin<TEntity, T1> NewUpdateJoin<TEntity, T1>(DbContext dbContext, IUpdateVisitor visitor);
     IUpdateJoin<TEntity, T1, T2> NewUpdateJoin<TEntity, T1, T2>(DbContext dbContext, IUpdateVisitor visitor);
     IUpdateJoin<TEntity, T1, T2, T3> NewUpdateJoin<TEntity, T1, T2, T3>(DbContext dbContext, IUpdateVisitor visitor);
     IUpdateJoin<TEntity, T1, T2, T3, T4> NewUpdateJoin<TEntity, T1, T2, T3, T4>(DbContext dbContext, IUpdateVisitor visitor);
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> NewUpdateJoin<TEntity, T1, T2, T3, T4, T5>(DbContext dbContext, IUpdateVisitor visitor);
 
+
+    IDelete NewDelete(Type entityType, DbContext dbContext);
     IDelete<TEntity> NewDelete<TEntity>(DbContext dbContext);
-    IDeleted<TEntity> NewDeleted<TEntity>(DbContext dbContext, IDeleteVisitor visitor);
+    IDeleted NewDeleted(DbContext dbContext, IDeleteVisitor visitor);
+    IBulkResultCommand<TResult> NewResultDeleted<TResult>(DbContext dbContext, IDeleteVisitor visitor);
 
     IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null);
     ICreateVisitor NewCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a');

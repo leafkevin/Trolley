@@ -47,7 +47,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
             case ActionMode.Bulk:
                 {
                     //此SQL只能用在多命令查询时和返回ToSql两个场景
-                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, readerFields) = this.BuildWithBulk(command);
+                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, readerFields) = this.BuildSetBulk(command);
                     Func<int, string> suffixGetter = index => this.IsMultiple ? $"_m{this.CommandIndex}{index}" : $"{index}";
                     Action<object, int> sqlExecute = null;
                     if (this.ShardingTables != null && this.ShardingTables.Count > 0)
@@ -214,7 +214,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
         return sql;
     }
     public override (IEnumerable, int, string, Action<IDataParameterCollection>, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>,
-        Action<StringBuilder, DbContext, string, object, string>, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
+        Action<StringBuilder, DbContext, string, object, string>, List<SqlFieldSegment>) BuildSetBulk(ITheaCommand command)
     {
         Type updateObjType = null;
         (var updateObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;

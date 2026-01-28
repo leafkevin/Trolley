@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading;
@@ -68,7 +69,7 @@ public static class OrmExtensions
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
     public static async Task<List<TEntity>> QueryAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> wherePredicate = null, CancellationToken cancellationToken = default)
         => await repository.From<TEntity>().Where(wherePredicate).ToListAsync(cancellationToken);
-    #endregion
+    #endregion    
 
     #region Exists
     /// <summary>
@@ -101,7 +102,7 @@ public static class OrmExtensions
     /// repository.Update&lt;Order&gt;(f => new
     /// {
     ///     parameter.TotalAmount, //直接赋值，使用同名变量
-    ///     Products = this.GetProducts(), //直接赋值，使用本地函数
+    ///     Products = repository.GetProducts(), //直接赋值，使用本地函数
     ///     BuyerId = DBNull.Value, //直接赋值 NULL
     ///     Disputes = new Dispute { ... } //使用updateObjs对象中的参数，实体对象由TypeHandler处理
     /// }, x =&gt; x.Id == 1);
@@ -124,7 +125,7 @@ public static class OrmExtensions
     /// await repository.UpdateAsync&lt;Order&gt;(f => new
     /// {
     ///     parameter.TotalAmount, //直接赋值，使用同名变量
-    ///     Products = this.GetProducts(), //直接赋值，使用本地函数
+    ///     Products = repository.GetProducts(), //直接赋值，使用本地函数
     ///     BuyerId = DBNull.Value, //直接赋值 NULL
     ///     Disputes = new Dispute { ... } //使用updateObjs对象中的参数，实体对象由TypeHandler处理
     /// }, x =&gt; x.Id == 1);

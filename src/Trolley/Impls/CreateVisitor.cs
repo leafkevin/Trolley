@@ -10,13 +10,17 @@ namespace Trolley;
 public class CreateVisitor : SqlVisitor, ICreateVisitor
 {
     protected List<CommandSegment> deferredSegments = new();
-    protected bool isNeedShardingValues = false;
-    protected Dictionary<string, object> shardingValues = null;
 
     public StringBuilder FieldsBuilder { get; set; } = new();
     public StringBuilder ValuesBuilder { get; set; }
     public ActionMode ActionMode { get; set; }
     public bool IsReturnIdentity { get; set; }
+    public string FromSql { get; set; }
+    public string OutputSql { get; set; }
+
+    public bool IsNeedShardingValues { get; set; }
+    public Dictionary<string, object> ShardingValues { get; set; }
+    public Dictionary<string, object> FieldValues { get; set; }
 
     public CreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
     {
@@ -83,8 +87,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                         throw new Exception($"实体表{tableSegment.EntityType.FullName}已设置分表，未指定分表，也未设置依赖字段无法确定分表，请使用UseTable/UseTableBy方法手动指定分表");
                     if (this.deferredSegments.Count > 1)
                     {
-                        this.isNeedShardingValues = true;
-                        this.shardingValues = new();
+                        this.IsNeedShardingValues = true;
+                        this.ShardingValues = new();
                     }
                 }
 
@@ -97,6 +101,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                             break;
                         case "WithByField":
                             this.VisitWithByField(deferredSegment.Value);
+                            break;
+                        case "WithByFieldExpr":
+                            this.VisitWithByFieldExpr(deferredSegment.Value);
                             break;
                     }
                 }
@@ -123,11 +130,20 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             Value = insertObj
         });
     }
-    public virtual void WithByField(Expression fieldSelector, object fieldValue)
+
+    public virtual void WithByField(string fieldName, object fieldValue)
     {
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "WithByField",
+            Value = (fieldName, fieldValue)
+        });
+    }
+    public virtual void WithByFieldExpr(Expression fieldSelector, object fieldValue)
+    {
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "WithByFieldExpr",
             Value = (fieldSelector, fieldValue)
         });
     }
@@ -138,6 +154,15 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         {
             Type = "WithBulk",
             Value = (insertObjs, bulkCount)
+        });
+    }
+    public virtual void WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds)
+    {
+        this.ActionMode = ActionMode.BulkCopy;      
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "WithBulkCopy",
+            Value = (insertObjs, timeoutSeconds)
         });
     }
     public virtual (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
@@ -170,8 +195,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 throw new Exception($"实体表{tableSegment.EntityType.FullName}已设置分表，未指定分表，也未设置依赖字段无法确定分表，请使用UseTable/UseTableBy方法手动指定分表，或是设置分表依赖字段");
             if (this.deferredSegments.Count > 1)
             {
-                this.isNeedShardingValues = true;
-                this.shardingValues = new();
+                this.IsNeedShardingValues = true;
+                this.ShardingValues = new();
             }
         }
 
@@ -188,6 +213,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     break;
                 case "WithByField":
                     this.VisitWithByField(deferredSegment.Value);
+                    break;
+                case "WithByFieldExpr":
+                    this.VisitWithByFieldExpr(deferredSegment.Value);
                     break;
                 default: throw new NotSupportedException("批量插入后，只支持WithBy操作");
             }
@@ -265,7 +293,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, insertObjType, insertObjs, firstInsertObj, this.shardingValues);
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, insertObjType, insertObjs, firstInsertObj, this.ShardingValues);
             }
         }
         return (shardingType, shardingTables, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, null, null);
@@ -309,8 +337,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     }
                 }
                 this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
-                if (this.isNeedShardingValues && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
-                    this.shardingValues[memberMapper.MemberName] = fieldValue;
+                if (this.IsNeedShardingValues && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
+                    this.ShardingValues[memberMapper.MemberName] = fieldValue;
             }
         }
         else
@@ -326,10 +354,41 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             tableSegment.ShardingType = ShardingTableType.SingleTable;
             tableSegment.IsSharding = true;
         }
-        if (this.isNeedShardingValues) RepositoryHelper.SetShardingValues(this.DbContext,
-            tableSegment.TableShardingInfo, tableSegment.EntityType, insertObjType, insertObj, this.shardingValues);
+        if (this.IsNeedShardingValues) RepositoryHelper.SetShardingValues(this.DbContext,
+            tableSegment.TableShardingInfo, tableSegment.EntityType, insertObjType, insertObj, this.ShardingValues);
     }
     public virtual void VisitWithByField(object deferredSegmentValue)
+    {
+        (var fieldName, var fieldValue) = ((string, object))deferredSegmentValue;
+        var tableSegment = this.Tables[0];
+        var entityMapper = tableSegment.Mapper;
+        var memberMapper = entityMapper.GetMemberMapByFieldName(fieldName);
+        if (memberMapper.IsIgnore || memberMapper.IsIgnoreInsert)
+            throw new NotSupportedException($"当前字段{memberMapper.FieldName}被忽略插入，IsIgnore：{memberMapper.IsIgnore}，IsIgnoreInsert：{memberMapper.IsIgnoreInsert}");
+        if (memberMapper.IsRowVersion)
+            throw new NotSupportedException($"当前字段{memberMapper.FieldName}为RowVersion类型，不允许插入");
+
+        if (memberMapper.TypeHandler != null)
+            fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
+        else
+        {
+            var targetType = memberMapper.MappedTargetType;
+            var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext);
+            fieldValue = valueGetter.Invoke(fieldValue);
+        }
+        if (this.FieldsBuilder.Length > 0)
+        {
+            this.FieldsBuilder.Append(',');
+            this.ValuesBuilder.Append(',');
+        }
+        var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
+        this.FieldsBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
+        this.ValuesBuilder.Append(parameterName);
+        this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+        if (this.IsNeedShardingValues && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
+            this.ShardingValues[memberMapper.MemberName] = fieldValue;
+    }
+    public virtual void VisitWithByFieldExpr(object deferredSegmentValue)
     {
         (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegmentValue;
         var lambdaExpr = fieldSelector as LambdaExpression;
@@ -359,8 +418,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.FieldsBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
         this.ValuesBuilder.Append(parameterName);
         this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
-        if (this.isNeedShardingValues && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
-            this.shardingValues[memberMapper.MemberName] = fieldValue;
+        if (this.IsNeedShardingValues && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
+            this.ShardingValues[memberMapper.MemberName] = fieldValue;
     }
     public virtual List<string> VisitFields(Expression fieldsSelector, bool isIgnoreCase = true)
     {
@@ -468,7 +527,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (tableSegment.TableShardingInfo != null)
         {
             if (tableSegment.IsSharding) tableName = tableSegment.Body;
-            else tableName = RepositoryHelper.GetShardingTableName(this.DbContext, tableSegment.TableShardingInfo, this.shardingValues);
+            else tableName = RepositoryHelper.GetShardingTableName(this.DbContext, tableSegment.TableShardingInfo, this.ShardingValues);
         }
         else tableName = tableSegment.Mapper.TableName;
         if (!string.IsNullOrEmpty(tableSegment.TableSchema))

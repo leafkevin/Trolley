@@ -331,6 +331,24 @@ public class FromCommand<TEntity, T> : FromCommand, IFromCommand<TEntity, T>
         return result;
     }
     #endregion
+
+    #region NewCreateVisitor
+    public virtual ICreateVisitor NewCreateVisitor(string fromSql = null)
+    {
+        var entityType = this.Visitor.Tables[0].EntityType;
+        var createVisiter = this.OrmProvider.NewCreateVisitor(entityType, this.DbContext, this.Visitor.TableAsStart);
+        createVisiter.Tables = this.Visitor.Tables;
+        createVisiter.DbParameters = this.Visitor.DbParameters;
+        createVisiter.RefQueries = this.Visitor.RefQueries;
+        createVisiter.ShardingTables = this.Visitor.ShardingTables;
+        createVisiter.RefTableAliases = this.Visitor.RefTableAliases;
+        createVisiter.IsRecursive = this.Visitor.IsRecursive;
+        createVisiter.CteQueryObj = this.Visitor.CteQueryObj;
+        createVisiter.RefFrom = this;
+        createVisiter.FromSql = fromSql;
+        return createVisiter;
+    }
+    #endregion
 }
 public class FromCommand<TEntity, T1, T2> : FromCommand, IFromCommand<TEntity, T1, T2>
 {

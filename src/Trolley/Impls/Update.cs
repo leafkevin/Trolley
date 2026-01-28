@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public class Update<TEntity> : IUpdate<TEntity>
+public class Update : IUpdate
 {
     #region Properties
     public DbContext DbContext { get; protected set; }
@@ -19,30 +19,30 @@ public class Update<TEntity> : IUpdate<TEntity>
     #endregion
 
     #region Constructor
-    public Update(DbContext dbContext)
+    public Update(Type entityType, DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.Visitor = this.DbContext.OrmProvider.NewUpdateVisitor(typeof(TEntity), dbContext);
+        this.Visitor = this.DbContext.OrmProvider.NewUpdateVisitor(entityType, dbContext);
     }
     #endregion
 
     #region Sharding
-    public virtual IUpdate<TEntity> UseTable(params string[] tableNames)
+    public virtual IUpdate UseTable(params string[] tableNames)
     {
         this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, false, tableNames);
         return this;
     }
-    public virtual IUpdate<TEntity> UseTableBy(params object[] fieldValues)
+    public virtual IUpdate UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
-    public virtual IUpdate<TEntity> UseTable(Func<object, string> tableNameGetter)
+    public virtual IUpdate UseTable(Func<object, string> tableNameGetter)
     {
         this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, tableNameGetter);
         return this;
     }
-    public virtual IUpdate<TEntity> UseTableByRange(params object[] fieldValues)
+    public virtual IUpdate UseTableByRange(params object[] fieldValues)
     {
         this.Visitor.UseTableByRange(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
@@ -50,7 +50,7 @@ public class Update<TEntity> : IUpdate<TEntity>
     #endregion
 
     #region UseTableSchema
-    public virtual IUpdate<TEntity> UseTableSchema(string tableSchema)
+    public virtual IUpdate UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(false, tableSchema);
         return this;
@@ -58,91 +58,39 @@ public class Update<TEntity> : IUpdate<TEntity>
     #endregion
 
     #region Set
-    public virtual IContinuedUpdate<TEntity> Set<TFields>(TFields setObj)
-        => this.Set(true, setObj);
-    public virtual IContinuedUpdate<TEntity> Set<TFields>(bool condition, TFields setObj)
+    public virtual IContinuedUpdate Set(object updateObj)
+        => this.Set(true, updateObj);
+    public virtual IContinuedUpdate Set(bool condition, object updateObj)
     {
         if (condition)
         {
-            if (setObj == null)
-                throw new ArgumentNullException(nameof(setObj));
-            if (!typeof(TFields).IsEntityType(out _))
+            if (updateObj == null)
+                throw new ArgumentNullException(nameof(updateObj));
+            var type = updateObj.GetType();
+            if (!type.IsEntityType(out _))
                 throw new NotSupportedException("Set方法参数setObj支持实体类对象，不支持基础类型，可以是匿名对、命名对象或是字典");
-            this.Visitor.SetWith(setObj);
+            this.Visitor.SetWith(updateObj);
         }
-        return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewContinuedUpdate(this.DbContext, this.Visitor);
     }
-    public virtual IContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-        => this.Set(true, fieldSelector, fieldValue);
-    public virtual IContinuedUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    public virtual IContinuedUpdate Set(string fieldName, object fieldValue)
+        => this.Set(true, fieldName, fieldValue);
+    public virtual IContinuedUpdate Set(bool condition, string fieldName, object fieldValue)
     {
         if (condition)
         {
-            if (fieldSelector == null)
-                throw new ArgumentNullException(nameof(fieldSelector));
+            if (string.IsNullOrEmpty(fieldName))
+                throw new ArgumentNullException(nameof(fieldName));
             if (fieldValue == null)
                 throw new ArgumentNullException(nameof(fieldValue));
-            if (!this.Visitor.IsMemberVisit(fieldSelector.Body))
-                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
-
-            this.Visitor.SetField(fieldSelector, fieldValue);
+            this.Visitor.SetField(fieldName, fieldValue);
         }
-        return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
-    }
-    public virtual IContinuedUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
-        => this.Set(true, fieldsAssignment);
-    public virtual IContinuedUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
-    {
-        if (condition)
-        {
-            if (fieldsAssignment == null)
-                throw new ArgumentNullException(nameof(fieldsAssignment));
-            if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
-                throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
-
-            this.Visitor.Set(fieldsAssignment);
-        }
-        return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
-    }
-    #endregion
-
-    #region SetFrom
-    public virtual IContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
-       => this.SetFrom(true, fieldSelector, valueSelector);
-    public virtual IContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
-    {
-        if (condition)
-        {
-            if (fieldSelector == null)
-                throw new ArgumentNullException(nameof(fieldSelector));
-            if (valueSelector == null)
-                throw new ArgumentNullException(nameof(valueSelector));
-            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
-                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
-
-            this.Visitor.SetFrom(fieldSelector, valueSelector);
-        }
-        return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
-    }
-    public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
-        => this.SetFrom(true, fieldsAssignment);
-    public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
-    {
-        if (condition)
-        {
-            if (fieldsAssignment == null)
-                throw new ArgumentNullException(nameof(fieldsAssignment));
-            if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
-                throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
-
-            this.Visitor.SetFrom(fieldsAssignment);
-        }
-        return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewContinuedUpdate(this.DbContext, this.Visitor);
     }
     #endregion
 
     #region SetBulk
-    public virtual IBulkContinuedUpdate<TEntity> SetBulk<TUpdateObj>(IEnumerable<TUpdateObj> updateObjs, int bulkCount = 500)
+    public virtual IBulkContinuedUpdate SetBulk(IEnumerable updateObjs, int bulkCount = 500)
     {
         if (updateObjs == null)
             throw new ArgumentNullException(nameof(updateObjs));
@@ -158,11 +106,11 @@ public class Update<TEntity> : IUpdate<TEntity>
         if (isEmpty) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
 
         this.Visitor.SetBulk(updateObjs, bulkCount);
-        return this.OrmProvider.NewBulkContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewBulkContinuedUpdate(this.DbContext, this.Visitor);
     }
     #endregion
 }
-public class Updated<TEntity> : IUpdated<TEntity>
+public class Updated : IUpdated
 {
     #region Properties
     public DbContext DbContext { get; protected set; }
@@ -186,7 +134,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
         {
             case ActionMode.Bulk:
                 (var shardingType, var shardingTables, var updateObjs, var bulkCount,
-                    var fixedSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
+                    var fixedSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildSetBulk(command);
 
                 int index = 0;
                 var builder = new StringBuilder();
@@ -277,7 +225,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
         {
             case ActionMode.Bulk:
                 (var shardingType, var shardingTables, var updateObjs, var bulkCount,
-                    var fixedSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
+                    var fixedSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildSetBulk(command);
 
                 int index = 0;
                 var builder = new StringBuilder();
@@ -372,14 +320,418 @@ public class Updated<TEntity> : IUpdated<TEntity>
     }
     #endregion
 }
-public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEntity>
+public class ContinuedUpdate : Updated, IContinuedUpdate
+{
+    #region Properties
+    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
+    #endregion
+
+    #region Constructor
+    public ContinuedUpdate(DbContext dbContext, IUpdateVisitor visitor)
+        : base(dbContext, visitor) { }
+    #endregion
+
+    #region Set
+    public virtual IContinuedUpdate Set(string fieldName, object fieldValue)
+        => this.Set(true, fieldName, fieldValue);
+    public virtual IContinuedUpdate Set(bool condition, string fieldName, object fieldValue)
+    {
+        if (condition)
+        {
+            if (string.IsNullOrEmpty(fieldName))
+                throw new ArgumentNullException(nameof(fieldName));
+            if (fieldValue == null)
+                throw new ArgumentNullException(nameof(fieldValue));
+            this.Visitor.SetField(fieldName, fieldValue);
+        }
+        return this.OrmProvider.NewContinuedUpdate(this.DbContext, this.Visitor);
+    }
+    #endregion
+
+    #region IgnoreFields
+    public virtual IContinuedUpdate IgnoreFields(params string[] fieldNames)
+    {
+        if (fieldNames == null)
+            throw new ArgumentNullException(nameof(fieldNames));
+
+        this.Visitor.IgnoreFields(fieldNames);
+        return this;
+    }
+    #endregion
+
+    #region OnlyFields
+    public virtual IContinuedUpdate OnlyFields(params string[] fieldNames)
+    {
+        if (fieldNames == null)
+            throw new ArgumentNullException(nameof(fieldNames));
+
+        this.Visitor.OnlyFields(fieldNames);
+        return this;
+    }
+    #endregion
+
+    #region Where
+    public virtual IContinuedUpdate WhereBy(object whereObj)
+        => this.AndBy(whereObj);
+    public virtual IContinuedUpdate WhereBy(bool condition, object whereObj)
+        => this.AndBy(condition, whereObj);
+    public virtual IContinuedUpdate WhereById(object whereKey)
+        => this.AndById(whereKey);
+    public virtual IContinuedUpdate WhereById(bool condition, object whereKey)
+        => this.AndById(condition, whereKey);
+    public virtual IContinuedUpdate WhereByIds(IEnumerable whereKeys)
+        => this.AndByIds(whereKeys);
+    public virtual IContinuedUpdate WhereByIds(bool condition, IEnumerable whereKeys)
+        => this.AndByIds(condition, whereKeys);
+    #endregion
+
+    #region And
+    public virtual IContinuedUpdate AndBy(object whereObj)
+    {
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+        this.Visitor.AndBy(whereObj);
+        return this;
+    }
+    public virtual IContinuedUpdate AndBy(bool condition, object whereObj)
+    {
+        if (!condition) return this;
+        return this.AndBy(whereObj);
+    }
+    public virtual IContinuedUpdate AndById(object whereKey)
+    {
+        if (whereKey == null)
+            throw new ArgumentNullException(nameof(whereKey));
+        this.Visitor.AndById(whereKey);
+        return this;
+    }
+    public virtual IContinuedUpdate AndById(bool condition, object whereKey)
+    {
+        if (!condition) return this;
+        return this.AndById(whereKey);
+    }
+    public virtual IContinuedUpdate AndByIds(IEnumerable whereKeys)
+    {
+        if (whereKeys == null)
+            throw new ArgumentNullException(nameof(whereKeys));
+        this.Visitor.AndByIds(whereKeys);
+        return this;
+    }
+    public virtual IContinuedUpdate AndByIds(bool condition, IEnumerable whereKeys)
+    {
+        if (!condition) return this;
+        return this.AndByIds(whereKeys);
+    }
+    #endregion
+
+    #region Or
+    public virtual IContinuedUpdate OrBy(object whereObj)
+    {
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+        this.Visitor.OrBy(whereObj);
+        return this;
+    }
+    public virtual IContinuedUpdate OrBy(bool condition, object whereObj)
+    {
+        if (!condition) return this;
+        return this.OrBy(whereObj);
+    }
+    public virtual IContinuedUpdate OrById(object whereKey)
+    {
+        if (whereKey == null)
+            throw new ArgumentNullException(nameof(whereKey));
+        this.Visitor.OrById(whereKey);
+        return this;
+    }
+    public virtual IContinuedUpdate OrById(bool condition, object whereKey)
+    {
+        if (!condition) return this;
+        return this.OrById(whereKey);
+    }
+    public virtual IContinuedUpdate OrByIds(IEnumerable whereKeys)
+    {
+        if (whereKeys == null)
+            throw new ArgumentNullException(nameof(whereKeys));
+        this.Visitor.OrByIds(whereKeys);
+        return this;
+    }
+    public virtual IContinuedUpdate OrByIds(bool condition, IEnumerable whereKeys)
+    {
+        if (!condition) return this;
+        return this.OrByIds(whereKeys);
+    }
+    #endregion
+}
+public class BulkContinuedUpdate : Updated, IBulkContinuedUpdate
+{
+    #region Properties
+    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
+    #endregion
+
+    #region Constructor
+    public BulkContinuedUpdate(DbContext dbContext, IUpdateVisitor visitor)
+        : base(dbContext, visitor) { }
+    #endregion
+
+    #region Set
+    public virtual IBulkContinuedUpdate Set(object updateObj)
+         => this.Set(true, updateObj);
+    public virtual IBulkContinuedUpdate Set(bool condition, object updateObj)
+    {
+        if (condition)
+        {
+            if (updateObj == null)
+                throw new ArgumentNullException(nameof(updateObj));
+            var type = updateObj.GetType();
+            if (!type.IsEntityType(out _))
+                throw new NotSupportedException("Set方法参数setObj支持实体类对象，不支持基础类型，可以是匿名对、命名对象或是字典");
+            this.Visitor.SetWith(updateObj);
+        }
+        return this.OrmProvider.NewBulkContinuedUpdate(this.DbContext, this.Visitor);
+    }
+    public virtual IBulkContinuedUpdate Set(string fieldName, object fieldValue)
+        => this.Set(true, fieldName, fieldValue);
+    public virtual IBulkContinuedUpdate Set(bool condition, string fieldName, object fieldValue)
+    {
+        if (condition)
+        {
+            if (string.IsNullOrEmpty(fieldName))
+                throw new ArgumentNullException(nameof(fieldName));
+            if (fieldValue == null)
+                throw new ArgumentNullException(nameof(fieldValue));
+            this.Visitor.SetField(fieldName, fieldValue);
+        }
+        return this.OrmProvider.NewBulkContinuedUpdate(this.DbContext, this.Visitor);
+    }
+    #endregion
+
+    #region IgnoreFields
+    public virtual IBulkContinuedUpdate IgnoreFields(params string[] fieldNames)
+    {
+        if (fieldNames == null)
+            throw new ArgumentNullException(nameof(fieldNames));
+
+        this.Visitor.IgnoreFields(fieldNames);
+        return this;
+    }
+    #endregion
+
+    #region OnlyFields
+    public virtual IBulkContinuedUpdate OnlyFields(params string[] fieldNames)
+    {
+        if (fieldNames == null)
+            throw new ArgumentNullException(nameof(fieldNames));
+
+        this.Visitor.OnlyFields(fieldNames);
+        return this;
+    }
+    #endregion
+
+    #region Where
+    public virtual IBulkContinuedUpdate WhereBy(object whereObj)
+        => this.AndBy(whereObj);
+    public virtual IBulkContinuedUpdate WhereBy(bool condition, object whereObj)
+        => this.AndBy(condition, whereObj);
+    #endregion
+
+    #region And
+    public virtual IBulkContinuedUpdate AndBy(object whereObj)
+    {
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+        this.Visitor.AndBy(whereObj);
+        return this;
+    }
+    public virtual IBulkContinuedUpdate AndBy(bool condition, object whereObj)
+    {
+        if (!condition) return this;
+        return this.AndBy(whereObj);
+    }
+    #endregion
+
+    #region Or
+    public virtual IBulkContinuedUpdate OrBy(object whereObj)
+    {
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+        this.Visitor.OrBy(whereObj);
+        return this;
+    }
+    public virtual IBulkContinuedUpdate OrBy(bool condition, object whereObj)
+    {
+        if (!condition) return this;
+        return this.OrBy(whereObj);
+    }
+    #endregion
+}
+public class BulkCopyContinuedUpdate : Updated, IBulkCopyContinuedUpdate
+{
+    #region Constructor
+    public BulkCopyContinuedUpdate(DbContext dbContext, IUpdateVisitor visitor)
+        : base(dbContext, visitor) { }
+    #endregion
+
+    #region Where
+    public virtual IBulkCopyContinuedUpdate WhereBy(object whereObj)
+        => this.AndBy(whereObj);
+    public virtual IBulkCopyContinuedUpdate WhereBy(bool condition, object whereObj)
+        => this.AndBy(condition, whereObj);
+    #endregion
+
+    #region And
+    public virtual IBulkCopyContinuedUpdate AndBy(object whereObj)
+    {
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+        this.Visitor.AndBy(whereObj);
+        return this;
+    }
+    public virtual IBulkCopyContinuedUpdate AndBy(bool condition, object whereObj)
+    {
+        if (!condition) return this;
+        return this.AndBy(whereObj);
+    }
+    #endregion
+
+    #region Or
+    public virtual IBulkCopyContinuedUpdate OrBy(object whereObj)
+    {
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+        this.Visitor.OrBy(whereObj);
+        return this;
+    }
+    public virtual IBulkCopyContinuedUpdate OrBy(bool condition, object whereObj)
+    {
+        if (!condition) return this;
+        return this.OrBy(whereObj);
+    }
+    #endregion
+}
+
+
+public class Update<TEntity> : Update, IUpdate<TEntity>
+{
+    #region Constructor
+    public Update(DbContext dbContext) : base(typeof(TEntity), dbContext) { }
+    #endregion
+
+    #region Sharding
+    public new IUpdate<TEntity> UseTable(params string[] tableNames)
+        => base.UseTable(tableNames) as IUpdate<TEntity>;
+    public new IUpdate<TEntity> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IUpdate<TEntity>;
+    public new IUpdate<TEntity> UseTable(Func<object, string> tableNameGetter)
+        => base.UseTable(tableNameGetter) as IUpdate<TEntity>;
+    public new IUpdate<TEntity> UseTableByRange(params object[] fieldValues)
+        => base.UseTableByRange(fieldValues) as IUpdate<TEntity>;
+    #endregion
+
+    #region UseTableSchema
+    public new IUpdate<TEntity> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IUpdate<TEntity>;
+    #endregion
+
+    #region Set
+    public new IContinuedUpdate<TEntity> Set(object updateObj)
+        => this.Set(true, updateObj);
+    public new IContinuedUpdate<TEntity> Set(bool condition, object updateObj)
+        => base.Set(condition, updateObj) as IContinuedUpdate<TEntity>;
+    public new IContinuedUpdate<TEntity> Set(string fieldName, object fieldValue)
+        => this.Set(true, fieldName, fieldValue);
+    public new IContinuedUpdate<TEntity> Set(bool condition, string fieldName, object fieldValue)
+        => base.Set(condition, fieldName, fieldValue) as IContinuedUpdate<TEntity>;
+
+    public IContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+        => this.Set(true, fieldSelector, fieldValue);
+    public IContinuedUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    {
+        if (condition)
+        {
+            if (fieldSelector == null)
+                throw new ArgumentNullException(nameof(fieldSelector));
+            if (fieldValue == null)
+                throw new ArgumentNullException(nameof(fieldValue));
+            if (!this.Visitor.IsMemberVisit(fieldSelector.Body))
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
+
+            this.Visitor.SetField(fieldSelector, fieldValue);
+        }
+        return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
+    }
+    public IContinuedUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
+        => this.Set(true, fieldsAssignment);
+    public IContinuedUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
+    {
+        if (condition)
+        {
+            if (fieldsAssignment == null)
+                throw new ArgumentNullException(nameof(fieldsAssignment));
+            if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
+
+            this.Visitor.Set(fieldsAssignment);
+        }
+        return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
+    }
+    #endregion
+
+    #region SetFrom
+    public virtual IContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
+        => this.SetFrom(true, fieldSelector, valueSelector);
+    public virtual IContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
+    {
+        if (condition)
+        {
+            if (fieldSelector == null)
+                throw new ArgumentNullException(nameof(fieldSelector));
+            if (valueSelector == null)
+                throw new ArgumentNullException(nameof(valueSelector));
+            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
+
+            this.Visitor.SetFrom(fieldSelector, valueSelector);
+        }
+        return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
+    }
+    public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
+        => this.SetFrom(true, fieldsAssignment);
+    public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
+    {
+        if (condition)
+        {
+            if (fieldsAssignment == null)
+                throw new ArgumentNullException(nameof(fieldsAssignment));
+            if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
+
+            this.Visitor.SetFrom(fieldsAssignment);
+        }
+        return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
+    }
+    #endregion
+
+    #region SetBulk
+    public new IBulkContinuedUpdate<TEntity> SetBulk(IEnumerable updateObjs, int bulkCount = 500)
+        => base.SetBulk(updateObjs, bulkCount) as IBulkContinuedUpdate<TEntity>;
+    #endregion
+}
+
+
+public class ContinuedUpdate<TEntity> : ContinuedUpdate, IContinuedUpdate<TEntity>
 {
     #region Constructor
     public ContinuedUpdate(DbContext dbContext, IUpdateVisitor visitor)
         : base(dbContext, visitor) { }
     #endregion
 
-    #region Set  
+    #region Set
+    public new IContinuedUpdate<TEntity> Set(string fieldName, object fieldValue)
+        => this.Set(true, fieldName, fieldValue);
+    public new IContinuedUpdate<TEntity> Set(bool condition, string fieldName, object fieldValue)
+        => base.Set(condition, fieldName, fieldValue) as IContinuedUpdate<TEntity>;
+
     public virtual IContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
     public virtual IContinuedUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
@@ -435,14 +787,8 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
     #endregion
 
     #region IgnoreFields
-    public virtual IContinuedUpdate<TEntity> IgnoreFields(params string[] fieldNames)
-    {
-        if (fieldNames == null)
-            throw new ArgumentNullException(nameof(fieldNames));
-
-        this.Visitor.IgnoreFields(fieldNames);
-        return this;
-    }
+    public new IContinuedUpdate<TEntity> IgnoreFields(params string[] fieldNames)
+        => base.IgnoreFields(fieldNames) as IContinuedUpdate<TEntity>;
     public virtual IContinuedUpdate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
     {
         if (fieldsSelector == null)
@@ -456,14 +802,8 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
     #endregion
 
     #region OnlyFields
-    public virtual IContinuedUpdate<TEntity> OnlyFields(params string[] fieldNames)
-    {
-        if (fieldNames == null)
-            throw new ArgumentNullException(nameof(fieldNames));
-
-        this.Visitor.OnlyFields(fieldNames);
-        return this;
-    }
+    public new IContinuedUpdate<TEntity> OnlyFields(params string[] fieldNames)
+        => base.OnlyFields(fieldNames) as IContinuedUpdate<TEntity>;
     public virtual IContinuedUpdate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
     {
         if (fieldsSelector == null)
@@ -477,17 +817,17 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
     #endregion
 
     #region Where
-    public virtual IContinuedUpdate<TEntity> WhereBy(object whereObj)
+    public new IContinuedUpdate<TEntity> WhereBy(object whereObj)
         => this.AndBy(whereObj);
-    public virtual IContinuedUpdate<TEntity> WhereBy(bool condition, object whereObj)
+    public new IContinuedUpdate<TEntity> WhereBy(bool condition, object whereObj)
         => this.AndBy(condition, whereObj);
-    public virtual IContinuedUpdate<TEntity> WhereById(object whereKey)
+    public new IContinuedUpdate<TEntity> WhereById(object whereKey)
         => this.AndById(whereKey);
-    public virtual IContinuedUpdate<TEntity> WhereById(bool condition, object whereKey)
+    public new IContinuedUpdate<TEntity> WhereById(bool condition, object whereKey)
         => this.AndById(condition, whereKey);
-    public virtual IContinuedUpdate<TEntity> WhereByIds(IEnumerable whereKeys)
+    public new IContinuedUpdate<TEntity> WhereByIds(IEnumerable whereKeys)
         => this.AndByIds(whereKeys);
-    public virtual IContinuedUpdate<TEntity> WhereByIds(bool condition, IEnumerable whereKeys)
+    public new IContinuedUpdate<TEntity> WhereByIds(bool condition, IEnumerable whereKeys)
         => this.AndByIds(condition, whereKeys);
     public virtual IContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
@@ -498,42 +838,18 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
     #endregion
 
     #region And
-    public virtual IContinuedUpdate<TEntity> AndBy(object whereObj)
-    {
-        if (whereObj == null)
-            throw new ArgumentNullException(nameof(whereObj));
-        this.Visitor.AndBy(whereObj);
-        return this;
-    }
-    public virtual IContinuedUpdate<TEntity> AndBy(bool condition, object whereObj)
-    {
-        if (!condition) return this;
-        return this.AndBy(whereObj);
-    }
-    public virtual IContinuedUpdate<TEntity> AndById(object whereKey)
-    {
-        if (whereKey == null)
-            throw new ArgumentNullException(nameof(whereKey));
-        this.Visitor.AndById(whereKey);
-        return this;
-    }
-    public virtual IContinuedUpdate<TEntity> AndById(bool condition, object whereKey)
-    {
-        if (!condition) return this;
-        return this.AndById(whereKey);
-    }
-    public virtual IContinuedUpdate<TEntity> AndByIds(IEnumerable whereKeys)
-    {
-        if (whereKeys == null)
-            throw new ArgumentNullException(nameof(whereKeys));
-        this.Visitor.AndByIds(whereKeys);
-        return this;
-    }
-    public virtual IContinuedUpdate<TEntity> AndByIds(bool condition, IEnumerable whereKeys)
-    {
-        if (!condition) return this;
-        return this.AndByIds(whereKeys);
-    }
+    public new IContinuedUpdate<TEntity> AndBy(object whereObj)
+        => this.AndBy(true, whereObj);
+    public new IContinuedUpdate<TEntity> AndBy(bool condition, object whereObj)
+        => base.AndBy(condition, whereObj) as IContinuedUpdate<TEntity>;
+    public new IContinuedUpdate<TEntity> AndById(object whereKey)
+        => this.AndById(true, whereKey);
+    public new IContinuedUpdate<TEntity> AndById(bool condition, object whereKey)
+        => base.AndById(condition, whereKey) as IContinuedUpdate<TEntity>;
+    public new IContinuedUpdate<TEntity> AndByIds(IEnumerable whereKeys)
+        => this.AndByIds(true, whereKeys);
+    public new IContinuedUpdate<TEntity> AndByIds(bool condition, IEnumerable whereKeys)
+        => base.AndByIds(condition, whereKeys) as IContinuedUpdate<TEntity>;
     public virtual IContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
     public virtual IContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -557,42 +873,18 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
     #endregion
 
     #region Or
-    public virtual IContinuedUpdate<TEntity> OrBy(object whereObj)
-    {
-        if (whereObj == null)
-            throw new ArgumentNullException(nameof(whereObj));
-        this.Visitor.OrBy(whereObj);
-        return this;
-    }
-    public virtual IContinuedUpdate<TEntity> OrBy(bool condition, object whereObj)
-    {
-        if (!condition) return this;
-        return this.OrBy(whereObj);
-    }
-    public virtual IContinuedUpdate<TEntity> OrById(object whereKey)
-    {
-        if (whereKey == null)
-            throw new ArgumentNullException(nameof(whereKey));
-        this.Visitor.OrById(whereKey);
-        return this;
-    }
-    public virtual IContinuedUpdate<TEntity> OrById(bool condition, object whereKey)
-    {
-        if (!condition) return this;
-        return this.OrById(whereKey);
-    }
-    public virtual IContinuedUpdate<TEntity> OrByIds(IEnumerable whereKeys)
-    {
-        if (whereKeys == null)
-            throw new ArgumentNullException(nameof(whereKeys));
-        this.Visitor.OrByIds(whereKeys);
-        return this;
-    }
-    public virtual IContinuedUpdate<TEntity> OrByIds(bool condition, IEnumerable whereKeys)
-    {
-        if (!condition) return this;
-        return this.OrByIds(whereKeys);
-    }
+    public new IContinuedUpdate<TEntity> OrBy(object whereObj)
+        => this.OrBy(true, whereObj);
+    public new IContinuedUpdate<TEntity> OrBy(bool condition, object whereObj)
+        => base.OrBy(condition, whereObj) as IContinuedUpdate<TEntity>;
+    public new IContinuedUpdate<TEntity> OrById(object whereKey)
+        => this.OrById(true, whereKey);
+    public new IContinuedUpdate<TEntity> OrById(bool condition, object whereKey)
+        => base.OrById(condition, whereKey) as IContinuedUpdate<TEntity>;
+    public new IContinuedUpdate<TEntity> OrByIds(IEnumerable whereKeys)
+        => this.OrByIds(true, whereKeys);
+    public new IContinuedUpdate<TEntity> OrByIds(bool condition, IEnumerable whereKeys)
+        => base.OrByIds(condition, whereKeys) as IContinuedUpdate<TEntity>;
     public virtual IContinuedUpdate<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
         => this.Or(true, predicate);
     public virtual IContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -615,7 +907,7 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
     }
     #endregion
 }
-public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpdate<TEntity>
+public class BulkContinuedUpdate<TEntity> : BulkContinuedUpdate, IBulkContinuedUpdate<TEntity>
 {
     #region Constructor
     public BulkContinuedUpdate(DbContext dbContext, IUpdateVisitor visitor)
@@ -623,18 +915,14 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
     #endregion
 
     #region Set
-    public virtual IBulkContinuedUpdate<TEntity> Set<TUpdateObj>(TUpdateObj updateObj)
-       => this.Set(true, updateObj);
-    public virtual IBulkContinuedUpdate<TEntity> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
-    {
-        if (condition)
-        {
-            if (updateObj == null)
-                throw new ArgumentNullException(nameof(updateObj));
-            this.Visitor.SetWith(updateObj);
-        }
-        return this;
-    }
+    public new IBulkContinuedUpdate<TEntity> Set(object updateObj)
+        => this.Set(true, updateObj);
+    public new IBulkContinuedUpdate<TEntity> Set(bool condition, object updateObj)
+        => base.Set(condition, updateObj) as IBulkContinuedUpdate<TEntity>;
+    public new IBulkContinuedUpdate<TEntity> Set(string fieldName, object fieldValue)
+        => this.Set(true, fieldName, fieldValue);
+    public new IBulkContinuedUpdate<TEntity> Set(bool condition, string fieldName, object fieldValue)
+        => base.Set(condition, fieldName, fieldValue) as IBulkContinuedUpdate<TEntity>;
     public virtual IBulkContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
     public virtual IBulkContinuedUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
@@ -670,14 +958,8 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
     #endregion
 
     #region IgnoreFields
-    public virtual IBulkContinuedUpdate<TEntity> IgnoreFields(params string[] fieldNames)
-    {
-        if (fieldNames == null)
-            throw new ArgumentNullException(nameof(fieldNames));
-
-        this.Visitor.IgnoreFields(fieldNames);
-        return this;
-    }
+    public new IBulkContinuedUpdate<TEntity> IgnoreFields(params string[] fieldNames)
+        => base.IgnoreFields(fieldNames) as IBulkContinuedUpdate<TEntity>;
     public virtual IBulkContinuedUpdate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
     {
         if (fieldsSelector == null)
@@ -691,14 +973,8 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
     #endregion
 
     #region OnlyFields
-    public virtual IBulkContinuedUpdate<TEntity> OnlyFields(params string[] fieldNames)
-    {
-        if (fieldNames == null)
-            throw new ArgumentNullException(nameof(fieldNames));
-
-        this.Visitor.OnlyFields(fieldNames);
-        return this;
-    }
+    public new IBulkContinuedUpdate<TEntity> OnlyFields(params string[] fieldNames)
+        => base.IgnoreFields(fieldNames) as IBulkContinuedUpdate<TEntity>;
     public virtual IBulkContinuedUpdate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
     {
         if (fieldsSelector == null)
@@ -712,18 +988,10 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
     #endregion
 
     #region Where
-    public virtual IBulkContinuedUpdate<TEntity> WhereBy(object whereObj)
+    public new IBulkContinuedUpdate<TEntity> WhereBy(object whereObj)
         => this.AndBy(whereObj);
-    public virtual IBulkContinuedUpdate<TEntity> WhereBy(bool condition, object whereObj)
+    public new IBulkContinuedUpdate<TEntity> WhereBy(bool condition, object whereObj)
         => this.AndBy(condition, whereObj);
-    public virtual IBulkContinuedUpdate<TEntity> WhereById(object whereKey)
-        => this.AndById(whereKey);
-    public virtual IBulkContinuedUpdate<TEntity> WhereById(bool condition, object whereKey)
-        => this.AndById(condition, whereKey);
-    public virtual IBulkContinuedUpdate<TEntity> WhereByIds(IEnumerable whereKeys)
-        => this.AndByIds(whereKeys);
-    public virtual IBulkContinuedUpdate<TEntity> WhereByIds(bool condition, IEnumerable whereKeys)
-        => this.AndByIds(condition, whereKeys);
     public virtual IBulkContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
     public virtual IBulkContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -733,42 +1001,10 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
     #endregion
 
     #region And
-    public virtual IBulkContinuedUpdate<TEntity> AndBy(object whereObj)
-    {
-        if (whereObj == null)
-            throw new ArgumentNullException(nameof(whereObj));
-        this.Visitor.AndBy(whereObj);
-        return this;
-    }
-    public virtual IBulkContinuedUpdate<TEntity> AndBy(bool condition, object whereObj)
-    {
-        if (!condition) return this;
-        return this.AndBy(whereObj);
-    }
-    public virtual IBulkContinuedUpdate<TEntity> AndById(object whereKey)
-    {
-        if (whereKey == null)
-            throw new ArgumentNullException(nameof(whereKey));
-        this.Visitor.AndById(whereKey);
-        return this;
-    }
-    public virtual IBulkContinuedUpdate<TEntity> AndById(bool condition, object whereKey)
-    {
-        if (!condition) return this;
-        return this.AndById(whereKey);
-    }
-    public virtual IBulkContinuedUpdate<TEntity> AndByIds(IEnumerable whereKeys)
-    {
-        if (whereKeys == null)
-            throw new ArgumentNullException(nameof(whereKeys));
-        this.Visitor.AndByIds(whereKeys);
-        return this;
-    }
-    public virtual IBulkContinuedUpdate<TEntity> AndByIds(bool condition, IEnumerable whereKeys)
-    {
-        if (!condition) return this;
-        return this.AndByIds(whereKeys);
-    }
+    public new IBulkContinuedUpdate<TEntity> AndBy(object whereObj)
+        => this.AndBy(true, whereObj);
+    public new IBulkContinuedUpdate<TEntity> AndBy(bool condition, object whereObj)
+        => base.AndBy(condition, whereObj) as IBulkContinuedUpdate<TEntity>;
     public virtual IBulkContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
     public virtual IBulkContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -792,42 +1028,10 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
     #endregion
 
     #region Or
-    public virtual IBulkContinuedUpdate<TEntity> OrBy(object whereObj)
-    {
-        if (whereObj == null)
-            throw new ArgumentNullException(nameof(whereObj));
-        this.Visitor.OrBy(whereObj);
-        return this;
-    }
-    public virtual IBulkContinuedUpdate<TEntity> OrBy(bool condition, object whereObj)
-    {
-        if (!condition) return this;
-        return this.OrBy(whereObj);
-    }
-    public virtual IBulkContinuedUpdate<TEntity> OrById(object whereKey)
-    {
-        if (whereKey == null)
-            throw new ArgumentNullException(nameof(whereKey));
-        this.Visitor.OrById(whereKey);
-        return this;
-    }
-    public virtual IBulkContinuedUpdate<TEntity> OrById(bool condition, object whereKey)
-    {
-        if (!condition) return this;
-        return this.OrById(whereKey);
-    }
-    public virtual IBulkContinuedUpdate<TEntity> OrByIds(IEnumerable whereKeys)
-    {
-        if (whereKeys == null)
-            throw new ArgumentNullException(nameof(whereKeys));
-        this.Visitor.OrByIds(whereKeys);
-        return this;
-    }
-    public virtual IBulkContinuedUpdate<TEntity> OrByIds(bool condition, IEnumerable whereKeys)
-    {
-        if (!condition) return this;
-        return this.OrByIds(whereKeys);
-    }
+    public new IBulkContinuedUpdate<TEntity> OrBy(object whereObj)
+        => this.OrBy(true, whereObj);
+    public new IBulkContinuedUpdate<TEntity> OrBy(bool condition, object whereObj)
+        => base.OrBy(condition, whereObj) as IBulkContinuedUpdate<TEntity>;
     public virtual IBulkContinuedUpdate<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
         => this.Or(true, predicate);
     public virtual IBulkContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -850,7 +1054,7 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
     }
     #endregion
 }
-public class BulkCopyContinuedUpdate<TEntity> : Updated<TEntity>, IBulkCopyContinuedUpdate<TEntity>
+public class BulkCopyContinuedUpdate<TEntity> : BulkCopyContinuedUpdate, IBulkCopyContinuedUpdate<TEntity>
 {
     #region Constructor
     public BulkCopyContinuedUpdate(DbContext dbContext, IUpdateVisitor visitor)
@@ -858,6 +1062,10 @@ public class BulkCopyContinuedUpdate<TEntity> : Updated<TEntity>, IBulkCopyConti
     #endregion
 
     #region Where
+    public new IBulkCopyContinuedUpdate<TEntity> WhereBy(object whereObj)
+        => this.AndBy(whereObj);
+    public new IBulkCopyContinuedUpdate<TEntity> WhereBy(bool condition, object whereObj)
+        => base.AndBy(condition, whereObj) as IBulkCopyContinuedUpdate<TEntity>;
     public virtual IBulkCopyContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
     public virtual IBulkCopyContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -867,6 +1075,10 @@ public class BulkCopyContinuedUpdate<TEntity> : Updated<TEntity>, IBulkCopyConti
     #endregion
 
     #region And
+    public new IBulkCopyContinuedUpdate<TEntity> AndBy(object whereObj)
+        => this.AndBy(true, whereObj);
+    public new IBulkCopyContinuedUpdate<TEntity> AndBy(bool condition, object whereObj)
+        => base.AndBy(condition, whereObj) as IBulkCopyContinuedUpdate<TEntity>;
     public virtual IBulkCopyContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
     public virtual IBulkCopyContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -890,6 +1102,10 @@ public class BulkCopyContinuedUpdate<TEntity> : Updated<TEntity>, IBulkCopyConti
     #endregion
 
     #region Or
+    public new IBulkCopyContinuedUpdate<TEntity> OrBy(object whereObj)
+        => this.OrBy(true, whereObj);
+    public new IBulkCopyContinuedUpdate<TEntity> OrBy(bool condition, object whereObj)
+        => base.OrBy(condition, whereObj) as IBulkCopyContinuedUpdate<TEntity>;
     public virtual IBulkCopyContinuedUpdate<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
         => this.Or(true, predicate);
     public virtual IBulkCopyContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -912,7 +1128,7 @@ public class BulkCopyContinuedUpdate<TEntity> : Updated<TEntity>, IBulkCopyConti
     }
     #endregion
 }
-public class UpdateJoin<TEntity, T1> : Updated<TEntity>, IUpdateJoin<TEntity, T1>
+public class UpdateJoin<TEntity, T1> : Updated, IUpdateJoin<TEntity, T1>
 {
     #region Properties
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
@@ -1113,7 +1329,7 @@ public class UpdateJoin<TEntity, T1> : Updated<TEntity>, IUpdateJoin<TEntity, T1
     }
     #endregion
 }
-public class UpdateJoin<TEntity, T1, T2> : Updated<TEntity>, IUpdateJoin<TEntity, T1, T2>
+public class UpdateJoin<TEntity, T1, T2> : Updated, IUpdateJoin<TEntity, T1, T2>
 {
     #region Properties
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
@@ -1314,7 +1530,7 @@ public class UpdateJoin<TEntity, T1, T2> : Updated<TEntity>, IUpdateJoin<TEntity
     }
     #endregion
 }
-public class UpdateJoin<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateJoin<TEntity, T1, T2, T3>
+public class UpdateJoin<TEntity, T1, T2, T3> : Updated, IUpdateJoin<TEntity, T1, T2, T3>
 {
     #region Properties
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
@@ -1515,7 +1731,7 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateJoin<TEn
     }
     #endregion
 }
-public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateJoin<TEntity, T1, T2, T3, T4>
+public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated, IUpdateJoin<TEntity, T1, T2, T3, T4>
 {
     #region Properties
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
@@ -1716,7 +1932,7 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateJoin
     }
     #endregion
 }
-public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdateJoin<TEntity, T1, T2, T3, T4, T5>
+public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated, IUpdateJoin<TEntity, T1, T2, T3, T4, T5>
 {
     #region Properties
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;

@@ -458,7 +458,7 @@ public partial class MySqlProvider : BaseOrmProvider
 
                         //使用别名，一定要先使用，后使用的话，存在表达式计算场景无法解析，如：.Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
                         var fieldName = this.GetFieldName(memberMapper.FieldName);
-                        if (myVisitor.IsUseSetAlias) fieldName = myVisitor.SetRowAlias + "." + fieldName;
+                        if (myVisitor.IsUseSetAlias) fieldName = myVisitor.RowAlias + "." + fieldName;
                         else fieldName = $"VALUES({fieldName})";
                         return new SqlFieldSegment
                         {

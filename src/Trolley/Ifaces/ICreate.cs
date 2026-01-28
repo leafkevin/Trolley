@@ -11,8 +11,7 @@ namespace Trolley;
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">要插入的实体类型</typeparam>
-public interface ICreate<TEntity>
+public interface ICreate
 {
     #region Properties
     /// <summary>
@@ -31,19 +30,19 @@ public interface ICreate<TEntity>
     /// </summary>
     /// <param name="tableName">完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回插入对象</returns>
-    ICreate<TEntity> UseTable(string tableName);
+    ICreate UseTable(string tableName);
     /// <summary>
     /// 手动指定分表规则参数值，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回插入对象</returns>
-    ICreate<TEntity> UseTableBy(params object[] fieldValues);
+    ICreate UseTableBy(params object[] fieldValues);
     /// <summary>
     /// 手动指定分表名获取委托，执行委托获取分表名，插入对象的值自动插入对应分表中。参数是插入对象的值，返回值是分表名，如：.UseTable(insertObj =&gt; $"sys_user_{((User)insertObj).CreatedAt:yyyyMM}")
     /// </summary>
     /// <param name="tableNameGetter">分表名获取委托</param>
     /// <returns>返回插入对象</returns>
-    ICreate<TEntity> UseTable(Func<object, string> tableNameGetter);
+    ICreate UseTable(Func<object, string> tableNameGetter);
     #endregion
 
     #region UseTableSchema
@@ -52,7 +51,7 @@ public interface ICreate<TEntity>
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回插入对象</returns>
-    ICreate<TEntity> UseTableSchema(string tableSchema);
+    ICreate UseTableSchema(string tableSchema);
     #endregion
 
     #region WithBy
@@ -62,16 +61,14 @@ public interface ICreate<TEntity>
     /// .WithBy(new
     /// {
     ///     Name = "leafkevin",
-    ///     Age = 25,
-    ///     ...
+    ///     Age = 25, ...
     /// })
     /// SQL: INSERT INTO `sys_user` (`Name`,`Age`, ...) VALUES(@Name,@Age, ...)
     /// </code>
     /// </summary>
-    /// <typeparam name="TInsertObject">插入对象类型</typeparam>
     /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出属性不插入，不可为null</param>
     /// <returns>返回插入对象</returns>
-    IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
+    IContinuedCreate WithBy(object insertObj);
     #endregion
 
     #region WithBulk
@@ -85,7 +82,275 @@ public interface ICreate<TEntity>
     /// <param name="insertObjs">插入的对象集合</param>
     /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
     /// <returns>返回插入对象</returns>
-    IBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500);
+    IBulkContinuedCreate WithBulk(IEnumerable insertObjs, int bulkCount = 500);
+    #endregion   
+}
+/// <summary>
+/// 插入数据
+/// </summary>
+public interface ICreated
+{
+    #region Properties
+    /// <summary>
+    /// 获取DbContext对象
+    /// </summary>
+    DbContext DbContext { get; }
+    /// <summary>
+    /// 获取Visitor对象
+    /// </summary
+    ICreateVisitor Visitor { get; }
+    #endregion
+
+    #region Execute
+    /// <summary>
+    /// 执行插入操作，并返回插入行数
+    /// </summary>
+    /// <returns>返回插入行数</returns>
+    int Execute();
+    /// <summary>
+    /// 执行插入操作，并返回插入行数
+    /// </summary>
+    /// <param name="cancellationToken">取消token</param>
+    /// <returns>返回插入行数</returns>
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToSql
+    /// <summary>
+    /// 返回生成的SQL和参数列表
+    /// </summary>
+    /// <param name="dbParameters">参数列表</param>
+    /// <returns>当前查询的SQL</returns>
+    string ToSql(out List<IDbDataParameter> dbParameters);
+    #endregion
+}
+/// <summary>
+/// 插入数据
+/// </summary>
+public interface IIdentitiedCreated : ICreated
+{
+    #region ExecuteIdentity
+    /// <summary>
+    /// 执行插入操作，并返回自增长ID
+    /// </summary>
+    /// <returns>返回自增长主键值</returns>
+    int ExecuteIdentity();
+    /// <summary>
+    /// 执行插入操作，并返回自增长ID
+    /// </summary>
+    /// <param name="cancellationToken">取消token</param>
+    /// <returns>返回自增长主键值</returns>
+    Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 执行插入操作，并返回自增长ID
+    /// </summary>
+    /// <returns>返回自增长主键值</returns>
+    long ExecuteIdentityLong();
+    /// <summary>
+    /// 执行插入操作，并返回自增长ID
+    /// </summary>
+    /// <param name="cancellationToken">取消token</param>
+    /// <returns>返回自增长主键值</returns>
+    Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default);
+    #endregion 
+}
+/// <summary>
+/// 插入数据
+/// </summary>
+/// <typeparam name="TEntity">要插入的实体类型</typeparam>
+public interface IContinuedCreate : IIdentitiedCreated
+{
+    #region WithBy
+    /// <summary>
+    /// 单个字段插入，可多次调用，如：.WithBy(f =&gt; f.Gender, Gender.Female)
+    /// </summary>
+    /// <param name="fieldName">字段名称</param>
+    /// <param name="fieldValue">字段值</param>
+    /// <returns>返回插入对象</returns>
+    IContinuedCreate WithBy(string fieldName, object fieldValue);
+    /// <summary>
+    /// 单个字段插入，可多次调用，condition为true生效，如：.WithBy(f =&gt; f.Gender, Gender.Female)
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="condition">判断条件，为true时生效</param>
+    /// <param name="fieldName">字段名称</param>
+    /// <param name="fieldValue">字段值</param>
+    /// <returns>返回插入对象</returns>
+    IContinuedCreate WithBy(bool condition, string fieldName, object fieldValue);
+    #endregion
+}
+/// <summary>
+/// 插入数据
+/// </summary>
+public interface IBulkContinuedCreate : ICreated
+{
+    #region WithBy
+    /// <summary>
+    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出属性不插入
+    /// <code>
+    /// .WithBy(new
+    /// {
+    ///     Name = "kevin",
+    ///     Age = 25, ...
+    /// })
+    /// SQL: INSERT INTO `sys_user` (`Name`,`Age`, ...) VALUES(@Name,@Age, ...)
+    /// </code>
+    /// </summary>
+    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出属性不插入，不可为null</param>
+    /// <returns>返回插入对象</returns>
+    IBulkContinuedCreate WithBy(object insertObj);
+    /// <summary>
+    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出属性不插入
+    /// <code>
+    /// .WithBy(true, new
+    /// {
+    ///     Name = "kevin",
+    ///     Age = 25, ...
+    /// })
+    /// SQL: INSERT INTO `sys_user` (`Name`,`Age`, ...) VALUES(@Name,@Age, ...)
+    /// </summary>
+    /// <param name="condition">判断条件，为true时生效</param>
+    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出属性不插入，不可为null</param>
+    /// <returns>返回插入对象</returns>
+    IBulkContinuedCreate WithBy(bool condition, object insertObj);
+    /// <summary>
+    /// 单个字段插入，可多次调用，如：.WithBy("Gender", Gender.Female)
+    /// </summary>
+    /// <param name="fieldName">字段名称</param>
+    /// <param name="fieldValue">字段值</param>
+    /// <returns>返回插入对象</returns>
+    IBulkContinuedCreate WithBy(string fieldName, object fieldValue);
+    /// <summary>
+    /// 单个字段插入，可多次调用，condition为true生效，如：.WithBy(true, "Gender", Gender.Female)
+    /// </summary>
+    /// <param name="condition">判断条件，为true时生效</param>
+    /// <param name="fieldName">字段名称</param>
+    /// <param name="fieldValue">字段值</param>
+    /// <returns>返回插入对象</returns>
+    IBulkContinuedCreate WithBy(bool condition, string fieldName, object fieldValue);
+    #endregion
+}
+/// <summary>
+/// 插入数据
+/// </summary>
+/// <typeparam name="TResult">返回数据类型</typeparam>
+public interface IResultCommand<TResult>
+{
+    #region Properties
+    /// <summary>
+    /// 获取DbContext对象
+    /// </summary>
+    DbContext DbContext { get; }
+    #endregion
+
+    #region Execute
+    /// <summary>
+    /// 执行插入操作，并返回插入行数
+    /// </summary>
+    /// <returns>返回插入行数</returns>
+    TResult Execute();
+    /// <summary>
+    /// 执行插入操作，并返回插入行数
+    /// </summary>
+    /// <param name="cancellationToken">取消token</param>
+    /// <returns>返回插入行数</returns>
+    Task<TResult> ExecuteAsync(CancellationToken cancellationToken = default);
+    #endregion
+}
+/// <summary>
+/// 插入数据
+/// </summary>
+/// <typeparam name="TResult">返回数据类型</typeparam>
+public interface IBulkResultCommand<TResult>
+{
+    #region Properties
+    /// <summary>
+    /// 获取DbContext对象
+    /// </summary>
+    DbContext DbContext { get; }
+    #endregion
+
+    #region Execute
+    /// <summary>
+    /// 执行插入操作，并返回插入行数
+    /// </summary>
+    /// <returns>返回插入行数</returns>
+    List<TResult> Execute();
+    /// <summary>
+    /// 执行插入操作，并返回插入行数
+    /// </summary>
+    /// <param name="cancellationToken">取消token</param>
+    /// <returns>返回插入行数</returns>
+    Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken = default);
+    #endregion
+}
+
+
+/// <summary>
+/// 插入数据
+/// </summary>
+/// <typeparam name="TEntity">要插入的实体类型</typeparam>
+public interface ICreate<TEntity> : ICreate
+{
+    #region Sharding
+    /// <summary>
+    /// 手动指定分表名，如：.UseTable("sys_order_202001")
+    /// </summary>
+    /// <param name="tableName">完整的表名，如：sys_order_202001，按月分表</param>
+    /// <returns>返回插入对象</returns>
+    new ICreate<TEntity> UseTable(string tableName);
+    /// <summary>
+    /// 手动指定分表规则参数值，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// </summary>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <returns>返回插入对象</returns>
+    new ICreate<TEntity> UseTableBy(params object[] fieldValues);
+    /// <summary>
+    /// 手动指定分表名获取委托，执行委托获取分表名，插入对象的值自动插入对应分表中。参数是插入对象的值，返回值是分表名，如：.UseTable(insertObj =&gt; $"sys_user_{((User)insertObj).CreatedAt:yyyyMM}")
+    /// </summary>
+    /// <param name="tableNameGetter">分表名获取委托</param>
+    /// <returns>返回插入对象</returns>
+    new ICreate<TEntity> UseTable(Func<object, string> tableNameGetter);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    new ICreate<TEntity> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithBy
+    /// <summary>
+    /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出属性不插入
+    /// <code>
+    /// .WithBy(new
+    /// {
+    ///     Name = "leafkevin",
+    ///     Age = 25, ...
+    /// })
+    /// SQL: INSERT INTO `sys_user` (`Name`,`Age`, ...) VALUES(@Name,@Age, ...)
+    /// </code>
+    /// </summary>
+    /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出属性不插入，不可为null</param>
+    /// <returns>返回插入对象</returns>
+    new IContinuedCreate<TEntity> WithBy(object insertObj);
+    #endregion
+
+    #region WithBulk
+    /// <summary>
+    /// 多条数据插入，自动增长栏位不需要传入，未列出属性不插入，分批次完成，每次插入bulkCount条数，
+    /// <code>
+    /// .WithBulk(new []{ new { ... }, new { ... }, new { ... })
+    /// INSERT INTO `sys_product` (`ProductNo`,`Name`, ...) VALUES (@ProductNo0,@Name0, ...),(@ProductNo1,@Name1, ...),(@ProductNo2,@Name2, ...)
+    /// </code>
+    /// </summary>
+    /// <param name="insertObjs">插入的对象集合</param>
+    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
+    /// <returns>返回插入对象</returns>
+    new IBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500);
     #endregion
 
     #region From
@@ -178,74 +443,24 @@ public interface ICreate<TEntity>
 /// 插入数据
 /// </summary>
 /// <typeparam name="TEntity">要插入的实体类型</typeparam>
-public interface ICreated<TEntity>
-{
-    #region Properties
-    /// <summary>
-    /// 获取DbContext对象
-    /// </summary>
-    DbContext DbContext { get; }
-    /// <summary>
-    /// 获取Visitor对象
-    /// </summary
-    ICreateVisitor Visitor { get; }
-    #endregion
-
-    #region Execute
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <returns>返回插入行数</returns>
-    int Execute();
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回插入行数</returns>
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    #endregion
-
-    #region ExecuteIdentity
-    /// <summary>
-    /// 执行插入操作，并返回自增长ID
-    /// </summary>
-    /// <returns>返回自增长主键值</returns>
-    int ExecuteIdentity();
-    /// <summary>
-    /// 执行插入操作，并返回自增长ID
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回自增长主键值</returns>
-    Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 执行插入操作，并返回自增长ID
-    /// </summary>
-    /// <returns>返回自增长主键值</returns>
-    long ExecuteIdentityLong();
-    /// <summary>
-    /// 执行插入操作，并返回自增长ID
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回自增长主键值</returns>
-    Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default);
-    #endregion
-
-    #region ToSql
-    /// <summary>
-    /// 返回生成的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
-    #endregion
-}
-/// <summary>
-/// 插入数据
-/// </summary>
-/// <typeparam name="TEntity">要插入的实体类型</typeparam>
-public interface IContinuedCreate<TEntity> : ICreated<TEntity>
+public interface IContinuedCreate<TEntity> : IContinuedCreate
 {
     #region WithBy
+    /// <summary>
+    /// 单个字段插入，可多次调用，如：.WithBy(f =&gt; f.Gender, Gender.Female)
+    /// </summary>
+    /// <param name="fieldName">字段名称</param>
+    /// <param name="fieldValue">字段值</param>
+    /// <returns>返回插入对象</returns>
+    new IContinuedCreate<TEntity> WithBy(string fieldName, object fieldValue);
+    /// <summary>
+    /// 单个字段插入，可多次调用，condition为true生效，如：.WithBy(f =&gt; f.Gender, Gender.Female)
+    /// </summary>
+    /// <param name="condition">判断条件，为true时生效</param>
+    /// <param name="fieldName">字段名称</param>
+    /// <param name="fieldValue">字段值</param>
+    /// <returns>返回插入对象</returns>
+    new IContinuedCreate<TEntity> WithBy(bool condition, string fieldName, object fieldValue);
     /// <summary>
     /// 单个字段插入，可多次调用，如：.WithBy(f =&gt; f.Gender, Gender.Female)
     /// </summary>
@@ -269,7 +484,7 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
 /// 插入数据
 /// </summary>
 /// <typeparam name="TEntity">要插入的实体类型</typeparam>
-public interface IBulkContinuedCreate<TEntity> : ICreated<TEntity>
+public interface IBulkContinuedCreate<TEntity> : IBulkContinuedCreate
 {
     #region WithBy
     /// <summary>
@@ -278,32 +493,43 @@ public interface IBulkContinuedCreate<TEntity> : ICreated<TEntity>
     /// .WithBy(new
     /// {
     ///     Name = "leafkevin",
-    ///     Age = 25,
-    ///     ...
+    ///     Age = 25, ...
     /// })
     /// SQL: INSERT INTO `sys_user` (`Name`,`Age`, ...) VALUES(@Name,@Age, ...)
     /// </code>
     /// </summary>
-    /// <typeparam name="TInsertObject">插入对象类型</typeparam>
     /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出属性不插入，不可为null</param>
     /// <returns>返回插入对象</returns>
-    IBulkContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
+    new IBulkContinuedCreate<TEntity> WithBy(object insertObj);
     /// <summary>
     /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出属性不插入
     /// <code>
     /// .WithBy(new
     /// {
     ///     Name = "leafkevin",
-    ///     Age = 25,
-    ///     ...
+    ///     Age = 25, ...
     /// })
     /// SQL: INSERT INTO `sys_user` (`Name`,`Age`, ...) VALUES(@Name,@Age, ...)
     /// </summary>
-    /// <typeparam name="TInsertObject">插入对象类型</typeparam>
     /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="insertObj">插入对象，可以是命名对象、匿名对象或是字典类型对象，未列出属性不插入，不可为null</param>
     /// <returns>返回插入对象</returns>
-    IBulkContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
+    new IBulkContinuedCreate<TEntity> WithBy(bool condition, object insertObj);
+    /// <summary>
+    /// 单个字段插入，可多次调用，如：.WithBy("Gender", Gender.Female)
+    /// </summary>
+    /// <param name="fieldName">字段名称</param>
+    /// <param name="fieldValue">字段值</param>
+    /// <returns>返回插入对象</returns>
+    new IBulkContinuedCreate<TEntity> WithBy(string fieldName, object fieldValue);
+    /// <summary>
+    /// 单个字段插入，可多次调用，condition为true生效，如：.WithBy(true, "Gender", Gender.Female)
+    /// </summary>
+    /// <param name="condition">判断条件，为true时生效</param>
+    /// <param name="fieldName">字段名称</param>
+    /// <param name="fieldValue">字段值</param>
+    /// <returns>返回插入对象</returns>
+    new IBulkContinuedCreate<TEntity> WithBy(bool condition, string fieldName, object fieldValue);
     /// <summary>
     /// 单个字段插入，可多次调用，如：.WithBy(f =&gt; f.Gender, Gender.Female)
     /// </summary>

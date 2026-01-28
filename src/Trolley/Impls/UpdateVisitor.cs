@@ -57,7 +57,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         {
             case ActionMode.Bulk:
                 (shardingType, shardingTables, var updateObjs, _, var fixedSqlSetter,
-                    var loopSqlSetter, readerFields) = this.BuildWithBulk(command);
+                    var loopSqlSetter, readerFields) = this.BuildSetBulk(command);
 
                 int index = 0;
                 fixedSqlSetter?.Invoke(command.Parameters);
@@ -115,6 +115,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                             break;
                         case "SetField":
                             this.VisitSetField(deferredSegment.Value);
+                            break;
+                        case "SetFieldExpr":
+                            this.VisitSetFieldExpr(deferredSegment.Value);
                             break;
                         case "SetWith":
                             this.VisitSetWith(deferredSegment.Value);
@@ -182,7 +185,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         return sql;
     }
     public virtual (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>,
-        Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
+        Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>, List<SqlFieldSegment>) BuildSetBulk(ITheaCommand command)
     {
         (var updateObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
 
@@ -330,11 +333,19 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             Value = fieldsAssignment
         });
     }
-    public virtual void SetField(Expression fieldSelector, object fieldValue)
+    public virtual void SetField(string fieldName, object fieldValue)
     {
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "SetField",
+            Value = (fieldName, fieldValue)
+        });
+    }
+    public virtual void SetField(Expression fieldSelector, object fieldValue)
+    {
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "SetFieldExpr",
             Value = (fieldSelector, fieldValue)
         });
     }
@@ -383,6 +394,15 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         {
             Type = "SetBulk",
             Value = (updateObjs, bulkCount)
+        });
+    }
+    public virtual void SetBulkCopy(IEnumerable updateObjs, int? timeoutSeconds)
+    {
+        this.ActionMode = ActionMode.BulkCopy;
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "SetBulkCopy",
+            Value = (updateObjs, timeoutSeconds)
         });
     }
     public virtual void AndBy(object whereObj)
@@ -503,6 +523,19 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.IgnoreFieldNames = null;
     }
     public virtual void VisitSetField(object deferredSegmentValue)
+    {
+        (var fieldName, var fieldValue) = ((string, object))deferredSegmentValue;
+        var entityMapper = this.Tables[0].Mapper;
+        if (!entityMapper.TryGetMemberMapByFieldName(fieldName, out var memberMapper))
+            throw new Exception($"没有找到字段{fieldName}");
+        if (memberMapper.IsIgnore || memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion)
+            throw new NotSupportedException($"当前字段{memberMapper.FieldName}被忽略更新，IsIgnore：{memberMapper.IsIgnore}，IsIgnoreUpdate：{memberMapper.IsIgnoreUpdate}");
+        if (memberMapper.IsRowVersion)
+            throw new NotSupportedException($"当前字段{memberMapper.FieldName}不允许更新，IsRowVersion：{memberMapper.IsRowVersion}");
+
+        this.AddMemberElement(memberMapper, fieldValue, false);
+    }
+    public virtual void VisitSetFieldExpr(object deferredSegmentValue)
     {
         (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegmentValue;
         var lambdaExpr = fieldSelector as LambdaExpression;

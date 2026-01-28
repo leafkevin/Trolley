@@ -14,9 +14,7 @@ public class MySqlCreateVisitor : CreateVisitor
     public bool IsUseIgnoreInto { get; set; }
     public StringBuilder UpdateBuilder { get; set; }
     public bool IsUseSetAlias { get; set; }
-    public string SetRowAlias { get; set; } = "newRow";
-    public string FromSql { get; set; }
-    public string OutputSql { get; set; }
+    public string RowAlias { get; set; } = "newRow";
 
     public MySqlCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
         : base(entityType, dbContext, tableAsStart) { }
@@ -80,8 +78,8 @@ public class MySqlCreateVisitor : CreateVisitor
                         throw new Exception($"实体表{tableSegment.EntityType.FullName}已设置分表，未指定分表，也未设置依赖字段无法确定分表，请使用UseTable/UseTableBy方法手动指定分表");
                     if (this.deferredSegments.Count > 1)
                     {
-                        this.isNeedShardingValues = true;
-                        this.shardingValues = new();
+                        this.IsNeedShardingValues = true;
+                        this.ShardingValues = new();
                     }
                 }
                 foreach (var deferredSegment in this.deferredSegments)
@@ -163,8 +161,8 @@ public class MySqlCreateVisitor : CreateVisitor
                 throw new Exception($"实体表{tableSegment.EntityType.FullName}已设置分表，未指定分表，也未设置依赖字段无法确定分表，请使用UseTable/UseTableBy方法手动指定分表，或是设置分表依赖字段");
             if (this.deferredSegments.Count > 1)
             {
-                this.isNeedShardingValues = true;
-                this.shardingValues = new();
+                this.IsNeedShardingValues = true;
+                this.ShardingValues = new();
             }
         }
         if (this.deferredSegments.Count > 1)
@@ -259,7 +257,7 @@ public class MySqlCreateVisitor : CreateVisitor
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, insertObjType, insertObjs, firstInsertObj, this.shardingValues);
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, insertObjType, insertObjs, firstInsertObj, this.ShardingValues);
             }
         }
         string tailSql = null;
@@ -394,15 +392,6 @@ public class MySqlCreateVisitor : CreateVisitor
         this.OutputSql = builder.ToString();
         builder.Clear();
     }
-    public void WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds)
-    {
-        this.ActionMode = ActionMode.BulkCopy;
-        this.deferredSegments.Add(new CommandSegment
-        {
-            Type = "WithBulkCopy",
-            Value = (insertObjs, timeoutSeconds)
-        });
-    }
     public (ShardingTableType, object, IEnumerable, int?, List<MemberMap>, List<Func<object, object>>) BuildWithBulkCopy()
     {
         (var insertObjs, int? timeoutSeconds) = ((IEnumerable, int?))this.deferredSegments[0].Value;
@@ -432,24 +421,11 @@ public class MySqlCreateVisitor : CreateVisitor
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, insertObjType, insertObjs, firstInsertObj, this.shardingValues);
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, insertObjType, insertObjs, firstInsertObj, this.ShardingValues);
             }
         }
         (var memberMappers, var valueGetters) = this.GetRefMemberMappers(insertObjType, tableSegment.Mapper, firstInsertObj, false);
         return (shardingType, shardingTables, insertObjs, timeoutSeconds, memberMappers, valueGetters);
-    }
-    public void OnDuplicateKeyUpdate(object updateObj)
-    {
-        if (this.ActionMode == ActionMode.Bulk)
-            throw new NotSupportedException("批量插入时，不支持此方法的调用，请使用OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment)方法");
-
-        this.UpdateBuilder = new();
-        this.VisitSetObject(updateObj);
-    }
-    public void OnDuplicateKeyUpdate(LambdaExpression updateExpr)
-    {
-        this.UpdateBuilder = new();
-        this.VisitSetExpression(updateExpr);
     }
     public string BuildHeadSql()
     {
@@ -503,88 +479,6 @@ public class MySqlCreateVisitor : CreateVisitor
             var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
             typedCommandInitializer.Invoke(this.DbParameters, this.UpdateBuilder, this.DbContext, updateObj);
         }
-    }
-    public void VisitSetExpression(LambdaExpression lambdaExpr)
-    {
-        var currentExpr = lambdaExpr.Body;
-        var callStack = new Stack<MethodCallExpression>();
-        while (true)
-        {
-            if (currentExpr.NodeType == ExpressionType.Parameter)
-                break;
-
-            if (currentExpr is MethodCallExpression callExpr)
-            {
-                callStack.Push(callExpr);
-                currentExpr = callExpr.Object;
-            }
-        }
-        this.InitTableAlias(lambdaExpr);
-        bool isNeedAlias = false;
-        while (callStack.TryPop(out var callExpr))
-        {
-            var genericArguments = callExpr.Method.GetGenericArguments();
-            switch (callExpr.Method.Name)
-            {
-                case "UseAlias":
-                    this.IsUseSetAlias = true;
-                    break;
-                case "Set":
-                    //var genericType = genericArguments[0].DeclaringType;
-                    if (callExpr.Arguments.Count == 1)
-                    {
-                        //Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
-                        if (callExpr.Arguments[0].Type.BaseType == typeof(LambdaExpression))
-                        {
-                            this.VisitAndDeferred(new SqlFieldSegment { Expression = callExpr.Arguments[0] });
-                            isNeedAlias = true;
-                        }
-                        //Set<TUpdateObj>(TUpdateObj updateObj), 走参数
-                        else this.VisitSetObject(this.Evaluate(callExpr.Arguments[0]));
-                    }
-                    else if (callExpr.Arguments.Count == 2)
-                    {
-                        //Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
-                        //Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector)
-                        if (callExpr.Arguments[1].Type.BaseType == typeof(LambdaExpression))
-                        {
-                            if (callExpr.Arguments[0].Type == typeof(bool))
-                            {
-                                var condition = this.Evaluate<bool>(callExpr.Arguments[0]);
-                                if (condition) this.VisitAndDeferred(new SqlFieldSegment { Expression = callExpr.Arguments[1] });
-                            }
-                            else this.VisitSetFieldExpression(callExpr.Arguments[0], callExpr.Arguments[1]);
-                            isNeedAlias = true;
-                        }
-                        else
-                        {
-                            //Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
-                            if (callExpr.Arguments[0].Type == typeof(bool))
-                            {
-                                var condition = this.Evaluate<bool>(callExpr.Arguments[0]);
-                                if (condition) this.VisitSetObject(this.Evaluate(callExpr.Arguments[1]));
-                            }
-                            //Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-                            else this.VisitWithSetField(callExpr.Arguments[0], this.Evaluate(callExpr.Arguments[1]));
-                        }
-                    }
-                    //Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-                    //Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector)
-                    else
-                    {
-                        var condition = this.Evaluate<bool>(callExpr.Arguments[0]);
-                        if (condition)
-                        {
-                            if (callExpr.Arguments[2].Type.BaseType == typeof(LambdaExpression))
-                                this.VisitSetFieldExpression(callExpr.Arguments[1], callExpr.Arguments[2]);
-                            else this.VisitWithSetField(callExpr.Arguments[1], this.Evaluate(callExpr.Arguments[2]));
-                        }
-                    }
-                    break;
-            }
-        }
-        this.UpdateBuilder.Insert(0, " ON DUPLICATE KEY UPDATE ");
-        if (this.IsUseSetAlias && isNeedAlias) this.UpdateBuilder.Insert(0, $" AS {this.SetRowAlias}");
     }
     public override SqlFieldSegment VisitNew(SqlFieldSegment sqlSegment)
     {
@@ -693,13 +587,8 @@ public class MySqlCreateVisitor : CreateVisitor
         //.Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
         else this.UpdateBuilder.Append($"{fieldName}={sqlSegment.Body}");
     }
-    public void VisitSetFieldExpression(Expression fieldSelector, Expression fieldValueSelector)
-    {
-        var fieldSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = fieldSelector });
-        var valueSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = fieldValueSelector });
-        if (this.UpdateBuilder.Length > 0) this.UpdateBuilder.Append(',');
-        this.UpdateBuilder.Append($"{fieldSegment.Body}={valueSegment.Body}");
-    }
+    public void VisitSetExpression(Expression assignmentExpr)
+        => this.VisitAndDeferred(new SqlFieldSegment { Expression = assignmentExpr });
     public void VisitWithSetField(Expression fieldSelector, object fieldValue)
     {
         var lambdaExpr = this.EnsureLambda(fieldSelector);
@@ -727,7 +616,7 @@ public class MySqlCreateVisitor : CreateVisitor
     {
         base.Dispose();
         this.UpdateBuilder = null;
-        this.SetRowAlias = null;
+        this.RowAlias = null;
         this.FromSql = null;
         this.OutputSql = null;
     }

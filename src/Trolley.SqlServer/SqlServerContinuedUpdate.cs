@@ -177,7 +177,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.Visitor.BuildWithBulk(command);
+                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.Visitor.BuildSetBulk(command);
                     Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
                     Action<object, int> sqlExecute = null;
@@ -339,7 +339,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.Visitor.BuildWithBulk(command);
+                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.Visitor.BuildSetBulk(command);
                     Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
                     Action<object, int> sqlExecute = null;
@@ -672,7 +672,7 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.Visitor.BuildWithBulk(command);
+                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.Visitor.BuildSetBulk(command);
                     Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
                     Action<object, int> sqlExecute = null;
@@ -835,7 +835,7 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.Visitor.BuildWithBulk(command);
+                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.Visitor.BuildSetBulk(command);
                     Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
                     Action<object, int> sqlExecute = null;

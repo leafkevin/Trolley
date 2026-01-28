@@ -123,26 +123,57 @@ partial class BaseOrmProvider
     public virtual IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(IMultipleQuery multiQuery, IQueryVisitor visitor) => new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(multiQuery, visitor);
     public virtual IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping> NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(IMultipleQuery multiQuery, IQueryVisitor visitor) => new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(multiQuery, visitor);
 
+
+    public virtual ICreate NewCreate(Type entityType, DbContext dbContext) => new Create(entityType, dbContext);
     public virtual ICreate<TEntity> NewCreate<TEntity>(DbContext dbContext) => new Create<TEntity>(dbContext);
-    public virtual ICreated<TEntity> NewCreated<TEntity>(DbContext dbContext, ICreateVisitor visitor) => new Created<TEntity>(dbContext, visitor);
+    public virtual IContinuedCreate NewContinuedCreate(DbContext dbContext, ICreateVisitor visitor) => new ContinuedCreate(dbContext, visitor);
     public virtual IContinuedCreate<TEntity> NewContinuedCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor) => new ContinuedCreate<TEntity>(dbContext, visitor);
+    public virtual IBulkContinuedCreate NewBulkContinuedCreate(DbContext dbContext, ICreateVisitor visitor) => new BulkContinuedCreate(dbContext, visitor);
     public virtual IBulkContinuedCreate<TEntity> NewBulkContinuedCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor) => new BulkContinuedCreate<TEntity>(dbContext, visitor);
+
+    public virtual IIdentitiedCreated NewIdentitiedCreated(DbContext dbContext, ICreateVisitor visitor) => new IdentitiedCreated(dbContext, visitor);
+    public virtual ICreated NewCreated(DbContext dbContext, ICreateVisitor visitor) => new Created(dbContext, visitor);
+    public virtual IResultCommand<TResult> NewResultCreated<TResult>(DbContext dbContext, ICreateVisitor visitor) => new ResultCreated<TResult>(dbContext, visitor);
+    public virtual IBulkResultCommand<TResult> NewBulkResultCreated<TResult>(DbContext dbContext, ICreateVisitor visitor) => new BulkResultCreated<TResult>(dbContext, visitor);
+
+
+    public virtual IUpdate NewUpdate(Type entityType, DbContext dbContext) => new Update(entityType, dbContext);
     public virtual IUpdate<TEntity> NewUpdate<TEntity>(DbContext dbContext) => new Update<TEntity>(dbContext);
-    public virtual IUpdated<TEntity> NewUpdated<TEntity>(DbContext dbContext, IUpdateVisitor visitor) => new Updated<TEntity>(dbContext, visitor);
+    public virtual IUpdated NewUpdated(DbContext dbContext, IUpdateVisitor visitor) => new Updated(dbContext, visitor);
+    public virtual IContinuedUpdate NewContinuedUpdate(DbContext dbContext, IUpdateVisitor visitor) => new ContinuedUpdate(dbContext, visitor);
     public virtual IContinuedUpdate<TEntity> NewContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor) => new ContinuedUpdate<TEntity>(dbContext, visitor);
+    public virtual IBulkContinuedUpdate NewBulkContinuedUpdate(DbContext dbContext, IUpdateVisitor visitor) => new BulkContinuedUpdate(dbContext, visitor);
     public virtual IBulkContinuedUpdate<TEntity> NewBulkContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor) => new BulkContinuedUpdate<TEntity>(dbContext, visitor);
     public virtual IBulkCopyContinuedUpdate<TEntity> NewBulkCopyContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor) => new BulkCopyContinuedUpdate<TEntity>(dbContext, visitor);
+
+
     public virtual IUpdateJoin<TEntity, T1> NewUpdateJoin<TEntity, T1>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateJoin<TEntity, T1>(dbContext, visitor);
     public virtual IUpdateJoin<TEntity, T1, T2> NewUpdateJoin<TEntity, T1, T2>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateJoin<TEntity, T1, T2>(dbContext, visitor);
     public virtual IUpdateJoin<TEntity, T1, T2, T3> NewUpdateJoin<TEntity, T1, T2, T3>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateJoin<TEntity, T1, T2, T3>(dbContext, visitor);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> NewUpdateJoin<TEntity, T1, T2, T3, T4>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateJoin<TEntity, T1, T2, T3, T4>(dbContext, visitor);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> NewUpdateJoin<TEntity, T1, T2, T3, T4, T5>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateJoin<TEntity, T1, T2, T3, T4, T5>(dbContext, visitor);
 
+    public virtual IDelete NewDelete(Type entityType, DbContext dbContext) => new Delete(entityType, dbContext);
     public virtual IDelete<TEntity> NewDelete<TEntity>(DbContext dbContext) => new Delete<TEntity>(dbContext);
-    public virtual IDeleted<TEntity> NewDeleted<TEntity>(DbContext dbContext, IDeleteVisitor visitor) => new Deleted<TEntity>(dbContext);
+    public virtual IDeleted NewDeleted(DbContext dbContext, IDeleteVisitor visitor) => new Deleted(dbContext);
+    public virtual IBulkResultCommand<TResult> NewResultDeleted<TResult>(DbContext dbContext, IDeleteVisitor visitor) => new ResultDeleted<TResult>(dbContext, visitor);
 
     public virtual IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null) => new QueryVisitor(dbContext, tableAsStart, dbParameters);
     public virtual ICreateVisitor NewCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a') => new CreateVisitor(entityType, dbContext, tableAsStart);
+    public virtual ICreateVisitor NewCreateVisitor(Type entityType, DbContext dbContext, IQueryVisitor queryVisitor, string fromSql = null)
+    {
+        var createVisitor = new CreateVisitor(entityType, dbContext, queryVisitor.TableAsStart);
+        createVisitor.Tables = queryVisitor.Tables;
+        createVisitor.DbParameters = queryVisitor.DbParameters;
+        createVisitor.RefQueries = queryVisitor.RefQueries;
+        createVisitor.ShardingTables = queryVisitor.ShardingTables;
+        createVisitor.RefTableAliases = queryVisitor.RefTableAliases;
+        createVisitor.IsRecursive = queryVisitor.IsRecursive;
+        createVisitor.CteQueryObj = queryVisitor.CteQueryObj;
+        createVisitor.RefFrom = this;
+        createVisitor.FromSql = fromSql;
+        return createVisitor;
+    }
     public virtual IUpdateVisitor NewUpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a') => new UpdateVisitor(entityType, dbContext, tableAsStart);
     public virtual IDeleteVisitor NewDeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a') => new DeleteVisitor(entityType, dbContext, tableAsStart);
 }

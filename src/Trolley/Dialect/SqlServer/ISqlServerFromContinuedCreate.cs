@@ -3,7 +3,7 @@ using System.Linq.Expressions;
 
 namespace Trolley.SqlServer;
 
-public interface ISqlServerFromContinuedCreate<TEntity> : ICreated<TEntity>
+public interface ISqlServerFromContinuedCreate<TEntity> : IIdentitiedCreated<TEntity>
 {
     #region Output
     /// <summary>

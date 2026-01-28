@@ -19,16 +19,7 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         tableSegment.TableSchema = tableSchema;
     }
-    public void WithBulkCopy(IEnumerable updateObjs, int? timeoutSeconds)
-    {
-        this.ActionMode = ActionMode.BulkCopy;
-        this.deferredSegments.Add(new CommandSegment
-        {
-            Type = "WithBulkCopy",
-            Value = (updateObjs, timeoutSeconds)
-        });
-    }
-    public (ShardingTableType, object, IEnumerable, int?, List<MemberMap>, List<Func<object, object>>) BuildWithBulkCopy()
+    public (ShardingTableType, object, IEnumerable, int?, List<MemberMap>, List<Func<object, object>>) BuildSetBulkCopy()
     {
         (var updateObjs, int? timeoutSeconds) = ((IEnumerable, int?))this.deferredSegments[0].Value;
         object firstUpdateObj = null;

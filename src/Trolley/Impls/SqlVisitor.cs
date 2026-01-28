@@ -99,7 +99,11 @@ public class SqlVisitor : ISqlVisitor
 
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         if (!this.TrySetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
+        {
+            //没有配置分表，直接设置第一个表名
+            if (tableNames.Length == 1) tableSegment.Body = tableNames[0];
             return;
+        }
 
         //多个分表，才当作分表处理
         tableSegment.IsSharding = true;

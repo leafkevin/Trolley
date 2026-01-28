@@ -20,7 +20,7 @@ public interface IUpdateVisitor : IDisposable
 
     string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields);
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>, Action<IDataParameterCollection,
-        StringBuilder, DbContext, string, object, string>, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command);
+        StringBuilder, DbContext, string, object, string>, List<SqlFieldSegment>) BuildSetBulk(ITheaCommand command);
 
     void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
     void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
@@ -32,6 +32,7 @@ public interface IUpdateVisitor : IDisposable
     void Join(string joinType, Type entityType, Expression joinOn);
     void Set(Expression fieldsAssignment);
     void SetWith(object updateObj);
+    void SetField(string fieldName, object fieldValue);
     void SetField(Expression fieldSelector, object fieldValue);
     void SetFrom(Expression fieldsAssignment);
     void SetFrom(Expression fieldSelector, Expression valueSelector);

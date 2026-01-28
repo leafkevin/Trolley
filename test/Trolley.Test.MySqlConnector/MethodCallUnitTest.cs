@@ -324,7 +324,7 @@ public class MethodCallUnitTest : UnitTestBase
         Assert.Equal(typeof(string), dbParameters[4].Value.GetType());
 
         repository.BeginTransaction();
-        repository.Delete<Order>(new[] { "1", "2", "3" });
+        repository.Delete<Order>().WhereByIds(new[] { "1", "2", "3" }).Execute();
         var count = repository.Create<Order>(new[]
         {
             new Order

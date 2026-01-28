@@ -14,8 +14,17 @@ public interface ICreateVisitor : IDisposable
     IEntityMapProvider MapProvider { get; }
     ITableShardingProvider ShardingProvider { get; }
     ActionMode ActionMode { get; set; }
-    List<TableSegment> Tables { get; }
     bool IsReturnIdentity { get; set; }
+
+    List<TableSegment> Tables { get; set; }
+    List<IQuery> RefQueries { get; set; }
+    List<TableSegment> ShardingTables { get; set; }
+    Dictionary<string, TableSegment> RefTableAliases { get; set; }
+    ICteQuery CteQueryObj { get; set; }
+    object RefFrom { get; set; }
+    string FromSql { get; set; }
+    bool IsRecursive { get; set; }
+
 
     string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields);
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
@@ -29,7 +38,8 @@ public interface ICreateVisitor : IDisposable
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
     void WithBy(object insertObj);
-    void WithByField(Expression fieldSelector, object fieldValue);
+    void WithByField(string fieldName, object fieldValue);
+    void WithByFieldExpr(Expression fieldSelector, object fieldValue);
     void WithBulk(IEnumerable insertObjs, int bulkCount);
     DataTable ToDataTable(string tableName, IEnumerable entities, List<MemberMap> memberMappers, List<Func<object, object>> valueGetters);
     (List<MemberMap>, List<Func<object, object>>) GetRefMemberMappers(Type parameterType, EntityMap entityMapper, object parameterSample, bool isUpdate = false);

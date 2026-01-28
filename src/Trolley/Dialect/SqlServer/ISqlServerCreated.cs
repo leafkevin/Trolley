@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Trolley.SqlServer;
 
-public interface ISqlServerCreated<TEntity, TResult> : ICreated<TEntity>
+public interface ISqlServerCreated<TEntity, TResult> : IIdentitiedCreated<TEntity>
 {
     #region Execute
     /// <summary>
@@ -20,7 +20,7 @@ public interface ISqlServerCreated<TEntity, TResult> : ICreated<TEntity>
     new Task<TResult> ExecuteAsync(CancellationToken cancellationToken = default);
     #endregion
 }
-public interface ISqlServerBulkCreated<TEntity, TResult> : ICreated<TEntity>
+public interface ISqlServerBulkCreated<TEntity, TResult> : IIdentitiedCreated<TEntity>
 {
     #region Execute
     /// <summary>

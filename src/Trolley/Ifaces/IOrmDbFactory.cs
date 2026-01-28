@@ -74,6 +74,6 @@ public interface IOrmDbFactory
 
     void UseTypeHandler(ITypeHandler typeHandler);
 
-    IRepository CreateRepository(string dbKey = null);
+    IRepository Create(string dbKey = null);
     void Build();
 }

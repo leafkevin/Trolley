@@ -8,7 +8,7 @@ namespace Trolley;
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表T1实体类型</typeparam>
-public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
+public interface IUpdateJoin<TEntity, T1> : IUpdated
 {
     #region Sharding
     /// <summary>
@@ -311,7 +311,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表T1实体类型</typeparam>
 /// <typeparam name="T2">更新值来源表T2实体类型</typeparam>
-public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
+public interface IUpdateJoin<TEntity, T1, T2> : IUpdated
 {
     #region Sharding
     /// <summary>
@@ -615,7 +615,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
 /// <typeparam name="T1">更新值来源表T1实体类型</typeparam>
 /// <typeparam name="T2">更新值来源表T2实体类型</typeparam>
 /// <typeparam name="T3">更新值来源表T3实体类型</typeparam>
-public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
+public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated
 {
     #region Sharding
     /// <summary>
@@ -920,7 +920,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
 /// <typeparam name="T2">更新值来源表T2实体类型</typeparam>
 /// <typeparam name="T3">更新值来源表T3实体类型</typeparam>
 /// <typeparam name="T4">更新值来源表T4实体类型</typeparam>
-public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
+public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated
 {
     #region Sharding
     /// <summary>
@@ -1226,7 +1226,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
 /// <typeparam name="T3">更新值来源表T3实体类型</typeparam>
 /// <typeparam name="T4">更新值来源表T4实体类型</typeparam>
 /// <typeparam name="T5">更新值来源表T5实体类型</typeparam>
-public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
+public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated
 {
     #region Sharding
     /// <summary>

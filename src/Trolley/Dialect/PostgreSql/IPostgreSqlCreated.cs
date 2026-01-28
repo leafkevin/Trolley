@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Trolley.PostgreSql;
 
-public interface IPostgreSqlCreated<TEntity, TResult> : ICreated<TEntity>
+public interface IPostgreSqlCreated<TEntity, TResult> : IIdentitiedCreated<TEntity>
 {
     #region Execute
     /// <summary>
@@ -20,7 +20,7 @@ public interface IPostgreSqlCreated<TEntity, TResult> : ICreated<TEntity>
     new Task<TResult> ExecuteAsync(CancellationToken cancellationToken = default);
     #endregion
 }
-public interface IPostgreSqlBulkCreated<TEntity, TResult> : ICreated<TEntity>
+public interface IPostgreSqlBulkCreated<TEntity, TResult> : IIdentitiedCreated<TEntity>
 {
     #region Execute
     /// <summary>

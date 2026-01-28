@@ -516,6 +516,12 @@ public interface IRepository
 
     #region Create
     /// <summary>
+    /// 创建<typeparamref name="entityType"/>类型匿名插入对象
+    /// </summary>
+    /// <param name="entityType"></param>
+    /// <returns>返回插入对象</returns>
+    ICreate Create(Type entityType);
+    /// <summary>
     /// 创建<typeparamref name="TEntity"/>类型插入对象
     /// </summary>
     /// <typeparam name="TEntity">插入实体类型</typeparam>

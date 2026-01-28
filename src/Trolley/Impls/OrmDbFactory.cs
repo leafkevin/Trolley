@@ -143,29 +143,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
         var typeHandlerType = typeHandler.GetType();
         this.typeHandlers.AddOrUpdate(typeHandlerType, typeHandler, (o, k) => typeHandler);
     }
-    //public TRepository Create<TRepository>(params object[] dbKeySelectorValues) where TRepository : class, IRepository
-    //{
-    //    //如果有指定dbKey，就是使用指定的dbKey创建IRepository对象,如果也没有指定，就使用配置的默认dbKey
-    //    string dbKey = null;
-    //    if (this.dbKeySelector != null)
-    //    {
-    //        if (dbKeySelectorValues != null && dbKeySelectorValues.Length > 0)
-    //        {
-    //            if (dbKeySelectorValues.Length != this.dbKeySelector.Method.GetParameters().Length)
-    //                throw new ArgumentException("dbKeySelectorValues参数个数与dbKeySelector委托参数个数不匹配");
-    //            dbKey = this.dbKeySelector.DynamicInvoke(dbKeySelectorValues) as string;
-    //        }
-    //        else dbKey = this.dbKeySelector.DynamicInvoke() as string;
-    //    }
-    //    else
-    //    {
-    //        if (this.defaultDatabase == null)
-    //            throw new ArgumentNullException(nameof(dbKey), "dbKey不可为null，未配置dbKeySelector委托，也没有配置默认数据库");
-    //        dbKey = this.defaultDatabase.DbKey;
-    //    }
-    //    return this.CreateRepository(dbKey) as TRepository;
-    //}
-    public IRepository CreateRepository(string dbKey = null)
+    public IRepository Create(string dbKey = null)
     {
         if (string.IsNullOrEmpty(dbKey))
         {

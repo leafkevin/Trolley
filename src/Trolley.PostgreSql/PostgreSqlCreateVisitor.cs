@@ -16,7 +16,6 @@ public class PostgreSqlCreateVisitor : CreateVisitor
     /// 当有OnConflict更新操作时，引用原值时才会设置，使用IsNeedTableAlias会影响正常Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)场景的解析
     /// </summary>
     public bool IsUseTableAlias { get; set; }
-    public string FromSql { get; set; }
     public string OutputSql { get; set; }
 
     public PostgreSqlCreateVisitor(DbContext dbContext, char tableAsStart = 'a')
@@ -461,7 +460,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         else if (sqlSegment.IsConstant || sqlSegment.IsVariable)
         {
             var parameterName = this.OrmProvider.ParameterPrefix + this.UserParameterPrefix + this.DbParameters.Count.ToString();
-          
+
             var dbFieldValue = sqlSegment.Value;
             if (memberMapper.TypeHandler != null)
                 dbFieldValue = memberMapper.TypeHandler.ToFieldValue(dbFieldValue);
@@ -496,7 +495,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         var entityMapper = this.Tables[0].Mapper;
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
-         //在前面insert的时候，参数有可能已经添加过了，此处需要判断是否需要添加
+        //在前面insert的时候，参数有可能已经添加过了，此处需要判断是否需要添加
         if (!this.DbParameters.Contains(parameterName))
         {
             if (memberMapper.TypeHandler != null)

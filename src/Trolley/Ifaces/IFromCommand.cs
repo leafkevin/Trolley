@@ -541,6 +541,10 @@ public interface IFromCommand<TEntity, T> : IFromCommand
     /// <returns>返回插入行数</returns>
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     #endregion
+
+    #region NewCreateVisitor
+    ICreateVisitor NewCreateVisitor(string fromSql = null);
+    #endregion
 }
 /// <summary>
 /// 多表T1, T2查询

@@ -168,13 +168,13 @@ public interface ISqlServerContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
 
     #region IgnoreFields
     /// <summary>
-    /// 不更新指定字段，如：IgnoreFields("Id","Age");IgnoreFields("Id");
+    /// 不更新指定字段，如：.IgnoreFields("Id","Age")
     /// </summary>
     /// <param name="fieldNames">忽略更新的字段列表</param>
     /// <returns>返回更新对象</returns>
     new ISqlServerContinuedUpdate<TEntity> IgnoreFields(params string[] fieldNames);
     /// <summary>
-    /// 不更新指定字段，如：.IgnoreFields(f =&gt; new { f.Id, f.Age}); .IgnoreFields(f =&gt; f.Id);
+    /// 不更新指定字段，如：.OnlyFields("Name","Gender"); .IgnoreFields(f =&gt; f.Id);
     /// </summary>
     /// <typeparam name="TFields">字段类型</typeparam>
     /// <param name="fieldsSelector">字段选择表达式，支持MemberAccess、New或MemberInit类型表达式</param>
@@ -184,7 +184,7 @@ public interface ISqlServerContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
 
     #region OnlyFields
     /// <summary>
-    /// 只更新指定字段，如：.OnlyFields("Name","Gender"); .OnlyFields("Name");
+    /// 只更新指定字段，如：.OnlyFields("Name","Gender")
     /// </summary>
     /// <param name="fieldNames">忽略更新的字段列表</param>
     /// <returns>返回更新对象</returns>
@@ -345,13 +345,13 @@ public interface ISqlServerBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<T
 
     #region IgnoreFields
     /// <summary>
-    /// 不更新指定字段，如：IgnoreFields("Id","Age");IgnoreFields("Id");
+    /// 不更新指定字段，如：.IgnoreFields("Id","Age")
     /// </summary>
     /// <param name="fieldNames">忽略更新的字段列表</param>
     /// <returns>返回更新对象</returns>
     new ISqlServerBulkContinuedUpdate<TEntity> IgnoreFields(params string[] fieldNames);
     /// <summary>
-    /// 不更新指定字段，如：.IgnoreFields(f =&gt; new { f.Id, f.Age}); .IgnoreFields(f =&gt; f.Id);
+    /// 不更新指定字段，如：.OnlyFields("Name","Gender"); .IgnoreFields(f =&gt; f.Id);
     /// </summary>
     /// <typeparam name="TFields">字段类型</typeparam>
     /// <param name="fieldsSelector">字段选择表达式，支持MemberAccess、New或MemberInit类型表达式</param>
@@ -361,7 +361,7 @@ public interface ISqlServerBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<T
 
     #region OnlyFields
     /// <summary>
-    /// 只更新指定字段，如：.OnlyFields("Name","Gender"); .OnlyFields("Name");
+    /// 只更新指定字段，如：.OnlyFields("Name","Gender")
     /// </summary>
     /// <param name="fieldNames">忽略更新的字段列表</param>
     /// <returns>返回更新对象</returns>

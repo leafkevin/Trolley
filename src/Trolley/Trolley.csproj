@@ -24,7 +24,12 @@
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 	<ItemGroup>
-	  <Compile Remove="Dialect\PostgreSql\IPostgreSqlMultiQuery.cs" />
+	  <Compile Remove="Dialect\PostgreSql\**" />
+	  <Compile Remove="Dialect\SqlServer\**" />
+	  <EmbeddedResource Remove="Dialect\PostgreSql\**" />
+	  <EmbeddedResource Remove="Dialect\SqlServer\**" />
+	  <None Remove="Dialect\PostgreSql\**" />
+	  <None Remove="Dialect\SqlServer\**" />
 	</ItemGroup>
 	<ItemGroup>
 		<None Include="README.md" Pack="true" PackagePath="\" />

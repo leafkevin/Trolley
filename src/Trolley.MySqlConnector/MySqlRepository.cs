@@ -7,32 +7,15 @@ using System.Threading.Tasks;
 
 namespace Trolley.MySqlConnector;
 
-public class MySqlRepository : Repository, IMySqlRepository
+public class MySqlRepository : Repository
 {
     #region fields
     private MySqlProvider dialectProvider => this.OrmProvider as MySqlProvider;
     #endregion
 
     #region Constructor
-    public MySqlRepository(DbContext dbContext) :
-        base(dbContext)
-    { }
-    #endregion
-
-    #region Create
-    public new IMySqlCreate<TEntity> Create<TEntity>()
-        => this.OrmProvider.NewCreate<TEntity>(this.DbContext) as IMySqlCreate<TEntity>;
-    #endregion
-
-    #region Update
-    public new IMySqlUpdate<TEntity> Update<TEntity>()
-        => this.OrmProvider.NewUpdate<TEntity>(this.DbContext) as IMySqlUpdate<TEntity>;
-    #endregion
-
-    #region Delete
-    public new IMySqlDelete<TEntity> Delete<TEntity>()
-        => this.OrmProvider.NewDelete<TEntity>(this.DbContext) as IMySqlDelete<TEntity>;
-    #endregion
+    public MySqlRepository(DbContext dbContext) : base(dbContext) { }
+    #endregion   
 
     #region ShardingTable
     public override void CreateShardingTable<TEntity>(string tableName, string fromTableSchema = null)

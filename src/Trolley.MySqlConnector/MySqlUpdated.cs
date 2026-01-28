@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Trolley.MySqlConnector;
 
-public class MySqlUpdated<TEntity> : Updated<TEntity>
+public class MySqlUpdated : Updated
 {
     #region Properties
     public MySqlUpdateVisitor DialectVisitor { get; protected set; }
@@ -34,7 +34,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>
             case ActionMode.BulkCopy:
                 {
                     (var shardingType, var shardingTables, var updateObjs, var timeoutSeconds,
-                        var memberMappers, var valueGetters) = this.DialectVisitor.BuildWithBulkCopy();
+                        var memberMappers, var valueGetters) = this.DialectVisitor.BuildSetBulkCopy();
 
                     var tableId = $"{Guid.NewGuid():N}";
                     var pkFields = memberMappers.Where(f => f.IsKey).Select(f => this.OrmProvider.GetFieldName(f.FieldName)).ToList();
@@ -132,7 +132,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>
             case ActionMode.Bulk:
                 {
                     (var shardingType, var shardingTables, var updateObjs, var bulkCount,
-                        var fixedSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
+                        var fixedSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildSetBulk(command);
 
                     int index = 0;
                     var builder = new StringBuilder();
@@ -227,7 +227,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>
             case ActionMode.BulkCopy:
                 {
                     (var shardingType, var shardingTables, var updateObjs, var timeoutSeconds,
-                        var memberMappers, var valueGetters) = this.DialectVisitor.BuildWithBulkCopy();
+                        var memberMappers, var valueGetters) = this.DialectVisitor.BuildSetBulkCopy();
 
                     var tableId = $"{Guid.NewGuid():N}";
                     var pkFields = memberMappers.Where(f => f.IsKey).Select(f => this.OrmProvider.GetFieldName(f.FieldName)).ToList();
@@ -326,7 +326,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>
             case ActionMode.Bulk:
                 {
                     (var shardingType, var shardingTables, var updateObjs, var bulkCount,
-                        var fixedSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
+                        var fixedSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildSetBulk(command);
 
                     int index = 0;
                     var builder = new StringBuilder();
@@ -423,7 +423,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>
         if (this.Visitor.ActionMode == ActionMode.BulkCopy)
         {
             (var shardingType, var shardingTables, var updateObjs, var timeoutSeconds,
-                var memberMappers, var valueGetters) = this.DialectVisitor.BuildWithBulkCopy();
+                var memberMappers, var valueGetters) = this.DialectVisitor.BuildSetBulkCopy();
 
             var tableId = $"{Guid.NewGuid():N}";
             var pkFields = memberMappers.Where(f => f.IsKey).Select(f => this.OrmProvider.GetFieldName(f.FieldName)).ToList();
