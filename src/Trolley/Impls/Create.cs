@@ -380,6 +380,19 @@ public class ResultCreated<TResult> : IResultCommand<TResult>
     public async Task<TResult> ExecuteAsync(CancellationToken cancellationToken)
         => await this.DbContext.CreateResultAsync<TResult>(this.Visitor, cancellationToken);
     #endregion
+
+    #region ToSql
+    public virtual string ToSql(out List<IDbDataParameter> dbParameters)
+    {
+        (_, _, var command) = this.DbContext.UseMasterCommand();
+        var sql = this.Visitor.BuildSql(command, out _);
+        dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
+        command.Dispose();
+        this.Visitor.Dispose();
+        this.Visitor = null;
+        return sql;
+    }
+    #endregion
 }
 public class BulkResultCreated<TResult> : IBulkResultCommand<TResult>
 {
@@ -401,6 +414,19 @@ public class BulkResultCreated<TResult> : IBulkResultCommand<TResult>
     public List<TResult> Execute() => this.DbContext.CreateResult<List<TResult>>(this.Visitor);
     public async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken)
         => await this.DbContext.CreateResultAsync<List<TResult>>(this.Visitor, cancellationToken);
+    #endregion
+
+    #region ToSql
+    public virtual string ToSql(out List<IDbDataParameter> dbParameters)
+    {
+        (_, _, var command) = this.DbContext.UseMasterCommand();
+        var sql = this.Visitor.BuildSql(command, out _);
+        dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
+        command.Dispose();
+        this.Visitor.Dispose();
+        this.Visitor = null;
+        return sql;
+    }
     #endregion
 }
 
@@ -436,47 +462,47 @@ public class Create<TEntity> : Create, ICreate<TEntity>
     #endregion
 
     #region From
-    public IFromCommand<TEntity, T> From<T>()
+    public IFromCommand<T> From<T>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.From('a', typeof(T));
         queryVisitor.IsFromCommand = true;
-        return this.OrmProvider.NewFromCommand<TEntity, T>(this.DbContext, queryVisitor);
+        return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
     }
-    public IFromCommand<TEntity, T1, T2> From<T1, T2>()
+    public IFromCommand<T1, T2> From<T1, T2>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.From('a', typeof(T1), typeof(T2));
         queryVisitor.IsFromCommand = true;
-        return this.OrmProvider.NewFromCommand<TEntity, T1, T2>(this.DbContext, queryVisitor);
+        return this.OrmProvider.NewFromCommand<T1, T2>(this.DbContext, queryVisitor);
     }
-    public IFromCommand<TEntity, T1, T2, T3> From<T1, T2, T3>()
+    public IFromCommand<T1, T2, T3> From<T1, T2, T3>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.From('a', typeof(T1), typeof(T2), typeof(T3));
         queryVisitor.IsFromCommand = true;
-        return this.OrmProvider.NewFromCommand<TEntity, T1, T2, T3>(this.DbContext, queryVisitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3>(this.DbContext, queryVisitor);
     }
-    public IFromCommand<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>()
+    public IFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.From('a', typeof(T1), typeof(T2), typeof(T3), typeof(T4));
         queryVisitor.IsFromCommand = true;
-        return this.OrmProvider.NewFromCommand<TEntity, T1, T2, T3, T4>(this.DbContext, queryVisitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4>(this.DbContext, queryVisitor);
     }
-    public IFromCommand<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
+    public IFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.From('a', typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
         queryVisitor.IsFromCommand = true;
-        return this.OrmProvider.NewFromCommand<TEntity, T1, T2, T3, T4, T5>(this.DbContext, queryVisitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5>(this.DbContext, queryVisitor);
     }
-    public IFromCommand<TEntity, T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
+    public IFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.From('a', typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
         queryVisitor.IsFromCommand = true;
-        return this.OrmProvider.NewFromCommand<TEntity, T1, T2, T3, T4, T5, T6>(this.DbContext, queryVisitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, T6>(this.DbContext, queryVisitor);
     }
     #endregion
 

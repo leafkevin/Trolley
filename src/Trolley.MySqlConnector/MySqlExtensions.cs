@@ -113,11 +113,11 @@ public static class MySqlExtensions
         => new MySqlCreateDuplicateKeyUpdate<TEntity>(instance.DbContext, instance.Visitor);
     public static IMySqlBulkCreateDuplicateKeyUpdate<TEntity> OnDuplicateKeyUpdate<TEntity>(this IBulkContinuedCreate<TEntity> instance)
         => new MySqlBulkCreateDuplicateKeyUpdate<TEntity>(instance.DbContext, instance.Visitor);
-    public static IMySqlBulkCreateDuplicateKeyUpdate<TEntity> OnDuplicateKeyUpdate<TEntity, T>(this IFromCommand<TEntity, T> instance)
+    public static IMySqlBulkCreateDuplicateKeyUpdate<TTarget> OnDuplicateKeyUpdate<TTarget>(this IFromCommand<TTarget> instance)
     {
         var fromSql = instance.Visitor.BuildCommandSql(false, out _);
         var visitor = instance.NewCreateVisitor(fromSql);
-        return new MySqlBulkCreateDuplicateKeyUpdate<TEntity>(instance.DbContext, visitor);
+        return new MySqlBulkCreateDuplicateKeyUpdate<TTarget>(instance.DbContext, visitor);
     }
     #endregion
 
@@ -155,21 +155,21 @@ public static class MySqlExtensions
         dialectVisitor.Returning(fieldNames);
         return dialectVisitor.OrmProvider.NewBulkResultCreated<TResult>(instance.DbContext, instance.Visitor);
     }
-    public static IBulkResultCommand<TResult> Returning<TEntity, TResult>(this IBulkContinuedCreate instance, Expression<Func<TEntity, TResult>> fieldsSelector)
+    public static IBulkResultCommand<TResult> Returning<TEntity, TResult>(this IBulkContinuedCreate<TEntity> instance, Expression<Func<TEntity, TResult>> fieldsSelector)
     {
         var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
         dialectVisitor.Returning(fieldsSelector);
         return dialectVisitor.OrmProvider.NewBulkResultCreated<TResult>(instance.DbContext, instance.Visitor);
     }
 
-    public static IBulkResultCommand<TResult> Returning<TEntity, T, TResult>(this IFromCommand<TEntity, T> instance, string fieldNames)
+    public static IBulkResultCommand<TResult> Returning<TResult>(this IFromCommand instance, string fieldNames)
     {
         var sql = instance.Visitor.BuildCommandSql(false, out _);
         var visitor = instance.NewCreateVisitor(sql) as MySqlCreateVisitor;
         visitor.Returning(fieldNames);
         return visitor.OrmProvider.NewBulkResultCreated<TResult>(instance.DbContext, visitor);
     }
-    public static IBulkResultCommand<TResult> Returning<TEntity, T, TResult>(this IFromCommand<TEntity, T> instance, Expression<Func<TEntity,TResult>> fieldsSelector)
+    public static IBulkResultCommand<TResult> Returning<TTarget, TResult>(this IFromCommand<TTarget> instance, Expression<Func<TTarget, TResult>> fieldsSelector)
     {
         var sql = instance.Visitor.BuildCommandSql(false, out _);
         var visitor = instance.NewCreateVisitor(sql) as MySqlCreateVisitor;
@@ -181,6 +181,12 @@ public static class MySqlExtensions
     {
         var dialectVisitor = instance.Visitor as MySqlDeleteVisitor;
         dialectVisitor.Returning(fieldNames);
+        return dialectVisitor.OrmProvider.NewResultDeleted<TResult>(instance.DbContext, instance.Visitor);
+    }
+    public static IBulkResultCommand<TResult> Returning<TEntity, TResult>(this IDelete<TEntity> instance, Expression<Func<TEntity, TResult>> fieldsSelector)
+    {
+        var dialectVisitor = instance.Visitor as MySqlDeleteVisitor;
+        dialectVisitor.Returning(fieldsSelector);
         return dialectVisitor.OrmProvider.NewResultDeleted<TResult>(instance.DbContext, instance.Visitor);
     }
     #endregion     

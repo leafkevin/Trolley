@@ -192,7 +192,7 @@ public class Deleted : IDeleted
         this.Visitor.Dispose();
         return sql;
     }
-    #endregion   
+    #endregion
 }
 public class Delete<TEntity> : Delete, IDelete<TEntity>
 {
@@ -373,6 +373,18 @@ public class ResultDeleted<TResult> : IBulkResultCommand<TResult>
         if (isNeedClose) await connection.CloseAsync();
         this.Visitor.Dispose();
         return result;
+    }
+    #endregion
+
+    #region ToSql
+    public virtual string ToSql(out List<IDbDataParameter> dbParameters)
+    {
+        (_, _, var command) = this.DbContext.UseMasterCommand();
+        var sql = this.Visitor.BuildSql(command, out _);
+        dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
+        command.Dispose();
+        this.Visitor.Dispose();
+        return sql;
     }
     #endregion
 }
