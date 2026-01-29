@@ -208,7 +208,7 @@ public class UnitTest4 : UnitTestBase
     {
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
-        repository.Delete<User>(new[] { 1, 2 });
+        repository.DeleteByIds<User>(new[] { 1, 2 });
         var count = repository.Create<User>(new[]
         {
             new User

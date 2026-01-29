@@ -7060,7 +7060,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
     {
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
-        repository.Delete<User>(new[] { 1, 2 });
+        repository.DeleteByIds<User>(new[] { 1, 2 });
         var count = repository.Create<User>(new[]
         {
             new User

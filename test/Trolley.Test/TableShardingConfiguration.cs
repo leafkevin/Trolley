@@ -5,7 +5,7 @@ namespace Trolley.Test;
 
 public class TableShardingConfiguration : ITableShardingConfiguration
 {
-    public void OnModelCreating(TableShardingBuilder builder)
+    public void Configure(TableShardingBuilder builder)
     {
         //按照租户+时间分表
         builder

@@ -203,4 +203,13 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
         (var memberMappers, var valueGetters) = this.GetRefMemberMappers(updateObjType, entityMapper, firstUpdateObj, true);
         return (shardingType, shardingTables, updateObjs, timeoutSeconds, memberMappers, valueGetters);
     }
+    public virtual void SetBulkCopy(IEnumerable updateObjs, int? timeoutSeconds)
+    {
+        this.ActionMode = ActionMode.BulkCopy;
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "WithBulkCopy",
+            Value = (updateObjs, timeoutSeconds)
+        });
+    }
 }

@@ -32,9 +32,6 @@
 	  <None Remove="Dialect\SqlServer\**" />
 	</ItemGroup>
 	<ItemGroup>
-	  <Compile Include="Dialect\PostgreSql\IPostgreSqlCreateConflictDoUpdate.cs" />
-	</ItemGroup>
-	<ItemGroup>
 		<None Include="README.md" Pack="true" PackagePath="\" />
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
 			<PrivateAssets>all</PrivateAssets>

@@ -169,6 +169,13 @@ public static class MySqlExtensions
         visitor.Returning(fieldNames);
         return visitor.OrmProvider.NewBulkResultCreated<TResult>(instance.DbContext, visitor);
     }
+    public static IBulkResultCommand<TResult> Returning<TEntity, T, TResult>(this IFromCommand<TEntity, T> instance, Expression<Func<TEntity,TResult>> fieldsSelector)
+    {
+        var sql = instance.Visitor.BuildCommandSql(false, out _);
+        var visitor = instance.NewCreateVisitor(sql) as MySqlCreateVisitor;
+        visitor.Returning(fieldsSelector);
+        return visitor.OrmProvider.NewBulkResultCreated<TResult>(instance.DbContext, visitor);
+    }
 
     public static IBulkResultCommand<TResult> Returning<TResult>(this IDelete instance, string fieldNames)
     {

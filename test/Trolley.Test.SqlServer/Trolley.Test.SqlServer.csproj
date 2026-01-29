@@ -19,7 +19,6 @@
 		</PackageReference>
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\Trolley.SqlServer\Trolley.SqlServer.csproj" />
 		<ProjectReference Include="..\Trolley.Test\Trolley.Test.csproj" />
 	</ItemGroup>
 	<ItemGroup Condition="'$(TargetFramework)'=='net462'">

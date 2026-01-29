@@ -17,9 +17,9 @@ public class UnitTestBase
 
     public void Initialize(int type)
     {
-        var repository = this.dbFactory.CreateRepository();
+        var repository = this.dbFactory.Create();
         repository.BeginTransaction();
-        repository.Delete<User>(new[] { 1, 2 });
+        repository.DeleteByIds<User>(new[] { 1, 2 });
         repository.Create<User>(new[]
         {
             new User
@@ -91,7 +91,7 @@ public class UnitTestBase
                 }
             });
         }
-        repository.Delete<Brand>(new[] { 1, 2, 3 });
+        repository.DeleteByIds<Brand>(new[] { 1, 2, 3 });
         repository.Create<Brand>(new[]
         {
             new Brand
@@ -132,7 +132,7 @@ public class UnitTestBase
             }
         });
 
-        repository.Delete<Product>(new[] { 1, 2, 3 });
+        repository.DeleteByIds<Product>(new[] { 1, 2, 3 });
         repository.Create<Product>(new[]
         {
             new Product
@@ -182,7 +182,7 @@ public class UnitTestBase
             }
         });
 
-        repository.Delete<Order>(new[] { "1", "2", "3" });
+        repository.DeleteByIds<Order>(new[] { "1", "2", "3" });
         repository.Create<Order>(new[]
         {
             new Order
@@ -253,7 +253,7 @@ public class UnitTestBase
             }
         });
 
-        repository.Delete<OrderDetail>(new[] { "1", "2", "3", "4", "5", "6" });
+        repository.DeleteByIds<OrderDetail>(new[] { "1", "2", "3", "4", "5", "6" });
         repository.Create<OrderDetail>(new[]
         {
             new OrderDetail
@@ -348,7 +348,7 @@ public class UnitTestBase
             }
         });
 
-        repository.Delete<Menu>(new[] { 1, 2, 3 });
+        repository.DeleteByIds<Menu>(new[] { 1, 2, 3 });
         repository.Create<Menu>(new[]
         {
             new Menu
@@ -388,7 +388,7 @@ public class UnitTestBase
             }
         });
 
-        repository.Delete<Page>(new[] { 1, 2, 3 });
+        repository.DeleteByIds<Page>(new[] { 1, 2, 3 });
         repository.Create<Page>(new[]
         {
             new Page
@@ -415,7 +415,7 @@ public class UnitTestBase
         switch (type)
         {
             case 1:
-                repository.Delete<UpdateEntity1>(new[] { 1, 2 });
+                repository.DeleteByIds<UpdateEntity1>(new[] { 1, 2 });
                 repository.Create<UpdateEntity1>(new UpdateEntity1[]
                 {
                     new UpdateEntity1
@@ -461,7 +461,7 @@ public class UnitTestBase
                });
                 break;
             case 2:
-                repository.Delete<UpdateEntity2>(new[] { 1, 2 });
+                repository.DeleteByIds<UpdateEntity2>(new[] { 1, 2 });
                 repository.Create<UpdateEntity2>(new UpdateEntity2[]
                 {
                     new UpdateEntity2
@@ -507,7 +507,7 @@ public class UnitTestBase
                 });
                 break;
             case 3:
-                repository.Delete<UpdateEntity3>(new[] { 1, 2 });
+                repository.DeleteByIds<UpdateEntity3>(new[] { 1, 2 });
                 repository.Create<UpdateEntity3>(new UpdateEntity3[]
                 {
                     new UpdateEntity3
