@@ -12,7 +12,6 @@ public class MySqlCreateVisitor : CreateVisitor
 {
     private MySqlProvider dialectProvider => this.OrmProvider as MySqlProvider;
     public bool IsUseIgnoreInto { get; set; }
-    public StringBuilder UpdateBuilder { get; set; }
     public bool IsUseSetAlias { get; set; }
     public string RowAlias { get; set; } = "newRow";
 
@@ -94,6 +93,18 @@ public class MySqlCreateVisitor : CreateVisitor
                             break;
                         case "WithByFieldExpr":
                             this.VisitWithByFieldExpr(deferredSegment.Value);
+                            break;
+                        case "SetObject":
+                            this.VisitSetObject(deferredSegment.Value);
+                            break;
+                        case "SetField":
+                            this.VisitSetField(deferredSegment.Value);
+                            break;
+                        case "SetFieldExpr":
+                            this.VisitSetFieldExpr(deferredSegment.Value);
+                            break;
+                        case "SetFieldExprs":
+                            this.VisitSetFieldExprs(deferredSegment.Value);
                             break;
                     }
                 }
@@ -447,54 +458,7 @@ public class MySqlCreateVisitor : CreateVisitor
         if (this.IsUseIgnoreInto) return "INSERT IGNORE INTO";
         return "INSERT INTO";
     }
-    public virtual void VisitSetObject(object updateObj)
-    {
-        if (this.ActionMode == ActionMode.Bulk)
-            throw new NotSupportedException("批量插入时，不支持此方法的调用，请使用OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment)方法");
 
-        var tableSegment = this.Tables[0];
-        var entityType = tableSegment.EntityType;
-        var updateObjType = updateObj.GetType();
-
-        if (updateObj is IDictionary<string, object> dict)
-        {
-            var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(entityType);
-            foreach (var key in dict.Keys)
-            {
-                if (!entityMapper.TryGetMemberMap(key, out var memberMapper))
-                    continue;
-
-                var fieldValue = dict[key];
-                if (memberMapper.IsIgnore || memberMapper.IsAutoIncrement || memberMapper.IsNavigation
-                    || memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion)
-                    continue;
-
-                var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}";
-                if (this.UpdateBuilder.Length > 0) this.FieldsBuilder.Append(',');
-                this.UpdateBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
-
-                if (memberMapper.TypeHandler != null)
-                    fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
-                else
-                {
-                    var targetType = memberMapper.MappedTargetType;
-                    var fieldValueType = fieldValue.GetType();
-                    if (fieldValueType != targetType)
-                    {
-                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext);
-                        fieldValue = myValueGetter.Invoke(fieldValue);
-                    }
-                }
-                this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
-            }
-        }
-        else
-        {
-            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this.DbContext, entityType, updateObjType, 2, false, false, null, null);
-            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
-            typedCommandInitializer.Invoke(this.DbParameters, this.UpdateBuilder, this.DbContext, updateObj);
-        }
-    }
     public override SqlFieldSegment VisitNew(SqlFieldSegment sqlSegment)
     {
         //只有OnDuplicateKeyUpdate.Set时，才会走到此场景，如：.Set(f => new { TotalAmount = f.TotalAmount + f.Values(f.TotalAmount) })

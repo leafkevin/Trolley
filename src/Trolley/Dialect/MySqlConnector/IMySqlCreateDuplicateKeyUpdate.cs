@@ -42,7 +42,7 @@ public interface IMySqlCreateDuplicateKeyUpdate : IIdentitiedCreated
     /// <param name="fieldName">字段名</param>
     /// <param name="fieldValue">字段值</param>
     /// <returns>返回更新对象</returns>
-    IMySqlCreateDuplicateKeyUpdate Set<TField>(string fieldName, object fieldValue);
+    IMySqlCreateDuplicateKeyUpdate Set(string fieldName, object fieldValue);
     /// <summary>
     /// 单个字段更新
     /// </summary>
@@ -50,10 +50,10 @@ public interface IMySqlCreateDuplicateKeyUpdate : IIdentitiedCreated
     /// <param name="fieldName">字段名</param>
     /// <param name="fieldValue">字段值</param>
     /// <returns>返回更新对象</returns>
-    IMySqlCreateDuplicateKeyUpdate Set<TField>(bool condition, string fieldName, object fieldValue);
+    IMySqlCreateDuplicateKeyUpdate Set(bool condition, string fieldName, object fieldValue);
     #endregion
 
-    #region Set
+    #region Returning
     /// <summary>
     /// 返回更新后的数据
     /// </summary>
@@ -102,7 +102,7 @@ public interface IMySqlBulkCreateDuplicateKeyUpdate : ICreated
     /// <param name="fieldName">字段名</param>
     /// <param name="fieldValue">字段值</param>
     /// <returns>返回更新对象</returns>
-    IMySqlBulkCreateDuplicateKeyUpdate Set<TField>(string fieldName, object fieldValue);
+    IMySqlBulkCreateDuplicateKeyUpdate Set(string fieldName, object fieldValue);
     /// <summary>
     /// 单个字段更新
     /// </summary>
@@ -110,10 +110,10 @@ public interface IMySqlBulkCreateDuplicateKeyUpdate : ICreated
     /// <param name="fieldName">字段名</param>
     /// <param name="fieldValue">字段值</param>
     /// <returns>返回更新对象</returns>
-    IMySqlBulkCreateDuplicateKeyUpdate Set<TField>(bool condition, string fieldName, object fieldValue);
+    IMySqlBulkCreateDuplicateKeyUpdate Set(bool condition, string fieldName, object fieldValue);
     #endregion
 
-    #region Set
+    #region Returning
     /// <summary>
     /// 返回更新后的数据
     /// </summary>
@@ -163,7 +163,7 @@ public interface IMySqlCreateDuplicateKeyUpdate<TEntity> : IMySqlCreateDuplicate
     /// <param name="fieldName">字段名</param>
     /// <param name="fieldValue">字段值</param>
     /// <returns>返回更新对象</returns>
-    new IMySqlCreateDuplicateKeyUpdate<TEntity> Set<TField>(string fieldName, object fieldValue);
+    new IMySqlCreateDuplicateKeyUpdate<TEntity> Set(string fieldName, object fieldValue);
     /// <summary>
     /// 单个字段更新
     /// </summary>
@@ -171,7 +171,7 @@ public interface IMySqlCreateDuplicateKeyUpdate<TEntity> : IMySqlCreateDuplicate
     /// <param name="fieldName">字段名</param>
     /// <param name="fieldValue">字段值</param>
     /// <returns>返回更新对象</returns>
-    new IMySqlCreateDuplicateKeyUpdate<TEntity> Set<TField>(bool condition, string fieldName, object fieldValue);
+    new IMySqlCreateDuplicateKeyUpdate<TEntity> Set(bool condition, string fieldName, object fieldValue);
 
     /// <summary>
     // VALUES多个字段更新，如：
@@ -228,7 +228,7 @@ public interface IMySqlCreateDuplicateKeyUpdate<TEntity> : IMySqlCreateDuplicate
     IMySqlCreateDuplicateKeyUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, object>> valueGetter);
     #endregion
 
-    #region Set
+    #region Returning
     IResultCommand<TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
     #endregion
 }
@@ -260,7 +260,6 @@ public interface IMySqlBulkCreateDuplicateKeyUpdate<TEntity> : IMySqlBulkCreateD
     /// <code>.Set(true, new { Id = 1, Name = "kevin", SourceType = DBNull.Value }).Where(f =&gt; f.Id);  SQL: SET `Name`=@Name,`SourceType`=@SourceType WHERE `Id`=@kId
     /// .Set(true, new User { Id = 1, ... })  SQL: SET ... //只更新部分字段，可以使用OnlyFields方法，忽略部分字段，可以使用IgnoreFields方法</code>
     /// </summary>
-    /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
     /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新，可以是字典或是匿名对象或是现有命名对象</param>
     /// <returns>返回更新对象</returns>
@@ -271,7 +270,7 @@ public interface IMySqlBulkCreateDuplicateKeyUpdate<TEntity> : IMySqlBulkCreateD
     /// <param name="fieldName">字段名</param>
     /// <param name="fieldValue">字段值</param>
     /// <returns>返回更新对象</returns>
-    new IMySqlBulkCreateDuplicateKeyUpdate<TEntity> Set<TField>(string fieldName, object fieldValue);
+    new IMySqlBulkCreateDuplicateKeyUpdate<TEntity> Set(string fieldName, object fieldValue);
     /// <summary>
     /// 单个字段更新
     /// </summary>
@@ -279,7 +278,7 @@ public interface IMySqlBulkCreateDuplicateKeyUpdate<TEntity> : IMySqlBulkCreateD
     /// <param name="fieldName">字段名</param>
     /// <param name="fieldValue">字段值</param>
     /// <returns>返回更新对象</returns>
-    new IMySqlBulkCreateDuplicateKeyUpdate<TEntity> Set<TField>(bool condition, string fieldName, object fieldValue);
+    new IMySqlBulkCreateDuplicateKeyUpdate<TEntity> Set(bool condition, string fieldName, object fieldValue);
 
     /// <summary>
     // VALUES多个字段更新，如：
@@ -336,7 +335,7 @@ public interface IMySqlBulkCreateDuplicateKeyUpdate<TEntity> : IMySqlBulkCreateD
     IMySqlBulkCreateDuplicateKeyUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, object>> valueGetter);
     #endregion
 
-    #region Set
+    #region Returning
     IBulkResultCommand<TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
     #endregion
 }

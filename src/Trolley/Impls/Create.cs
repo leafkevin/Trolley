@@ -507,21 +507,21 @@ public class Create<TEntity> : Create, ICreate<TEntity>
     #endregion
 
     #region FromQuery
-    public IFromCommand<TEntity, T> FromQuery<T>(IQuery<T> subQuery)
+    public IFromCommand<T> FromQuery<T>(IQuery<T> subQuery)
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.IsFromCommand = true;
         queryVisitor.IsFromQuery = true;
         queryVisitor.UseQuery(typeof(T), subQuery, true);
-        return this.OrmProvider.NewFromCommand<TEntity, T>(this.DbContext, queryVisitor);
+        return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
     }
-    public IFromCommand<TEntity, T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
+    public IFromCommand<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.IsFromCommand = true;
         queryVisitor.IsFromQuery = true;
         queryVisitor.UseNewQuery(typeof(T), subQueryExpr, true);
-        return this.OrmProvider.NewFromCommand<TEntity, T>(this.DbContext, queryVisitor);
+        return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
     }
     #endregion
 }

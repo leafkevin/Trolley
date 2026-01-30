@@ -673,6 +673,7 @@ public static class RepositoryHelper
 
     public static object BuildTypedCommandInitializer(DbContext dbContext, Type entityType, Type parameterType, int commandType, bool isFunc, bool hasIdentity, List<string> onlyFields, List<string> ignoreFields)
     {
+        //commandType : 1=Insert, 2=Update, 3=InsertAndUpdate
         var hasOnlyFields = onlyFields != null && onlyFields.Count > 0;
         var hasIgnoreFields = ignoreFields != null && ignoreFields.Count > 0;
         var onlyFieldsKey = hasOnlyFields ? string.Join("-", onlyFields) : "";
@@ -754,7 +755,6 @@ public static class RepositoryHelper
                 var memberNameExpr = Expression.Constant(memberMapper.MemberName);
                 var memberType = memberInfo.GetMemberType();
                 var lowerMemberNameExpr = Expression.Constant(memberMapper.MemberName.ToLower());
-                Expression memberValueExpr = null;
 
                 if (commandType == 1)
                 {
@@ -804,9 +804,17 @@ public static class RepositoryHelper
                         index++;
                     }
                 }
+                var myBlockParameters = blockParameters;
+                var myBlockBodies = blockBodies;
+                if (commandType == 3)
+                {
+                    myBlockParameters = new List<ParameterExpression>();
+                    myBlockBodies = new List<Expression>();
+                }
                 var fieldValueExpr = Expression.Variable(typeof(object), $"{memberMapper.MemberName.ToCamel()}Value");
-                blockParameters.Add(fieldValueExpr);
+                myBlockParameters.Add(fieldValueExpr);
 
+                Expression memberValueExpr = null;
                 if (memberMapper.TypeHandler != null)
                 {
                     var typeHandlerMethodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
@@ -823,7 +831,7 @@ public static class RepositoryHelper
                         memberValueExpr = Expression.Invoke(Expression.Constant(valueGetter), parameterValueExpr);
                     }
                 }
-                blockBodies.Add(Expression.Assign(fieldValueExpr, memberValueExpr));
+                myBlockBodies.Add(Expression.Assign(fieldValueExpr, memberValueExpr));
 
                 Expression nativeDbTypeExpr = Expression.Constant(memberMapper.NativeDbType);
                 if (nativeDbTypeExpr.Type != typeof(object))
@@ -831,7 +839,16 @@ public static class RepositoryHelper
                 methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), [typeof(string), typeof(object), typeof(object)]);
                 var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
                 methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add));
-                blockBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
+                Expression addParameterExpr = Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr);
+
+                if (commandType == 3)
+                {
+                    methodInfo = typeof(IDataParameterCollection).GetMethod(nameof(IDataParameterCollection.Contains));
+                    var callExpr = Expression.Call(dbParametersExpr, methodInfo, parameterNameExpr);
+                    myBlockBodies.Add(Expression.IfThen(Expression.IsFalse(callExpr), addParameterExpr));
+                    addParameterExpr = Expression.Block(myBlockParameters, myBlockBodies);
+                }
+                blockBodies.Add(addParameterExpr);
             }
             if (index <= 0) throw new Exception($"没有找到{(commandType == 1 ? "插入" : "更新")}语句");
 

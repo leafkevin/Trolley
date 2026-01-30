@@ -13,6 +13,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
 
     public StringBuilder FieldsBuilder { get; set; } = new();
     public StringBuilder ValuesBuilder { get; set; }
+    public StringBuilder UpdateBuilder { get; set; }
     public ActionMode ActionMode { get; set; }
     public bool IsReturnIdentity { get; set; }
     public string FromSql { get; set; }
@@ -105,6 +106,18 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                         case "WithByFieldExpr":
                             this.VisitWithByFieldExpr(deferredSegment.Value);
                             break;
+                        case "SetObject":
+                            this.VisitSetObject(deferredSegment.Value);
+                            break;
+                        case "SetField":
+                            this.VisitSetField(deferredSegment.Value);
+                            break;
+                        case "SetFieldExpr":
+                            this.VisitSetFieldExpr(deferredSegment.Value);
+                            break;
+                        case "SetFieldExprs":
+                            this.VisitSetFieldExprs(deferredSegment.Value);
+                            break;
                     }
                 }
                 sql = $"INSERT INTO {this.GetTableName(tableSegment)} ({this.FieldsBuilder}) VALUES ({this.ValuesBuilder})";
@@ -155,7 +168,47 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             Type = "WithBulk",
             Value = (insertObjs, bulkCount)
         });
-    }  
+    }
+    public virtual void SetField(string fieldName, object fieldValue)
+    {
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "SetField",
+            Value = (fieldName, fieldValue)
+        });
+    }
+    public virtual void SetObject(object updateObj)
+    {
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "SetObject",
+            Value = updateObj
+        });
+    }
+    public virtual void SetFieldExpr(Expression fieldSelector, object fieldValue)
+    {
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "SetFieldExpr",
+            Value = (fieldSelector, fieldValue)
+        });
+    }
+    public virtual void SetFieldExprs(Expression fieldSelector, Expression valueGetter)
+    {
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "SetFieldExprs",
+            Value = (fieldSelector, valueGetter)
+        });
+    }
+    public virtual void SetObjectExpr(Expression fieldsAssignment)
+    {
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "SetFieldsExpr",
+            Value = fieldsAssignment
+        });
+    }
     public virtual (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
     {
@@ -208,6 +261,18 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 case "WithByFieldExpr":
                     this.VisitWithByFieldExpr(deferredSegment.Value);
                     break;
+                case "SetObject":
+                    this.VisitSetObject(deferredSegment.Value);
+                    break;
+                case "SetField":
+                    this.VisitSetField(deferredSegment.Value);
+                    break;
+                case "SetFieldExpr":
+                    this.VisitSetFieldExpr(deferredSegment.Value);
+                    break;
+                case "SetFieldExprs":
+                    this.VisitSetFieldExprs(deferredSegment.Value);
+                    break;
                 default: throw new NotSupportedException("批量插入后，只支持WithBy操作");
             }
         }
@@ -218,7 +283,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (this.DbParameters.Count > 0)
             fixedDbParameters = tempDbParameters.ToList();
         this.DbParameters = command.Parameters;
-
 
         Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string> loopSqlSetter = null;
@@ -353,7 +417,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         (var fieldName, var fieldValue) = ((string, object))deferredSegmentValue;
         var tableSegment = this.Tables[0];
         var entityMapper = tableSegment.Mapper;
-        var memberMapper = entityMapper.GetMemberMapByFieldName(fieldName);
+        if (!entityMapper.TryGetMemberMapByFieldName(fieldName, out var memberMapper))
+            throw new NotSupportedException($"实体{entityMapper.EntityType.FullName}未包含字段{fieldName}，无法进行更新操作");
         if (memberMapper.IsIgnore || memberMapper.IsIgnoreInsert)
             throw new NotSupportedException($"当前字段{memberMapper.FieldName}被忽略插入，IsIgnore：{memberMapper.IsIgnore}，IsIgnoreInsert：{memberMapper.IsIgnoreInsert}");
         if (memberMapper.IsRowVersion)
@@ -411,6 +476,120 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
         if (this.IsNeedShardingValues && tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName))
             this.ShardingValues[memberMapper.MemberName] = fieldValue;
+    }
+    public virtual void VisitSetObject(object updateObj)
+    {
+        var tableSegment = this.Tables[0];
+        var entityType = tableSegment.EntityType;
+        var updateObjType = updateObj.GetType();
+        if (this.UpdateBuilder.Length > 0) this.UpdateBuilder.Append(',');
+
+        if (updateObj is IDictionary<string, object> dict)
+        {
+            var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(entityType);
+            foreach (var key in dict.Keys)
+            {
+                if (!entityMapper.TryGetMemberMap(key, out var memberMapper))
+                    continue;
+
+                var fieldValue = dict[key];
+                if (memberMapper.IsIgnore || memberMapper.IsAutoIncrement || memberMapper.IsNavigation
+                    || memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion)
+                    continue;
+
+                var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}";
+                //此前参数可能有添加，也可能没有添加过，此处需要判断是否需要添加过
+                if (!this.DbParameters.Contains(parameterName))
+                {
+                    if (memberMapper.TypeHandler != null)
+                        fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
+                    else
+                    {
+                        var targetType = memberMapper.MappedTargetType;
+                        var fieldValueType = fieldValue.GetType();
+                        if (fieldValueType != targetType)
+                        {
+                            var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext);
+                            fieldValue = myValueGetter.Invoke(fieldValue);
+                        }
+                    }
+                    this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                }
+                if (this.UpdateBuilder.Length > 0) this.FieldsBuilder.Append(',');
+                this.UpdateBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+            }
+        }
+        else
+        {
+            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this.DbContext, entityType, updateObjType, 3, false, false, null, null);
+            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
+            typedCommandInitializer.Invoke(this.DbParameters, this.UpdateBuilder, this.DbContext, updateObj);
+        }
+    }
+    public virtual void VisitSetField(object deferredSegmentValue)
+    {
+        (var fieldName, var fieldValue) = ((string, object))deferredSegmentValue;
+        var tableSegment = this.Tables[0];
+        var entityMapper = tableSegment.Mapper;
+        if (!entityMapper.TryGetMemberMapByFieldName(fieldName, out var memberMapper))
+            throw new NotSupportedException($"实体{entityMapper.EntityType.FullName}未包含字段{fieldName}，无法进行更新操作");
+        if (memberMapper.IsIgnore || memberMapper.IsIgnoreInsert)
+            throw new NotSupportedException($"当前字段{memberMapper.FieldName}被忽略插入，IsIgnore：{memberMapper.IsIgnore}，IsIgnoreInsert：{memberMapper.IsIgnoreInsert}");
+        if (memberMapper.IsRowVersion)
+            throw new NotSupportedException($"当前字段{memberMapper.FieldName}为RowVersion类型，不允许插入");
+
+        var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
+        if (!this.DbParameters.Contains(parameterName))
+        {
+            if (memberMapper.TypeHandler != null)
+                fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
+            else
+            {
+                var targetType = memberMapper.MappedTargetType;
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext);
+                fieldValue = valueGetter.Invoke(fieldValue);
+            }
+            this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+        }
+        if (this.UpdateBuilder.Length > 0) this.UpdateBuilder.Append(',');
+        this.UpdateBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+    }
+    public virtual void VisitSetFieldExpr(object deferredSegmentValue)
+    {
+        (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegmentValue;
+        var lambdaExpr = fieldSelector as LambdaExpression;
+        var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;
+        var tableSegment = this.Tables[0];
+        var entityMapper = tableSegment.Mapper;
+        var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
+        if (memberMapper.IsIgnore || memberMapper.IsIgnoreInsert)
+            throw new NotSupportedException($"当前字段{memberMapper.FieldName}被忽略插入，IsIgnore：{memberMapper.IsIgnore}，IsIgnoreInsert：{memberMapper.IsIgnoreInsert}");
+        if (memberMapper.IsRowVersion)
+            throw new NotSupportedException($"当前字段{memberMapper.FieldName}为RowVersion类型，不允许插入");
+
+        var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
+        if (!this.DbParameters.Contains(parameterName))
+        {
+            if (memberMapper.TypeHandler != null)
+                fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
+            else
+            {
+                var targetType = memberMapper.MappedTargetType;
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext);
+                fieldValue = valueGetter.Invoke(fieldValue);
+            }
+            this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+        }
+        if (this.UpdateBuilder.Length > 0) this.UpdateBuilder.Append(',');
+        this.UpdateBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+    }
+    public virtual void VisitSetFieldExprs(object deferredSegmentValue)
+    {
+        (var fieldSelector, var valueGetter) = ((Expression, Expression))deferredSegmentValue;
+        var fieldSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = fieldSelector });
+        var valueSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = valueGetter });
+        if (this.UpdateBuilder.Length > 0) this.UpdateBuilder.Append(',');
+        this.UpdateBuilder.Append($"{fieldSegment.Body}={valueSegment.Body}");
     }
     public virtual List<string> VisitFields(Expression fieldsSelector, bool isIgnoreCase = true)
     {
