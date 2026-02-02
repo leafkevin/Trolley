@@ -716,6 +716,21 @@ public class Update<TEntity> : Update, IUpdate<TEntity>
     public new IBulkContinuedUpdate<TEntity> SetBulk(IEnumerable updateObjs, int bulkCount = 500)
         => base.SetBulk(updateObjs, bulkCount) as IBulkContinuedUpdate<TEntity>;
     #endregion
+
+    #region Join
+    public IUpdateJoin<TEntity, T> InnerJoin<T>(Expression<Func<TEntity, T, bool>> joinOn)
+    {
+        if (joinOn == null) throw new ArgumentNullException(nameof(joinOn));
+        this.Visitor.Join("INNER JOIN", typeof(T), joinOn);
+        return this.OrmProvider.NewUpdateJoin<TEntity, T>(this.DbContext, this.Visitor);
+    }
+    public IUpdateJoin<TEntity, T> LeftJoin<T>(Expression<Func<TEntity, T, bool>> joinOn)
+    {
+        if (joinOn == null) throw new ArgumentNullException(nameof(joinOn));
+        this.Visitor.Join("LEFT JOIN", typeof(T), joinOn);
+        return this.OrmProvider.NewUpdateJoin<TEntity, T>(this.DbContext, this.Visitor);
+    }
+    #endregion
 }
 
 

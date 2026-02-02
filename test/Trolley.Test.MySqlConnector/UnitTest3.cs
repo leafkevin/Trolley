@@ -829,12 +829,12 @@ public class UnitTest3 : UnitTestBase
             .Where(f => f.OrderId == "1")
             .SumAsync(f => f.Amount);
         var sql = repository.Update<Order>()
+            .Set(f => new { BuyerId = DBNull.Value })
             .SetFrom(f => f.TotalAmount, (x, y) => x
                 .From<OrderDetail>('b')
                 .Where(t => t.OrderId == y.Id)
                 .SelectAggregate((x, f) => (double)x.Sum(f.Amount)))
             .Set(x => x.OrderNo, "ON_111")
-            .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.Id == "1")
             .ToSql(out var dbParameters);
         Assert.Equal("UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT IFNULL(SUM(b.`Amount`),0) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`Id`='1'", sql);
@@ -842,12 +842,12 @@ public class UnitTest3 : UnitTestBase
         Assert.Equal("ON_111", (string)dbParameters[0].Value);
 
         var count = await repository.Update<Order>()
+            .Set(f => new { BuyerId = DBNull.Value })
             .SetFrom(f => f.TotalAmount, (x, y) => x
                 .From<OrderDetail>('b')
                 .Where(t => t.OrderId == y.Id)
                 .SelectAggregate((x, f) => (double)x.Sum(f.Amount)))
             .Set(x => x.OrderNo, "ON_111")
-            .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.Id == "1")
             .ExecuteAsync();
         var reult = repository.QueryById<Order>("1");
@@ -856,6 +856,7 @@ public class UnitTest3 : UnitTestBase
         Assert.True(reult.TotalAmount != order.TotalAmount);
 
         sql = repository.Update<Order>()
+            .Set(f => new { BuyerId = DBNull.Value })
             .SetFrom((a, b) => new
             {
                 TotalAmount = a.From<OrderDetail>('b')
@@ -863,12 +864,12 @@ public class UnitTest3 : UnitTestBase
                     .SelectAggregate((x, t) => x.Sum(t.Amount))
             })
             .Set(x => x.OrderNo, "ON_111")
-            .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
         Assert.Equal("UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT IFNULL(SUM(b.`Amount`),0) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`BuyerId`=1", sql);
 
         count = await repository.Update<Order>()
+            .Set(f => new { BuyerId = DBNull.Value })
             .SetFrom((a, b) => new
             {
                 TotalAmount = a.From<OrderDetail>('b')
@@ -876,7 +877,6 @@ public class UnitTest3 : UnitTestBase
                     .SelectAggregate((x, t) => x.Sum(t.Amount))
             })
             .Set(x => x.OrderNo, "ON_111")
-            .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ExecuteAsync();
         Assert.True(count > 0);
@@ -927,6 +927,7 @@ public class UnitTest3 : UnitTestBase
         this.Initialize(1);
         var repository = this.dbFactory.Create();
         var sql = repository.Update<Order>()
+            .Set(f => new { BuyerId = DBNull.Value })
             .SetFrom((x, y) => new
             {
                 TotalAmount = x.From<OrderDetail>('b')
@@ -934,7 +935,6 @@ public class UnitTest3 : UnitTestBase
                     .SelectAggregate((x, t) => x.Sum(t.Amount))
             })
             .Set(x => x.OrderNo, "ON_111")
-            .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
         Assert.Equal("UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT IFNULL(SUM(b.`Amount`),0) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`BuyerId`=1", sql);
@@ -1302,7 +1302,7 @@ public class UnitTest3 : UnitTestBase
 
         var sql1 = repository.Update<User>()
             .Set(new { Gender = Gender.Male })
-            .Where(new { Id = 1 })
+            .WhereBy(new { Id = 1 })
             .ToSql(out var parameters1);
         Assert.Equal("UPDATE `sys_user` SET `Gender`=@Gender WHERE `Id`=@kId", sql1);
         Assert.Equal("@Gender", parameters1[0].ParameterName);
@@ -1320,9 +1320,9 @@ public class UnitTest3 : UnitTestBase
 
         var user = new User { Gender = Gender.Female };
         var sql3 = repository.Update<User>()
-            .Set(f => f.Age, 20)
             .Set(new { user.Gender })
-            .Where(new { Id = 1 })
+            .Set(f => f.Age, 20)
+            .WhereBy(new { Id = 1 })
             .ToSql(out var parameters3);
         Assert.Equal("UPDATE `sys_user` SET `Age`=@Age,`Gender`=@Gender WHERE `Id`=@kId", sql3);
         Assert.Equal("@Gender", parameters3[1].ParameterName);
@@ -1331,9 +1331,9 @@ public class UnitTest3 : UnitTestBase
 
         int age = 20;
         var sql7 = repository.Update<User>()
-            .Set(f => f.Age, age)
             .Set(new { Gender = Gender.Male })
-            .Where(new { Id = 1 })
+            .Set(f => f.Age, age)
+            .WhereBy(new { Id = 1 })
             .ToSql(out var parameters7);
         Assert.Equal("UPDATE `sys_user` SET `Age`=@Age,`Gender`=@Gender WHERE `Id`=@kId", sql7);
         Assert.Equal("@Gender", parameters7[1].ParameterName);
@@ -1342,7 +1342,7 @@ public class UnitTest3 : UnitTestBase
 
         var sql4 = repository.Update<Company>()
             .Set(new { Nature = CompanyNature.Internet })
-            .Where(new { Id = 1 })
+            .WhereBy(new { Id = 1 })
             .ToSql(out var parameters4);
         Assert.Equal("UPDATE `sys_company` SET `Nature`=@Nature WHERE `Id`=@kId", sql4);
         Assert.Equal("@Nature", parameters4[0].ParameterName);
@@ -1360,7 +1360,7 @@ public class UnitTest3 : UnitTestBase
 
         var sql6 = repository.Update<Company>()
             .Set(f => f.Nature, CompanyNature.Internet)
-            .Where(new { Id = 1 })
+            .WhereById(1)
             .ToSql(out var parameters6);
         Assert.Equal("UPDATE `sys_company` SET `Nature`=@Nature WHERE `Id`=@kId", sql6);
         Assert.Equal("@Nature", parameters6[0].ParameterName);
@@ -1410,7 +1410,7 @@ public class UnitTest3 : UnitTestBase
     {
         var repository = this.dbFactory.Create();
         var timeSpan = TimeSpan.FromMinutes(455);
-        await repository.DeleteAsync<UpdateEntity1>(1);
+        await repository.DeleteByIdAsync<UpdateEntity1>(1);
         await repository.CreateAsync<UpdateEntity1>(new UpdateEntity1
         {
             Id = 1,
@@ -1433,7 +1433,7 @@ public class UnitTest3 : UnitTestBase
         });
         var sql1 = repository.Update<User>()
             .Set(new { SomeTimes = timeSpan })
-            .Where(new { Id = 1 })
+            .WhereById(1)
             .ToSql(out var parameters1);
         Assert.Equal("UPDATE `sys_user` SET `SomeTimes`=@SomeTimes WHERE `Id`=@kId", sql1);
         Assert.Equal("@SomeTimes", parameters1[0].ParameterName);
@@ -1462,7 +1462,7 @@ public class UnitTest3 : UnitTestBase
         repository.BeginTransaction();
         await repository.Update<User>()
             .Set(new { SomeTimes = timeSpan })
-            .Where(new { Id = 1 })
+            .WhereById(1)
             .ExecuteAsync();
         var userInfo = repository.QueryById<User>(1);
         repository.Commit();

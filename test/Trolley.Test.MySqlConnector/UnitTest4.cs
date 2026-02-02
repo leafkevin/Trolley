@@ -149,7 +149,7 @@ public class UnitTest4 : UnitTestBase
     {
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
-        repository.Delete<User>(new[] { new { Id = 1 }, new { Id = 2 } });
+        repository.DeleteByIds<User>(new[] { new { Id = 1 }, new { Id = 2 } });
         var count = repository.Create<User>(new[]
         {
             new User
@@ -182,12 +182,12 @@ public class UnitTest4 : UnitTestBase
             }
         });
         Assert.Equal(2, count);
-        count = await repository.DeleteAsync<User>(new[] { new { Id = 1 }, new { Id = 2 } });
+        count = await repository.DeleteByIdsAsync<User>(new[] { new { Id = 1 }, new { Id = 2 } });
         repository.Commit();
         Assert.Equal(2, count);
 
         var sql = repository.Delete<User>()
-            .Where(new[] { new { Id = 1 }, new { Id = 2 } })
+            .WhereByIds(new[] { new { Id = 1 }, new { Id = 2 } })
             .ToSql(out var parameters);
         Assert.Equal("DELETE FROM `sys_user` WHERE `Id` IN (@Id0,@Id1)", sql);
         Assert.Equal(1, (int)parameters[0].Value);
