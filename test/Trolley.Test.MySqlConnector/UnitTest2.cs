@@ -2561,7 +2561,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
     {
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
-        repository.Delete<Order>("8");
+        repository.DeleteByIdAsync<Order>("8");
         repository.Create<Order>(new Order
         {
             Id = "8",
@@ -2733,7 +2733,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
     {
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
-        repository.Delete<Order>("8");
+        repository.DeleteById<Order>("8");
         repository.Create<Order>(new Order
         {
             Id = "8",

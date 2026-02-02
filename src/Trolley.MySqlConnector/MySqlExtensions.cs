@@ -122,6 +122,17 @@ public static class MySqlExtensions
     #endregion
 
     #region Join
+    public static IUpdateJoin<TEntity, T> WithTable<TEntity, T>(this IUpdate<TEntity> instance)
+        => instance.DbContext.OrmProvider.NewUpdateJoin<TEntity, T>(instance.DbContext, instance.Visitor);
+    public static IUpdateJoin<TEntity, T1, T2> WithTable<TEntity, T1, T2>(this IUpdate<TEntity> instance)
+       => instance.DbContext.OrmProvider.NewUpdateJoin<TEntity, T1, T2>(instance.DbContext, instance.Visitor);
+    public static IUpdateJoin<TEntity, T1, T2, T3> WithTable<TEntity, T1, T2, T3>(this IUpdate<TEntity> instance)
+       => instance.DbContext.OrmProvider.NewUpdateJoin<TEntity, T1, T2, T3>(instance.DbContext, instance.Visitor);
+    public static IUpdateJoin<TEntity, T1, T2, T3, T4> WithTable<TEntity, T1, T2, T3, T4>(this IUpdate<TEntity> instance)
+       => instance.DbContext.OrmProvider.NewUpdateJoin<TEntity, T1, T2, T3, T4>(instance.DbContext, instance.Visitor);
+    public static IUpdateJoin<TEntity, T1, T2, T3, T4, T5> WithTable<TEntity, T1, T2, T3, T4, T5>(this IUpdate<TEntity> instance)
+       => instance.DbContext.OrmProvider.NewUpdateJoin<TEntity, T1, T2, T3, T4, T5>(instance.DbContext, instance.Visitor);
+
     public static IUpdateJoin<TEntity, T> InnerJoin<TEntity, T>(this IUpdate<TEntity> instance, Expression<Func<TEntity, T, bool>> joinOn)
     {
         if (joinOn == null) throw new ArgumentNullException(nameof(joinOn));

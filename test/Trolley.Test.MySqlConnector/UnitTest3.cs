@@ -490,7 +490,7 @@ public class UnitTest3 : UnitTestBase
         repository.BeginTransaction();
         result = repository.Update<Order>()
             .Set(new { ProductCount = 11 })
-            .Where(new { Id = "1" })
+            .WhereBy(new { Id = "1" })
             .Execute();
         var result2 = repository.QueryById<Order>(new { Id = "1" });
         repository.Commit();
@@ -508,7 +508,7 @@ public class UnitTest3 : UnitTestBase
         repository.BeginTransaction();
         result = repository.Update<Order>()
             .Set(updateObj)
-            .Where(new { Id = "1" })
+            .WhereBy(new { Id = "1" })
             .Execute();
         var result3 = repository.QueryById<Order>(new { Id = "1" });
         repository.Commit();
@@ -614,7 +614,7 @@ public class UnitTest3 : UnitTestBase
                 updateObj.Disputes,
                 UpdatedAt = DateTime.Now
             })
-            .Where(new { updateObj.Id })
+            .WhereBy(new { updateObj.Id })
             .ToSql(out var dbParameters);
         Assert.Equal("UPDATE `sys_order` SET `TotalAmount`=@p0,`Products`=@p1,`Disputes`=@p2,`UpdatedAt`=NOW() WHERE `Id`=@kId", sql);
         Assert.Equal(4, dbParameters.Count);
@@ -636,7 +636,7 @@ public class UnitTest3 : UnitTestBase
                 updateObj.Disputes,
                 updateObj.UpdatedAt
             })
-            .Where(new { updateObj.Id })
+            .WhereBy(new { updateObj.Id })
             .Execute();
 
         var updatedOrder = repository.QueryById<Order>("1");
