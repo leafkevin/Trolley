@@ -22,7 +22,7 @@ public class UnitTest7 : UnitTestBase
             var connectionString2 = "Server=localhost;Database=fengling2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
             var builder = new OrmDbFactoryBuilder()
                 .Register(OrmProviderType.MySql, "fengling", f => f.Use(connectionString)
-                    .UseSlave(connectionString1, connectionString2).AsDefaultDatabase())
+                    .UseSlave(connectionString1, connectionString2), true)
                 .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
                 .UseInterceptors(df =>
                 {
@@ -192,8 +192,8 @@ SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON
 )
 SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN (SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`=@p1 UNION ALL
 SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id` WHERE a.`Id`>@p2) b ON a.`Id`=b.`Id`", sql);
-        var result2 =await  repository
-            .FromQuery(f =>  menuList)
+        var result2 = await repository
+            .FromQuery(f => menuList)
             .WithQuery(x => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)
@@ -208,48 +208,48 @@ SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id`
         Assert.NotNull(result2);
         Assert.True(result2.Count > 0);
 
-//        sql = repository
-//            .FromQuery(f => f.UseQuery(menuList))
-//            .WithQuery(x => x.From<Page>()
-//                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
-//                    .Where((a, b) => a.Id == pageId)
-//                    .Select((x, y) => new { y.Id, x.Url })
-//                .UnionAll(x => x.From<Page>()//.WithTable(self)
-//                    .InnerJoin(menuList, (a, b) => a.Id == b.Id)
-//                    .Where((a, b) => a.Id > pageId)
-//                    .Select((x, y) => new { y.Id, x.Url }))
-//                .AsCteTable("MenuPageList"))
-//            .InnerJoin((a, b) => a.Id == b.Id)
-//            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
-//            .ToSql(out _);
-//        Assert.Equal(@"WITH RECURSIVE `MenuList`(`Id`,`Name`,`ParentId`) AS 
-//(
-//SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a WHERE a.`Id`=@RootId UNION ALL
-//SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`Id`
-//),
-//`MenuPageList`(`Id`,`Url`) AS 
-//(
-//SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`=@p1 UNION ALL
-//SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id` WHERE a.`Id`>@p2
-//)
-//SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN `MenuPageList` b ON a.`Id`=b.`Id`", sql);
+        //        sql = repository
+        //            .FromQuery(f => f.UseQuery(menuList))
+        //            .WithQuery(x => x.From<Page>()
+        //                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+        //                    .Where((a, b) => a.Id == pageId)
+        //                    .Select((x, y) => new { y.Id, x.Url })
+        //                .UnionAll(x => x.From<Page>()//.WithTable(self)
+        //                    .InnerJoin(menuList, (a, b) => a.Id == b.Id)
+        //                    .Where((a, b) => a.Id > pageId)
+        //                    .Select((x, y) => new { y.Id, x.Url }))
+        //                .AsCteTable("MenuPageList"))
+        //            .InnerJoin((a, b) => a.Id == b.Id)
+        //            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+        //            .ToSql(out _);
+        //        Assert.Equal(@"WITH RECURSIVE `MenuList`(`Id`,`Name`,`ParentId`) AS 
+        //(
+        //SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a WHERE a.`Id`=@RootId UNION ALL
+        //SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`Id`
+        //),
+        //`MenuPageList`(`Id`,`Url`) AS 
+        //(
+        //SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`=@p1 UNION ALL
+        //SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id` WHERE a.`Id`>@p2
+        //)
+        //SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN `MenuPageList` b ON a.`Id`=b.`Id`", sql);
 
-//        var result3 = await repository
-//            .FromQuery(f => f.UseQuery(menuList))
-//            .WithQuery(x => x.From<Page>()
-//                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
-//                    .Where((a, b) => a.Id == pageId)
-//                    .Select((x, y) => new { y.Id, x.Url })
-//                .UnionAll(x => x.From<Page>()//.WithTable(self)
-//                    .InnerJoin(menuList, (a, b) => a.Id == b.Id)
-//                    .Where((a, b) => a.Id > pageId)
-//                    .Select((x, y) => new { y.Id, x.Url }))
-//                .AsCteTable("MenuPageList"))
-//            .InnerJoin((a, b) => a.Id == b.Id)
-//            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
-//            .ToListAsync();
-//        Assert.NotNull(result3);
-//        Assert.True(result3.Count > 0);
+        //        var result3 = await repository
+        //            .FromQuery(f => f.UseQuery(menuList))
+        //            .WithQuery(x => x.From<Page>()
+        //                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+        //                    .Where((a, b) => a.Id == pageId)
+        //                    .Select((x, y) => new { y.Id, x.Url })
+        //                .UnionAll(x => x.From<Page>()//.WithTable(self)
+        //                    .InnerJoin(menuList, (a, b) => a.Id == b.Id)
+        //                    .Where((a, b) => a.Id > pageId)
+        //                    .Select((x, y) => new { y.Id, x.Url }))
+        //                .AsCteTable("MenuPageList"))
+        //            .InnerJoin((a, b) => a.Id == b.Id)
+        //            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+        //            .ToListAsync();
+        //        Assert.NotNull(result3);
+        //        Assert.True(result3.Count > 0);
     }
     [Fact]
     public async Task Update_SetBulk_OnlyFields()

@@ -678,9 +678,9 @@ public class Update<TEntity> : Update, IUpdate<TEntity>
     #endregion
 
     #region SetFrom
-    public virtual IContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
+    public virtual IBulkContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
-    public virtual IContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
+    public virtual IBulkContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
         if (condition)
         {
@@ -693,11 +693,11 @@ public class Update<TEntity> : Update, IUpdate<TEntity>
 
             this.Visitor.SetFrom(fieldSelector, valueSelector);
         }
-        return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewBulkContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
-    public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
+    public virtual IBulkContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
         => this.SetFrom(true, fieldsAssignment);
-    public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
+    public virtual IBulkContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
     {
         if (condition)
         {
@@ -708,7 +708,7 @@ public class Update<TEntity> : Update, IUpdate<TEntity>
 
             this.Visitor.SetFrom(fieldsAssignment);
         }
-        return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewBulkContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
 

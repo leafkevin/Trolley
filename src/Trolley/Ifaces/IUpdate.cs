@@ -597,7 +597,7 @@ public interface IUpdate<TEntity> : IUpdate
     /// <param name="fieldSelector">单个字段筛选表达式</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
+    IBulkContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，如：
     /// <code>
@@ -613,7 +613,7 @@ public interface IUpdate<TEntity> : IUpdate
     /// <param name="fieldSelector">字段筛选表达式，只能筛选一个字段</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
+    IBulkContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     /// <summary>
     /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，如：
     /// <code>
@@ -633,7 +633,7 @@ public interface IUpdate<TEntity> : IUpdate
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
     /// <param name="fieldsAssignment">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
+    IBulkContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，如：
     /// <code>
@@ -654,7 +654,7 @@ public interface IUpdate<TEntity> : IUpdate
     /// <param name="condition">判断条件，为true时生效</param>
     /// <param name="fieldsAssignment">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
+    IBulkContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     #endregion
 
     #region SetBulk

@@ -405,7 +405,7 @@ public class MethodCallUnitTest : UnitTestBase
         Assert.Equal("SELECT CONCAT(LOWER(a.`OrderNo`),'_ABCD') AS `Col1`,CONCAT(UPPER(a.`OrderNo`),'_abcd') AS `Col2` FROM `sys_order` a", sql);
 
         repository.BeginTransaction();
-        repository.Delete<Order>("1");
+        repository.DeleteById<Order>("1");
         var count = repository.Create<Order>(new Order
         {
             Id = "1",
@@ -465,7 +465,7 @@ public class MethodCallUnitTest : UnitTestBase
         Assert.Equal(typeof(string), dbParameters[1].Value.GetType());
 
         repository.BeginTransaction();
-        repository.Delete<Order>("1");
+        repository.DeleteById<Order>("1");
         repository.Create<Order>(new Order
         {
             Id = "1",

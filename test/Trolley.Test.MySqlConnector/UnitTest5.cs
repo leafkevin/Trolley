@@ -1,10 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Trolley.MySqlConnector;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,9 +21,9 @@ public class UnitTest5 : UnitTestBase
             var connectionString1 = "Server=localhost;Database=fengling1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
             var connectionString2 = "Server=localhost;Database=fengling2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.MySql, "fengling", f=>f.UseConnectionString(connectionString)
-                    .UseSlave(connectionString1, connectionString2).AsDefaultDatabase())
-                .Configure<ModelConfiguration>(OrmProviderType.MySql)
+                .Register(OrmProviderType.MySql, "fengling", f => f.Use(connectionString)
+                    .UseSlave(connectionString1, connectionString2), true)
+                .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
                 .UseInterceptors(df =>
                 {
                     df.OnConnectionCreated += evt =>
@@ -74,7 +72,7 @@ public class UnitTest5 : UnitTestBase
         this.Initialize(1);
         var repository = this.dbFactory.Create();
         using var reader = await repository.QueryMultipleAsync(f => f
-            .GetById<User>(new { Id = 1 })
+            .QueryById<User>(new { Id = 1 })
             .Exists<Order>(f => f.BuyerId.IsNull())
             .From<Order>()
                 .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
@@ -123,8 +121,8 @@ public class UnitTest5 : UnitTestBase
         this.Initialize(1);
         var repository = this.dbFactory.Create().UseMaster();
         using var reader = await repository.QueryMultipleAsync(f => f
-            .GetById<User>(new { Id = 1 })
-            .GetByIds<User>(new int[] { 1, 2, 3 })
+            .QueryById<User>(new { Id = 1 })
+            .QueryByIds<User>(new int[] { 1, 2, 3 })
             .Exists<Order>(f => f.BuyerId.IsNull())
             .From<Order>()
                 .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
@@ -159,110 +157,5 @@ public class UnitTest5 : UnitTestBase
         Assert.Equal("1", orderInfo.Id);
         Assert.Equal("1", groupedOrderInfo.Id);
         Assert.Equal("1", groupedOrderInfo.Grouping.OrderId);
-    }
-    [Fact]
-    public async Task MultipleCommand()
-    {
-        var repository = this.dbFactory.Create();
-        int[] productIds = new int[] { 2, 4, 5, 6 };
-        int category = 1;
-        var commands = new List<MultipleCommand>();
-        var deleteCommand = repository.Delete<Product>()
-            .Where(f => productIds.Contains(f.Id))
-            .ToMultipleCommand();
-
-        var insertCommand = repository.Create<Product>()
-           .WithBy(new
-           {
-               Id = 2,
-               ProductNo = "PN_111",
-               Name = "PName_111",
-               BrandId = 1,
-               CategoryId = category,
-               CompanyId = 1,
-               IsEnabled = true,
-               CreatedBy = 1,
-               CreatedAt = DateTime.Now,
-               UpdatedBy = 1,
-               UpdatedAt = DateTime.Now
-           })
-           .ToMultipleCommand();
-
-        var insertCommand2 = repository.Create<Product>()
-            .WithBulk(new[]
-            {
-                new
-                {
-                    Id = 4,
-                    ProductNo="PN-004",
-                    Name = "波司登羽绒服",
-                    BrandId = 1,
-                    CategoryId = 1,
-                    IsEnabled = true,
-                    CreatedAt = DateTime.Now,
-                    CreatedBy = 1,
-                    UpdatedAt = DateTime.Now,
-                    UpdatedBy = 1
-                },
-                new
-                {
-                    Id = 5,
-                    ProductNo="PN-005",
-                    Name = "雪中飞羽绒裤",
-                    BrandId = 2,
-                    CategoryId = 2,
-                    IsEnabled = true,
-                    CreatedAt = DateTime.Now,
-                    CreatedBy = 1,
-                    UpdatedAt = DateTime.Now,
-                    UpdatedBy = 1
-                },
-                new
-                {
-                    Id = 6,
-                    ProductNo="PN-006",
-                    Name = "优衣库保暖内衣",
-                    BrandId = 3,
-                    CategoryId = 3,
-                    IsEnabled = true,
-                    CreatedAt = DateTime.Now,
-                    CreatedBy = 1,
-                    UpdatedAt = DateTime.Now,
-                    UpdatedBy = 1
-                }
-            })
-            .OnlyFields(f => new { f.Id, f.ProductNo, f.Name, f.IsEnabled, f.CreatedBy, f.CreatedAt, f.UpdatedAt, f.UpdatedBy })
-            .ToMultipleCommand();
-
-        var updateCommand = repository.Update<Order>()
-           .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-           .Set(true, (x, y) => new
-           {
-               TotalAmount = 200.56,
-               OrderNo = x.OrderNo + "-111",
-               BuyerSource = y.SourceType
-           })
-           .Set(x => x.Products, new List<int> { 1, 2, 3 })
-           .Where((a, b) => a.Id == "1")
-           .ToMultipleCommand();
-
-        var orderDetails = await repository.From<OrderDetail>().ToListAsync();
-        var parameters = orderDetails.Select(f => new
-        {
-            f.Id,
-            Amount = f.Amount + 50,
-            UpdatedAt = f.UpdatedAt.AddDays(1)
-        })
-        .ToList();
-        var bulkUpdateCommand = repository.Update<OrderDetail>()
-            .SetBulk(parameters)
-            .Set(f => f.ProductId, 3)
-            .Set(new { Quantity = 5 })
-            .Set(f => new { Price = f.Price + 10 })
-            .ToMultipleCommand();
-
-        commands.AddRange(new[] { deleteCommand, insertCommand, insertCommand2, updateCommand, bulkUpdateCommand });
-        var count = repository.MultipleExecute(commands);
-        Assert.True(count > 0);
-    }
+    } 
 }

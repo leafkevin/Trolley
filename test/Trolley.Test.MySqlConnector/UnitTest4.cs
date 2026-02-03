@@ -194,7 +194,7 @@ public class UnitTest4 : UnitTestBase
         Assert.Equal(2, (int)parameters[1].Value);
 
         var sql1 = repository.Delete<Function>()
-            .Where(new[] { new { MenuId = 1, PageId = 1 }, new { MenuId = 2, PageId = 2 } })
+            .WhereByIds(new[] { new { MenuId = 1, PageId = 1 }, new { MenuId = 2, PageId = 2 } })
             .ToSql(out parameters);
         Assert.Equal("DELETE FROM `sys_function` WHERE `MenuId`=@MenuId0 AND `PageId`=@PageId0 OR `MenuId`=@MenuId1 AND `PageId`=@PageId1", sql1);
         Assert.Equal(4, parameters.Count);
@@ -241,12 +241,12 @@ public class UnitTest4 : UnitTestBase
             }
         });
         Assert.Equal(2, count);
-        count = await repository.DeleteAsync<User>(new int[] { 1, 2 });
+        count = await repository.DeleteByIdsAsync<User>(new int[] { 1, 2 });
         repository.Commit();
         Assert.Equal(2, count);
 
         var sql = repository.Delete<User>()
-            .Where(new int[] { 1, 2 })
+            .WhereByIds(new int[] { 1, 2 })
             .ToSql(out var parameters);
         Assert.Equal("DELETE FROM `sys_user` WHERE `Id` IN (@Id0,@Id1)", sql);
         Assert.Equal(1, (int)parameters[0].Value);
@@ -348,7 +348,7 @@ public class UnitTest4 : UnitTestBase
             .ToSql(out _);
         Assert.Equal("DELETE FROM `sys_user` WHERE `Id`=1 RETURNING *", sql2);
 
-        await repository.DeleteAsync<User>(1);
+        await repository.DeleteByIdAsync<User>(1);
         await repository.Create<User>()
             .WithBy(new
             {
@@ -433,7 +433,7 @@ public class UnitTest4 : UnitTestBase
         await repository.BeginTransactionAsync();
         await repository.Update<User>()
             .Set(new { Name = "leafkevin1" })
-            .Where(new { Id = 1 })
+            .WhereBy(new { Id = 1 })
             .ExecuteAsync();
         await repository.UpdateAsync<User>(new { Name = "leafkevin1", Id = 1 });
         await repository.Delete<User>()
@@ -441,7 +441,7 @@ public class UnitTest4 : UnitTestBase
             .And(isMale.HasValue, f => f.Age > 25)
             .ExecuteAsync();
         await repository.CommitAsync();
-        if (!await repository.ExistsAsync<User>(1))
+        if (!await repository.ExistsByIdAsync<User>(1))
             await repository.CreateAsync<User>(new User
             {
                 Id = 1,
@@ -471,21 +471,20 @@ public class UnitTest4 : UnitTestBase
     {
         var repository = this.dbFactory.Create();
         bool? isMale = true;
-        var dbContext = repository.DbContext;
         await repository.BeginTransactionAsync();
         await repository.Update<User>()
             .Set(new { Name = "leafkevin1" })
-            .Where(new { Id = 1 })
+            .WhereById(new { Id = 1 })
             .ExecuteAsync();
         await repository.UpdateAsync<User>(new { Name = "leafkevin1", Id = 1 });
 
-        var newResitory = this.dbFactory.Create(dbContext);
+        var newResitory = this.dbFactory.Create();
         await newResitory.Delete<User>()
             .Where(f => f.Name.Contains("kevin"))
             .And(isMale.HasValue, f => f.Age > 25)
             .ExecuteAsync();
         await newResitory.CommitAsync();
-        if (!await repository.ExistsAsync<User>(1))
+        if (!await repository.ExistsByIdAsync<User>(1))
             await repository.CreateAsync<User>(new User
             {
                 Id = 1,

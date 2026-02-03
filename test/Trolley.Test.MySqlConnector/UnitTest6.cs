@@ -29,8 +29,8 @@ public class UnitTest6 : UnitTestBase
                 {
                     var tenantId = (int)values[0];
                     if (tenantId > 3) tenantId = 3;
-                    var connectionStrings = new Dictionary<int, string[]>() 
-                    { 
+                    var connectionStrings = new Dictionary<int, string[]>()
+                    {
                         { 1, [connectionString, connectionString1, connectionString2] },
                         { 2, [connectionString, connectionString1, connectionString2] },
                         { 3, [connectionString, connectionString1, connectionString2] }
@@ -93,7 +93,7 @@ public class UnitTest6 : UnitTestBase
         await repository.Delete<User>()
             .UseTableBy("104")
             .UseTableBy("105")
-            .Where(new[] { 101, 102, 103 })
+            .WhereByIds(new[] { 101, 102, 103 })
             .ExecuteAsync();
         repository.Create<User>(new[]
         {
@@ -309,7 +309,7 @@ public class UnitTest6 : UnitTestBase
         var repository = this.dbFactory.Create();
         await repository.Delete<User>()
             .UseTableBy("104")
-            .Where(101)
+            .WhereById(101)
             .ExecuteAsync();
         var count = repository.UseMaster()
             .From<User>()
@@ -355,7 +355,7 @@ public class UnitTest6 : UnitTestBase
         var repository = this.dbFactory.Create();
         await repository.Delete<User>()
             .UseTableBy("104")
-            .Where(101)
+            .WhereById(101)
             .ExecuteAsync();
         var count = repository.UseMaster()
             .From<User>()
@@ -400,7 +400,7 @@ public class UnitTest6 : UnitTestBase
         var repository = this.dbFactory.Create();
         await repository.Delete<User>()
             .UseTableBy("104")
-            .Where(101)
+            .WhereById(101)
             .ExecuteAsync();
         var count = repository.UseMaster()
             .From<User>()
@@ -447,7 +447,7 @@ public class UnitTest6 : UnitTestBase
         await repository.Delete<User>()
             .UseTableBy("104")
             .UseTableBy("105")
-            .Where(new object[] { 101, 102, 103 })
+            .WhereByIds(new object[] { 101, 102, 103 })
             .ExecuteAsync();
         await repository.CreateAsync<User>(new
         {
@@ -544,7 +544,7 @@ public class UnitTest6 : UnitTestBase
         var userIds = new[] { 101, 102, 103 };
         await repository.Delete<User>()
             .UseTable("sys_user", "sys_user_104", "sys_user_105")
-            .Where(userIds)
+            .WhereByIds(userIds)
             .ExecuteAsync();
         repository.Create<User>(new[]
         {
@@ -2021,7 +2021,7 @@ public class UnitTest6 : UnitTestBase
         var repository = this.dbFactory.Create();
         await repository.Delete<User>()
             .UseTableBy("104")
-            .Where(11)
+            .WhereById(11)
             .ExecuteAsync();
         repository.Create<User>()
             .WithBy(new
@@ -2061,14 +2061,8 @@ public class UnitTest6 : UnitTestBase
         var repository = this.dbFactory.Create();
         var tableName1 = repository.GetShardingTableName<OrderDetail>(tenantId, now);
         var tableName2 = repository.GetShardingTableName<OrderDetail>(tenantId, now.AddMonths(1));
-        var tableNames = new List<string> { tableName1, tableName2 };
-        var existedTableNames = repository.GetShardingTableNames<OrderDetail>(f => tableNames.Contains(f));
-        string sql = null;
-        if (existedTableNames.Count > 0)
-        {
-            sql = "DROP TABLE " + string.Join(";DROP TABLE ", existedTableNames);
-            await repository.ExecuteAsync(sql);
-        }
+        var sql = $"DROP TABLE {tableName1};DROP TABLE {tableName2}";
+        await repository.ExecuteAsync(sql);
         repository.CreateShardingTable<OrderDetail>(tableName1);
         await repository.CreateShardingTableAsync<OrderDetail>(tableName2);
         sql = $"DROP TABLE {tableName1};DROP TABLE {tableName2}";
@@ -2084,14 +2078,8 @@ public class UnitTest6 : UnitTestBase
         var repository = this.dbFactory.Create();
         var tableName1 = repository.GetShardingTableName<OrderDetail>(tenantId, now);
         var tableName2 = repository.GetShardingTableName<OrderDetail>(tenantId, now.AddMonths(1));
-        var tableNames = new List<string> { tableName1, tableName2 };
-        var existedTableNames = repository.GetShardingTableNames<OrderDetail>(f => tableNames.Contains(f));
-        string sql = null;
-        if (existedTableNames.Count > 0)
-        {
-            sql = "DROP TABLE " + string.Join(";DROP TABLE ", existedTableNames);
-            await repository.ExecuteAsync(sql);
-        }
+        var sql = $"DROP TABLE {tableName1};DROP TABLE {tableName1};DROP TABLE {tableName2}";
+        await repository.ExecuteAsync(sql); 
         repository.CreateShardingTable<OrderDetail>(tableName1);
         await repository.CreateShardingTableAsync<OrderDetail>(tableName2);
         sql = $"DROP TABLE {tableName1};DROP TABLE {tableName2}";
