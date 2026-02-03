@@ -69,7 +69,7 @@ public class Update : IUpdate
             var type = updateObj.GetType();
             if (!type.IsEntityType(out _))
                 throw new NotSupportedException("Set方法参数setObj支持实体类对象，不支持基础类型，可以是匿名对、命名对象或是字典");
-            this.Visitor.SetWith(updateObj);
+            this.Visitor.SetObject(updateObj);
         }
         return this.OrmProvider.NewContinuedUpdate(this.DbContext, this.Visitor);
     }
@@ -486,7 +486,7 @@ public class BulkContinuedUpdate : Updated, IBulkContinuedUpdate
             var type = updateObj.GetType();
             if (!type.IsEntityType(out _))
                 throw new NotSupportedException("Set方法参数setObj支持实体类对象，不支持基础类型，可以是匿名对、命名对象或是字典");
-            this.Visitor.SetWith(updateObj);
+            this.Visitor.SetObject(updateObj);
         }
         return this.OrmProvider.NewBulkContinuedUpdate(this.DbContext, this.Visitor);
     }
@@ -671,7 +671,7 @@ public class Update<TEntity> : Update, IUpdate<TEntity>
             if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
                 throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
 
-            this.Visitor.Set(fieldsAssignment);
+            this.Visitor.SetExpr(fieldsAssignment);
         }
         return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
@@ -966,7 +966,7 @@ public class BulkContinuedUpdate<TEntity> : BulkContinuedUpdate, IBulkContinuedU
             if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
                 throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
 
-            this.Visitor.Set(fieldsAssignment);
+            this.Visitor.SetExpr(fieldsAssignment);
         }
         return this;
     }
@@ -1216,7 +1216,7 @@ public class UpdateJoin<TEntity, T1> : Updated, IUpdateJoin<TEntity, T1>
             if (!typeof(TUpdateObj).IsEntityType(out _))
                 throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
 
-            this.Visitor.SetWith(updateObj);
+            this.Visitor.SetObject(updateObj);
         }
         return this;
     }
@@ -1248,7 +1248,7 @@ public class UpdateJoin<TEntity, T1> : Updated, IUpdateJoin<TEntity, T1>
             if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
                 throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
 
-            this.Visitor.Set(fieldsAssignment);
+            this.Visitor.SetExpr(fieldsAssignment);
         }
         return this;
     }
@@ -1417,7 +1417,7 @@ public class UpdateJoin<TEntity, T1, T2> : Updated, IUpdateJoin<TEntity, T1, T2>
             if (!typeof(TUpdateObj).IsEntityType(out _))
                 throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
 
-            this.Visitor.SetWith(updateObj);
+            this.Visitor.SetObject(updateObj);
         }
         return this;
     }
@@ -1449,7 +1449,7 @@ public class UpdateJoin<TEntity, T1, T2> : Updated, IUpdateJoin<TEntity, T1, T2>
             if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
                 throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
 
-            this.Visitor.Set(fieldsAssignment);
+            this.Visitor.SetExpr(fieldsAssignment);
         }
         return this;
     }
@@ -1618,7 +1618,7 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated, IUpdateJoin<TEntity, T1,
             if (!typeof(TUpdateObj).IsEntityType(out _))
                 throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
 
-            this.Visitor.SetWith(updateObj);
+            this.Visitor.SetObject(updateObj);
         }
         return this;
     }
@@ -1650,7 +1650,7 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated, IUpdateJoin<TEntity, T1,
             if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
                 throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
 
-            this.Visitor.Set(fieldsAssignment);
+            this.Visitor.SetExpr(fieldsAssignment);
         }
         return this;
     }
@@ -1819,7 +1819,7 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated, IUpdateJoin<TEntity,
             if (!typeof(TUpdateObj).IsEntityType(out _))
                 throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
 
-            this.Visitor.SetWith(updateObj);
+            this.Visitor.SetObject(updateObj);
         }
         return this;
     }
@@ -1851,7 +1851,7 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated, IUpdateJoin<TEntity,
             if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
                 throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
 
-            this.Visitor.Set(fieldsAssignment);
+            this.Visitor.SetExpr(fieldsAssignment);
         }
         return this;
     }
@@ -2001,7 +2001,7 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated, IUpdateJoin<TEnt
             if (!typeof(TUpdateObj).IsEntityType(out _))
                 throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
 
-            this.Visitor.SetWith(updateObj);
+            this.Visitor.SetObject(updateObj);
         }
         return this;
     }
@@ -2033,7 +2033,7 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated, IUpdateJoin<TEnt
             if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
                 throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
 
-            this.Visitor.Set(fieldsAssignment);
+            this.Visitor.SetExpr(fieldsAssignment);
         }
         return this;
     }

@@ -54,6 +54,29 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var tableSegment = this.Tables[0];
         var shardingType = tableSegment.ShardingType;
         object shardingTables = tableSegment.Mapper.TableName;
+        if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding)
+        {
+            if (tableSegment.ShardingTableGetter == null)
+            {
+                if (tableSegment.TableShardingInfo.DependOnMembers == null || tableSegment.TableShardingInfo.DependOnMembers.Count == 0)
+                    throw new Exception($"实体表{tableSegment.EntityType.FullName}已设置分表，未指定分表，也未设置依赖字段无法确定分表，请使用UseTable/UseTableBy方法手动指定分表");
+                if (this.deferredSegments.Count > 1)
+                {
+                    this.IsNeedShardingValues = true;
+                    this.ShardingValues = new();
+                }
+            }
+            else
+            {
+                if (this.ActionMode == ActionMode.Single)
+                {
+                    var updateObj = this.deferredSegments[0].Value;
+                    tableSegment.Body = tableSegment.ShardingTableGetter.Invoke(updateObj);
+                    tableSegment.ShardingType = ShardingTableType.SingleTable;
+                    tableSegment.IsSharding = true;
+                }
+            }
+        }
         switch (this.ActionMode)
         {
             case ActionMode.Bulk:
@@ -108,11 +131,11 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 {
                     switch (deferredSegment.Type)
                     {
-                        case "Set":
-                            this.VisitSet(deferredSegment.Value as Expression);
+                        case "SetExpr":
+                            this.VisitSetExpr(deferredSegment.Value as Expression);
                             break;
                         case "SetFrom":
-                            this.VisitSet(deferredSegment.Value as Expression);
+                            this.VisitSetExpr(deferredSegment.Value as Expression);
                             break;
                         case "SetField":
                             this.VisitSetField(deferredSegment.Value);
@@ -120,8 +143,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         case "SetFieldExpr":
                             this.VisitSetFieldExpr(deferredSegment.Value);
                             break;
-                        case "SetWith":
-                            this.VisitSetWith(deferredSegment.Value);
+                        case "SetObject":
+                            this.VisitSetObject(deferredSegment.Value);
                             break;
                         case "SetFromField":
                             this.VisitSetFromField(deferredSegment.Value);
@@ -156,6 +179,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         case "Or":
                             this.VisitOr(deferredSegment.Value as Expression);
                             break;
+                        default: throw new NotSupportedException("Set操作后，只支持Set/SetFrom/IgnoreFields/OnlyFields/Where/And/Or操作");
                     }
                 }
                 builder.Append($"UPDATE {this.GetFormatTableName(tableSegment)}");
@@ -214,27 +238,61 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             this.FieldsBuilder = new();
             var tempDbParameters = new TheaDbParameterCollection();
             this.DbParameters = tempDbParameters;
+            Func<IDataParameterCollection, DbContext, object, string> whereSqlInitializer = null;
             for (int i = 1; i < this.deferredSegments.Count; i++)
             {
                 var deferredSegment = this.deferredSegments[i];
                 switch (deferredSegment.Type)
                 {
-                    case "Set":
-                        this.VisitSet(deferredSegment.Value as Expression);
+                    case "SetExpr":
+                        this.VisitSetExpr(deferredSegment.Value as Expression);
+                        break;
+                    case "SetFrom":
+                        this.VisitSetExpr(deferredSegment.Value as Expression);
                         break;
                     case "SetField":
                         this.VisitSetField(deferredSegment.Value);
                         break;
-                    case "SetWith":
-                        this.VisitSetWith(deferredSegment.Value);
+                    case "SetFieldExpr":
+                        this.VisitSetFieldExpr(deferredSegment.Value);
+                        break;
+                    case "SetObject":
+                        this.VisitSetObject(deferredSegment.Value);
+                        break;
+                    case "SetFromField":
+                        this.VisitSetFromField(deferredSegment.Value);
+                        break;
+                    case "AndBy":
+                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, false, false, false);
+                        this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                        break;
+                    case "AndById":
+                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, false);
+                        this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                        break;
+                    case "AndByIds":
+                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, true);
+                        this.VisitAndSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
                         break;
                     case "And":
                         this.VisitAnd(deferredSegment.Value as Expression);
                         break;
+                    case "OrBy":
+                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, false, false, false);
+                        this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                        break;
+                    case "OrById":
+                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, false);
+                        this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                        break;
+                    case "OrByIds":
+                        whereSqlInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, deferredSegment.Value, 4, true, false, true);
+                        this.VisitOrSql(whereSqlInitializer.Invoke(this.DbParameters, this.DbContext, deferredSegment.Value));
+                        break;
                     case "Or":
                         this.VisitOr(deferredSegment.Value as Expression);
                         break;
-                    default: throw new NotSupportedException("SetBulk操作后，只支持Set/IgnoreFields/OnlyFields/Where/And/Or操作");
+                    default: throw new NotSupportedException("SetBulk操作后，只支持Set/SetFrom/IgnoreFields/OnlyFields/Where/And/Or操作");
                 }
             }
             if (this.DbParameters.Count > 0)
@@ -318,19 +376,19 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.InitTableAlias(lambdaExpr);
         joinTable.OnExpr = this.VisitConditionExpr(lambdaExpr.Body, out _);
     }
-    public virtual void SetWith(object updateObj)
+    public virtual void SetObject(object updateObj)
     {
         this.deferredSegments.Add(new CommandSegment
         {
-            Type = "SetWith",
+            Type = "SetObject",
             Value = updateObj
         });
     }
-    public virtual void Set(Expression fieldsAssignment)
+    public virtual void SetExpr(Expression fieldsAssignment)
     {
         this.deferredSegments.Add(new CommandSegment
         {
-            Type = "Set",
+            Type = "SetExpr",
             Value = fieldsAssignment
         });
     }
@@ -541,7 +599,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
         this.AddMemberElement(memberMapper, fieldValue, false);
     }
-    public virtual void VisitSetWith(object updateObj)
+    public virtual void VisitSetObject(object updateObj)
     {
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
@@ -593,16 +651,10 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
             typedCommandInitializer.Invoke(this.DbParameters, this.FieldsBuilder, this.DbContext, updateObj);
         }
-        if (this.ActionMode == ActionMode.Single && tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter != null)
-        {
-            tableSegment.Body = tableSegment.ShardingTableGetter.Invoke(updateObj);
-            tableSegment.ShardingType = ShardingTableType.SingleTable;
-            tableSegment.IsSharding = true;
-        }
         if (this.IsNeedShardingValues) RepositoryHelper.SetShardingValues(this.DbContext,
             tableSegment.TableShardingInfo, tableSegment.EntityType, updateObjType, updateObj, this.ShardingValues);
     }
-    public virtual void VisitSet(Expression fieldsAssignment)
+    public virtual void VisitSetExpr(Expression fieldsAssignment)
     {
         var entityMapper = this.Tables[0].Mapper;
         var lambdaExpr = fieldsAssignment as LambdaExpression;

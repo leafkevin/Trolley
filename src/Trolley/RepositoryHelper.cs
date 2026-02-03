@@ -1171,7 +1171,7 @@ public static class RepositoryHelper
                 var memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                     .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
                 var parameterExpr = Expression.Parameter(typeof(object), "parameter");
-                var shardingValuesExpr = Expression.Parameter(typeof(Dictionary<string, object>), "shardingValues");
+                var shardingValuesExpr = Expression.Parameter(typeof(IDictionary<string, object>), "shardingValues");
                 var fieldValuesExpr = Expression.Variable(typeof(object[]), "fieldValues");
                 var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
 
@@ -1206,7 +1206,7 @@ public static class RepositoryHelper
     {
         return typeMemberInfos.GetOrAdd(entityType, f => entityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
             .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList());
-    }
+    } 
     public static object CreateInstance(Type targetType)
     {
         var creator = creatorCache.GetOrAdd(targetType, f =>

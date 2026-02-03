@@ -68,9 +68,9 @@ public class MySqlCreateVisitor : CreateVisitor
                     this.DbParameters = command.Parameters;
                 }
                 else this.DbParameters = command.Parameters;
+
                 this.ValuesBuilder = new();
                 var tableSegment = this.Tables[0];
-
                 if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null)
                 {
                     if (tableSegment.TableShardingInfo.DependOnMembers == null || tableSegment.TableShardingInfo.DependOnMembers.Count == 0)

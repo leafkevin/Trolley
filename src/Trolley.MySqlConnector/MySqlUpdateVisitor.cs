@@ -56,11 +56,11 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                 var deferredSegment = this.deferredSegments[i];
                 switch (deferredSegment.Type)
                 {
-                    case "Set":
-                        this.VisitSet(deferredSegment.Value as Expression);
+                    case "SetExpr":
+                        this.VisitSetExpr(deferredSegment.Value as Expression);
                         break;
                     case "SetFrom":
-                        this.VisitSet(deferredSegment.Value as Expression);
+                        this.VisitSetExpr(deferredSegment.Value as Expression);
                         break;
                     case "SetField":
                         this.VisitSetField(deferredSegment.Value);
@@ -68,8 +68,8 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     case "SetFieldExpr":
                         this.VisitSetFieldExpr(deferredSegment.Value);
                         break;
-                    case "SetWith":
-                        this.VisitSetWith(deferredSegment.Value);
+                    case "SetObject":
+                        this.VisitSetObject(deferredSegment.Value);
                         break;
                     case "SetFromField":
                         this.VisitSetFromField(deferredSegment.Value);

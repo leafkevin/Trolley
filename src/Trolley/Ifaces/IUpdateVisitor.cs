@@ -30,8 +30,8 @@ public interface IUpdateVisitor : IDisposable
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
     void Join(string joinType, Type entityType, Expression joinOn);
-    void Set(Expression fieldsAssignment);
-    void SetWith(object updateObj);
+    void SetExpr(Expression fieldsAssignment);
+    void SetObject(object updateObj);
     void SetField(string fieldName, object fieldValue);
     void SetField(Expression fieldSelector, object fieldValue);
     void SetFrom(Expression fieldsAssignment);

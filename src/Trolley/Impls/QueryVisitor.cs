@@ -1457,9 +1457,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 existsMembers = this.ReaderFields.Select(f => f.TargetMember.Name).ToList();
                 isExistsFields = true;
             }
-            var targetMembers = targetType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                .Where(f => f.CanWrite()).ToList();
-
+            var targetMembers = RepositoryHelper.GetMembers(targetType).FindAll(f => f.CanWrite());
             foreach (var memberInfo in targetMembers)
             {
                 if (isExistsFields && existsMembers.Contains(memberInfo.Name)) continue;
@@ -1470,9 +1468,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else
         {
             this.ReaderFields = new();
-            var targetMembers = targetType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                .Where(f => f.CanWrite()).ToList();
-
+            var targetMembers = RepositoryHelper.GetMembers(targetType).FindAll(f => f.CanWrite());
             foreach (var memberInfo in targetMembers)
             {
                 if (this.TryFindReaderField(memberInfo, out var readerField))
