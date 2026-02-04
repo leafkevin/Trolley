@@ -12,14 +12,17 @@ namespace Trolley;
 
 public static class Extensions
 {
-    private static readonly Type[] valueTypes = [typeof(byte),typeof(sbyte),typeof(short),typeof(ushort),
+    private static readonly HashSet<Type> valueTypes = new HashSet<Type> 
+    {
+        typeof(byte),typeof(sbyte),typeof(short),typeof(ushort),
         typeof(int),typeof(uint),typeof(long),typeof(ulong),typeof(float),typeof(double),typeof(decimal),
         typeof(bool),typeof(string),typeof(char),typeof(Guid),typeof(DateTime),typeof(DateTimeOffset),
         typeof(TimeSpan),
 #if NET6_0_OR_GREATER
         typeof(DateOnly),typeof(TimeOnly),
 #endif
-        typeof(BitArray),typeof(DBNull)];
+        typeof(BitArray),typeof(DBNull)
+    };
 
     private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> valueTupleReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> typeReaderDeserializerCache = new();
@@ -411,19 +414,18 @@ public static class Extensions
         itemKey = null;
         foreach (var dictKey in dict.Keys)
         {
-            if (!string.Equals(memberName, dictKey, StringComparison.OrdinalIgnoreCase))
-                continue;
-            itemKey = dictKey;
-            return true;
+            if (string.Equals(memberName, dictKey, StringComparison.OrdinalIgnoreCase))
+            {
+                itemKey = dictKey;
+                return true;
+            }
         }
         return false;
     }
     public static bool TryGetMember(this Type entityType, string memberName, out MemberInfo memberInfo)
     {
-        memberInfo = entityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-            .Where(f => (f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field)
-            && string.Equals(f.Name, memberName, StringComparison.OrdinalIgnoreCase)).First();
-        return memberInfo != null;
+        var memberInfos = RepositoryHelper.GetMembers(entityType);
+        return memberInfos.TryFind(memberName, out memberInfo);
     }
     //public static bool TryGetValueIgnoreCase(this IDictionary<string, object> dict, string lowerKey, out object value)
     //{

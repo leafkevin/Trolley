@@ -334,14 +334,19 @@ public partial class MySqlProvider : BaseOrmProvider
                 Position = reader.ToFieldValue<int>(13)
             };
             tableInfo.Columns.Add(conlumnInfo);
-
-            var lengthTypes = new[] { "bit", "binary", "varbinary" };
-            if (lengthTypes.Contains(conlumnInfo.DataType))
+        }
+        var lengthTypes = new[] { "bit", "binary", "varbinary" };
+        foreach (var tableInfoObj in tableInfos)
+        {
+            foreach (var conlumnInfo in tableInfoObj.Columns)
             {
-                var beginIndex = conlumnInfo.DbColumnType.IndexOf('(') + 1;
-                var endIndex = conlumnInfo.DbColumnType.IndexOf(')');
-                var length = conlumnInfo.DbColumnType.Substring(beginIndex, endIndex - beginIndex);
-                conlumnInfo.MaxLength = int.Parse(length);
+                if (lengthTypes.Contains(conlumnInfo.DataType))
+                {
+                    var beginIndex = conlumnInfo.DbColumnType.IndexOf('(') + 1;
+                    var endIndex = conlumnInfo.DbColumnType.IndexOf(')');
+                    var length = conlumnInfo.DbColumnType.Substring(beginIndex, endIndex - beginIndex);
+                    conlumnInfo.MaxLength = int.Parse(length);
+                }
             }
         }
         reader.Close();

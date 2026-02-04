@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
@@ -170,8 +169,7 @@ public static class RepositoryHelper
     public static string BuildSelectFieldsSqlPart(DbContext dbContext, EntityMap entityMapper, Type parametersType)
     {
         var builder = new StringBuilder();
-        var memberInfos = parametersType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-            .Where(f => f.CanWrite()).ToList();
+        var memberInfos = GetMembers(parametersType).Where(f => f.CanWrite()).ToList();
 
         var index = 0;
         var ormProvider = dbContext.OrmProvider;
@@ -214,8 +212,7 @@ public static class RepositoryHelper
             var cacheKey = GetCacheKey(rawSql, parameterType);
             commandInitializer = queryRawSqlCommandInitializerCache.GetOrAdd(cacheKey, f =>
             {
-                var memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                    .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
+                var memberInfos = GetMembers(parameterType);
                 var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
                 var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
                 var parameterExpr = Expression.Parameter(typeof(object), "parameter");
@@ -553,6 +550,7 @@ public static class RepositoryHelper
             //var fieldValue = enumerator.Current.Value;          
             var currentExpr = Expression.Property(enumeratorExpr, nameof(IEnumerator.Current));
             loopBodies.Add(Expression.Assign(itemKeyExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Key))));
+            loopBodies.Add(Expression.Assign(itemValueExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Value))));
 
             //if(!entityMapper.TryGetMemberMap(itemKey, out var memberMapper)
             //  || memberMapper.IsIgnore || memberMapper.IsNavigation) continue;
@@ -733,8 +731,7 @@ public static class RepositoryHelper
             }
 
             int index = 0, whereIndex = 0;
-            var targetMemberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                .Where(f => (f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field)).ToList();
+            var targetMemberInfos = GetMembers(parameterType);
 
             foreach (var memberMapper in entityMapper.MemberMaps)
             {
@@ -910,8 +907,7 @@ public static class RepositoryHelper
             blockBodies.Add(Expression.Assign(ormProviderExpr, Expression.Property(dbContextExpr, nameof(DbContext.OrmProvider))));
 
             var targetMemberInfos = new List<MemberInfo>();
-            var memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
+            var memberInfos = GetMembers(parameterType);
             var ormProvider = dbContext.OrmProvider;
             var entityMapper = dbContext.EntityMapProvider.GetEntityMap(entityType);
             var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)]);
@@ -1082,8 +1078,7 @@ public static class RepositoryHelper
                 var dictItemPropertyInfo = typeof(IDictionary<string, object>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
                     .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(string)).First();
                 var methodInfo = dictItemPropertyInfo.GetSetMethod();
-                var memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                    .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
+                var memberInfos = GetMembers(parameterType);
                 bool isContiansShardingValue = false;
                 foreach (var memberName in tableShardingInfo.DependOnMembers)
                 {
@@ -1168,8 +1163,7 @@ public static class RepositoryHelper
             var cacheKey = GetCacheKey(entityMapProvider, tableShardingInfo, entityType, parameterType);
             var tableNameGetter = shardingTableGetters.GetOrAdd(cacheKey, f =>
             {
-                var memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                    .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
+                var memberInfos = GetMembers(parameterType);
                 var parameterExpr = Expression.Parameter(typeof(object), "parameter");
                 var shardingValuesExpr = Expression.Parameter(typeof(IDictionary<string, object>), "shardingValues");
                 var fieldValuesExpr = Expression.Variable(typeof(object[]), "fieldValues");
@@ -1218,9 +1212,7 @@ public static class RepositoryHelper
     }
     public static object CreateInstance(Type targetType, Type[] parameterTypes, params object[] parameters)
     {
-        var keyParameterTypes = new List<object> { targetType, "args" };
-        keyParameterTypes.AddRange(parameterTypes);
-        var cacheKey = GetCacheKey(keyParameterTypes.ToArray());
+        var cacheKey = GetCacheKey(targetType, parameterTypes);
         var creator = parameterizedCreatorCache.GetOrAdd(cacheKey, f =>
         {
             var parametersExprs = Expression.Parameter(typeof(object[]), "parameters");
@@ -1538,6 +1530,25 @@ public static class RepositoryHelper
         return hashCode;
 #endif
     }
+    public static int GetCacheKey(Type targetType, Type[] parameterTypes)
+    {
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+        var hashCode = new HashCode();
+        hashCode.Add(targetType);
+        foreach (var type in parameterTypes)
+            hashCode.Add(type);
+        return hashCode.ToHashCode(); 
+#else
+        int hashCode = 17;
+        unchecked
+        {
+            hashCode = hashCode * 23 + targetType.GetHashCode();
+            foreach (var type in parameterTypes)
+                hashCode = hashCode * 23 + type.GetHashCode();
+        }
+        return hashCode;
+#endif
+    }
     public static Func<ITheaDataReader, object> CreateReaderValueTupleDeserializer(Type entityType, DbContext dbContext, ITheaDataReader reader)
     {
         var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
@@ -1551,9 +1562,8 @@ public static class RepositoryHelper
             //使用原始SQL才有可能SQL中的字段名与成员名不一致，或是没有加 AS成员名
             var fieldType = reader.GetFieldType(index);
             var memberInfo = entityType.GetMember($"Item{index + 1}")[0];
-            var memberType = memberInfo.GetMemberType();
             var readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr,
-                Expression.Constant(index), memberType, fieldType, null, blockParameters, blockBodies);
+                Expression.Constant(index), memberInfo.GetMemberType(), fieldType, null, blockParameters, blockBodies);
             target.Arguments.Add(readerValueExpr);
             index++;
         }
@@ -1569,7 +1579,7 @@ public static class RepositoryHelper
     {
         var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
-        var memberInfos = entityType.GetMembers(BindingFlags.Public | BindingFlags.Instance).Where(f => f.CanWrite()).ToList();
+        var memberInfos = GetMembers(entityType).Where(f => f.CanWrite()).ToList();
         var entityMapProvider = dbContext.EntityMapProvider;
         var hasMapper = entityMapProvider.TryGetEntityMap(entityType, out var entityMapper);
         var index = 0;
@@ -1652,8 +1662,7 @@ public static class RepositoryHelper
 
         if (readerFields.Count == 1 && readerFields[0].FieldType == SqlFieldType.RawSql)
         {
-            var memberInfos = entityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                .Where(f => f.CanWrite()).ToList();
+            var memberInfos = GetMembers(entityType).Where(f => f.CanWrite()).ToList();
 
             if (!root.IsDefault)
                 throw new NotSupportedException($"不支持使用原始SQL创建没有默认构造函数的实体，实体类型:{entityType.FullName}");
@@ -1668,7 +1677,8 @@ public static class RepositoryHelper
                 var fieldType = reader.GetFieldType(index);
 
                 var indexExpr = Expression.Constant(index);
-                readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr, indexExpr, memberInfo.GetMemberType(), fieldType, null, blockParameters, blockBodies);
+                readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr,
+                    indexExpr, memberInfo.GetMemberType(), fieldType, null, blockParameters, blockBodies);
                 if (!root.IsDefault)
                     root.Arguments.Add(readerValueExpr);
                 else if (memberInfo.CanWrite())
