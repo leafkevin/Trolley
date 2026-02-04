@@ -66,15 +66,12 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     this.ShardingValues = new();
                 }
             }
-            else
+            else if (this.ActionMode == ActionMode.Single && tableSegment.ShardingTableGetter != null)
             {
-                if (this.ActionMode == ActionMode.Single)
-                {
-                    var updateObj = this.deferredSegments[0].Value;
-                    tableSegment.Body = tableSegment.ShardingTableGetter.Invoke(updateObj);
-                    tableSegment.ShardingType = ShardingTableType.SingleTable;
-                    tableSegment.IsSharding = true;
-                }
+                var updateObj = this.deferredSegments[0].Value;
+                tableSegment.Body = tableSegment.ShardingTableGetter.Invoke(updateObj);
+                tableSegment.ShardingType = ShardingTableType.SingleTable;
+                tableSegment.IsSharding = true;
             }
         }
         switch (this.ActionMode)
@@ -823,8 +820,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
         if (this.IsNeedShardingValues)
         {
-            var tableSegment = this.Tables[0];
-            if (!tableSegment.TableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName)) return;
+            var tableShardingInfo = this.Tables[0].TableShardingInfo;
+            if (!tableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName)) return;
             this.ShardingValues[memberMapper.MemberName] = fieldValue;
         }
     }
@@ -850,6 +847,13 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             }
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
             this.FieldsBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+
+            if (this.IsNeedShardingValues)
+            {
+                var tableShardingInfo = this.Tables[0].TableShardingInfo;
+                if (!tableShardingInfo.DependOnMembers.Contains(memberMapper.MemberName)) return;
+                this.ShardingValues[memberMapper.MemberName] = fieldValue;
+            }
         }
     }
     public (List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>>, List<Action<IDataParameterCollection,

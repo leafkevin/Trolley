@@ -2591,13 +2591,17 @@ public class SqlVisitor : ISqlVisitor
     public string GetFormatTableName(TableSegment tableSegment)
     {
         string tableName = null;
-        if (tableSegment.TableShardingInfo != null && tableSegment.IsSharding)
+        if (tableSegment.TableShardingInfo != null)
         {
-            //当单个ShardingTables时，只有一个分表的情况下，会移除ShardingTables中的表，存在多个分表的表时，不做移除
-            if (tableSegment.ShardingType > ShardingTableType.SingleTable
-                && (tableSegment.TableType == TableType.Entity || tableSegment.TableType == TableType.Include))
-                tableName = $"__SHARDING_{tableSegment.ShardingId}_{tableSegment.Mapper.TableName}";
-            //单个明确分表或是有分表的子查询
+            if (tableSegment.IsSharding)
+            {
+                //当单个ShardingTables时，只有一个分表的情况下，会移除ShardingTables中的表，存在多个分表的表时，不做移除
+                if (tableSegment.ShardingType > ShardingTableType.SingleTable
+                    && (tableSegment.TableType == TableType.Entity || tableSegment.TableType == TableType.Include))
+                    tableName = $"__SHARDING_{tableSegment.ShardingId}_{tableSegment.Mapper.TableName}";
+                //单个明确分表或是有分表的子查询
+                else tableName = tableSegment.Body;
+            }
             else tableName = tableSegment.Body;
         }
         else tableName = tableSegment.Mapper.TableName;
