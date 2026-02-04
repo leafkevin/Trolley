@@ -42,14 +42,14 @@ public class MySqlCreated : Created
                         var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
                         foreach (var tableName in tabledInsertObjs.Keys)
                         {
-                            var data = this.Visitor.ToDataTable(tableName, tabledInsertObjs[tableName], memberMappers, valueGetters);
+                            using var data = new EnumerableDataReader(tabledInsertObjs[tableName], memberMappers, valueGetters);
                             result += dialectOrmProvider.ExecuteBulkCopy(tableName, bulkCopyObj, connection, this.DbContext, data);
                         }
                     }
                     else
                     {
                         var tableName = shardingTables as string;
-                        var data = this.Visitor.ToDataTable(tableName, insertObjs, memberMappers, valueGetters);
+                        using var data = new EnumerableDataReader(insertObjs, memberMappers, valueGetters);
                         result = dialectOrmProvider.ExecuteBulkCopy(shardingTables as string, bulkCopyObj, connection, this.DbContext, data);
                     }
                     break;
@@ -140,14 +140,14 @@ public class MySqlCreated : Created
                         var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
                         foreach (var tableName in tabledInsertObjs.Keys)
                         {
-                            var data = this.Visitor.ToDataTable(tableName, tabledInsertObjs[tableName], memberMappers, valueGetters);
+                            using var data = new EnumerableDataReader(tabledInsertObjs[tableName], memberMappers, valueGetters);
                             result += await dialectOrmProvider.ExecuteBulkCopyAsync(tableName, bulkCopyObj, connection, this.DbContext, data, cancellationToken);
                         }
                     }
                     else
                     {
                         var tableName = shardingTables as string;
-                        var data = this.Visitor.ToDataTable(tableName, insertObjs, memberMappers, valueGetters);
+                        using var data = new EnumerableDataReader(insertObjs, memberMappers, valueGetters);
                         result = await dialectOrmProvider.ExecuteBulkCopyAsync(shardingTables as string, bulkCopyObj, connection, this.DbContext, data, cancellationToken);
                     }
                     break;
@@ -252,14 +252,14 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
                         var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
                         foreach (var tableName in tabledInsertObjs.Keys)
                         {
-                            var data = this.Visitor.ToDataTable(tableName, tabledInsertObjs[tableName], memberMappers, valueGetters);
+                            using var data = new EnumerableDataReader(tabledInsertObjs[tableName], memberMappers, valueGetters);
                             result += dialectOrmProvider.ExecuteBulkCopy(tableName, bulkCopyObj, connection, this.DbContext, data);
                         }
                     }
                     else
                     {
                         var tableName = shardingTables as string;
-                        var data = this.Visitor.ToDataTable(tableName, insertObjs, memberMappers, valueGetters);
+                        using var data = new EnumerableDataReader(insertObjs, memberMappers, valueGetters);
                         result = dialectOrmProvider.ExecuteBulkCopy(shardingTables as string, bulkCopyObj, connection, this.DbContext, data);
                     }
                     break;
@@ -350,14 +350,14 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
                         var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
                         foreach (var tableName in tabledInsertObjs.Keys)
                         {
-                            var data = this.Visitor.ToDataTable(tableName, tabledInsertObjs[tableName], memberMappers, valueGetters);
+                            using var data = new EnumerableDataReader(tabledInsertObjs[tableName], memberMappers, valueGetters);
                             result += await dialectOrmProvider.ExecuteBulkCopyAsync(tableName, bulkCopyObj, connection, this.DbContext, data, cancellationToken);
                         }
                     }
                     else
                     {
                         var tableName = shardingTables as string;
-                        var data = this.Visitor.ToDataTable(tableName, insertObjs, memberMappers, valueGetters);
+                        using var data = new EnumerableDataReader(insertObjs, memberMappers, valueGetters);
                         result = await dialectOrmProvider.ExecuteBulkCopyAsync(shardingTables as string, bulkCopyObj, connection, this.DbContext, data, cancellationToken);
                     }
                     break;

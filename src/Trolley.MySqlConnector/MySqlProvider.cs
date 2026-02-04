@@ -1,6 +1,5 @@
 ﻿using MySqlConnector;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -582,7 +581,93 @@ public partial class MySqlProvider : BaseOrmProvider
         }
         return recordsAffected;
     }
+    public int ExecuteBulkCopy(string tableName, MySqlBulkCopy bulkCopyObj, ITheaConnection connection, DbContext dbContext, IDataReader data)
+    {
+        var createdAt = DateTime.Now;
+        bulkCopyObj.DestinationTableName = tableName;
+        dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
+        {
+            DbKey = dbContext.DbKey,
+            ConnectionString = connection.ConnectionString,
+            SqlType = CommandSqlType.BulkCopyInsert
+        });
+        int recordsAffected = 0;
+        bool isSuccess = true;
+        Exception exception = null;
+        try
+        {
+            var bulkCopyResult = bulkCopyObj.WriteToServer(data);
+            recordsAffected = bulkCopyResult.RowsInserted;
+        }
+        catch (Exception ex)
+        {
+            exception = ex;
+            isSuccess = false;
+        }
+        finally
+        {
+            var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
+            dbContext.DbInterceptors.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
+            {
+                DbKey = dbContext.DbKey,
+                ConnectionString = connection.ConnectionString,
+                SqlType = CommandSqlType.BulkCopyInsert,
+                IsSuccess = isSuccess,
+                Exception = exception,
+                Elapsed = (int)elapsed
+            });
+        }
+        if (!isSuccess)
+        {
+            if (dbContext.Transaction == null) dbContext.Connection.Close();
+            throw exception;
+        }
+        return recordsAffected;
+    }
     public async Task<int> ExecuteBulkCopyAsync(string tableName, MySqlBulkCopy bulkCopyObj, ITheaConnection connection, DbContext dbContext, DataTable data, CancellationToken cancellationToken = default)
+    {
+        var createdAt = DateTime.Now;
+        bulkCopyObj.DestinationTableName = tableName;
+        dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
+        {
+            DbKey = dbContext.DbKey,
+            ConnectionString = connection.ConnectionString,
+            SqlType = CommandSqlType.BulkCopyInsert
+        });
+        int recordsAffected = 0;
+        bool isSuccess = true;
+        Exception exception = null;
+        try
+        {
+            var bulkCopyResult = await bulkCopyObj.WriteToServerAsync(data, cancellationToken);
+            recordsAffected = bulkCopyResult.RowsInserted;
+        }
+        catch (Exception ex)
+        {
+            exception = ex;
+            isSuccess = false;
+        }
+        finally
+        {
+            var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
+            dbContext.DbInterceptors.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
+            {
+                DbKey = dbContext.DbKey,
+                ConnectionString = connection.ConnectionString,
+                SqlType = CommandSqlType.BulkCopyInsert,
+                IsSuccess = isSuccess,
+                Exception = exception,
+                Elapsed = (int)elapsed
+            });
+        }
+        if (!isSuccess)
+        {
+            if (dbContext.Transaction == null) await connection.CloseAsync();
+            throw exception;
+        }
+        return recordsAffected;
+    }
+    public async Task<int> ExecuteBulkCopyAsync(string tableName, MySqlBulkCopy bulkCopyObj, ITheaConnection connection, DbContext dbContext, IDataReader data, CancellationToken cancellationToken = default)
     {
         var createdAt = DateTime.Now;
         bulkCopyObj.DestinationTableName = tableName;

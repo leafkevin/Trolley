@@ -114,14 +114,14 @@ public class MySqlUpdated : Updated
                         var tabledUpdateObjs = shardingTables as Dictionary<string, List<object>>;
                         foreach (var tableName in tabledUpdateObjs.Keys)
                         {
-                            var data = this.Visitor.ToDataTable(tableName, tabledUpdateObjs[tableName], memberMappers, valueGetters);
+                            using var data = new EnumerableDataReader(tabledUpdateObjs[tableName], memberMappers, valueGetters);
                             result += dialectOrmProvider.ExecuteBulkCopy(tableName, bulkCopyObj, connection, this.DbContext, data);
                         }
                     }
                     else
                     {
                         var tableName = shardingTables as string;
-                        var data = this.Visitor.ToDataTable(tableName, updateObjs, memberMappers, valueGetters);
+                        using var data = new EnumerableDataReader(updateObjs, memberMappers, valueGetters);
                         result = dialectOrmProvider.ExecuteBulkCopy(tableName, bulkCopyObj, connection, this.DbContext, data);
                     }
                     //执行更新
@@ -308,14 +308,14 @@ public class MySqlUpdated : Updated
                         var tabledUpdateObjs = shardingTables as Dictionary<string, List<object>>;
                         foreach (var tableName in tabledUpdateObjs.Keys)
                         {
-                            var data = this.Visitor.ToDataTable(tableName, tabledUpdateObjs[tableName], memberMappers, valueGetters);
+                            using var data = new EnumerableDataReader(tabledUpdateObjs[tableName], memberMappers, valueGetters);
                             result += await dialectOrmProvider.ExecuteBulkCopyAsync(tableName, bulkCopyObj, connection, this.DbContext, data, cancellationToken);
                         }
                     }
                     else
                     {
                         var tableName = shardingTables as string;
-                        var data = this.Visitor.ToDataTable(tableName, updateObjs, memberMappers, valueGetters);
+                        using var data = new EnumerableDataReader(updateObjs, memberMappers, valueGetters);
                         result = await dialectOrmProvider.ExecuteBulkCopyAsync(tableName, bulkCopyObj, connection, this.DbContext, data, cancellationToken);
                     }
                     //执行更新
