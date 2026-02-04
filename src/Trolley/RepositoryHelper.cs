@@ -1206,7 +1206,7 @@ public static class RepositoryHelper
     {
         return typeMemberInfos.GetOrAdd(entityType, f => entityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
             .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList());
-    } 
+    }
     public static object CreateInstance(Type targetType)
     {
         var creator = creatorCache.GetOrAdd(targetType, f =>
@@ -1375,24 +1375,32 @@ public static class RepositoryHelper
 
     public static DateTime ToUtcTime(DateTime dateTime)
     {
+        if (dateTime == DateTime.MinValue || dateTime == DateTime.MaxValue)
+            return dateTime;
         if (dateTime.Kind == DateTimeKind.Local)
             return dateTime.ToUniversalTime();
         return dateTime;
     }
     public static DateTimeOffset ToUtcTime(DateTimeOffset dateTimeOffset)
     {
+        if (dateTimeOffset == DateTimeOffset.MinValue || dateTimeOffset == DateTimeOffset.MaxValue)
+            return dateTimeOffset;
         if (dateTimeOffset.DateTime.Kind == DateTimeKind.Local)
             return dateTimeOffset.ToUniversalTime();
         return dateTimeOffset;
     }
     public static DateTime ToLocalTime(DateTime dateTime)
     {
+        if (dateTime == DateTime.MinValue || dateTime == DateTime.MaxValue)
+            return dateTime;
         if (dateTime.Kind == DateTimeKind.Utc)
             return dateTime.ToLocalTime();
         return dateTime;
     }
     public static DateTimeOffset ToLocalTime(DateTimeOffset dateTimeOffset)
     {
+        if (dateTimeOffset == DateTimeOffset.MinValue || dateTimeOffset == DateTimeOffset.MaxValue)
+            return dateTimeOffset;
         if (dateTimeOffset.DateTime.Kind == DateTimeKind.Utc)
             return dateTimeOffset.ToLocalTime();
         return dateTimeOffset;

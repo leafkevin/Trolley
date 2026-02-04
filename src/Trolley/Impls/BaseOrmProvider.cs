@@ -1017,7 +1017,10 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return RepositoryHelper.ToUtcTime(new DateTimeOffset(((DateTime)value)));
+                                        var dt = (DateTime)value;
+                                        if (dt == DateTime.MinValue) return DateTimeOffset.MinValue;
+                                        if (dt == DateTime.MaxValue) return DateTimeOffset.MaxValue;
+                                        return RepositoryHelper.ToUtcTime(new DateTimeOffset(dt));
                                     };
                                 }
                                 else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
@@ -1025,7 +1028,10 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return RepositoryHelper.ToLocalTime(new DateTimeOffset((DateTime)value));
+                                        var dt = (DateTime)value;
+                                        if (dt == DateTime.MinValue) return DateTimeOffset.MinValue;
+                                        if (dt == DateTime.MaxValue) return DateTimeOffset.MaxValue;
+                                        return RepositoryHelper.ToLocalTime(new DateTimeOffset(dt));
                                     };
                                 }
                                 else
@@ -1033,7 +1039,10 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return new DateTimeOffset((DateTime)value);
+                                        var dt = (DateTime)value;
+                                        if (dt == DateTime.MinValue) return DateTimeOffset.MinValue;
+                                        if (dt == DateTime.MaxValue) return DateTimeOffset.MaxValue;
+                                        return new DateTimeOffset(dt);
                                     };
                                 }
                             }
@@ -1044,7 +1053,10 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return DateTimeOffset.MinValue;
-                                        return RepositoryHelper.ToUtcTime(new DateTimeOffset(((DateTime)value)));
+                                        var dt = (DateTime)value;
+                                        if (dt == DateTime.MinValue) return DateTimeOffset.MinValue;
+                                        if (dt == DateTime.MaxValue) return DateTimeOffset.MaxValue;
+                                        return RepositoryHelper.ToUtcTime(new DateTimeOffset(dt));
                                     };
                                 }
                                 else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
@@ -1052,7 +1064,10 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return DateTimeOffset.MinValue;
-                                        return new DateTimeOffset(RepositoryHelper.ToLocalTime((DateTime)value));
+                                        var dt = (DateTime)value;
+                                        if (dt == DateTime.MinValue) return DateTimeOffset.MinValue;
+                                        if (dt == DateTime.MaxValue) return DateTimeOffset.MaxValue;
+                                        return new DateTimeOffset(RepositoryHelper.ToLocalTime(dt));
                                     };
                                 }
                                 else
@@ -1060,7 +1075,10 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return DateTimeOffset.MinValue;
-                                        return new DateTimeOffset((DateTime)value);
+                                        var dt = (DateTime)value;
+                                        if (dt == DateTime.MinValue) return DateTimeOffset.MinValue;
+                                        if (dt == DateTime.MaxValue) return DateTimeOffset.MaxValue;
+                                        return new DateTimeOffset(dt);
                                     };
                                 }
                             }
