@@ -302,6 +302,7 @@ public partial class MySqlProvider : BaseOrmProvider
         using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
 
         DbTableInfo tableInfo = null;
+        var lengthTypes = new[] { "bit", "binary", "varbinary" };
         while (reader.Read())
         {
             var tableSchema = reader.ToFieldValue<string>(0);
@@ -333,19 +334,12 @@ public partial class MySqlProvider : BaseOrmProvider
                 Position = reader.ToFieldValue<int>(13)
             };
             tableInfo.Columns.Add(conlumnInfo);
-        }
-        var lengthTypes = new[] { "bit", "binary", "varbinary" };
-        foreach (var tableInfoObj in tableInfos)
-        {
-            foreach (var conlumnInfo in tableInfoObj.Columns)
+            if (lengthTypes.Contains(conlumnInfo.DataType))
             {
-                if (lengthTypes.Contains(conlumnInfo.DataType))
-                {
-                    var beginIndex = conlumnInfo.DbColumnType.IndexOf('(') + 1;
-                    var endIndex = conlumnInfo.DbColumnType.IndexOf(')');
-                    var length = conlumnInfo.DbColumnType.Substring(beginIndex, endIndex - beginIndex);
-                    conlumnInfo.MaxLength = int.Parse(length);
-                }
+                var beginIndex = conlumnInfo.DbColumnType.IndexOf('(') + 1;
+                var endIndex = conlumnInfo.DbColumnType.IndexOf(')');
+                var length = conlumnInfo.DbColumnType.Substring(beginIndex, endIndex - beginIndex);
+                conlumnInfo.MaxLength = int.Parse(length);
             }
         }
         reader.Close();

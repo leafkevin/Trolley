@@ -341,6 +341,7 @@ public static class RepositoryHelper
         MethodInfo methodInfo = null;
         var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)]);
         var concatMethodInfo = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string)]);
+        var countProperty = typeof(ICollection).GetProperty(nameof(ICollection.Count));
         var dictItemPropertyInfo = typeof(IDictionary<string, object>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
             .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(string)).First();
 
@@ -375,7 +376,7 @@ public static class RepositoryHelper
         if (isBulk)
         {
             indexExpr = Expression.Variable(typeof(int), "index");
-            enumeratorExpr = Expression.Variable(typeof(IEnumerable), "enumerator");
+            enumeratorExpr = Expression.Variable(typeof(IEnumerator), "enumerator");
             loopBodies = new List<Expression>();
             blockParameters.AddRange([indexExpr, enumeratorExpr]);
 
@@ -447,7 +448,7 @@ public static class RepositoryHelper
                 }
                 else
                 {
-                    if (!targetMemberInfos.TryGetValue(lowerMemberName, out targetMemberInfo))
+                    if (isEntityType && !targetMemberInfos.TryGetValue(lowerMemberName, out targetMemberInfo))
                     {
                         if (!isUseKey) continue;
                         throw new KeyNotFoundException($"参数类型{whereObjType.FullName}缺少{memberMapper.MemberName}的成员");
@@ -461,7 +462,7 @@ public static class RepositoryHelper
                     var parameterNameExpr = Expression.Variable(typeof(string), memberMapper.MemberName.ToCamel() + "Name");
                     blockParameters.Add(parameterNameExpr);
 
-                    Expression suffixExpr = Expression.Property(dbParametersExpr, nameof(IDataParameterCollection.Count));
+                    Expression suffixExpr = Expression.Property(dbParametersExpr, countProperty);
                     suffixExpr = Expression.Call(suffixExpr, typeof(int).GetMethod(nameof(int.ToString), Type.EmptyTypes));
                     myParameterNameExpr = Expression.Call(concatMethodInfo, myParameterNameExpr, suffixExpr);
                     myBlockBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
@@ -481,7 +482,12 @@ public static class RepositoryHelper
                 Expression fieldValueExpr = null;
                 if (isDictionary) fieldValueExpr = Expression.Property(typedWhereObjExpr, dictItemPropertyInfo, itemKeyExpr);
                 else if (isEntityType) fieldValueExpr = Expression.PropertyOrField(typedWhereObjExpr, targetMemberInfo.Name);
-                else fieldValueExpr = whereObjExpr;
+                else
+                {
+                    fieldValueExpr = isBulk ? typedWhereObjExpr : whereObjExpr;
+                    if (fieldValueExpr.Type != typeof(object))
+                        fieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
+                }
                 AddValueParameter(dbContext, dbParametersExpr, ormProviderExpr, isDictionary, myParameterNameExpr, fieldValueExpr, memberMapper, myBlockBodies);
                 index++;
             }
@@ -509,7 +515,7 @@ public static class RepositoryHelper
             //var suffix = dbParameters.Count.ToString();
             //valueSetter.Invoke(dbParameters, builder, dict, suffix);
             //loopIndex++;
-            Expression suffixExpr = Expression.Property(dbParametersExpr, nameof(IDataParameterCollection.Count));
+            Expression suffixExpr = Expression.Property(dbParametersExpr, countProperty);
             suffixExpr = Expression.Call(suffixExpr, typeof(int).GetMethod(nameof(int.ToString), Type.EmptyTypes));
             var itemProperyInfo = valueSettersType.GetProperties(BindingFlags.Instance | BindingFlags.Public)
                 .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(int)).First();
@@ -577,7 +583,7 @@ public static class RepositoryHelper
             {
                 //var parameterName = $"{ormProvider.ParameterPrefix}{(isWithKey ? "k" : "")}{memberMapper.MemberName}{dbParameters.Count}";
                 methodInfo = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string), typeof(string)]);
-                Expression suffixExpr = Expression.Property(dbParametersExpr, nameof(IDataParameterCollection.Count));
+                Expression suffixExpr = Expression.Property(dbParametersExpr, countProperty);
                 suffixExpr = Expression.Call(suffixExpr, typeof(int).GetMethod(nameof(int.ToString), Type.EmptyTypes));
                 myParameterNameExpr = Expression.Call(methodInfo, myParameterNameExpr, memberNameExpr, suffixExpr);
             }
@@ -1029,6 +1035,8 @@ public static class RepositoryHelper
                 }
                 else memberValueExpr = parameterValueExpr;
             }
+            if (memberValueExpr.Type != typeof(object))
+                memberValueExpr = Expression.Convert(memberValueExpr, typeof(object));
             blockBodies.Add(Expression.Assign(fieldValueExpr, memberValueExpr));
 
             Expression nativeDbTypeExpr = Expression.Constant(memberMapper.NativeDbType);
@@ -1537,7 +1545,7 @@ public static class RepositoryHelper
         hashCode.Add(targetType);
         foreach (var type in parameterTypes)
             hashCode.Add(type);
-        return hashCode.ToHashCode(); 
+        return hashCode.ToHashCode();
 #else
         int hashCode = 17;
         unchecked

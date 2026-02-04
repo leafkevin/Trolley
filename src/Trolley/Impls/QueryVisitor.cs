@@ -41,9 +41,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         this.DbContext = dbContext;
         this.TableAsStart = tableAsStart;
-        if (dbParameters != null) this.DbParameters = dbParameters;
-        //TODO:
-        //this.DbParameters = dbParameters ?? new TheaDbParameterCollection();
+        this.DbParameters = dbParameters ?? new TheaDbParameterCollection();
         this.IsNeedTableAlias = true;
     }
     public virtual string BuildSql(bool isBuildCteSql, out List<SqlFieldSegment> readerFields)

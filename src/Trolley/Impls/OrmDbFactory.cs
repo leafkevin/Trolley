@@ -57,10 +57,9 @@ public sealed class OrmDbFactory : IOrmDbFactory
         if (string.IsNullOrEmpty(database.DbKey))
             throw new ArgumentNullException(nameof(database.DbKey));
         this.databases.TryAdd(database.DbKey, database);
-        if (database.OrmProvider != null)
+        if (database.OrmProvider != null && !this.ormProviders.ContainsKey(database.OrmProviderType))
             this.ormProviders.TryAdd(database.OrmProviderType, database.OrmProvider);
-        if (database.IsDefault)
-            this.defaultDatabase = database;
+        if (database.IsDefault) this.defaultDatabase = database;
     }
     public TheaDatabase GetDatabase(string dbKey)
     {
@@ -171,6 +170,8 @@ public sealed class OrmDbFactory : IOrmDbFactory
     {
         this.allEntityMapProviders = new();
         this.allTableShardingProviders = new();
+        this.allDatabases = this.databases.Values.ToList();
+        this.allOrmProviders = this.ormProviders.Values.ToList();
         if (!this.entityMapProviders.IsEmpty)
         {
             //遍历所有数据库，映射实体对象
@@ -229,7 +230,5 @@ public sealed class OrmDbFactory : IOrmDbFactory
         //遍历所有数据库，未设置连接串选择器的，默认设置轮询方式选择连接串
         foreach (var database in this.Databases)
             database.Build();
-        this.allOrmProviders = this.ormProviders.Values.ToList();
-        this.allDatabases = this.databases.Values.ToList();
     }
 }

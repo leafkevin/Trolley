@@ -16,14 +16,16 @@ public sealed class OrmDbFactoryBuilder
             ormProvider = RepositoryHelper.CreateInstance(type) as IOrmProvider;
             this.dbFactory.UseOrmProvider(ormProvider);
         }
-        var builder = new OrmDatabaseBuilder(this.dbFactory, new TheaDatabase
+        var database = new TheaDatabase
         {
             DbKey = dbKey,
             OrmProviderType = ormProviderType,
             OrmProvider = ormProvider,
             IsDefault = isDefaultDatabase
-        });
+        };
+        var builder = new OrmDatabaseBuilder(this.dbFactory, database);
         databaseInitializer.Invoke(builder);
+        this.dbFactory.Register(database);
         return this;
     }
     public OrmDbFactoryBuilder UseDbKeySelector(Delegate dbKeySelector)
