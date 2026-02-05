@@ -483,12 +483,23 @@ public class SqlVisitor : ISqlVisitor
                 if (rightSegment.IsDeferredFields) return sqlSegment;
 
                 //计算数组访问，a??b
-                if (leftSegment.IsConstant && rightSegment.IsConstant)
-                    return sqlSegment.ChangeValue(Expression.Lambda(binaryExpr).Compile().DynamicInvoke(), true);
-
                 if ((leftSegment.IsConstant || leftSegment.IsVariable)
                     && (rightSegment.IsConstant || rightSegment.IsVariable))
-                    return sqlSegment.ChangeValue(Expression.Lambda(binaryExpr).Compile().DynamicInvoke(), false);
+                {
+                    var isConstant = leftSegment.IsConstant && rightSegment.IsConstant;
+                    if (binaryExpr.NodeType == ExpressionType.ArrayIndex)
+                    {
+                        var array = leftSegment.Value as Array;
+                        var index = Convert.ToInt32(rightSegment.Value);
+                        return sqlSegment.ChangeValue(array.GetValue(index), isConstant);
+                    }
+                    if (binaryExpr.NodeType == ExpressionType.Coalesce)
+                    {
+                        var value = leftSegment.Value ?? rightSegment.Value;
+                        return sqlSegment.ChangeValue(value, isConstant);
+                    }
+                    return sqlSegment.ChangeValue(Expression.Lambda(binaryExpr).Compile().DynamicInvoke(), isConstant);
+                }
 
                 //下面都是带有参数的情况，带有参数表达式计算(常量、变量)、函数调用等共2种情况
                 //bool类型的表达式，这里不做解析只做defer操作解析，到最外层select、where、having、joinOn子句中去解析合并
@@ -735,6 +746,21 @@ public class SqlVisitor : ISqlVisitor
             return sqlSegment;
         }
 
+        //优化本地成员访问
+        if (memberExpr.Expression != null)
+        {
+            var objSegment = this.Visit(new SqlFieldSegment { Expression = memberExpr.Expression });
+            if (objSegment.IsConstant || objSegment.IsVariable)
+            {
+                object memberValue = null;
+                if (memberInfo is PropertyInfo propertyInfo)
+                    memberValue = propertyInfo.GetValue(objSegment.Value);
+                else if (memberInfo is FieldInfo fieldInfo)
+                    memberValue = fieldInfo.GetValue(objSegment.Value);
+                return sqlSegment.ChangeValue(memberValue, objSegment.IsConstant);
+            }
+        }
+
         //访问局部变量或是成员变量，当作常量处理，直接计算，后面统一做参数化处理
         //var orderIds=new List<int>{1,2,3}; Where(f=>orderIds.Contains(f.OrderId)); orderIds
         //private Order order; Where(f=>f.OrderId==this.Order.Id); this.Order.Id
@@ -840,6 +866,37 @@ public class SqlVisitor : ISqlVisitor
             }
         }
 
+        if (methodCallExpr.Object != null && !typeof(IQuery).IsAssignableFrom(methodCallExpr.Object.Type))
+        {
+            var objSegment = this.Visit(new SqlFieldSegment { Expression = methodCallExpr.Object });
+            if (objSegment.IsConstant || objSegment.IsVariable)
+            {
+                var args = new object[methodCallExpr.Arguments.Count];
+                bool allArgsLocal = true;
+                bool isConstant = objSegment.IsConstant;
+                for (int i = 0; i < methodCallExpr.Arguments.Count; i++)
+                {
+                    var argSegment = this.Visit(new SqlFieldSegment { Expression = methodCallExpr.Arguments[i] });
+                    if (argSegment.IsConstant || argSegment.IsVariable)
+                    {
+                        args[i] = argSegment.Value;
+                        if (!argSegment.IsConstant) isConstant = false;
+                    }
+                    else
+                    {
+                        allArgsLocal = false;
+                        break;
+                    }
+                }
+
+                if (allArgsLocal)
+                {
+                    var result = methodCallExpr.Method.Invoke(objSegment.Value, args);
+                    return sqlSegment.ChangeValue(result, isConstant);
+                }
+            }
+        }
+
         sqlSegment = this.Evaluate(sqlSegment);
         sqlSegment.SegmentType = methodCallExpr.Type;
         //如果未指定常量和变量，当作变量处理，通常是常量或是变量经过一系列Linq操作得到的结果值
@@ -934,6 +991,37 @@ public class SqlVisitor : ISqlVisitor
     {
         if (sqlSegment.Expression.IsParameter(out _))
             throw new NotSupportedException("索引表达式不支持Parameter访问操作");
+
+        var indexExpr = sqlSegment.Expression as IndexExpression;
+        if (indexExpr.Object != null)
+        {
+            var objSegment = this.Visit(new SqlFieldSegment { Expression = indexExpr.Object });
+            if (objSegment.IsConstant || objSegment.IsVariable)
+            {
+                var args = new object[indexExpr.Arguments.Count];
+                bool allArgsLocal = true;
+                bool isConstant = objSegment.IsConstant;
+                for (int i = 0; i < indexExpr.Arguments.Count; i++)
+                {
+                    var argSegment = this.Visit(new SqlFieldSegment { Expression = indexExpr.Arguments[i] });
+                    if (argSegment.IsConstant || argSegment.IsVariable)
+                    {
+                        args[i] = argSegment.Value;
+                        if (!argSegment.IsConstant) isConstant = false;
+                    }
+                    else
+                    {
+                        allArgsLocal = false;
+                        break;
+                    }
+                }
+                if (allArgsLocal)
+                {
+                    var result = indexExpr.Indexer.GetValue(objSegment.Value, args);
+                    return sqlSegment.ChangeValue(result, isConstant);
+                }
+            }
+        }
         return this.Evaluate(sqlSegment);
     }
     public virtual SqlFieldSegment VisitConditional(SqlFieldSegment sqlSegment)
