@@ -209,7 +209,7 @@ public static class RepositoryHelper
         else
         {
             var parameterType = parameters.GetType();
-            var cacheKey = GetCacheKey(rawSql, parameterType);
+            var cacheKey = HashCode.Combine(rawSql, parameterType);
             commandInitializer = queryRawSqlCommandInitializerCache.GetOrAdd(cacheKey, f =>
             {
                 var memberInfos = GetMembers(parameterType);
@@ -262,7 +262,7 @@ public static class RepositoryHelper
         bool hasWhere = whereObjs != null;
         whereObjType ??= entityType;
 
-        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, isMultiple);
+        var cacheKey = HashCode.Combine(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, isMultiple);
         var commandInitializerCache = commandType switch
         {
             1 => isBulk ? queryByIdsCommandInitializerCache : isUseKey ? queryByIdCommandInitializerCache : queryByCommandInitializerCache,
@@ -682,7 +682,7 @@ public static class RepositoryHelper
         var hasIgnoreFields = ignoreFields != null && ignoreFields.Count > 0;
         var onlyFieldsKey = hasOnlyFields ? string.Join("-", onlyFields) : "";
         var ignoreFieldsKey = hasIgnoreFields ? string.Join("-", ignoreFields) : "";
-        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, parameterType, hasIdentity, onlyFieldsKey, ignoreFieldsKey);
+        var cacheKey = HashCode.Combine(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, parameterType, hasIdentity, onlyFieldsKey, ignoreFieldsKey);
         var commandInitializerCache = commandType == 1 ? createWithCommandInitializerCache : updateWithCommandInitializerCache;
         return commandInitializerCache.GetOrAdd(cacheKey, f =>
         {
@@ -892,7 +892,7 @@ public static class RepositoryHelper
         var onlyFieldsKey = hasOnlyFields ? string.Join("-", onlyFields) : "";
         var ignoreFieldsKey = hasIgnoreFields ? string.Join("-", ignoreFields) : "";
         var hasFilterFields = hasOnlyFields || hasIgnoreFields;
-        var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, parameterType, onlyFieldsKey, ignoreFieldsKey);
+        var cacheKey = HashCode.Combine(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, parameterType, onlyFieldsKey, ignoreFieldsKey);
         var commandInitializerCache = commandType == 1 ? createWithCommandInitializerCache : updateWithCommandInitializerCache;
         return commandInitializerCache.GetOrAdd(cacheKey, f =>
         {
@@ -1070,7 +1070,7 @@ public static class RepositoryHelper
         else
         {
             var entityMapProvider = dbContext.EntityMapProvider;
-            var cacheKey = GetCacheKey(entityMapProvider, tableShardingInfo, entityType, parameterType);
+            var cacheKey = HashCode.Combine(entityMapProvider, tableShardingInfo, entityType, parameterType);
             (var isContainsShardingValues, var shardingValuesSetter) = shardingValuesSetters.GetOrAdd(cacheKey, f =>
             {
                 var parameterExpr = Expression.Parameter(typeof(object), "parameter");
@@ -1168,7 +1168,7 @@ public static class RepositoryHelper
                 else throw new ArgumentException($"参数中缺少实体表{tableShardingInfo.EntityType.FullName}分表依赖成员{memberName}，无法确定分表，请使用UseTable/UseTableBy方法手动指定分表，或提供依赖成员{memberName}的值");
                 index++;
             }
-            var cacheKey = GetCacheKey(entityMapProvider, tableShardingInfo, entityType, parameterType);
+            var cacheKey = HashCode.Combine(entityMapProvider, tableShardingInfo, entityType, parameterType);
             var tableNameGetter = shardingTableGetters.GetOrAdd(cacheKey, f =>
             {
                 var memberInfos = GetMembers(parameterType);
@@ -1246,7 +1246,7 @@ public static class RepositoryHelper
     }
     public static object ReadList(Type entityType, ITheaDataReader reader, DbContext dbContext)
     {
-        var cacheKey = GetCacheKey(entityType, dbContext.OrmProvider.OrmProviderType);
+        var cacheKey = HashCode.Combine(entityType, dbContext.OrmProvider.OrmProviderType);
         var typedReaderDeserializer = readerDeserializerGetters.GetOrAdd(cacheKey, f =>
         {
             var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
@@ -1265,7 +1265,7 @@ public static class RepositoryHelper
     }
     public static Task<object> ReadListAsync(Type entityType, ITheaDataReader reader, DbContext dbContext, CancellationToken cancellationToken)
     {
-        var cacheKey = GetCacheKey(entityType, dbContext.OrmProvider.OrmProviderType);
+        var cacheKey = HashCode.Combine(entityType, dbContext.OrmProvider.OrmProviderType);
         var typedReaderDeserializer = readerDeserializerAsyncGetters.GetOrAdd(cacheKey, f =>
         {
             var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
@@ -1306,7 +1306,7 @@ public static class RepositoryHelper
     public static Func<object, object> GetMemberValueGetter(MemberInfo memberInfo)
     {
         var entityType = memberInfo.DeclaringType;
-        var cacheKey = RepositoryHelper.GetCacheKey(entityType, memberInfo);
+        var cacheKey = HashCode.Combine(entityType, memberInfo);
         return memberGetterCache.GetOrAdd(cacheKey, f =>
         {
             Expression valueExpr;
@@ -1339,7 +1339,7 @@ public static class RepositoryHelper
     public static Action<object, object> GetMemberValueSetter(MemberInfo memberInfo)
     {
         var type = memberInfo.DeclaringType;
-        var cacheKey = RepositoryHelper.GetCacheKey(type, memberInfo);
+        var cacheKey = HashCode.Combine(type, memberInfo);
         return memberSetterCache.GetOrAdd(cacheKey, f =>
         {
             Expression bodyExpr = null;
@@ -1404,158 +1404,6 @@ public static class RepositoryHelper
         if (dateTimeOffset.DateTime.Kind == DateTimeKind.Utc)
             return dateTimeOffset.ToLocalTime();
         return dateTimeOffset;
-    }
-
-    public static int GetCacheKey(object parameter)
-    {
-#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        return HashCode.Combine(parameter);
-#else
-        int hashCode = 17;
-        unchecked
-        {
-            hashCode = hashCode * 23 + parameter.GetHashCode();
-        }
-        return hashCode;
-#endif
-    }
-    public static int GetCacheKey(object parameter1, object parameter2)
-    {
-#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        return HashCode.Combine(parameter1, parameter2);
-#else
-        int hashCode = 17;
-        unchecked
-        {
-            hashCode = hashCode * 23 + parameter1.GetHashCode();
-            hashCode = hashCode * 23 + parameter2.GetHashCode();
-        }
-        return hashCode;
-#endif
-    }
-    public static int GetCacheKey(object parameter1, object parameter2, object parameter3)
-    {
-#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        return HashCode.Combine(parameter1, parameter2, parameter3);
-#else
-        int hashCode = 17;
-        unchecked
-        {
-            hashCode = hashCode * 23 + parameter1.GetHashCode();
-            hashCode = hashCode * 23 + parameter2.GetHashCode();
-            hashCode = hashCode * 23 + parameter3.GetHashCode();
-        }
-        return hashCode;
-#endif
-    }
-    public static int GetCacheKey(object parameter1, object parameter2, object parameter3, object parameter4)
-    {
-#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        return HashCode.Combine(parameter1, parameter2, parameter3, parameter4);
-#else
-        int hashCode = 17;
-        unchecked
-        {
-            hashCode = hashCode * 23 + parameter1.GetHashCode();
-            hashCode = hashCode * 23 + parameter2.GetHashCode();
-            hashCode = hashCode * 23 + parameter3.GetHashCode();
-            hashCode = hashCode * 23 + parameter4.GetHashCode();
-        }
-        return hashCode;
-#endif
-    }
-    public static int GetCacheKey(object parameter1, object parameter2, object parameter3, object parameter4, object parameter5)
-    {
-#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        return HashCode.Combine(parameter1, parameter2, parameter3, parameter4, parameter5);
-#else
-        int hashCode = 17;
-        unchecked
-        {
-            hashCode = hashCode * 23 + parameter1.GetHashCode();
-            hashCode = hashCode * 23 + parameter2.GetHashCode();
-            hashCode = hashCode * 23 + parameter3.GetHashCode();
-            hashCode = hashCode * 23 + parameter4.GetHashCode();
-            hashCode = hashCode * 23 + parameter5.GetHashCode();
-        }
-        return hashCode;
-#endif
-    }
-    public static int GetCacheKey(object parameter1, object parameter2, object parameter3, object parameter4, object parameter5, object parameter6)
-    {
-#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        return HashCode.Combine(parameter1, parameter2, parameter3, parameter4, parameter5, parameter6);
-#else
-        int hashCode = 17;
-        unchecked
-        {
-            hashCode = hashCode * 23 + parameter1.GetHashCode();
-            hashCode = hashCode * 23 + parameter2.GetHashCode();
-            hashCode = hashCode * 23 + parameter3.GetHashCode();
-            hashCode = hashCode * 23 + parameter4.GetHashCode();
-            hashCode = hashCode * 23 + parameter5.GetHashCode();
-            hashCode = hashCode * 23 + parameter6.GetHashCode();
-        }
-        return hashCode;
-#endif
-    }
-    public static int GetCacheKey(object parameter1, object parameter2, object parameter3, object parameter4, object parameter5, object parameter6, object parameter7)
-    {
-#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        return HashCode.Combine(parameter1, parameter2, parameter3, parameter4, parameter5, parameter6, parameter7);
-#else
-        int hashCode = 17;
-        unchecked
-        {
-            hashCode = hashCode * 23 + parameter1.GetHashCode();
-            hashCode = hashCode * 23 + parameter2.GetHashCode();
-            hashCode = hashCode * 23 + parameter3.GetHashCode();
-            hashCode = hashCode * 23 + parameter4.GetHashCode();
-            hashCode = hashCode * 23 + parameter5.GetHashCode();
-            hashCode = hashCode * 23 + parameter6.GetHashCode();
-            hashCode = hashCode * 23 + parameter7.GetHashCode();
-        }
-        return hashCode;
-#endif
-    }
-    public static int GetCacheKey(object parameter1, object parameter2, object parameter3, object parameter4, object parameter5, object parameter6, object parameter7, object parameter8)
-    {
-#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        return HashCode.Combine(parameter1, parameter2, parameter3, parameter4, parameter5, parameter6, parameter7, parameter8);
-#else
-        int hashCode = 17;
-        unchecked
-        {
-            hashCode = hashCode * 23 + parameter1.GetHashCode();
-            hashCode = hashCode * 23 + parameter2.GetHashCode();
-            hashCode = hashCode * 23 + parameter3.GetHashCode();
-            hashCode = hashCode * 23 + parameter4.GetHashCode();
-            hashCode = hashCode * 23 + parameter5.GetHashCode();
-            hashCode = hashCode * 23 + parameter6.GetHashCode();
-            hashCode = hashCode * 23 + parameter7.GetHashCode();
-            hashCode = hashCode * 23 + parameter8.GetHashCode();
-        }
-        return hashCode;
-#endif
-    }
-    public static int GetCacheKey(Type targetType, Type[] parameterTypes)
-    {
-#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        var hashCode = new HashCode();
-        hashCode.Add(targetType);
-        foreach (var type in parameterTypes)
-            hashCode.Add(type);
-        return hashCode.ToHashCode();
-#else
-        int hashCode = 17;
-        unchecked
-        {
-            hashCode = hashCode * 23 + targetType.GetHashCode();
-            foreach (var type in parameterTypes)
-                hashCode = hashCode * 23 + type.GetHashCode();
-        }
-        return hashCode;
-#endif
     }
     public static Func<ITheaDataReader, object> CreateReaderValueTupleDeserializer(Type entityType, DbContext dbContext, ITheaDataReader reader)
     {
@@ -1724,7 +1572,7 @@ public static class RepositoryHelper
                     var childIndex = 0;
                     var endIndex = index;
                     //当无参数的Deferred函数调用，ReaderFields的值为null，也没有从数据库读取字段，count=0
-                    if (readerField.Fields != null)
+                    if (readerField.Fields != null && readerField.Fields.Count > 0)
                         endIndex += readerField.Fields.Count;
 
                     //支持延迟方法调用、属性访问，一切均可延迟，但必须最后调用Deferred()方法
@@ -1895,6 +1743,14 @@ public static class RepositoryHelper
         blockParameters.Add(objLocalExpr);
         blockBodies.Add(Expression.Assign(objLocalExpr, valueExpr));
         return objLocalExpr;
+    }
+    private static int GetCacheKey(Type targetType, Type[] parameterTypes)
+    {
+        var hashCode = new HashCode();
+        hashCode.Add(targetType);
+        foreach (var type in parameterTypes)
+            hashCode.Add(type);
+        return hashCode.ToHashCode();
     }
     class EntityBuildInfo
     {

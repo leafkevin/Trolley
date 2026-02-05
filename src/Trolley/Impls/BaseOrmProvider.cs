@@ -116,7 +116,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
         };
     public virtual Func<object, object> GetParameterValueGetter(Type fromType, Type fieldType, bool isNullable, DbContext dbContext)
     {
-        var hashKey = RepositoryHelper.GetCacheKey(fromType, fieldType, isNullable);
+        var hashKey = HashCode.Combine(fromType, fieldType, isNullable);
         return parameterValueGetters.GetOrAdd(hashKey, f =>
         {
             var underlyingType = Nullable.GetUnderlyingType(fromType);
@@ -722,7 +722,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     }
     public virtual Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType, DbContext dbContext)
     {
-        var hashKey = RepositoryHelper.GetCacheKey(targetType, fieldType, dbContext.DefaultDateTimeKind);
+        var hashKey = HashCode.Combine(targetType, fieldType, dbContext.DefaultDateTimeKind);
         return readerValueGetters.GetOrAdd(hashKey, f =>
         {
             var underlyingType = Nullable.GetUnderlyingType(targetType);
@@ -1936,7 +1936,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     public virtual bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter)
     {
         var memberInfo = memberExpr.Member;
-        var cacheKey = RepositoryHelper.GetCacheKey(memberInfo.DeclaringType, memberInfo);
+        var cacheKey = HashCode.Combine(memberInfo.DeclaringType, memberInfo);
         if (memberAccessSqlFormatterCache.TryGetValue(cacheKey, out formatter))
             return true;
 
@@ -1967,7 +1967,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     public virtual bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
     {
         var methodInfo = methodCallExpr.Method;
-        var cacheKey = RepositoryHelper.GetCacheKey(methodInfo.DeclaringType, methodInfo);
+        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
         if (methodCallSqlFormatterCache.TryGetValue(cacheKey, out formatter))
             return true;
 
@@ -2276,7 +2276,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
         formatter = null;
         var methodInfo = methodCallExpr.Method;
         var parameterInfos = methodInfo.GetParameters();
-        var cacheKey = RepositoryHelper.GetCacheKey(methodInfo.DeclaringType, methodInfo);
+        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
         switch (methodInfo.Name)
         {
             case "ToBoolean":
@@ -2339,7 +2339,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
         formatter = null;
         var methodInfo = methodCallExpr.Method;
         var parameterInfos = methodInfo.GetParameters();
-        var cacheKey = RepositoryHelper.GetCacheKey(methodInfo.DeclaringType, methodInfo);
+        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
         switch (methodInfo.Name)
         {
             case "Contains":

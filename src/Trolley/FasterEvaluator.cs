@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Linq.Expressions;
@@ -8,12 +9,14 @@ namespace Trolley;
 
 public static class FasterEvaluator
 {
+    private readonly static ConcurrentDictionary<int, Func<object, object, object>> binaryFuncCache = new();
+
     public static object Evaluate(this Expression expression, object target = null)
     {
         return expression switch
         {
-            //BinaryExpression binaryExpression => binaryExpression.Evaluate(),
-            ConstantExpression constantExpression => constantExpression.Evaluate(),
+            BinaryExpression binaryExpression => binaryExpression.Evaluate(),
+            ConstantExpression constantExpression => constantExpression.Value,
             UnaryExpression unaryExpression => unaryExpression.Evaluate(),
             MethodCallExpression methodCallExpression => methodCallExpression.Evaluate(target),
             MemberExpression memberExpression => memberExpression.Evaluate(),
@@ -27,9 +30,63 @@ public static class FasterEvaluator
             _ => Expression.Lambda(expression).Compile().DynamicInvoke()
         };
     }
-    public static object Evaluate(this BinaryExpression expression) => expression.Right.Evaluate();
-    public static object Evaluate(this ConstantExpression expression) => expression.Value;
-    public static object Evaluate(this UnaryExpression expression) => expression.Operand.Evaluate();
+    public static object Evaluate(this BinaryExpression expression)
+    {
+        var left = expression.Left.Evaluate();
+        var right = expression.Right.Evaluate();
+        return expression.Evaluate(left, right);
+    }
+    public static object Evaluate(this BinaryExpression expression, object left, object right)
+    {
+        switch (expression.NodeType)
+        {
+            case ExpressionType.AndAlso: return (bool)left && (bool)right;
+            case ExpressionType.OrElse: return (bool)left || (bool)right;
+            case ExpressionType.Equal: return object.Equals(left, right);
+            case ExpressionType.NotEqual: return !object.Equals(left, right);
+            case ExpressionType.LessThan: return left != null && right != null && Compare(left, right) < 0;
+            case ExpressionType.LessThanOrEqual: return left != null && right != null && Compare(left, right) <= 0;
+            case ExpressionType.GreaterThan: return left != null && right != null && Compare(left, right) > 0;
+            case ExpressionType.GreaterThanOrEqual: return left != null && right != null && Compare(left, right) >= 0;
+            case ExpressionType.Coalesce: return left ?? right;
+            case ExpressionType.ArrayIndex: return ((Array)left).GetValue(Convert.ToInt32(right));
+            default:
+                var hashKey = HashCode.Combine(expression.Left.Type, expression.Right.Type, expression.NodeType);
+                var func = binaryFuncCache.GetOrAdd(hashKey, k =>
+                {
+                    var pLeft = Expression.Parameter(typeof(object), "left");
+                    var pRight = Expression.Parameter(typeof(object), "right");
+                    var leftExpr = Expression.Convert(pLeft, expression.Left.Type);
+                    var rightExpr = Expression.Convert(pRight, expression.Right.Type);
+
+                    Expression bodyExpr = null;
+                    if (expression.Left.Type == typeof(string) || expression.Right.Type == typeof(string))
+                    {
+                        var methodInfo = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string)]);
+                        bodyExpr = Expression.Call(methodInfo, leftExpr, rightExpr);
+                    }
+                    else bodyExpr = Expression.MakeBinary(expression.NodeType, leftExpr, rightExpr);
+                    bodyExpr = Expression.Convert(bodyExpr, typeof(object));
+                    return Expression.Lambda<Func<object, object, object>>(bodyExpr, pLeft, pRight).Compile();
+                });
+                return func(left, right);
+        }
+    }
+    public static object Evaluate(this UnaryExpression expression)
+    {
+        var operand = expression.Operand.Evaluate();
+        return expression.NodeType switch
+        {
+            ExpressionType.Not => Not(operand),
+            ExpressionType.Convert => operand != null ? Convert.ChangeType(operand, expression.Type) : null,
+            ExpressionType.ConvertChecked => operand != null ? Convert.ChangeType(operand, expression.Type) : null,
+            ExpressionType.Negate => Negate(operand),
+            ExpressionType.NegateChecked => Negate(operand),
+            ExpressionType.ArrayLength => ((Array)operand).Length,
+            ExpressionType.TypeAs => operand != null && expression.Type.IsInstanceOfType(operand) ? operand : null,
+            _ => Expression.Lambda(expression).Compile().DynamicInvoke()
+        };
+    }
     public static object Evaluate(this MethodCallExpression expression, object target)
         => expression.Method.Invoke(target ?? expression.Object?.Evaluate(), expression.Arguments.Select(argExpression => argExpression.Evaluate()).ToArray());
     public static object Evaluate(this MemberExpression expression) => expression.Member.Evaluate(expression.Expression?.Evaluate());
@@ -80,7 +137,6 @@ public static class FasterEvaluator
         if (expression.Type.GetConstructors().Any(e => e.GetParameters().Length == 0))
             return RepositoryHelper.CreateInstance(expression.Type);
         return target;
-        //throw new InvalidExpressionException($"The default constructor for expression '{expression}' is not found.");
     }
     public static object Evaluate(this DefaultExpression expression) => expression.Type.IsValueType ? RepositoryHelper.CreateInstance(expression.Type) : null;
     public static object Evaluate(this MemberInfo member, object obj, object[] parameters = null, bool isCache = true)
@@ -114,5 +170,41 @@ public static class FasterEvaluator
     {
         var memberSetter = RepositoryHelper.GetMemberValueSetter(memberInfo);
         memberSetter.Invoke(entity, value);
+    }
+    private static int Compare(object left, object right)
+    {
+        if (left is IComparable comparable) return comparable.CompareTo(right);
+        return Comparer.Default.Compare(left, right);
+    }
+    private static object Negate(object operand)
+    {
+        if (operand == null) return null;
+        else if (operand is int i) return -i;
+        else if (operand is double d) return -d;
+        else if (operand is decimal de) return -de;
+        else if (operand is long l) return -l;
+        else if (operand is byte b) return -b;
+        else if (operand is sbyte sb) return -sb;
+        else if (operand is short s) return -s;
+        else if (operand is ushort us) return -us;
+        else if (operand is uint ui) return -ui;
+        return -(dynamic)operand;
+    }
+    private static object Not(object operand)
+    {
+        if (operand == null) return null;
+        switch (operand)
+        {
+            case bool b: return !b;
+            case int i: return ~i;
+            case uint ui: return ~ui;
+            case long l: return ~l;
+            case ulong ul: return ~ul;
+            case sbyte sb: return ~sb;
+            case byte b: return ~b;
+            case short s: return ~s;
+            case ushort us: return ~us;
+            default: return ~((dynamic)operand);
+        }
     }
 }

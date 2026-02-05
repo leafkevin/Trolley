@@ -482,23 +482,12 @@ public class SqlVisitor : ISqlVisitor
                 var rightSegment = this.Visit(new SqlFieldSegment { Expression = binaryExpr.Right });
                 if (rightSegment.IsDeferredFields) return sqlSegment;
 
-                //计算数组访问，a??b
                 if ((leftSegment.IsConstant || leftSegment.IsVariable)
-                    && (rightSegment.IsConstant || rightSegment.IsVariable))
+                   && (rightSegment.IsConstant || rightSegment.IsVariable))
                 {
                     var isConstant = leftSegment.IsConstant && rightSegment.IsConstant;
-                    if (binaryExpr.NodeType == ExpressionType.ArrayIndex)
-                    {
-                        var array = leftSegment.Value as Array;
-                        var index = Convert.ToInt32(rightSegment.Value);
-                        return sqlSegment.ChangeValue(array.GetValue(index), isConstant);
-                    }
-                    if (binaryExpr.NodeType == ExpressionType.Coalesce)
-                    {
-                        var value = leftSegment.Value ?? rightSegment.Value;
-                        return sqlSegment.ChangeValue(value, isConstant);
-                    }
-                    return sqlSegment.ChangeValue(Expression.Lambda(binaryExpr).Compile().DynamicInvoke(), isConstant);
+                    var value = binaryExpr.Evaluate(leftSegment.Value, leftSegment.Value);
+                    return sqlSegment.ChangeValue(value, isConstant);
                 }
 
                 //下面都是带有参数的情况，带有参数表达式计算(常量、变量)、函数调用等共2种情况
@@ -757,6 +746,7 @@ public class SqlVisitor : ISqlVisitor
                     memberValue = propertyInfo.GetValue(objSegment.Value);
                 else if (memberInfo is FieldInfo fieldInfo)
                     memberValue = fieldInfo.GetValue(objSegment.Value);
+                sqlSegment.SegmentType = memberExpr.Type;
                 return sqlSegment.ChangeValue(memberValue, objSegment.IsConstant);
             }
         }
