@@ -323,7 +323,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         this.Visitor.Distinct();
         return this;
     }
-    #endregion    
+    #endregion
 
     #region Execute
     public virtual int Execute()

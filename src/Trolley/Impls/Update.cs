@@ -609,8 +609,6 @@ public class BulkCopyContinuedUpdate : Updated, IBulkCopyContinuedUpdate
     }
     #endregion
 }
-
-
 public class Update<TEntity> : Update, IUpdate<TEntity>
 {
     #region Constructor
@@ -729,6 +727,79 @@ public class Update<TEntity> : Update, IUpdate<TEntity>
         if (joinOn == null) throw new ArgumentNullException(nameof(joinOn));
         this.Visitor.Join("LEFT JOIN", typeof(T), joinOn);
         return this.OrmProvider.NewUpdateJoin<TEntity, T>(this.DbContext, this.Visitor);
+    }
+    #endregion
+}
+public class ResultUpdated<TResult> : IBulkResultCommand<TResult>
+{
+    #region Properties
+    public DbContext DbContext { get; set; }
+    public IUpdateVisitor Visitor { get; set; }
+    #endregion
+
+    #region Constructor
+    public ResultUpdated(DbContext dbContext, IUpdateVisitor visitor)
+    {
+        this.DbContext = dbContext;
+        this.Visitor = visitor;
+    }
+    #endregion
+
+    #region Execute
+    public virtual List<TResult> Execute()
+    {
+        if (!this.Visitor.HasWhere)
+            throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
+
+        var result = new List<TResult>();
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        command.CommandText = this.Visitor.BuildSql(command, out var readerFields);
+        connection.Open();
+
+        using var reader = command.ExecuteReader(CommandSqlType.Update, CommandBehavior.SequentialAccess);
+        var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
+
+        while (reader.Read())
+            result.Add((TResult)readerDeserializer.Invoke(reader));
+
+        reader.Dispose();
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        this.Visitor.Dispose();
+        return result;
+    }
+    public virtual async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken = default)
+    {
+        if (!this.Visitor.HasWhere)
+            throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
+
+        var result = new List<TResult>();
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        command.CommandText = this.Visitor.BuildSql(command, out var readerFields);
+        await connection.OpenAsync(cancellationToken);
+        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Update, CommandBehavior.SequentialAccess, cancellationToken);
+        var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
+
+        while (await reader.ReadAsync(cancellationToken))
+            result.Add((TResult)readerDeserializer.Invoke(reader));
+
+        await reader.DisposeAsync();
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        this.Visitor.Dispose();
+        return result;
+    }
+    #endregion
+
+    #region ToSql
+    public virtual string ToSql(out List<IDbDataParameter> dbParameters)
+    {
+        (_, _, var command) = this.DbContext.UseMasterCommand();
+        var sql = this.Visitor.BuildSql(command, out _);
+        dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
+        command.Dispose();
+        this.Visitor.Dispose();
+        return sql;
     }
     #endregion
 }

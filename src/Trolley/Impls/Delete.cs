@@ -309,7 +309,7 @@ public class ResultDeleted<TResult> : IBulkResultCommand<TResult>
 {
     #region Properties
     public DbContext DbContext { get; set; }
-    public IDeleteVisitor Visitor { get; protected set; }
+    public IDeleteVisitor Visitor { get; set; }
     #endregion
 
     #region Constructor

@@ -12,6 +12,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     protected List<CommandSegment> deferredSegments = new();
 
     public bool HasWhere { get; protected set; }
+    public string OutputSql { get; set; }
 
     public DeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
     {
@@ -84,6 +85,8 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         var builder = this.WhereBuilder;
         builder.Append($"DELETE FROM {this.GetFormatTableName(tableSegment)}");
         if (this.HasWhere) builder.Append($" WHERE {whereSql}");
+        if (!string.IsNullOrEmpty(this.OutputSql))
+            builder.Append(this.OutputSql);
 
         var sql = builder.ToString();
         if (tableSegment.ShardingType > ShardingTableType.SingleTable)

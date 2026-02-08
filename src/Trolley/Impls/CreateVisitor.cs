@@ -42,13 +42,14 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
-        string sql = null;
-        readerFields = null;
+        string tailSql = null;
+        readerFields = this.ReaderFields;
+
         switch (this.ActionMode)
         {
             case ActionMode.Bulk:
                 (var shardingType, var shardingTables, var insertObjs, _, var firstSqlSetter,
-                    var loopSqlSetter, _, readerFields) = this.BuildWithBulk(command);
+                  var loopSqlSetter, tailSql, readerFields) = this.BuildWithBulk(command);
 
                 int index = 0;
                 var builder = new StringBuilder();
@@ -76,64 +77,86 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     }
                 }
                 builder.Remove(builder.Length - 1, 1);
-                sql = builder.ToString();
+                this.FromSql = builder.ToString();
                 break;
             case ActionMode.Single:
-                this.DbParameters = command.Parameters;
-                this.ValuesBuilder = new();
+                //当Insert Select From操作时，DbParameters也有值，但不是command.Parameters，需要赋值到command.Parameters
+                if (this.DbParameters == null) this.DbParameters = command.Parameters;
+                else if (this.DbParameters != command.Parameters)
+                {
+                    foreach (var dbParameter in this.DbParameters)
+                    {
+                        command.Parameters.Add(dbParameter);
+                    }
+                    this.DbParameters = command.Parameters;
+                }
                 var tableSegment = this.Tables[0];
-                if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null)
+                if (string.IsNullOrEmpty(this.FromSql))
                 {
-                    if (tableSegment.TableShardingInfo.DependOnMembers == null || tableSegment.TableShardingInfo.DependOnMembers.Count == 0)
-                        throw new Exception($"实体表{tableSegment.EntityType.FullName}已设置分表，未指定分表，也未设置依赖字段无法确定分表，请使用UseTable/UseTableBy方法手动指定分表");
-                    if (this.deferredSegments.Count > 1)
+                    this.ValuesBuilder = new();
+                    if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null)
                     {
-                        this.IsNeedShardingValues = true;
-                        this.ShardingValues = new();
+                        if (tableSegment.TableShardingInfo.DependOnMembers == null || tableSegment.TableShardingInfo.DependOnMembers.Count == 0)
+                            throw new Exception($"实体表{tableSegment.EntityType.FullName}已设置分表，未指定分表，也未设置依赖字段无法确定分表，请使用UseTable/UseTableBy方法手动指定分表");
+                        if (this.deferredSegments.Count > 1)
+                        {
+                            this.IsNeedShardingValues = true;
+                            this.ShardingValues = new();
+                        }
                     }
+                    foreach (var deferredSegment in this.deferredSegments)
+                    {
+                        switch (deferredSegment.Type)
+                        {
+                            case "WithBy":
+                                this.VisitWithBy(deferredSegment.Value);
+                                break;
+                            case "WithByField":
+                                this.VisitWithByField(deferredSegment.Value);
+                                break;
+                            case "WithByFieldExpr":
+                                this.VisitWithByFieldExpr(deferredSegment.Value);
+                                break;
+                            case "SetObject":
+                                this.VisitSetObject(deferredSegment.Value);
+                                break;
+                            case "SetField":
+                                this.VisitSetField(deferredSegment.Value);
+                                break;
+                            case "SetFieldExpr":
+                                this.VisitSetFieldExpr(deferredSegment.Value);
+                                break;
+                            case "SetFieldExprs":
+                                this.VisitSetFieldExprs(deferredSegment.Value);
+                                break;
+                        }
+                    }
+                    var tableName = this.GetTableName(tableSegment);
+                    if (this.IsReturnIdentity && (this.UpdateBuilder != null || this.OutputSql != null))
+                        throw new NotSupportedException("返回Identity，不支持同时Returning操作");
+                    this.FromSql = $"INSERT INTO {tableName} ({this.FieldsBuilder}) VALUES ({this.ValuesBuilder})";
+                    this.ValuesBuilder.Clear();
                 }
+                if (this.UpdateBuilder != null)
+                    tailSql = this.UpdateBuilder.ToString();
 
-                foreach (var deferredSegment in this.deferredSegments)
+                if (this.OutputSql != null)
                 {
-                    switch (deferredSegment.Type)
-                    {
-                        case "WithBy":
-                            this.VisitWithBy(deferredSegment.Value);
-                            break;
-                        case "WithByField":
-                            this.VisitWithByField(deferredSegment.Value);
-                            break;
-                        case "WithByFieldExpr":
-                            this.VisitWithByFieldExpr(deferredSegment.Value);
-                            break;
-                        case "SetObject":
-                            this.VisitSetObject(deferredSegment.Value);
-                            break;
-                        case "SetField":
-                            this.VisitSetField(deferredSegment.Value);
-                            break;
-                        case "SetFieldExpr":
-                            this.VisitSetFieldExpr(deferredSegment.Value);
-                            break;
-                        case "SetFieldExprs":
-                            this.VisitSetFieldExprs(deferredSegment.Value);
-                            break;
-                    }
+                    tailSql += this.OutputSql;
+                    readerFields = this.ReaderFields;
                 }
-                sql = $"INSERT INTO {this.GetTableName(tableSegment)} ({this.FieldsBuilder}) VALUES ({this.ValuesBuilder})";
                 if (this.IsReturnIdentity)
                 {
                     var entityMapper = tableSegment.Mapper;
                     if (!entityMapper.IsAutoIncrementKey)
                         throw new NotSupportedException($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
                     var keyFieldName = this.OrmProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName);
-                    sql += this.OrmProvider.GetIdentitySql(keyFieldName);
+                    tailSql = this.OrmProvider.GetIdentitySql(keyFieldName);
                 }
                 break;
         }
         this.FieldsBuilder.Clear();
-        this.ValuesBuilder.Clear();
-        return sql;
+        return $"{this.FromSql}{tailSql}";
     }
     public virtual void WithBy(object insertObj)
     {
@@ -225,14 +248,13 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var entityType = tableSegment.EntityType;
         this.FieldsBuilder.Append('(');
 
-        var headSql = "INSERT INTO ";
+        var headSql = $"INSERT INTO ";
         if (!string.IsNullOrEmpty(tableSegment.TableSchema))
             headSql += this.OrmProvider.GetTableName(tableSegment.TableSchema) + ".";
         List<IDbDataParameter> fixedDbParameters = null;
 
         string fixedFieldsSql = null;
         string fixedValuesSql = "(";
-
         if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null)
         {
             if (tableSegment.TableShardingInfo.DependOnMembers == null || tableSegment.TableShardingInfo.DependOnMembers.Count == 0)
@@ -243,46 +265,48 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 this.ShardingValues = new();
             }
         }
-
-        this.ValuesBuilder = new StringBuilder("(");
-        var tempDbParameters = new TheaDbParameterCollection();
-        this.DbParameters = tempDbParameters;
-        for (int i = 1; i < this.deferredSegments.Count; i++)
+        if (this.deferredSegments.Count > 1)
         {
-            var deferredSegment = this.deferredSegments[i];
-            switch (deferredSegment.Type)
+            this.ValuesBuilder = new StringBuilder("(");
+            var tempDbParameters = new TheaDbParameterCollection();
+            this.DbParameters = tempDbParameters;
+            for (int i = 1; i < this.deferredSegments.Count; i++)
             {
-                case "WithBy":
-                    this.VisitWithBy(deferredSegment.Value);
-                    break;
-                case "WithByField":
-                    this.VisitWithByField(deferredSegment.Value);
-                    break;
-                case "WithByFieldExpr":
-                    this.VisitWithByFieldExpr(deferredSegment.Value);
-                    break;
-                case "SetObject":
-                    this.VisitSetObject(deferredSegment.Value);
-                    break;
-                case "SetField":
-                    this.VisitSetField(deferredSegment.Value);
-                    break;
-                case "SetFieldExpr":
-                    this.VisitSetFieldExpr(deferredSegment.Value);
-                    break;
-                case "SetFieldExprs":
-                    this.VisitSetFieldExprs(deferredSegment.Value);
-                    break;
-                default: throw new NotSupportedException("批量插入后，只支持WithBy操作");
+                var deferredSegment = this.deferredSegments[i];
+                switch (deferredSegment.Type)
+                {
+                    case "WithBy":
+                        this.VisitWithBy(deferredSegment.Value);
+                        break;
+                    case "WithByField":
+                        this.VisitWithByField(deferredSegment.Value);
+                        break;
+                    case "WithByFieldExpr":
+                        this.VisitWithByFieldExpr(deferredSegment.Value);
+                        break;
+                    case "SetObject":
+                        this.VisitSetObject(deferredSegment.Value);
+                        break;
+                    case "SetField":
+                        this.VisitSetField(deferredSegment.Value);
+                        break;
+                    case "SetFieldExpr":
+                        this.VisitSetFieldExpr(deferredSegment.Value);
+                        break;
+                    case "SetFieldExprs":
+                        this.VisitSetFieldExprs(deferredSegment.Value);
+                        break;
+                    default: throw new NotSupportedException("批量插入后，只支持WithBy/OnDuplicateKeyUpdate/Returning操作");
+                }
             }
+            this.FieldsBuilder.Append(',');
+            this.ValuesBuilder.Append(',');
+            fixedValuesSql = this.ValuesBuilder.ToString();
+            this.ValuesBuilder.Clear();
+            if (this.DbParameters.Count > 0)
+                fixedDbParameters = tempDbParameters.ToList();
+            this.DbParameters = command.Parameters;
         }
-        this.FieldsBuilder.Append(',');
-        this.ValuesBuilder.Append(',');
-        fixedValuesSql = this.ValuesBuilder.ToString();
-        this.ValuesBuilder.Clear();
-        if (this.DbParameters.Count > 0)
-            fixedDbParameters = tempDbParameters.ToList();
-        this.DbParameters = command.Parameters;
 
         Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string> loopSqlSetter = null;
@@ -351,7 +375,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, insertObjType, insertObjs, firstInsertObj, this.ShardingValues);
             }
         }
-        return (shardingType, shardingTables, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, null, null);
+        string tailSql = null;
+        if (this.UpdateBuilder != null)
+            tailSql = this.UpdateBuilder.ToString();
+        if (this.OutputSql != null)
+            tailSql += this.OutputSql;
+        return (shardingType, shardingTables, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, tailSql, this.ReaderFields);
     }
     public virtual void VisitWithBy(object insertObj)
     {

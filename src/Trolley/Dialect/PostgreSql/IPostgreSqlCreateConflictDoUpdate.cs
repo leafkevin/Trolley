@@ -2,7 +2,7 @@
 using System.Linq.Expressions;
 
 namespace Trolley.PostgreSql;
- 
+
 public interface IPostgreSqlCreateConflictDoUpdate<TEntity> : IIdentitiedCreated
 {
     #region DoNothing
@@ -37,6 +37,8 @@ public interface IPostgreSqlCreateConflictDoUpdate<TEntity> : IIdentitiedCreated
     /// <param name="fieldsAssignment">要更新的字段表达式，尽力使用VALUES</param>
     /// <returns>返回更新对象</returns>
     IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment);
+    IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, object fieldValue);
+    IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, object fieldValue);
     /// <summary>
     /// 单个字段更新，可多次使用，如：
     /// <code>
@@ -48,10 +50,8 @@ public interface IPostgreSqlCreateConflictDoUpdate<TEntity> : IIdentitiedCreated
     /// <param name="fieldSelector">字段选择表表达式</param>
     /// <param name="fieldValueSelector">字段值表达式</param>
     /// <returns>返回更新对象</returns>
-    IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector);
-    IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
-    IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
-    IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector);
+    IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, object>> valueGetter);
+    IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, object>> valueGetter);
     #endregion
 
     #region Where
@@ -59,6 +59,7 @@ public interface IPostgreSqlCreateConflictDoUpdate<TEntity> : IIdentitiedCreated
     #endregion
 
     #region Returning
+    IResultCommand<TResult> Returning<TResult>(string fieldNames);
     IResultCommand<TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
     #endregion
 }
@@ -78,9 +79,7 @@ public interface IPostgreSqlBulkCreateConflictDoUpdate<TEntity> : ICreated
 
     #region Set
     /// <summary>
-    /// 多个字段更新，可多次使用，如：
-    /// <code>
-    /// 使用Excluded方法 .WithBy( ... ).OnDuplicateKeyUpdate(x =>x.Set(f => new { TotalAmount = f.TotalAmount + x.Excluded(f.TotalAmount) })
+    ///多个字段更新，如：<code> .OnDuplicateKeyUpdate().Set(f => new { TotalAmount = f.TotalAmount + f.Excluded(f.TotalAmount) })
     /// SQL: INSERT INTO ... VALUES ( ... ) ON DUPLICATE KEY UPDATE "TotalAmount"=a."TotalAmount"+EXCLUDED."TotalAmount"
     /// </code>
     /// </summary>
@@ -89,9 +88,7 @@ public interface IPostgreSqlBulkCreateConflictDoUpdate<TEntity> : ICreated
     /// <returns>返回更新对象</returns>
     IPostgreSqlBulkCreateConflictDoUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 判断condition的值，为true时多个字段更新，可多次使用，如：
-    /// <code>
-    /// 使用Excluded方法 .WithBy( ... ).OnDuplicateKeyUpdate(x =>x.Set(f => new { TotalAmount = f.TotalAmount + x.Excluded(f.TotalAmount) })
+    /// 多个字段更新，如：<code> .OnDuplicateKeyUpdate().Set(true, f => new { TotalAmount = f.TotalAmount + f.Excluded(f.TotalAmount) })
     /// SQL: INSERT INTO ... VALUES ( ... ) ON DUPLICATE KEY UPDATE "TotalAmount"=a."TotalAmount"+EXCLUDED."TotalAmount"
     /// </code>
     /// </summary>
@@ -100,10 +97,12 @@ public interface IPostgreSqlBulkCreateConflictDoUpdate<TEntity> : ICreated
     /// <param name="fieldsAssignment">要更新的字段表达式，尽力使用VALUES</param>
     /// <returns>返回更新对象</returns>
     IPostgreSqlBulkCreateConflictDoUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment);
+    IPostgreSqlBulkCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, object fieldValue);
+    IPostgreSqlBulkCreateConflictDoUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, object fieldValue);
     /// <summary>
     /// 单个字段更新，可多次使用，如：
     /// <code>
-    /// .WithBy( ... ).OnConflictDoUpdate(x =>.Set(f => f.TotalAmount, f => x.Excluded(f.TotalAmount)))
+    /// .OnConflictDoUpdate().Set(f => f.TotalAmount, f => f.Excluded(f.TotalAmount)))
     /// SQL: INSERT INTO ... VALUES ( ... ) ON CONFLICT DO UPDATE "TotalAmount"=EXCLUDED."TotalAmount"
     /// </code>
     /// </summary>
@@ -111,10 +110,8 @@ public interface IPostgreSqlBulkCreateConflictDoUpdate<TEntity> : ICreated
     /// <param name="fieldSelector">字段选择表表达式</param>
     /// <param name="fieldValueSelector">字段值表达式</param>
     /// <returns>返回更新对象</returns>
-    IPostgreSqlBulkCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector);
-    IPostgreSqlBulkCreateConflictDoUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
-    IPostgreSqlBulkCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
-    IPostgreSqlBulkCreateConflictDoUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector);
+    IPostgreSqlBulkCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, object>> valueGetter);
+    IPostgreSqlBulkCreateConflictDoUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, object>> valueGetter);
     #endregion
 
     #region Where
@@ -122,6 +119,7 @@ public interface IPostgreSqlBulkCreateConflictDoUpdate<TEntity> : ICreated
     #endregion
 
     #region Returning
+    IBulkResultCommand<TResult> Returning<TResult>(string fieldNames);
     IBulkResultCommand<TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
     #endregion
 }
