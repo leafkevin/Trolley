@@ -14,7 +14,7 @@ partial class PostgreSqlProvider
         formatter = null;
         var methodInfo = methodCallExpr.Method;
         var parameterInfos = methodInfo.GetParameters();
-        var cacheKey = RepositoryHelper.GetCacheKey(methodInfo.DeclaringType, methodInfo);
+        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
         switch (methodInfo.Name)
         {
             case "Contains":

@@ -9,7 +9,7 @@ namespace Trolley.PostgreSql;
 
 public class PostgreSqlCreateVisitor : CreateVisitor
 {
-    public StringBuilder UpdateBuilder { get; set; }
+    private bool isUseKeysOrConstraint = false;
     public bool IsUpdate { get; set; }
     /// <summary>
     /// 当有OnConflict更新操作时，引用原值时才会设置，使用IsNeedTableAlias会影响正常Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)场景的解析
@@ -18,7 +18,6 @@ public class PostgreSqlCreateVisitor : CreateVisitor
 
     public PostgreSqlCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
         : base(entityType, dbContext, tableAsStart) { }
-
     public override string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
         string tailSql = null;
@@ -28,7 +27,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         {
             case ActionMode.Bulk:
                 (var shardingType, var shardingTables, var insertObjs, _, var firstSqlSetter,
-                   var loopSqlSetter, tailSql, readerFields) = this.BuildWithBulk(command);
+                  var loopSqlSetter, tailSql, readerFields) = this.BuildWithBulk(command);
 
                 int index = 0;
                 var builder = new StringBuilder();
@@ -60,7 +59,8 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                 break;
             case ActionMode.Single:
                 //当Insert Select From操作时，DbParameters也有值，但不是command.Parameters，需要赋值到command.Parameters
-                if (this.DbParameters != null && this.DbParameters != command.Parameters)
+                if (this.DbParameters == null) this.DbParameters = command.Parameters;
+                else if (this.DbParameters != command.Parameters)
                 {
                     foreach (var dbParameter in this.DbParameters)
                     {
@@ -68,44 +68,56 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                     }
                     this.DbParameters = command.Parameters;
                 }
-                else this.DbParameters = command.Parameters;
-                this.ValuesBuilder = new();
                 var tableSegment = this.Tables[0];
-
-                if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null)
-                {
-                    if (tableSegment.TableShardingInfo.DependOnMembers == null || tableSegment.TableShardingInfo.DependOnMembers.Count == 0)
-                        throw new Exception($"实体表{tableSegment.EntityType.FullName}已设置分表，未指定分表，也未设置依赖字段无法确定分表，请使用UseTable/UseTableBy方法手动指定分表");
-                    if (this.deferredSegments.Count > 1)
-                    {
-                        this.IsNeedShardingValues = true;
-                        this.ShardingValues = new();
-                    }
-                }
-                foreach (var deferredSegment in this.deferredSegments)
-                {
-                    switch (deferredSegment.Type)
-                    {
-                        case "WithBy":
-                            this.VisitWithBy(deferredSegment.Value);
-                            break;
-                        case "WithByField":
-                            this.VisitWithByField(deferredSegment.Value);
-                            break;
-                        case "WithByFieldExpr":
-                            this.VisitWithByFieldExpr(deferredSegment.Value);
-                            break;
-                    }
-                }
-                var entityType = tableSegment.EntityType;
                 if (string.IsNullOrEmpty(this.FromSql))
                 {
+                    this.ValuesBuilder = new();
+                    if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null)
+                    {
+                        if (tableSegment.TableShardingInfo.DependOnMembers == null || tableSegment.TableShardingInfo.DependOnMembers.Count == 0)
+                            throw new Exception($"实体表{tableSegment.EntityType.FullName}已设置分表，未指定分表，也未设置依赖字段无法确定分表，请使用UseTable/UseTableBy方法手动指定分表");
+                        if (this.deferredSegments.Count > 1)
+                        {
+                            this.IsNeedShardingValues = true;
+                            this.ShardingValues = new();
+                        }
+                    }
+                    foreach (var deferredSegment in this.deferredSegments)
+                    {
+                        switch (deferredSegment.Type)
+                        {
+                            case "WithBy":
+                                this.VisitWithBy(deferredSegment.Value);
+                                break;
+                            case "WithByField":
+                                this.VisitWithByField(deferredSegment.Value);
+                                break;
+                            case "WithByFieldExpr":
+                                this.VisitWithByFieldExpr(deferredSegment.Value);
+                                break;
+                            case "SetObject":
+                                this.VisitSetObject(deferredSegment.Value);
+                                break;
+                            case "SetField":
+                                this.VisitSetField(deferredSegment.Value);
+                                break;
+                            case "SetFieldExpr":
+                                this.VisitSetFieldExpr(deferredSegment.Value);
+                                break;
+                            case "SetFieldExprs":
+                                this.VisitSetFieldExprs(deferredSegment.Value);
+                                break;
+                            case "SetWhere":
+                                this.VisitSetWhere(deferredSegment.Value);
+                                break;
+                        }
+                    }
                     var tableName = this.GetTableName(tableSegment);
                     if (this.IsReturnIdentity && (this.UpdateBuilder != null || this.OutputSql != null))
                         throw new NotSupportedException("返回Identity，不支持同时Returning操作");
                     this.FromSql = $"INSERT INTO {tableName} ({this.FieldsBuilder}) VALUES ({this.ValuesBuilder})";
+                    this.ValuesBuilder.Clear();
                 }
-                this.ValuesBuilder.Clear();
                 if (this.UpdateBuilder != null)
                     tailSql = this.UpdateBuilder.ToString();
 
@@ -122,7 +134,6 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                     var keyFieldName = this.OrmProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName);
                     tailSql = this.OrmProvider.GetIdentitySql(keyFieldName);
                 }
-                this.ValuesBuilder.Clear();
                 break;
         }
         this.FieldsBuilder.Clear();
@@ -179,6 +190,21 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                         break;
                     case "WithByFieldExpr":
                         this.VisitWithByFieldExpr(deferredSegment.Value);
+                        break;
+                    case "SetObject":
+                        this.VisitSetObject(deferredSegment.Value);
+                        break;
+                    case "SetField":
+                        this.VisitSetField(deferredSegment.Value);
+                        break;
+                    case "SetFieldExpr":
+                        this.VisitSetFieldExpr(deferredSegment.Value);
+                        break;
+                    case "SetFieldExprs":
+                        this.VisitSetFieldExprs(deferredSegment.Value);
+                        break;
+                    case "SetWhere":
+                        this.VisitSetWhere(deferredSegment.Value);
                         break;
                     default: throw new NotSupportedException("批量插入后，只支持WithBy/OnConflict/Returning操作");
                 }
@@ -266,6 +292,14 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             tailSql += this.OutputSql;
         return (shardingType, shardingTables, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, tailSql, this.ReaderFields);
     }
+    public virtual void SetWhere(Expression whereExpr)
+    {
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "SetWhere",
+            Value = whereExpr
+        });
+    }
     public (ShardingTableType, object, IEnumerable, List<MemberMap>, List<Func<object, object>>) BuildWithBulkCopy()
     {
         var insertObjs = this.deferredSegments[0].Value as IEnumerable;
@@ -309,14 +343,6 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         {
             Type = "WithBulkCopy",
             Value = insertObjs
-        });
-    }
-    public void OnConflict(Expression updateExpr)
-    {
-        this.deferredSegments.Add(new CommandSegment
-        {
-            Type = "SetExpression",
-            Value = updateExpr
         });
     }
     public virtual void Returning(string fieldNames)
@@ -559,37 +585,43 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         //.Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
         else this.UpdateBuilder.Append($"{fieldName}={sqlSegment.Body}");
     }
-    public virtual void VisitSetFieldExpression(Expression fieldSelector, Expression fieldValueSelector)
+
+    public virtual void DoNothing() => this.UpdateBuilder.Append(" DO NOTHING");
+    public virtual void UseKeys()
     {
-        var fieldSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = fieldSelector });
-        this.IsUpdate = true;
-        var valueSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = fieldValueSelector });
-        this.IsUpdate = false;
-        if (this.UpdateBuilder.Length > 0) this.UpdateBuilder.Append(',');
-        this.UpdateBuilder.Append($"{fieldSegment.Body}={valueSegment.Body}");
-    }
-    public virtual void VisitWithSetField(Expression fieldSelector, object fieldValue)
-    {
-        var lambdaExpr = this.EnsureLambda(fieldSelector);
-        var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;
-        var entityMapper = this.Tables[0].Mapper;
-        var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
-        var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
-        //在前面insert的时候，参数有可能已经添加过了，此处需要判断是否需要添加
-        if (!this.DbParameters.Contains(parameterName))
+        if (this.isUseKeysOrConstraint)
+            throw new InvalidOperationException("已使用UseKeys或UseConstraint，不能重复使用");
+
+        this.UpdateBuilder.Append(" (");
+        var keyMappers = this.Tables[0].Mapper.KeyMembers;
+        if (keyMappers.Count > 1)
         {
-            if (memberMapper.TypeHandler != null)
-                fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
-            else
+            for (int i = 0; i < keyMappers.Count; i++)
             {
-                var targetType = memberMapper.MappedTargetType;
-                var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext);
-                fieldValue = valueGetter.Invoke(fieldValue);
+                if (i > 0) this.UpdateBuilder.Append(',');
+                var keyMapper = keyMappers[i];
+                this.UpdateBuilder.Append(this.OrmProvider.GetFieldName(keyMapper.FieldName));
             }
-            this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
         }
-        if (this.UpdateBuilder.Length > 0) this.UpdateBuilder.Append(',');
-        this.UpdateBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+        else this.UpdateBuilder.Append(this.OrmProvider.GetFieldName(keyMappers[0].FieldName));
+        this.UpdateBuilder.Append(") DO UPDATE SET");
+        this.isUseKeysOrConstraint = true;
+    }
+    public void UseConstraint(string constraintName)
+    {
+        if (this.isUseKeysOrConstraint)
+            throw new InvalidOperationException("已使用UseKeys或UseConstraint，不能重复使用");
+
+        if (string.IsNullOrEmpty(constraintName))
+            throw new ArgumentNullException("参数constraintName不可为null");
+        this.UpdateBuilder.Append($" ON CONSTRAINT {constraintName} DO UPDATE SET");
+        this.isUseKeysOrConstraint = true;
+    }
+    public virtual void VisitSetWhere(object deferredSegmentValue)
+    {
+        var whereExpr = deferredSegmentValue as Expression;
+        var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = whereExpr });
+        this.UpdateBuilder.Append($" WHERE {sqlSegment.Body}");
     }
     public override void Dispose()
     {

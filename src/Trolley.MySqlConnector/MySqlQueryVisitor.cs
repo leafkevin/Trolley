@@ -9,11 +9,9 @@ namespace Trolley.MySqlConnector;
 
 public class MySqlQueryVisitor : QueryVisitor
 {
-    private MySqlProvider dialectProvider => this.OrmProvider as MySqlProvider;
     public bool IsUseIgnoreInto { get; set; }
-    public MySqlQueryVisitor(DbContext dbContext)
-        : base(dbContext) { }
-    public MySqlQueryVisitor(DbContext dbContext, char tableAsStart, IDataParameterCollection dbParameters = null)
+
+    public MySqlQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
         : base(dbContext, tableAsStart, dbParameters) { }
 
     public override string BuildCommandSql(bool isBuildCteSql, out IDataParameterCollection dbParameters)
@@ -217,7 +215,8 @@ public class MySqlQueryVisitor : QueryVisitor
     }
     public override void UseTableSchema(bool isIncludeMany, string tableSchema)
     {
-        var defaultSchemaName = this.dialectProvider.GetDefaultSchemaName(this.DbContext);
+        var dialectProvider = this.OrmProvider as MySqlProvider;
+        var defaultSchemaName = dialectProvider.GetDefaultSchemaName(this.DbContext);
         if (tableSchema == defaultSchemaName) return;
 
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();

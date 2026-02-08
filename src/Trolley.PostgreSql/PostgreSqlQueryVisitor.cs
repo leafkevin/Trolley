@@ -9,13 +9,13 @@ namespace Trolley.PostgreSql;
 public class PostgreSqlQueryVisitor : QueryVisitor
 {
     private bool isDisposed;
+    private bool isDistinctOn;
+
+    public List<SqlFieldSegment> DistinctOnFields { get; set; }
+    public string DistinctOnSql { get; set; }
 
     public PostgreSqlQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
         : base(dbContext, tableAsStart, dbParameters) { }
-
-    public bool IsDistinctOn { get; set; }
-    public List<SqlFieldSegment> DistinctOnFields { get; set; }
-    public string DistinctOnSql { get; set; }
 
     public override string BuildSql(bool isBuildCteSql, out List<SqlFieldSegment> readerFields)
     {
@@ -57,12 +57,12 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         var hasShardingTables = this.ShardingTables != null && this.ShardingTables.Count > 0;
         if (this.Tables.Count > 0)
         {
-            //每个表都要有单独的GUID值，否则有类似的表前缀名，也会被替换导致表名替换错误
-            for (int i = 0; i < this.Tables.Count; i++)
+            var startIndex = this.IsFromCommand ? 1 : 0;
+            for (int i = startIndex; i < this.Tables.Count; i++)
             {
                 var tableSegment = this.Tables[i];
                 string tableName = this.GetFormatTableName(tableSegment);
-                if (i > 0)
+                if (i > startIndex)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))
                     {
@@ -93,7 +93,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         if (this.ReaderFields == null)
             throw new Exception("缺少Select语句");
 
-        if (this.IsDistinctOn)
+        if (this.isDistinctOn)
             builder.Append($"DISTINCT ON ({this.DistinctOnSql}) ");
 
         if (this.IsManyShardingTables)
@@ -135,12 +135,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         else selectSql = builder.ToString();
 
         builder.Clear();
-        string whereSql = null;
-        if (!string.IsNullOrEmpty(this.WhereBuilder))
-        {
-            whereSql = $" WHERE {this.WhereBuilder}";
-            builder.Append(whereSql);
-        }
+        if (this.WhereBuilder != null && this.WhereBuilder.Length > 0)
+            builder.Append($" WHERE {this.WhereBuilder.ToString()}");
         //有多分表还有Group By操作，每个分表语句中做Group By操作，Union All语句后，还要再做Group By操作
         if (!string.IsNullOrEmpty(this.GroupBySql))
             builder.Append($" GROUP BY {this.GroupBySql}");
@@ -200,11 +196,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
     }
     public override string BuildCommandSql(bool isBuildCteSql, out IDataParameterCollection dbParameters)
     {
-        var builder = new StringBuilder("INSERT INTO");
         var entityMapper = this.Tables[0].Mapper;
-        builder.Append($" {this.GetFormatTableName(this.Tables[0])}");
-        if (this.IsNeedCommandTableAlias) builder.Append($" AS {this.Tables[0].AliasName}");
-        builder.Append(" (");
+        var builder = new StringBuilder($"INSERT INTO {this.GetFormatTableName(this.Tables[0])} (");
         int index = 0;
         //如果ReaderFields没有设置，通常是从Query中来的，ReaderFields是从Query中获取的
         if (this.ReaderFields == null && this.IsFromQuery)
@@ -276,7 +269,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                     else builder.Append(',');
                 }
                 builder.Append(tableName);
-                //子查询要设置表别名               
+                //子查询要设置表别名
                 builder.Append(" " + tableSegment.AliasName);
                 if (!string.IsNullOrEmpty(tableSegment.SuffixRawSql))
                     builder.Append(" " + tableSegment.SuffixRawSql);
@@ -297,7 +290,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         if (this.ReaderFields == null)
             throw new Exception("缺少Select语句");
 
-        if (this.IsDistinctOn)
+        if (this.isDistinctOn)
             builder.Append($"DISTINCT ON ({this.DistinctOnSql}) ");
 
         if (this.IsManyShardingTables)
@@ -339,12 +332,13 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         else selectSql = builder.ToString();
 
         builder.Clear();
-        if (!string.IsNullOrEmpty(this.WhereBuilder))
-            builder.Append($" WHERE {this.WhereBuilder}");
-
+        if (this.WhereBuilder != null && this.WhereBuilder.Length > 0)
+            builder.Append($" WHERE {this.WhereBuilder.ToString()}");
+        //有多分表还有Group By操作，每个分表语句中做Group By操作，Union All语句后，还要再做Group By操作
         if (!string.IsNullOrEmpty(this.GroupBySql))
             builder.Append($" GROUP BY {this.GroupBySql}");
-        if (!string.IsNullOrEmpty(this.HavingSql))
+        //有多分表还有Group By+Having操作，每个分表语句中只做Group By操作，不做Having操作，在Union All语句后，再做Group By+Having操作
+        if (!this.IsManyShardingTables && !string.IsNullOrEmpty(this.HavingSql))
             builder.Append($" HAVING {this.HavingSql}");
 
         string orderBy = null;
@@ -369,6 +363,14 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             pageSql = pageSql.Replace("/**fields**/", selectSql);
             pageSql = pageSql.Replace("/**tables**/", tableSql);
             pageSql = pageSql.Replace(" /**others**/", others);
+
+            if (this.IsNeedPaging && this.offset.HasValue && this.limit.HasValue)
+            {
+                var myTableSql = $"{tableSql}{others}";
+                if (this.HasAggFields || !string.IsNullOrEmpty(this.GroupBySql))
+                    myTableSql = $"(SELECT {selectSql} FROM {tableSql}{others}) a";
+                builder.Append($"SELECT COUNT(*) FROM {myTableSql};");
+            }
             builder.Append($"{pageSql}");
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
@@ -391,13 +393,13 @@ public class PostgreSqlQueryVisitor : QueryVisitor
     }
     public override void Distinct()
     {
-        if (this.IsDistinctOn)
+        if (this.isDistinctOn)
             throw new NotSupportedException("使用了DistinctOn方法，无需再使用Distinct方法来去重了");
         this.IsDistinct = true;
     }
     public virtual void DistinctOn(Expression fieldsSelector)
     {
-        this.IsDistinctOn = true;
+        this.isDistinctOn = true;
         var lambdaExpr = fieldsSelector as LambdaExpression;
         if (lambdaExpr.Body.NodeType != ExpressionType.New && lambdaExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new Exception("不支持的表达式访问，DistinctOn只支持New或MemberAccess表达式");

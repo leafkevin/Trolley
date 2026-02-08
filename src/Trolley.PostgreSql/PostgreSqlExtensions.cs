@@ -20,6 +20,15 @@ public static class PostgreSqlExtensions
     public static TField Excluded<TInsertObj, TField>(this TInsertObj insertObj, TField field) => throw new NotImplementedException();
     #endregion
 
+    #region DistictOn
+    public static IQuery<TEntity> DistictOn<TEntity>(this IQuery<TEntity> instance, Expression<Func<TEntity, object>> fieldsSelector)
+    {
+        var dialectVisitor = instance.Visitor as PostgreSqlQueryVisitor;
+        dialectVisitor.DistinctOn(fieldsSelector);
+        return instance;
+    }
+    #endregion
+
     #region WithBulkCopy
     public static IBulkContinuedCreate WithBulkCopy(this ICreate instance, IEnumerable insertObjs)
     {
@@ -133,26 +142,25 @@ public static class PostgreSqlExtensions
         return dialectVisitor.OrmProvider.NewBulkResultCreated<TResult>(instance.DbContext, instance.Visitor);
     }
 
-    public static IBulkResultCommand<TResult> Returning<TEntity, T, TResult>(this IFromCommand<TEntity, T> instance, string fieldNames)
+    public static IBulkResultCommand<TResult> Returning<TTarget, TResult>(this IFromCommand<TTarget> instance, string fieldNames)
     {
         var sql = instance.Visitor.BuildCommandSql(false, out _);
         var visitor = instance.NewCreateVisitor(sql) as PostgreSqlCreateVisitor;
         visitor.Returning(fieldNames);
         return visitor.OrmProvider.NewBulkResultCreated<TResult>(instance.DbContext, visitor);
     }
-
-    public static IResultCommand<TResult> Returning<TResult>(this IContinuedUpdate instance, string fieldNames)
+    public static IBulkResultCommand<TResult> Returning<TTarget, TResult>(this IFromCommand<TTarget> instance, Expression<Func<TTarget, TResult>> fieldsSelector)
     {
-        var dialectVisitor = instance.Visitor as PostgreSqlCreateVisitor;
-        dialectVisitor.Returning(fieldNames); 
-        return dialectVisitor.OrmProvider.NewResultUpdated<TResult>(instance.DbContext, visitor);
+        var sql = instance.Visitor.BuildCommandSql(false, out _);
+        var visitor = instance.NewCreateVisitor(sql) as PostgreSqlCreateVisitor;
+        visitor.Returning(fieldsSelector);
+        return visitor.OrmProvider.NewBulkResultCreated<TResult>(instance.DbContext, visitor);
     }
     public static IBulkResultCommand<TResult> Returning<TResult>(this IContinuedUpdate instance, string fieldNames)
     {
-        var sql = instance.Visitor.BuildCommandSql(false, out _);
-        var visitor = instance.NewCreateVisitor(sql) as PostgreSqlCreateVisitor;
-        visitor.Returning(fieldNames);
-        return visitor.OrmProvider.NewBulkResultCreated<TResult>(instance.DbContext, visitor);
+        var dialectVisitor = instance.Visitor as PostgreSqlCreateVisitor;
+        dialectVisitor.Returning(fieldNames);
+        return dialectVisitor.OrmProvider.NewResultUpdated<TResult>(instance.DbContext, instance.Visitor);
     }
 
     public static IBulkResultCommand<TResult> Returning<TResult>(this IDelete instance, string fieldNames)

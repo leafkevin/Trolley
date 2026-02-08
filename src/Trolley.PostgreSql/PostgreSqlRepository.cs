@@ -1,75 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Trolley.PostgreSql;
 
-public class PostgreSqlRepository : Repository, IPostgreSqlRepository
+public class PostgreSqlRepository : Repository
 {
-    #region fields
-    private PostgreSqlProvider dialectProvider => this.OrmProvider as PostgreSqlProvider;
-    #endregion
-
     #region Constructor
-    public PostgreSqlRepository(DbContext dbContext) :
-        base(dbContext)
-    { }
-    #endregion
-
-    #region From
-    public new IPostgreSqlQuery<T> From<T>(char tableAsStart = 'a')
-        => base.From<T>(tableAsStart) as IPostgreSqlQuery<T>;
-    public new IPostgreSqlQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
-        => base.From<T1, T2>(tableAsStart) as IPostgreSqlQuery<T1, T2>;
-    public new IPostgreSqlQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a')
-        => base.From<T1, T2, T3>(tableAsStart) as IPostgreSqlQuery<T1, T2, T3>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart = 'a')
-        => base.From<T1, T2, T3, T4>(tableAsStart) as IPostgreSqlQuery<T1, T2, T3, T4>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(char tableAsStart = 'a')
-        => base.From<T1, T2, T3, T4, T5>(tableAsStart) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>(char tableAsStart = 'a')
-        => base.From<T1, T2, T3, T4, T5, T6>(tableAsStart) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>(char tableAsStart = 'a')
-        => base.From<T1, T2, T3, T4, T5, T6, T7>(tableAsStart) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>(char tableAsStart = 'a')
-        => base.From<T1, T2, T3, T4, T5, T6, T7, T8>(tableAsStart) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(char tableAsStart = 'a')
-        => base.From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(tableAsStart) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a')
-        => base.From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(tableAsStart) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
-    #endregion
-
-    #region From SubQuery  
-    public new IPostgreSqlQuery<T> FromQuery<T>(IQuery<T> subQuery)
-        => base.FromQuery(subQuery) as IPostgreSqlQuery<T>;
-    public new IPostgreSqlQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
-        => base.FromQuery(subQueryExpr) as IPostgreSqlQuery<T>;
-    #endregion
-
-    #region Create
-    public new IPostgreSqlCreate<TEntity> Create<TEntity>()
-        => this.OrmProvider.NewCreate<TEntity>(this.DbContext) as IPostgreSqlCreate<TEntity>;
-    #endregion
-
-    #region Update
-    public new IPostgreSqlUpdate<TEntity> Update<TEntity>()
-        => this.OrmProvider.NewUpdate<TEntity>(this.DbContext) as IPostgreSqlUpdate<TEntity>;
-    #endregion
-
-    #region Delete
-    public new IPostgreSqlDelete<TEntity> Delete<TEntity>()
-        => this.OrmProvider.NewDelete<TEntity>(this.DbContext) as IPostgreSqlDelete<TEntity>;
+    public PostgreSqlRepository(DbContext dbContext) : base(dbContext) { }
     #endregion
 
     #region ShardingTable
-    public override List<string> GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector = null, string tableSchema = null)
-        => this.dialectProvider.GetShardingTableNames<TEntity>(this.DbContext, tableNameSelector, tableSchema);
-    public override async Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector = null, string tableSchema = null, CancellationToken cancellationToken = default)
-        => await this.dialectProvider.GetShardingTableNamesAsync<TEntity>(this.DbContext, tableNameSelector, tableSchema, cancellationToken);
     public override void CreateShardingTable<TEntity>(string tableName, string fromTableSchema = null)
     {
         var entityType = typeof(TEntity);

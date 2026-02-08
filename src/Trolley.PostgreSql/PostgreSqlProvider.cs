@@ -403,7 +403,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
     }
     public override Func<object, object> GetParameterValueGetter(Type fromType, Type fieldType, bool isNullable, DbContext dbContext)
     {
-        var hashKey = RepositoryHelper.GetCacheKey(fromType, fieldType, isNullable);
+        var hashKey = HashCode.Combine(fromType, fieldType, isNullable);
         return parameterValueGetters.GetOrAdd(hashKey, f =>
         {
             var underlyingType = Nullable.GetUnderlyingType(fromType);
@@ -1025,7 +1025,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
     }
     public override Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType, DbContext dbContext)
     {
-        var hashKey = RepositoryHelper.GetCacheKey(targetType, fieldType, dbContext.DefaultDateTimeKind);
+        var hashKey = HashCode.Combine(targetType, fieldType, dbContext.DefaultDateTimeKind);
         return readerValueGetters.GetOrAdd(hashKey, f =>
         {
             var underlyingType = Nullable.GetUnderlyingType(targetType);
@@ -2495,7 +2495,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                 var genericArgumentTypes = methodInfo.DeclaringType.GetGenericArguments();
                 if (genericArgumentTypes.Length == 1 && methodInfo.DeclaringType == typeof(IPostgreSqlCreateConflictDoUpdate<>).MakeGenericType(genericArgumentTypes[0]))
                 {
-                    cacheKey = RepositoryHelper.GetCacheKey(typeof(IPostgreSqlCreateConflictDoUpdate<>), methodInfo.GetGenericMethodDefinition());
+                    cacheKey = HashCode.Combine(typeof(IPostgreSqlCreateConflictDoUpdate<>), methodInfo.GetGenericMethodDefinition());
                     //.OnConflict(x => x.UseKeys().Set(f => new { TotalAmount = f.TotalAmount + x.Excluded(f.TotalAmount) }) ... )
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
@@ -2521,7 +2521,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                 }
                 break;
             case "IsNull":
-                cacheKey = RepositoryHelper.GetCacheKey(typeof(Sql), methodInfo.GetGenericMethodDefinition());
+                cacheKey = HashCode.Combine(typeof(Sql), methodInfo.GetGenericMethodDefinition());
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0], IsNullFields = true });
@@ -2577,25 +2577,16 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
             return tableNames.FindAll(f => tableNameSelector(f));
         return tableNames;
     }
-    public int ExecuteBulkCopy(bool isUpdate, DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, string tableName = null)
+    public int ExecuteBulkCopy(string tableName, DbContext dbContext, ITheaConnection connection, IEnumerable insertObjs, List<MemberMap> memberMappers, List<Func<object, object>> valueGetters)
     {
-        var entityMapper = visitor.Tables[0].Mapper;
-        var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper, isUpdate);
-
-        connection.Open();
-        var fromMapper = visitor.Tables[0].Mapper;
         int index = 0;
-        tableName ??= fromMapper.TableName;
         var builder = new StringBuilder($"COPY {this.GetTableName(tableName)}(");
-        foreach ((var refMemberMapper, _) in memberMappers)
+        foreach (var memberMapper in memberMappers)
         {
             if (index > 0) builder.Append(',');
-            builder.Append(this.GetFieldName(refMemberMapper.FieldName));
             index++;
         }
         builder.Append(") FROM STDIN BINARY");
-        var dbConnection = connection.BaseConnection as NpgsqlConnection;
-        var transaction = dbContext.Transaction?.BaseTransaction as NpgsqlTransaction;
         var createdAt = DateTime.Now;
         dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
         {
@@ -2606,16 +2597,22 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         int recordsAffected = 0;
         bool isSuccess = true;
         Exception exception = null;
+
+        var transaction = dbContext.Transaction?.BaseTransaction as NpgsqlTransaction;
         try
         {
+            connection.Open();
+            var dbConnection = connection.BaseConnection as NpgsqlConnection;
             using var writer = dbConnection.BeginBinaryImport(builder.ToString());
             foreach (var insertObj in insertObjs)
             {
                 writer.StartRow();
-                foreach ((var refMemberMapper, var valueGetter) in memberMappers)
+                for (int i = 0; i < memberMappers.Count; i++)
                 {
+                    var memberMapper = memberMappers[i];
+                    var valueGetter = valueGetters[i];
                     object fieldValue = valueGetter.Invoke(insertObj);
-                    writer.Write(fieldValue, (NpgsqlDbType)refMemberMapper.NativeDbType);
+                    writer.Write(fieldValue, (NpgsqlDbType)memberMapper.NativeDbType);
                 }
                 recordsAffected++;
             }
@@ -2647,25 +2644,16 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         }
         return recordsAffected;
     }
-    public async Task<int> ExecuteBulkCopyAsync(bool isUpdate, DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, CancellationToken cancellationToken = default, string tableName = null)
+    public async Task<int> ExecuteBulkCopyAsync(string tableName, DbContext dbContext, ITheaConnection connection, IEnumerable insertObjs, List<MemberMap> memberMappers, List<Func<object, object>> valueGetters, CancellationToken cancellationToken = default)
     {
-        var entityMapper = visitor.Tables[0].Mapper;
-        var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper, isUpdate);
-
-        await connection.OpenAsync(cancellationToken);
-        var fromMapper = visitor.Tables[0].Mapper;
         int index = 0;
-        tableName ??= fromMapper.TableName;
         var builder = new StringBuilder($"COPY {this.GetTableName(tableName)}(");
-        foreach ((var refMemberMapper, _) in memberMappers)
+        foreach (var memberMapper in memberMappers)
         {
             if (index > 0) builder.Append(',');
-            builder.Append(this.GetFieldName(refMemberMapper.FieldName));
             index++;
         }
         builder.Append(") FROM STDIN BINARY");
-        var dbConnection = connection.BaseConnection as NpgsqlConnection;
-        var transaction = dbContext.Transaction?.BaseTransaction as NpgsqlTransaction;
         var createdAt = DateTime.Now;
         dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
         {
@@ -2676,16 +2664,22 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         int recordsAffected = 0;
         bool isSuccess = true;
         Exception exception = null;
+
+        var transaction = dbContext.Transaction?.BaseTransaction as NpgsqlTransaction;
         try
         {
-            using var writer = await dbConnection.BeginBinaryImportAsync(builder.ToString(), cancellationToken);
+            await connection.OpenAsync(cancellationToken);
+            var dbConnection = connection.BaseConnection as NpgsqlConnection;
+            using var writer = dbConnection.BeginBinaryImport(builder.ToString());
             foreach (var insertObj in insertObjs)
             {
                 await writer.StartRowAsync(cancellationToken);
-                foreach ((var refMemberMapper, var valueGetter) in memberMappers)
+                for (int i = 0; i < memberMappers.Count; i++)
                 {
+                    var memberMapper = memberMappers[i];
+                    var valueGetter = valueGetters[i];
                     object fieldValue = valueGetter.Invoke(insertObj);
-                    await writer.WriteAsync(fieldValue, (NpgsqlDbType)refMemberMapper.NativeDbType, cancellationToken);
+                    await writer.WriteAsync(fieldValue, (NpgsqlDbType)memberMapper.NativeDbType, cancellationToken);
                 }
                 recordsAffected++;
             }
@@ -2712,7 +2706,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         }
         if (!isSuccess)
         {
-            if (transaction == null) connection.Close();
+            if (transaction == null) await connection.CloseAsync();
             throw exception;
         }
         return recordsAffected;

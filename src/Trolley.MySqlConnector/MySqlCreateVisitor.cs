@@ -59,7 +59,8 @@ public class MySqlCreateVisitor : CreateVisitor
                 break;
             case ActionMode.Single:
                 //当Insert Select From操作时，DbParameters也有值，但不是command.Parameters，需要赋值到command.Parameters
-                if (this.DbParameters != null && this.DbParameters != command.Parameters)
+                if (this.DbParameters == null) this.DbParameters = command.Parameters;
+                else if (this.DbParameters != command.Parameters)
                 {
                     foreach (var dbParameter in this.DbParameters)
                     {
@@ -67,56 +68,53 @@ public class MySqlCreateVisitor : CreateVisitor
                     }
                     this.DbParameters = command.Parameters;
                 }
-                else this.DbParameters = command.Parameters;
-
-                this.ValuesBuilder = new();
                 var tableSegment = this.Tables[0];
-                if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null)
-                {
-                    if (tableSegment.TableShardingInfo.DependOnMembers == null || tableSegment.TableShardingInfo.DependOnMembers.Count == 0)
-                        throw new Exception($"实体表{tableSegment.EntityType.FullName}已设置分表，未指定分表，也未设置依赖字段无法确定分表，请使用UseTable/UseTableBy方法手动指定分表");
-                    if (this.deferredSegments.Count > 1)
-                    {
-                        this.IsNeedShardingValues = true;
-                        this.ShardingValues = new();
-                    }
-                }
-                foreach (var deferredSegment in this.deferredSegments)
-                {
-                    switch (deferredSegment.Type)
-                    {
-                        case "WithBy":
-                            this.VisitWithBy(deferredSegment.Value);
-                            break;
-                        case "WithByField":
-                            this.VisitWithByField(deferredSegment.Value);
-                            break;
-                        case "WithByFieldExpr":
-                            this.VisitWithByFieldExpr(deferredSegment.Value);
-                            break;
-                        case "SetObject":
-                            this.VisitSetObject(deferredSegment.Value);
-                            break;
-                        case "SetField":
-                            this.VisitSetField(deferredSegment.Value);
-                            break;
-                        case "SetFieldExpr":
-                            this.VisitSetFieldExpr(deferredSegment.Value);
-                            break;
-                        case "SetFieldExprs":
-                            this.VisitSetFieldExprs(deferredSegment.Value);
-                            break;
-                    }
-                }
-                var entityType = tableSegment.EntityType;
                 if (string.IsNullOrEmpty(this.FromSql))
                 {
+                    this.ValuesBuilder = new();
+                    if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null)
+                    {
+                        if (tableSegment.TableShardingInfo.DependOnMembers == null || tableSegment.TableShardingInfo.DependOnMembers.Count == 0)
+                            throw new Exception($"实体表{tableSegment.EntityType.FullName}已设置分表，未指定分表，也未设置依赖字段无法确定分表，请使用UseTable/UseTableBy方法手动指定分表");
+                        if (this.deferredSegments.Count > 1)
+                        {
+                            this.IsNeedShardingValues = true;
+                            this.ShardingValues = new();
+                        }
+                    }
+                    foreach (var deferredSegment in this.deferredSegments)
+                    {
+                        switch (deferredSegment.Type)
+                        {
+                            case "WithBy":
+                                this.VisitWithBy(deferredSegment.Value);
+                                break;
+                            case "WithByField":
+                                this.VisitWithByField(deferredSegment.Value);
+                                break;
+                            case "WithByFieldExpr":
+                                this.VisitWithByFieldExpr(deferredSegment.Value);
+                                break;
+                            case "SetObject":
+                                this.VisitSetObject(deferredSegment.Value);
+                                break;
+                            case "SetField":
+                                this.VisitSetField(deferredSegment.Value);
+                                break;
+                            case "SetFieldExpr":
+                                this.VisitSetFieldExpr(deferredSegment.Value);
+                                break;
+                            case "SetFieldExprs":
+                                this.VisitSetFieldExprs(deferredSegment.Value);
+                                break;
+                        }
+                    }
                     var tableName = this.GetTableName(tableSegment);
                     if (this.IsReturnIdentity && (this.UpdateBuilder != null || this.OutputSql != null))
                         throw new NotSupportedException("返回Identity，不支持同时Returning操作");
                     this.FromSql = $"{this.BuildHeadSql()} {tableName} ({this.FieldsBuilder}) VALUES ({this.ValuesBuilder})";
+                    this.ValuesBuilder.Clear();
                 }
-                this.ValuesBuilder.Clear();
                 if (this.UpdateBuilder != null)
                     tailSql = this.UpdateBuilder.ToString();
 
@@ -127,12 +125,10 @@ public class MySqlCreateVisitor : CreateVisitor
                 }
                 if (this.IsReturnIdentity)
                 {
-                    var entityMapper = tableSegment.Mapper;
-                    if (!entityMapper.IsAutoIncrementKey)
-                        throw new NotSupportedException($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
+                    if (!tableSegment.Mapper.IsAutoIncrementKey)
+                        throw new NotSupportedException($"实体{tableSegment.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
                     tailSql = this.OrmProvider.GetIdentitySql(null);
                 }
-                this.ValuesBuilder.Clear();
                 break;
         }
         this.FieldsBuilder.Clear();
@@ -197,6 +193,18 @@ public class MySqlCreateVisitor : CreateVisitor
                         break;
                     case "WithByFieldExpr":
                         this.VisitWithByFieldExpr(deferredSegment.Value);
+                        break;
+                    case "SetObject":
+                        this.VisitSetObject(deferredSegment.Value);
+                        break;
+                    case "SetField":
+                        this.VisitSetField(deferredSegment.Value);
+                        break;
+                    case "SetFieldExpr":
+                        this.VisitSetFieldExpr(deferredSegment.Value);
+                        break;
+                    case "SetFieldExprs":
+                        this.VisitSetFieldExprs(deferredSegment.Value);
                         break;
                     default: throw new NotSupportedException("批量插入后，只支持WithBy/OnDuplicateKeyUpdate/Returning操作");
                 }

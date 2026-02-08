@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Linq.Expressions;
-using System.Text;
 
 namespace Trolley.PostgreSql;
 
 public class PostgreSqlCreateConflictDoUpdate<TEntity> : PostgreSqlIdentitiedCreated, IPostgreSqlCreateConflictDoUpdate<TEntity>
 {
     private PostgreSqlCreateVisitor dialectVisitor;
-    private StringBuilder builder => this.dialectVisitor.UpdateBuilder;
-    private bool isUseKeysOrConstraint = false;
 
     public PostgreSqlCreateConflictDoUpdate(DbContext dbContext, ICreateVisitor visitor)
         : base(dbContext, visitor)
@@ -20,7 +17,7 @@ public class PostgreSqlCreateConflictDoUpdate<TEntity> : PostgreSqlIdentitiedCre
     #region DoNothing
     public virtual IIdentitiedCreated DoNothing()
     {
-        this.builder.Append(" DO NOTHING");
+        this.dialectVisitor.DoNothing();
         return this;
     }
     #endregion
@@ -28,23 +25,7 @@ public class PostgreSqlCreateConflictDoUpdate<TEntity> : PostgreSqlIdentitiedCre
     #region UseKeys
     public virtual IPostgreSqlCreateConflictDoUpdate<TEntity> UseKeys()
     {
-        if (this.isUseKeysOrConstraint)
-            throw new InvalidOperationException("已使用UseKeys或UseConstraint，不能重复使用");
-
-        this.builder.Append(" (");
-        var keyMappers = this.Visitor.Tables[0].Mapper.KeyMembers;
-        if (keyMappers.Count > 1)
-        {
-            for (int i = 0; i < keyMappers.Count; i++)
-            {
-                if (i > 0) this.builder.Append(',');
-                var keyMapper = keyMappers[i];
-                this.builder.Append(this.OrmProvider.GetFieldName(keyMapper.FieldName));
-            }
-        }
-        else this.builder.Append(this.OrmProvider.GetFieldName(keyMappers[0].FieldName));
-        this.builder.Append(") DO UPDATE SET");
-        this.isUseKeysOrConstraint = true;
+        this.dialectVisitor.UseKeys();
         return this;
     }
     #endregion
@@ -52,13 +33,7 @@ public class PostgreSqlCreateConflictDoUpdate<TEntity> : PostgreSqlIdentitiedCre
     #region UseConstraint
     public virtual IPostgreSqlCreateConflictDoUpdate<TEntity> UseConstraint(string constraintName)
     {
-        if (this.isUseKeysOrConstraint)
-            throw new InvalidOperationException("已使用UseKeys或UseConstraint，不能重复使用");
-
-        if (string.IsNullOrEmpty(constraintName))
-            throw new ArgumentNullException("参数constraintName不可为null");
-        this.builder.Append($" ON CONSTRAINT {constraintName} DO UPDATE SET");
-        this.isUseKeysOrConstraint = true;
+        this.dialectVisitor.UseConstraint(constraintName);
         return this;
     }
     #endregion
@@ -68,43 +43,32 @@ public class PostgreSqlCreateConflictDoUpdate<TEntity> : PostgreSqlIdentitiedCre
     {
         if (fieldsAssignment == null)
             throw new ArgumentNullException(nameof(fieldsAssignment));
-
-        this.dialectVisitor.VisitAndDeferred(new SqlFieldSegment { Expression = fieldsAssignment });
+        this.dialectVisitor.SetObjectExpr(fieldsAssignment);
         return this;
     }
     public virtual IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
     {
         if (!condition) return this;
-        this.dialectVisitor.VisitAndDeferred(new SqlFieldSegment { Expression = fieldsAssignment });
+        return this.Set(fieldsAssignment);
+    }
+    public IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, object fieldValue)
+    {
+        this.dialectVisitor.SetFieldExpr(fieldSelector, fieldValue);
         return this;
     }
-    public virtual IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector)
+    public IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, object fieldValue)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-        if (fieldValueSelector == null)
-            throw new ArgumentNullException(nameof(fieldValueSelector));
-
-        this.dialectVisitor.VisitSetFieldExpression(fieldSelector, fieldValueSelector);
+        if (condition) this.Set(fieldSelector, fieldValue);
         return this;
     }
-    public virtual IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector)
+    public IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, object>> valueGetter)
     {
-        if (!condition) return this;
-        this.Set(fieldSelector, fieldValueSelector);
+        this.dialectVisitor.SetFieldExprs(fieldSelector, valueGetter);
         return this;
     }
-    public virtual IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    public IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, object>> valueGetter)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-        this.dialectVisitor.VisitWithSetField(fieldSelector, fieldValue);
-        return this;
-    }
-    public virtual IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-    {
-        if (!condition) return this;
-        this.Set(fieldSelector, fieldValue);
+        if (condition) this.Set(fieldSelector, valueGetter);
         return this;
     }
     #endregion
@@ -114,14 +78,19 @@ public class PostgreSqlCreateConflictDoUpdate<TEntity> : PostgreSqlIdentitiedCre
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
-
-        var sqlSegment = this.dialectVisitor.VisitAndDeferred(new SqlFieldSegment { Expression = predicate });
-        this.builder.Append($" WHERE {sqlSegment.Body}");
+        this.dialectVisitor.VisitSetWhere(predicate);
         return this;
     }
     #endregion
 
     #region Returning
+    public virtual IResultCommand<TResult> Returning<TResult>(string fieldNames)
+    {
+        if (string.IsNullOrEmpty(fieldNames))
+            throw new ArgumentNullException(nameof(fieldNames));
+        this.dialectVisitor.Returning(fieldNames);
+        return this.OrmProvider.NewResultCreated<TResult>(this.DbContext, this.Visitor);
+    }
     public virtual IResultCommand<TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
     {
         if (fieldsSelector == null)
@@ -134,8 +103,6 @@ public class PostgreSqlCreateConflictDoUpdate<TEntity> : PostgreSqlIdentitiedCre
 public class PostgreSqlBulkCreateConflictDoUpdate<TEntity> : PostgreSqlCreated, IPostgreSqlBulkCreateConflictDoUpdate<TEntity>
 {
     private PostgreSqlCreateVisitor dialectVisitor;
-    private StringBuilder builder => this.dialectVisitor.UpdateBuilder;
-    private bool isUseKeysOrConstraint = false;
 
     public PostgreSqlBulkCreateConflictDoUpdate(DbContext dbContext, ICreateVisitor visitor)
         : base(dbContext, visitor)
@@ -147,7 +114,7 @@ public class PostgreSqlBulkCreateConflictDoUpdate<TEntity> : PostgreSqlCreated, 
     #region DoNothing
     public virtual ICreated DoNothing()
     {
-        this.builder.Append(" DO NOTHING");
+        this.dialectVisitor.DoNothing();
         return this;
     }
     #endregion
@@ -155,23 +122,7 @@ public class PostgreSqlBulkCreateConflictDoUpdate<TEntity> : PostgreSqlCreated, 
     #region UseKeys
     public virtual IPostgreSqlBulkCreateConflictDoUpdate<TEntity> UseKeys()
     {
-        if (this.isUseKeysOrConstraint)
-            throw new InvalidOperationException("已使用UseKeys或UseConstraint，不能重复使用");
-
-        this.builder.Append(" (");
-        var keyMappers = this.Visitor.Tables[0].Mapper.KeyMembers;
-        if (keyMappers.Count > 1)
-        {
-            for (int i = 0; i < keyMappers.Count; i++)
-            {
-                if (i > 0) this.builder.Append(',');
-                var keyMapper = keyMappers[i];
-                this.builder.Append(this.OrmProvider.GetFieldName(keyMapper.FieldName));
-            }
-        }
-        else this.builder.Append(this.OrmProvider.GetFieldName(keyMappers[0].FieldName));
-        this.builder.Append(") DO UPDATE SET");
-        this.isUseKeysOrConstraint = true;
+        this.dialectVisitor.UseKeys();
         return this;
     }
     #endregion
@@ -179,13 +130,7 @@ public class PostgreSqlBulkCreateConflictDoUpdate<TEntity> : PostgreSqlCreated, 
     #region UseConstraint
     public virtual IPostgreSqlBulkCreateConflictDoUpdate<TEntity> UseConstraint(string constraintName)
     {
-        if (this.isUseKeysOrConstraint)
-            throw new InvalidOperationException("已使用UseKeys或UseConstraint，不能重复使用");
-
-        if (string.IsNullOrEmpty(constraintName))
-            throw new ArgumentNullException("参数constraintName不可为null");
-        this.builder.Append($" ON CONSTRAINT {constraintName} DO UPDATE SET");
-        this.isUseKeysOrConstraint = true;
+        this.dialectVisitor.UseConstraint(constraintName);
         return this;
     }
     #endregion
@@ -195,43 +140,32 @@ public class PostgreSqlBulkCreateConflictDoUpdate<TEntity> : PostgreSqlCreated, 
     {
         if (fieldsAssignment == null)
             throw new ArgumentNullException(nameof(fieldsAssignment));
-
-        this.dialectVisitor.VisitAndDeferred(new SqlFieldSegment { Expression = fieldsAssignment });
+        this.dialectVisitor.SetObjectExpr(fieldsAssignment);
         return this;
     }
     public virtual IPostgreSqlBulkCreateConflictDoUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
     {
         if (!condition) return this;
-        this.dialectVisitor.VisitAndDeferred(new SqlFieldSegment { Expression = fieldsAssignment });
+        return this.Set(fieldsAssignment);
+    }
+    public IPostgreSqlBulkCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, object fieldValue)
+    {
+        this.dialectVisitor.SetFieldExpr(fieldSelector, fieldValue);
         return this;
     }
-    public virtual IPostgreSqlBulkCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector)
+    public IPostgreSqlBulkCreateConflictDoUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, object fieldValue)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-        if (fieldValueSelector == null)
-            throw new ArgumentNullException(nameof(fieldValueSelector));
-
-        this.dialectVisitor.VisitSetFieldExpression(fieldSelector, fieldValueSelector);
+        if (condition) this.Set(fieldSelector, fieldValue);
         return this;
     }
-    public virtual IPostgreSqlBulkCreateConflictDoUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector)
+    public IPostgreSqlBulkCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, object>> valueGetter)
     {
-        if (!condition) return this;
-        this.Set(fieldSelector, fieldValueSelector);
+        this.dialectVisitor.SetFieldExprs(fieldSelector, valueGetter);
         return this;
     }
-    public virtual IPostgreSqlBulkCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    public IPostgreSqlBulkCreateConflictDoUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, object>> valueGetter)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-        this.dialectVisitor.VisitWithSetField(fieldSelector, fieldValue);
-        return this;
-    }
-    public virtual IPostgreSqlBulkCreateConflictDoUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-    {
-        if (!condition) return this;
-        this.Set(fieldSelector, fieldValue);
+        if (condition) this.Set(fieldSelector, valueGetter);
         return this;
     }
     #endregion
@@ -241,14 +175,19 @@ public class PostgreSqlBulkCreateConflictDoUpdate<TEntity> : PostgreSqlCreated, 
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
-
-        var sqlSegment = this.dialectVisitor.VisitAndDeferred(new SqlFieldSegment { Expression = predicate });
-        this.builder.Append($" WHERE {sqlSegment.Body}");
+        this.dialectVisitor.SetWhere(predicate);
         return this;
     }
     #endregion
 
     #region Returning
+    public virtual IBulkResultCommand<TResult> Returning<TResult>(string fieldNames)
+    {
+        if (string.IsNullOrEmpty(fieldNames))
+            throw new ArgumentNullException(nameof(fieldNames));
+        this.dialectVisitor.Returning(fieldNames);
+        return this.OrmProvider.NewBulkResultCreated<TResult>(this.DbContext, this.Visitor);
+    }
     public virtual IBulkResultCommand<TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
     {
         if (fieldsSelector == null)

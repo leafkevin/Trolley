@@ -13,7 +13,7 @@ partial class PostgreSqlProvider
         bool result = false;
         formatter = null;
         var memberInfo = memberExpr.Member;
-        var cacheKey = RepositoryHelper.GetCacheKey(memberInfo.DeclaringType, memberInfo);
+        var cacheKey = HashCode.Combine(memberInfo.DeclaringType, memberInfo);
         if (memberExpr.Expression == null)
         {
             switch (memberInfo.Name)
@@ -48,7 +48,7 @@ partial class PostgreSqlProvider
         formatter = null;
         var methodInfo = methodCallExpr.Method;
         var parameterInfos = methodInfo.GetParameters();
-        var cacheKey = RepositoryHelper.GetCacheKey(methodInfo.DeclaringType, methodInfo);
+        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
         if (methodInfo.IsStatic)
         {
             switch (methodInfo.Name)

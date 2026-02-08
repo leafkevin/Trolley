@@ -15,7 +15,7 @@ partial class PostgreSqlProvider
         formatter = null;
 #if NET6_0_OR_GREATER
         var memberInfo = memberExpr.Member;
-        var cacheKey = RepositoryHelper.GetCacheKey(memberInfo.DeclaringType, memberInfo);
+        var cacheKey = HashCode.Combine(memberInfo.DeclaringType, memberInfo);
         if (memberExpr.Expression == null)
         {
             switch (memberInfo.Name)
@@ -143,7 +143,7 @@ partial class PostgreSqlProvider
 #if NET6_0_OR_GREATER
         var methodInfo = methodCallExpr.Method;
         var parameterInfos = methodInfo.GetParameters();
-        var cacheKey = RepositoryHelper.GetCacheKey(methodInfo.DeclaringType, methodInfo);
+        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
         if (methodInfo.IsStatic)
         {
             switch (methodInfo.Name)

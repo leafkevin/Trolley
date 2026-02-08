@@ -522,59 +522,6 @@ public partial class MySqlProvider : BaseOrmProvider
             return tableNames.FindAll(f => tableNameSelector(f));
         return tableNames;
     }
-    public MySqlBulkCopy CreateBulkCopy(MySqlConnection connection, MySqlTransaction transaction, List<MemberMap> memberMappers, int? timeoutSeconds)
-    {
-        var bulkCopy = new MySqlBulkCopy(connection, transaction);
-        if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
-        for (int i = 0; i < memberMappers.Count; i++)
-        {
-            bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, memberMappers[i].FieldName));
-        }
-        return bulkCopy;
-    }
-    public int ExecuteBulkCopy(string tableName, MySqlBulkCopy bulkCopyObj, ITheaConnection connection, DbContext dbContext, DataTable data)
-    {
-        var createdAt = DateTime.Now;
-        bulkCopyObj.DestinationTableName = tableName;
-        dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
-        {
-            DbKey = dbContext.DbKey,
-            ConnectionString = connection.ConnectionString,
-            SqlType = CommandSqlType.BulkCopyInsert
-        });
-        int recordsAffected = 0;
-        bool isSuccess = true;
-        Exception exception = null;
-        try
-        {
-            var bulkCopyResult = bulkCopyObj.WriteToServer(data);
-            recordsAffected = bulkCopyResult.RowsInserted;
-        }
-        catch (Exception ex)
-        {
-            exception = ex;
-            isSuccess = false;
-        }
-        finally
-        {
-            var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
-            dbContext.DbInterceptors.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
-            {
-                DbKey = dbContext.DbKey,
-                ConnectionString = connection.ConnectionString,
-                SqlType = CommandSqlType.BulkCopyInsert,
-                IsSuccess = isSuccess,
-                Exception = exception,
-                Elapsed = (int)elapsed
-            });
-        }
-        if (!isSuccess)
-        {
-            if (dbContext.Transaction == null) dbContext.Connection.Close();
-            throw exception;
-        }
-        return recordsAffected;
-    }
     public int ExecuteBulkCopy(string tableName, MySqlBulkCopy bulkCopyObj, ITheaConnection connection, DbContext dbContext, IDataReader data)
     {
         var createdAt = DateTime.Now;
@@ -614,49 +561,6 @@ public partial class MySqlProvider : BaseOrmProvider
         if (!isSuccess)
         {
             if (dbContext.Transaction == null) dbContext.Connection.Close();
-            throw exception;
-        }
-        return recordsAffected;
-    }
-    public async Task<int> ExecuteBulkCopyAsync(string tableName, MySqlBulkCopy bulkCopyObj, ITheaConnection connection, DbContext dbContext, DataTable data, CancellationToken cancellationToken = default)
-    {
-        var createdAt = DateTime.Now;
-        bulkCopyObj.DestinationTableName = tableName;
-        dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
-        {
-            DbKey = dbContext.DbKey,
-            ConnectionString = connection.ConnectionString,
-            SqlType = CommandSqlType.BulkCopyInsert
-        });
-        int recordsAffected = 0;
-        bool isSuccess = true;
-        Exception exception = null;
-        try
-        {
-            var bulkCopyResult = await bulkCopyObj.WriteToServerAsync(data, cancellationToken);
-            recordsAffected = bulkCopyResult.RowsInserted;
-        }
-        catch (Exception ex)
-        {
-            exception = ex;
-            isSuccess = false;
-        }
-        finally
-        {
-            var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
-            dbContext.DbInterceptors.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
-            {
-                DbKey = dbContext.DbKey,
-                ConnectionString = connection.ConnectionString,
-                SqlType = CommandSqlType.BulkCopyInsert,
-                IsSuccess = isSuccess,
-                Exception = exception,
-                Elapsed = (int)elapsed
-            });
-        }
-        if (!isSuccess)
-        {
-            if (dbContext.Transaction == null) await connection.CloseAsync();
             throw exception;
         }
         return recordsAffected;

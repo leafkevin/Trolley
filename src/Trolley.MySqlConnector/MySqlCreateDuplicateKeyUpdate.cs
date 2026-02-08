@@ -13,7 +13,6 @@ public class MySqlCreateDuplicateKeyUpdate : MySqlIdentitiedCreated, IMySqlCreat
         this.dialectVisitor = visitor as MySqlCreateVisitor;
         this.dialectVisitor.UpdateBuilder = new();
     }
-    public TField Values<TField>(TField fieldSelector) => throw new NotImplementedException();
     public IMySqlCreateDuplicateKeyUpdate UseAlias(string aliasName = "newRow")
     {
         this.dialectVisitor.RowAlias = aliasName;
