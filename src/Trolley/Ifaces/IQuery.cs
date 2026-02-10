@@ -930,6 +930,22 @@ public interface IQuery<T> : IQueryBase
     /// <returns></returns>
     ICteQuery<T> AsCteTable(string tableName);
     #endregion
+
+    #region ToCreate
+    /// <summary>
+    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
+    /// </summary>
+    /// <typeparam name="TEntity">插入表实体类型</typeparam>
+    /// <returns>返回插入对象</returns>
+    IFromCreated<TEntity> ToCreate<TEntity>();
+    /// <summary>
+    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
+    /// </summary>
+    /// <typeparam name="TEntity">插入表实体类型</typeparam>
+    /// <param name="fieldsSelector">字段值选择器</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T, object>> fieldsSelector);
+    #endregion
 }
 /// <summary>
 /// CTE表查询对象
@@ -1522,6 +1538,16 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
+
+    #region ToCreate
+    /// <summary>
+    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
+    /// </summary>
+    /// <typeparam name="TEntity">插入表实体类型</typeparam>
+    /// <param name="fieldsSelector">字段值选择器</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, object>> fieldsSelector);
+    #endregion
 }
 /// <summary>
 /// 多表T1, T2, T3查询
@@ -2109,6 +2135,16 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToCreate
+    /// <summary>
+    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
+    /// </summary>
+    /// <typeparam name="TEntity">插入表实体类型</typeparam>
+    /// <param name="fieldsSelector">字段值选择器</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -2698,6 +2734,16 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToCreate
+    /// <summary>
+    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
+    /// </summary>
+    /// <typeparam name="TEntity">插入表实体类型</typeparam>
+    /// <param name="fieldsSelector">字段值选择器</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -3289,6 +3335,16 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
+
+    #region ToCreate
+    /// <summary>
+    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
+    /// </summary>
+    /// <typeparam name="TEntity">插入表实体类型</typeparam>
+    /// <param name="fieldsSelector">字段值选择器</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, object>> fieldsSelector);
+    #endregion
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6查询
@@ -3879,6 +3935,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToCreate
+    /// <summary>
+    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
+    /// </summary>
+    /// <typeparam name="TEntity">插入表实体类型</typeparam>
+    /// <param name="fieldsSelector">字段值选择器</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -4472,6 +4538,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
+
+    #region ToCreate
+    /// <summary>
+    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
+    /// </summary>
+    /// <typeparam name="TEntity">插入表实体类型</typeparam>
+    /// <param name="fieldsSelector">字段值选择器</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, object>> fieldsSelector);
+    #endregion
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6, T7, T8查询
@@ -5064,6 +5140,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToCreate
+    /// <summary>
+    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
+    /// </summary>
+    /// <typeparam name="TEntity">插入表实体类型</typeparam>
+    /// <param name="fieldsSelector">字段值选择器</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -5659,6 +5745,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
+
+    #region ToCreate
+    /// <summary>
+    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
+    /// </summary>
+    /// <typeparam name="TEntity">插入表实体类型</typeparam>
+    /// <param name="fieldsSelector">字段值选择器</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, object>> fieldsSelector);
+    #endregion
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6, T7, T8, T9, T10查询
@@ -6253,6 +6349,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToCreate
+    /// <summary>
+    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
+    /// </summary>
+    /// <typeparam name="TEntity">插入表实体类型</typeparam>
+    /// <param name="fieldsSelector">字段值选择器</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -6850,6 +6956,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
+
+    #region ToCreate
+    /// <summary>
+    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
+    /// </summary>
+    /// <typeparam name="TEntity">插入表实体类型</typeparam>
+    /// <param name="fieldsSelector">字段值选择器</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, object>> fieldsSelector);
+    #endregion
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12查询
@@ -7446,6 +7562,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToCreate
+    /// <summary>
+    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
+    /// </summary>
+    /// <typeparam name="TEntity">插入表实体类型</typeparam>
+    /// <param name="fieldsSelector">字段值选择器</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -8045,6 +8171,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
+
+    #region ToCreate
+    /// <summary>
+    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
+    /// </summary>
+    /// <typeparam name="TEntity">插入表实体类型</typeparam>
+    /// <param name="fieldsSelector">字段值选择器</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, object>> fieldsSelector);
+    #endregion
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14查询
@@ -8643,6 +8779,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToCreate
+    /// <summary>
+    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
+    /// </summary>
+    /// <typeparam name="TEntity">插入表实体类型</typeparam>
+    /// <param name="fieldsSelector">字段值选择器</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -9244,6 +9390,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
+
+    #region ToCreate
+    /// <summary>
+    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
+    /// </summary>
+    /// <typeparam name="TEntity">插入表实体类型</typeparam>
+    /// <param name="fieldsSelector">字段值选择器</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, object>> fieldsSelector);
+    #endregion
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16查询
@@ -9699,5 +9855,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToCreate
+    /// <summary>
+    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
+    /// </summary>
+    /// <typeparam name="TEntity">插入表实体类型</typeparam>
+    /// <param name="fieldsSelector">字段值选择器</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, object>> fieldsSelector);
     #endregion
 }

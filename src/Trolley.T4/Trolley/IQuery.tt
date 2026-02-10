@@ -148,22 +148,6 @@ public interface IQuery<T> : IQueryBase
     IQuery<T> UseTableSchema(string tableSchema);
     #endregion
 
-    #region GetShardingTableNames
-    /// <summary>
-    /// 获取<typeparamref name="TEntity"/>实体表满足断言tableNameSelector条件的所有分表名
-    /// </summary>
-    /// <param name="tableNameSelector">分表名选择委托</param>
-    /// <returns>返回满足条件的所有分表</returns>
-    List<string> GetShardingTableNames(Func<string, bool> tableNameSelector);
-    /// <summary>
-    /// 获取<typeparamref name="TEntity"/>实体表满足断言tableNameSelector条件的所有分表名
-    /// </summary>
-    /// <param name="tableNameSelector">分表名选择表达式</param>
-    /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回满足条件的所有分表</returns>
-    Task<List<string>> GetShardingTableNamesAsync(Func<string, bool> tableNameSelector, CancellationToken cancellationToken = default);
-    #endregion
-
     #region Union/UnionAll
     /// <summary>
     /// Union操作，去掉重复记录，如：
@@ -953,6 +937,22 @@ public interface IQuery<T> : IQueryBase
     /// <returns></returns>
     ICteQuery<T> AsCteTable(string tableName);
     #endregion
+
+    #region ToCreate
+    /// <summary>
+    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
+    /// </summary>
+    /// <typeparam name="TEntity">插入表实体类型</typeparam>
+    /// <returns>返回插入对象</returns>
+    IFromCreate<TEntity> ToCreate<TEntity>();
+    /// <summary>
+    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
+    /// </summary>
+    /// <typeparam name="TEntity">插入表实体类型</typeparam>
+    /// <param name="fieldsSelector">字段值选择器</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<T, object>> fieldsSelector);
+    #endregion
 }
 /// <summary>
 /// CTE表查询对象
@@ -1582,6 +1582,16 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToCreate
+    /// <summary>
+    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
+    /// </summary>
+    /// <typeparam name="TEntity">插入表实体类型</typeparam>
+    /// <param name="fieldsSelector">字段值选择器</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<<#=tables#>, object>> fieldsSelector);
     #endregion
 }
 <#  }#>

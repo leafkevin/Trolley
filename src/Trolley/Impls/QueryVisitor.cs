@@ -84,12 +84,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var hasShardingTables = this.ShardingTables != null && this.ShardingTables.Count > 0;
         if (this.Tables.Count > 0)
         {
-            var startIndex = this.IsFromCommand ? 1 : 0;
-            for (int i = startIndex; i < this.Tables.Count; i++)
+            for (int i = 0; i < this.Tables.Count; i++)
             {
                 var tableSegment = this.Tables[i];
                 string tableName = this.GetFormatTableName(tableSegment);
-                if (i > startIndex)
+                if (i > 0)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))
                     {
@@ -220,13 +219,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual string BuildCommandSql(bool isBuildCteSql, out IDataParameterCollection dbParameters)
     {
-        var builder = new StringBuilder();
+        var builder = new StringBuilder("(");
         var entityMapper = this.Tables[0].Mapper;
-        builder.Append($"INSERT INTO {this.GetFormatTableName(this.Tables[0])} (");
         int index = 0;
         //如果ReaderFields没有设置，通常是从Query中来的，ReaderFields是从Query中获取的
-        if (this.ReaderFields == null && this.IsFromQuery)
-            this.ReaderFields = this.Tables[1].Fields;
+        //if (this.ReaderFields == null && this.IsFromQuery)
+        //    this.ReaderFields = this.Tables[1].Fields;
         foreach (var readerField in this.ReaderFields)
         {
             //Union后，如果没有select语句时，通常实体类型或是select分组对象
@@ -1473,7 +1471,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     this.ReaderFields.Add(readerField);
             }
         }
-        this.IsFromQuery = false;
+        //this.IsFromQuery = false;
         this.IsSelect = false;
     }
     public virtual bool TryFindReaderField(MemberInfo memberInfo, out SqlFieldSegment readerField)
@@ -1686,7 +1684,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 if (memberExpr.Type.IsEntityType(out _))
                 {
                     //TODO:匿名实体类型类似于Grouping对象，在子查询后续会支持
-                    if (this.IsFromQuery && this.IsSelectMember)
+                    //if (this.IsFromQuery && this.IsSelectMember)
+                    if (this.IsSelectMember)
                         throw new NotSupportedException("FROM子查询中不支持实体类型成员MemberAccess表达式访问，只支持基础字段访问");
 
                     //实体类型字段，三个场景：Json类型实体字段成员访问(包含实体表和子查询表)，Include导航实体类型成员访问(包括1:1,1:N关系)，
@@ -1942,8 +1941,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         switch (elementExpr.NodeType)
         {
             case ExpressionType.Parameter:
-                if (this.IsFromQuery)
-                    throw new NotSupportedException("FROM子查询中不支持参数Parameter表达式访问，只支持基础字段访问访问");
+                //if (this.IsFromQuery)
+                //    throw new NotSupportedException("FROM子查询中不支持参数Parameter表达式访问，只支持基础字段访问访问");
                 //两种场景：.Select((x, y) => new { Order = x, x.Seller, x.Buyer, ... }) 和 .Select((x, y) => x)，可能有include操作
                 sqlSegment = this.VisitParameter(sqlSegment);
                 var tableReaderFields = sqlSegment.Value as List<SqlFieldSegment>;

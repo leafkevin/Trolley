@@ -32,7 +32,7 @@ public static class MySqlExtensions
         var baseInstance = instance as ICreate;
         return baseInstance.IgnoreInto() as ICreate<TEntity>;
     }
-    #endregion
+    #endregion     
 
     #region WithBulkCopy
     public static IBulkContinuedCreate WithBulkCopy(this ICreate instance, IEnumerable insertObjs, int? timeoutSeconds = null)
@@ -113,13 +113,7 @@ public static class MySqlExtensions
         => new MySqlCreateDuplicateKeyUpdate<TEntity>(instance.DbContext, instance.Visitor);
     public static IMySqlBulkCreateDuplicateKeyUpdate<TEntity> OnDuplicateKeyUpdate<TEntity>(this IBulkContinuedCreate<TEntity> instance)
         => new MySqlBulkCreateDuplicateKeyUpdate<TEntity>(instance.DbContext, instance.Visitor);
-    public static IMySqlBulkCreateDuplicateKeyUpdate<TTarget> OnDuplicateKeyUpdate<TTarget>(this IFromCommand<TTarget> instance)
-    {
-        var fromSql = instance.Visitor.BuildCommandSql(false, out _);
-        var visitor = instance.NewCreateVisitor(fromSql);
-        return new MySqlBulkCreateDuplicateKeyUpdate<TTarget>(instance.DbContext, visitor);
-    }
-    #endregion     
+    #endregion
 
     #region Returnning
     public static IResultCommand<TResult> Returning<TResult>(this IContinuedCreate instance, string fieldNames)
@@ -145,22 +139,7 @@ public static class MySqlExtensions
         var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
         dialectVisitor.Returning(fieldsSelector);
         return dialectVisitor.OrmProvider.NewBulkResultCreated<TResult>(instance.DbContext, instance.Visitor);
-    }
-
-    public static IBulkResultCommand<TResult> Returning<TResult>(this IFromCommand instance, string fieldNames)
-    {
-        var sql = instance.Visitor.BuildCommandSql(false, out _);
-        var visitor = instance.NewCreateVisitor(sql) as MySqlCreateVisitor;
-        visitor.Returning(fieldNames);
-        return visitor.OrmProvider.NewBulkResultCreated<TResult>(instance.DbContext, visitor);
-    }
-    public static IBulkResultCommand<TResult> Returning<TTarget, TResult>(this IFromCommand<TTarget> instance, Expression<Func<TTarget, TResult>> fieldsSelector)
-    {
-        var sql = instance.Visitor.BuildCommandSql(false, out _);
-        var visitor = instance.NewCreateVisitor(sql) as MySqlCreateVisitor;
-        visitor.Returning(fieldsSelector);
-        return visitor.OrmProvider.NewBulkResultCreated<TResult>(instance.DbContext, visitor);
-    }
+    } 
 
     public static IBulkResultCommand<TResult> Returning<TResult>(this IDelete instance, string fieldNames)
     {

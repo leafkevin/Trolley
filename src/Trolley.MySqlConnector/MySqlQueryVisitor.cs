@@ -24,8 +24,8 @@ public class MySqlQueryVisitor : QueryVisitor
         builder.Append($" {this.GetFormatTableName(this.Tables[0])} (");
         int index = 0;
         //如果ReaderFields没有设置，通常是从Query中来的，ReaderFields是从Query中获取的
-        if (this.ReaderFields == null && this.IsFromQuery)
-            this.ReaderFields = this.Tables[1].Fields;
+        //if (this.ReaderFields == null && this.IsFromQuery)
+        //    this.ReaderFields = this.Tables[1].Fields;
         foreach (var readerField in this.ReaderFields)
         {
             //Union后，如果没有select语句时，通常实体类型或是select分组对象

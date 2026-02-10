@@ -27,6 +27,7 @@
 	  <Compile Remove="MySqlContinuedCreate.cs" />
 	  <Compile Remove="MySqlContinuedUpdate.cs" />
 	  <Compile Remove="MySqlCreate.cs" />
+	  <Compile Remove="MySqlFromCommand.cs" />
 	</ItemGroup>
 	<ItemGroup>
 		<None Include="README.md" Pack="true" PackagePath="\" />

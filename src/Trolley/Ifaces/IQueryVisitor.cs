@@ -49,8 +49,8 @@ public interface IQueryVisitor : ICloneable, IDisposable
     string AggFieldAlias { get; set; }
     List<TableSegment> ShardingTables { get; set; }
     string ShardingTableJointMark { get; set; }
-    bool IsFromQuery { get; set; }
-    bool IsFromCommand { get; set; }
+    //bool IsFromQuery { get; set; }
+    //bool IsFromCommand { get; set; }
     bool IsNeedPaging { get; set; }
     bool HasAggFields { get; set; }
 

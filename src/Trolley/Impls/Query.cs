@@ -182,6 +182,24 @@ public class QueryBase : QueryInternal, IQueryBase
         return await this.DbContext.QueryScalarAsync<TTarget>(this.Visitor, cancellationToken);
     }
     #endregion
+
+    #region NewCreateVisitor
+    public virtual ICreateVisitor NewCreateVisitor()
+    {
+        var entityType = this.Visitor.Tables[0].EntityType;
+        var createVisiter = this.OrmProvider.NewCreateVisitor(entityType, this.DbContext, this.Visitor.TableAsStart);
+        createVisiter.Tables = this.Visitor.Tables;
+        createVisiter.DbParameters = this.Visitor.DbParameters;
+        createVisiter.RefQueries = this.Visitor.RefQueries;
+        createVisiter.ShardingTables = this.Visitor.ShardingTables;
+        createVisiter.RefTableAliases = this.Visitor.RefTableAliases;
+        createVisiter.IsRecursive = this.Visitor.IsRecursive;
+        createVisiter.CteQueryObj = this.Visitor.CteQueryObj;
+        createVisiter.RefFrom = this;
+        createVisiter.FromSql = this.Visitor.BuildCommandSql(true, out _);
+        return createVisiter;
+    }
+    #endregion
 }
 public class Query<T> : QueryBase, IQuery<T>
 {
@@ -675,6 +693,33 @@ public class Query<T> : QueryBase, IQuery<T>
         return list.ToDictionary(keySelector, valueSelector);
     }
     #endregion
+
+    #region ToCreate
+    public virtual IFromCreated<TEntity> ToCreate<TEntity>()
+    {
+        Expression<Func<T, T>> defaultExpr = f => f;
+        this.Visitor.SelectDefault(defaultExpr);
+        var createVisitor = this.NewCreateVisitor();
+        return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
+    }
+    /// <summary>
+    /// 生成插入数据的查询构造器，fieldsSelector参数指定要插入的字段，未指定的字段将使用默认值，fieldsSelector表达式支持匿名对象和实体对象两种形式，例如：
+    /// </summary>
+    /// <typeparam name="TEntity"></typeparam>
+    /// <param name="fieldsSelector"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentNullException"></exception>
+    public virtual IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T, object>> fieldsSelector)
+    {
+        if (fieldsSelector == null)
+            throw new ArgumentNullException(nameof(fieldsSelector));
+
+        this.SelectInternal(fieldsSelector);
+        var createVisitor = this.NewCreateVisitor();
+        return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
+    }
+    #endregion
+
 
     #region AsCteTable
     public virtual ICteQuery<T> AsCteTable(string tableName)

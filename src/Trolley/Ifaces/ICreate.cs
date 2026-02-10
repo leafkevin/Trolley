@@ -154,10 +154,73 @@ public interface IIdentitiedCreated : ICreated
     Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default);
     #endregion 
 }
+public interface IFromCreated : ICreated
+{
+    #region Sharding
+    /// <summary>
+    /// 手动指定分表名，如：.UseTable("sys_order_202001")
+    /// </summary>
+    /// <param name="tableName">完整的表名，如：sys_order_202001，按月分表</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreated UseTable(string tableName);
+    /// <summary>
+    /// 手动指定分表规则参数值，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// </summary>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreated UseTableBy(params object[] fieldValues);
+    /// <summary>
+    /// 手动指定分表名获取委托，执行委托获取分表名，插入对象的值自动插入对应分表中。参数是插入对象的值，返回值是分表名，如：.UseTable(insertObj =&gt; $"sys_user_{((User)insertObj).CreatedAt:yyyyMM}")
+    /// </summary>
+    /// <param name="tableNameGetter">分表名获取委托</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreated UseTable(Func<object, string> tableNameGetter);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreated UseTableSchema(string tableSchema);
+    #endregion
+}
+public interface IFromCreated<TEntity> : IFromCreated
+{
+    #region Sharding
+    /// <summary>
+    /// 手动指定分表名，如：.UseTable("sys_order_202001")
+    /// </summary>
+    /// <param name="tableName">完整的表名，如：sys_order_202001，按月分表</param>
+    /// <returns>返回插入对象</returns>
+    new IFromCreated<TEntity> UseTable(string tableName);
+    /// <summary>
+    /// 手动指定分表规则参数值，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// </summary>
+    /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
+    /// <returns>返回插入对象</returns>
+    new IFromCreated<TEntity> UseTableBy(params object[] fieldValues);
+    /// <summary>
+    /// 手动指定分表名获取委托，执行委托获取分表名，插入对象的值自动插入对应分表中。参数是插入对象的值，返回值是分表名，如：.UseTable(insertObj =&gt; $"sys_user_{((User)insertObj).CreatedAt:yyyyMM}")
+    /// </summary>
+    /// <param name="tableNameGetter">分表名获取委托</param>
+    /// <returns>返回插入对象</returns>
+    new IFromCreated<TEntity> UseTable(Func<object, string> tableNameGetter);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    new IFromCreated<TEntity> UseTableSchema(string tableSchema);
+    #endregion
+}
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">要插入的实体类型</typeparam>
 public interface IContinuedCreate : IIdentitiedCreated
 {
     #region WithBy
@@ -302,8 +365,6 @@ public interface IBulkResultCommand<TResult>
     string ToSql(out List<IDbDataParameter> dbParameters);
     #endregion
 }
-
-
 /// <summary>
 /// 插入数据
 /// </summary>
@@ -370,92 +431,91 @@ public interface ICreate<TEntity> : ICreate
     /// <returns>返回插入对象</returns>
     new IBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500);
     #endregion
+    //#region From
+    ///// <summary>
+    ///// 从表T中查询数据创建子查询对象，如：
+    ///// <code>
+    ///// repository.From&lt;Menu&gt;() SQL:FROM `sys_menu`
+    ///// </code>
+    ///// </summary>
+    ///// <typeparam name="T">实体类型</typeparam>
+    ///// </param>
+    ///// <returns>返回查询对象</returns>
+    //IFromCommand<T> From<T>();
+    ///// <summary>
+    ///// 使用2个表创建子查询对象
+    ///// </summary>
+    ///// <typeparam name="T1">表T1实体类型</typeparam>
+    ///// <typeparam name="T2">表T2实体类型</typeparam>
+    ///// <returns>返回查询对象</returns>
+    //IFromCommand<T1, T2> From<T1, T2>();
+    ///// <summary>
+    ///// 使用3个表创建子查询对象
+    ///// </summary>
+    ///// <typeparam name="T1">表T1实体类型</typeparam>
+    ///// <typeparam name="T2">表T2实体类型</typeparam>
+    ///// <typeparam name="T3">表T3实体类型</typeparam>
+    ///// <returns>返回查询对象</returns>
+    //IFromCommand<T1, T2, T3> From<T1, T2, T3>();
+    ///// <summary>
+    ///// 使用4个表创建子查询对象
+    ///// </summary>
+    ///// <typeparam name="T1">表T1实体类型</typeparam>
+    ///// <typeparam name="T2">表T2实体类型</typeparam>
+    ///// <typeparam name="T3">表T3实体类型</typeparam>
+    ///// <typeparam name="T4">表T4实体类型</typeparam>
+    ///// <returns>返回查询对象</returns>
+    //IFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>();
+    ///// <summary>
+    ///// 使用5个表创建子查询对象
+    ///// </summary>
+    ///// <typeparam name="T1">表T1实体类型</typeparam>
+    ///// <typeparam name="T2">表T2实体类型</typeparam>
+    ///// <typeparam name="T3">表T3实体类型</typeparam>
+    ///// <typeparam name="T4">表T4实体类型</typeparam>
+    ///// <typeparam name="T5">表T5实体类型</typeparam>
+    ///// <returns>返回查询对象</returns>
+    //IFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>();
+    ///// <summary>
+    ///// 使用6个表创建子查询对象
+    ///// </summary>
+    ///// <typeparam name="T1">表T1实体类型</typeparam>
+    ///// <typeparam name="T2">表T2实体类型</typeparam>
+    ///// <typeparam name="T3">表T3实体类型</typeparam>
+    ///// <typeparam name="T4">表T4实体类型</typeparam>
+    ///// <typeparam name="T5">表T5实体类型</typeparam>
+    ///// <typeparam name="T6">表T6实体类型</typeparam>
+    ///// <returns>返回查询对象</returns>
+    //IFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>();
+    //#endregion
 
-    #region From
-    /// <summary>
-    /// 从表T中查询数据创建子查询对象，如：
-    /// <code>
-    /// repository.From&lt;Menu&gt;() SQL:FROM `sys_menu`
-    /// </code>
-    /// </summary>
-    /// <typeparam name="T">实体类型</typeparam>
-    /// </param>
-    /// <returns>返回查询对象</returns>
-    IFromCommand<T> From<T>();
-    /// <summary>
-    /// 使用2个表创建子查询对象
-    /// </summary>
-    /// <typeparam name="T1">表T1实体类型</typeparam>
-    /// <typeparam name="T2">表T2实体类型</typeparam>
-    /// <returns>返回查询对象</returns>
-    IFromCommand<T1, T2> From<T1, T2>();
-    /// <summary>
-    /// 使用3个表创建子查询对象
-    /// </summary>
-    /// <typeparam name="T1">表T1实体类型</typeparam>
-    /// <typeparam name="T2">表T2实体类型</typeparam>
-    /// <typeparam name="T3">表T3实体类型</typeparam>
-    /// <returns>返回查询对象</returns>
-    IFromCommand<T1, T2, T3> From<T1, T2, T3>();
-    /// <summary>
-    /// 使用4个表创建子查询对象
-    /// </summary>
-    /// <typeparam name="T1">表T1实体类型</typeparam>
-    /// <typeparam name="T2">表T2实体类型</typeparam>
-    /// <typeparam name="T3">表T3实体类型</typeparam>
-    /// <typeparam name="T4">表T4实体类型</typeparam>
-    /// <returns>返回查询对象</returns>
-    IFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>();
-    /// <summary>
-    /// 使用5个表创建子查询对象
-    /// </summary>
-    /// <typeparam name="T1">表T1实体类型</typeparam>
-    /// <typeparam name="T2">表T2实体类型</typeparam>
-    /// <typeparam name="T3">表T3实体类型</typeparam>
-    /// <typeparam name="T4">表T4实体类型</typeparam>
-    /// <typeparam name="T5">表T5实体类型</typeparam>
-    /// <returns>返回查询对象</returns>
-    IFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>();
-    /// <summary>
-    /// 使用6个表创建子查询对象
-    /// </summary>
-    /// <typeparam name="T1">表T1实体类型</typeparam>
-    /// <typeparam name="T2">表T2实体类型</typeparam>
-    /// <typeparam name="T3">表T3实体类型</typeparam>
-    /// <typeparam name="T4">表T4实体类型</typeparam>
-    /// <typeparam name="T5">表T5实体类型</typeparam>
-    /// <typeparam name="T6">表T6实体类型</typeparam>
-    /// <returns>返回查询对象</returns>
-    IFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>();
-    #endregion
-
-    #region FromQuery
-    /// <summary>
-    /// 使用子查询多条数据插入，参数subQuery也可以是CTE表，如：
-    /// <code>
-    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// repository.Create&lt;Menu&gt;().FromQuery(subQuery)
-    /// SQL: INSERT INTO `sys_menu` SELECT ... FROM ( ... )
-    /// </code>
-    /// </summary>
-    /// <typeparam name="T">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
-    /// <returns>返回查询对象</returns>
-    IFromCommand<T> FromQuery<T>(IQuery<T> subQuery);
-    /// <summary>
-    /// 使用子查询多条数据插入，参数subQuery也可以是CTE表，如：
-    /// <code>
-    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// repository.Create&lt;Menu&gt;(f =&gt; f.UseQuery(subQuery)).Select( ... )
-    /// repository.Create&lt;Menu&gt;(f =&gt; f.From&lt;Page, Menu&gt;('o').Where(...)...)
-    /// SQL: INSERT INTO `sys_menu` SELECT ... FROM ( ... )
-    /// </code>
-    /// </summary>
-    /// <typeparam name="T">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询表达式</param>
-    /// <returns>返回查询对象</returns>
-    IFromCommand<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
-    #endregion
+    //#region FromQuery
+    ///// <summary>
+    ///// 使用子查询多条数据插入，参数subQuery也可以是CTE表，如：
+    ///// <code>
+    ///// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    ///// repository.Create&lt;Menu&gt;().FromQuery(subQuery)
+    ///// SQL: INSERT INTO `sys_menu` SELECT ... FROM ( ... )
+    ///// </code>
+    ///// </summary>
+    ///// <typeparam name="T">子查询返回的实体类型</typeparam>
+    ///// <param name="subQuery">子查询</param>
+    ///// <returns>返回查询对象</returns>
+    //IFromCommand<T> FromQuery<T>(IQuery<T> subQuery);
+    ///// <summary>
+    ///// 使用子查询多条数据插入，参数subQuery也可以是CTE表，如：
+    ///// <code>
+    ///// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    ///// repository.Create&lt;Menu&gt;(f =&gt; f.UseQuery(subQuery)).Select( ... )
+    ///// repository.Create&lt;Menu&gt;(f =&gt; f.From&lt;Page, Menu&gt;('o').Where(...)...)
+    ///// SQL: INSERT INTO `sys_menu` SELECT ... FROM ( ... )
+    ///// </code>
+    ///// </summary>
+    ///// <typeparam name="T">子查询返回的实体类型</typeparam>
+    ///// <param name="subQueryExpr">子查询表达式</param>
+    ///// <returns>返回查询对象</returns>
+    //IFromCommand<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
+    //#endregion
 }
 /// <summary>
 /// 插入数据
@@ -486,7 +546,7 @@ public interface IContinuedCreate<TEntity> : IContinuedCreate
     /// <param name="fieldSelector">字段选择表达式，只能选择单个字段</param>
     /// <param name="fieldValue">字段值</param>
     /// <returns>返回插入对象</returns>
-    IContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
+    IContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, object fieldValue);
     /// <summary>
     /// 单个字段插入，可多次调用，condition为true生效，如：.WithBy(f =&gt; f.Gender, Gender.Female)
     /// </summary>
@@ -495,7 +555,7 @@ public interface IContinuedCreate<TEntity> : IContinuedCreate
     /// <param name="fieldSelector">字段选择表达式，只能选择单个字段</param>
     /// <param name="fieldValue">字段值</param>
     /// <returns>返回插入对象</returns>
-    IContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
+    IContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, object fieldValue);
     #endregion
 }
 /// <summary>
@@ -555,7 +615,7 @@ public interface IBulkContinuedCreate<TEntity> : IBulkContinuedCreate
     /// <param name="fieldSelector">字段选择表达式，只能选择单个字段</param>
     /// <param name="fieldValue">字段值</param>
     /// <returns>返回插入对象</returns>
-    IBulkContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
+    IBulkContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, object fieldValue);
     /// <summary>
     /// 单个字段插入，可多次调用，condition为true生效，如：.WithBy(f =&gt; f.Gender, Gender.Female)
     /// </summary>
@@ -564,6 +624,6 @@ public interface IBulkContinuedCreate<TEntity> : IBulkContinuedCreate
     /// <param name="fieldSelector">字段选择表达式，只能选择单个字段</param>
     /// <param name="fieldValue">字段值</param>
     /// <returns>返回插入对象</returns>
-    IBulkContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
+    IBulkContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, object fieldValue);
     #endregion
 }

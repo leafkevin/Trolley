@@ -439,91 +439,108 @@ public class Create<TEntity> : Create, ICreate<TEntity>
 
     #region Sharding
     public new ICreate<TEntity> UseTable(string tableName)
-         => base.UseTable(tableName) as ICreate<TEntity>;
+    {
+        base.UseTable(tableName);
+        return this;
+    }
     public new ICreate<TEntity> UseTableBy(params object[] fieldValues)
-        => base.UseTableBy(fieldValues) as ICreate<TEntity>;
+    {
+        base.UseTableBy(fieldValues);
+        return this;
+    }
     public new ICreate<TEntity> UseTable(Func<object, string> tableNameGetter)
-        => base.UseTable(tableNameGetter) as ICreate<TEntity>;
+    {
+        base.UseTable(tableNameGetter);
+        return this;
+    }
     #endregion
 
     #region UseTableSchema
     public new ICreate<TEntity> UseTableSchema(string tableSchema)
-        => base.UseTableSchema(tableSchema) as ICreate<TEntity>;
+    {
+        base.UseTableSchema(tableSchema);
+        return this;
+    }
     #endregion
 
     #region WithBy
     public new IContinuedCreate<TEntity> WithBy(object insertObj)
-        => base.WithBy(insertObj) as IContinuedCreate<TEntity>;
+    {
+        base.WithBy(insertObj);
+        return this.OrmProvider.NewContinuedCreate<TEntity>(this.DbContext, this.Visitor);
+    }
     #endregion
 
     #region WithBulk
     public new IBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500)
-        => base.WithBulk(insertObjs, bulkCount) as IBulkContinuedCreate<TEntity>;
+    {
+        base.WithBulk(insertObjs, bulkCount);
+        return this.OrmProvider.NewBulkContinuedCreate<TEntity>(this.DbContext, this.Visitor);
+    }
     #endregion
+    //#region From
+    //public IFromCommand<T> From<T>()
+    //{
+    //    var queryVisitor = this.Visitor.CreateQueryVisitor();
+    //    queryVisitor.From('a', typeof(T));
+    //    queryVisitor.IsFromCommand = true;
+    //    return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
+    //}
+    //public IFromCommand<T1, T2> From<T1, T2>()
+    //{
+    //    var queryVisitor = this.Visitor.CreateQueryVisitor();
+    //    queryVisitor.From('a', typeof(T1), typeof(T2));
+    //    queryVisitor.IsFromCommand = true;
+    //    return this.OrmProvider.NewFromCommand<T1, T2>(this.DbContext, queryVisitor);
+    //}
+    //public IFromCommand<T1, T2, T3> From<T1, T2, T3>()
+    //{
+    //    var queryVisitor = this.Visitor.CreateQueryVisitor();
+    //    queryVisitor.From('a', typeof(T1), typeof(T2), typeof(T3));
+    //    queryVisitor.IsFromCommand = true;
+    //    return this.OrmProvider.NewFromCommand<T1, T2, T3>(this.DbContext, queryVisitor);
+    //}
+    //public IFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>()
+    //{
+    //    var queryVisitor = this.Visitor.CreateQueryVisitor();
+    //    queryVisitor.From('a', typeof(T1), typeof(T2), typeof(T3), typeof(T4));
+    //    queryVisitor.IsFromCommand = true;
+    //    return this.OrmProvider.NewFromCommand<T1, T2, T3, T4>(this.DbContext, queryVisitor);
+    //}
+    //public IFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
+    //{
+    //    var queryVisitor = this.Visitor.CreateQueryVisitor();
+    //    queryVisitor.From('a', typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
+    //    queryVisitor.IsFromCommand = true;
+    //    return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5>(this.DbContext, queryVisitor);
+    //}
+    //public IFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
+    //{
+    //    var queryVisitor = this.Visitor.CreateQueryVisitor();
+    //    queryVisitor.From('a', typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
+    //    queryVisitor.IsFromCommand = true;
+    //    return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, T6>(this.DbContext, queryVisitor);
+    //}
+    //#endregion
 
-    #region From
-    public IFromCommand<T> From<T>()
-    {
-        var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.From('a', typeof(T));
-        queryVisitor.IsFromCommand = true;
-        return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
-    }
-    public IFromCommand<T1, T2> From<T1, T2>()
-    {
-        var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.From('a', typeof(T1), typeof(T2));
-        queryVisitor.IsFromCommand = true;
-        return this.OrmProvider.NewFromCommand<T1, T2>(this.DbContext, queryVisitor);
-    }
-    public IFromCommand<T1, T2, T3> From<T1, T2, T3>()
-    {
-        var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.From('a', typeof(T1), typeof(T2), typeof(T3));
-        queryVisitor.IsFromCommand = true;
-        return this.OrmProvider.NewFromCommand<T1, T2, T3>(this.DbContext, queryVisitor);
-    }
-    public IFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>()
-    {
-        var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.From('a', typeof(T1), typeof(T2), typeof(T3), typeof(T4));
-        queryVisitor.IsFromCommand = true;
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4>(this.DbContext, queryVisitor);
-    }
-    public IFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
-    {
-        var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.From('a', typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
-        queryVisitor.IsFromCommand = true;
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5>(this.DbContext, queryVisitor);
-    }
-    public IFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
-    {
-        var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.From('a', typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
-        queryVisitor.IsFromCommand = true;
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, T6>(this.DbContext, queryVisitor);
-    }
-    #endregion
-
-    #region FromQuery
-    public IFromCommand<T> FromQuery<T>(IQuery<T> subQuery)
-    {
-        var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.IsFromCommand = true;
-        queryVisitor.IsFromQuery = true;
-        queryVisitor.UseQuery(typeof(T), subQuery, true);
-        return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
-    }
-    public IFromCommand<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
-    {
-        var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.IsFromCommand = true;
-        queryVisitor.IsFromQuery = true;
-        queryVisitor.UseNewQuery(typeof(T), subQueryExpr, true);
-        return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
-    }
-    #endregion
+    //#region FromQuery
+    //public IFromCommand<T> FromQuery<T>(IQuery<T> subQuery)
+    //{
+    //    var queryVisitor = this.Visitor.CreateQueryVisitor();
+    //    queryVisitor.IsFromCommand = true;
+    //    queryVisitor.IsFromQuery = true;
+    //    queryVisitor.UseQuery(typeof(T), subQuery, true);
+    //    return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
+    //}
+    //public IFromCommand<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
+    //{
+    //    var queryVisitor = this.Visitor.CreateQueryVisitor();
+    //    queryVisitor.IsFromCommand = true;
+    //    queryVisitor.IsFromQuery = true;
+    //    queryVisitor.UseNewQuery(typeof(T), subQueryExpr, true);
+    //    return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
+    //}
+    //#endregion
 }
 public class ContinuedCreate<TEntity> : ContinuedCreate, IContinuedCreate<TEntity>
 {
@@ -534,17 +551,23 @@ public class ContinuedCreate<TEntity> : ContinuedCreate, IContinuedCreate<TEntit
 
     #region WithBy
     public new IContinuedCreate<TEntity> WithBy(string fieldName, object fieldValue)
-        => base.WithBy(fieldName, fieldValue) as IContinuedCreate<TEntity>;
+    {
+        base.WithBy(fieldName, fieldValue);
+        return this;
+    }
     public new IContinuedCreate<TEntity> WithBy(bool condition, string fieldName, object fieldValue)
-        => base.WithBy(condition, fieldName, fieldValue) as IContinuedCreate<TEntity>;
-    public virtual IContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    {
+        base.WithBy(condition, fieldName, fieldValue);
+        return this;
+    }
+    public virtual IContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, object fieldValue)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
         this.Visitor.WithByFieldExpr(fieldSelector, fieldValue);
         return this;
     }
-    public virtual IContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    public virtual IContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, object fieldValue)
     {
         if (!condition) return this;
         return this.WithBy(fieldSelector, fieldValue);
@@ -560,25 +583,102 @@ public class BulkContinuedCreate<TEntity> : BulkContinuedCreate, IBulkContinuedC
 
     #region WithBy
     public new IBulkContinuedCreate<TEntity> WithBy(object insertObj)
-        => base.WithBy(insertObj) as IBulkContinuedCreate<TEntity>;
+    {
+        base.WithBy(insertObj);
+        return this;
+    }
     public new IBulkContinuedCreate<TEntity> WithBy(bool condition, object insertObj)
-        => base.WithBy(condition, insertObj) as IBulkContinuedCreate<TEntity>;
-
+    {
+        base.WithBy(condition, insertObj);
+        return this;
+    }
     public new IBulkContinuedCreate<TEntity> WithBy(string fieldName, object fieldValue)
-        => base.WithBy(fieldName, fieldValue) as IBulkContinuedCreate<TEntity>;
+    {
+        base.WithBy(fieldName, fieldValue);
+        return this;
+    }
     public new IBulkContinuedCreate<TEntity> WithBy(bool condition, string fieldName, object fieldValue)
-        => base.WithBy(condition, fieldName, fieldValue) as IBulkContinuedCreate<TEntity>;
-    public IBulkContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    {
+        base.WithBy(condition, fieldName, fieldValue);
+        return this;
+    }
+    public IBulkContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, object fieldValue)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
         this.Visitor.WithByFieldExpr(fieldSelector, fieldValue);
         return this;
     }
-    public IBulkContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    public IBulkContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, object fieldValue)
     {
         if (!condition) return this;
         return this.WithBy(fieldSelector, fieldValue);
+    }
+    #endregion
+}
+public class FromCreated : Created, IFromCreated
+{
+    #region Constructor
+    public FromCreated(DbContext dbContext, ICreateVisitor visitor)
+        : base(dbContext, visitor) { }
+    #endregion
+
+    #region Sharding
+    public virtual IFromCreated UseTable(string tableName)
+    {
+        this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, false, tableName);
+        return this;
+    }
+    public virtual IFromCreated UseTableBy(params object[] fieldValues)
+    {
+        this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
+        return this;
+    }
+    public virtual IFromCreated UseTable(Func<object, string> tableNameGetter)
+    {
+        this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, tableNameGetter);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IFromCreated UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+}
+public class FromCreated<TEntity> : FromCreated, IFromCreated<TEntity>
+{
+    #region Constructor
+    public FromCreated(DbContext dbContext, ICreateVisitor visitor)
+        : base(dbContext, visitor) { }
+    #endregion
+
+    #region Sharding
+    public new IFromCreated<TEntity> UseTable(string tableName)
+    {
+        base.UseTable(tableName);
+        return this;
+    }
+    public new IFromCreated<TEntity> UseTableBy(params object[] fieldValues)
+    {
+        base.UseTableBy(fieldValues);
+        return this;
+    }
+    public new IFromCreated<TEntity> UseTable(Func<object, string> tableNameGetter)
+    {
+        base.UseTable(tableNameGetter);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public new IFromCreated<TEntity> UseTableSchema(string tableSchema)
+    {
+        base.UseTableSchema(tableSchema);
+        return this;
     }
     #endregion
 }

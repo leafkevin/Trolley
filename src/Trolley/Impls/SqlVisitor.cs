@@ -41,7 +41,6 @@ public class SqlVisitor : ISqlVisitor
     #region Build Sql时使用，临时状态变量
     public bool IsSelect { get; set; }
     public bool IsWhere { get; set; }
-    public bool IsFromQuery { get; set; }
     public bool IsFromCommand { get; set; }
     public bool IsIncludeMany { get; set; }
     #endregion

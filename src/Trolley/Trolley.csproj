@@ -7,7 +7,7 @@
 		<PackageDescription>一款轻量级高性能的ORM，可以不用写SQL语句，支持多结果集，多命令执行，模型映射，导航属性，CTE，批量插入、批量更新，分库分表，读写分离等，各种复杂SQL场景等。</PackageDescription>
 		<Authors>leaf kevin</Authors>
 		<Copyright>2022 leafkevin</Copyright>
-		<TargetFrameworks>netstandard2.0;netstandard2.1;net6.0;net7.0;net8.0;net9.0</TargetFrameworks>
+		<TargetFrameworks>netstandard2.0;netstandard2.1;net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
 		<Version>2.0.8</Version>
 		<LangVersion>12.0</LangVersion>
 		<PackageTags>orm;trolley</PackageTags>
@@ -24,15 +24,22 @@
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 	<ItemGroup>
-	  <Compile Remove="Dialect\PostgreSql\**" />
-	  <Compile Remove="Dialect\SqlServer\**" />
-	  <EmbeddedResource Remove="Dialect\PostgreSql\**" />
-	  <EmbeddedResource Remove="Dialect\SqlServer\**" />
-	  <None Remove="Dialect\PostgreSql\**" />
-	  <None Remove="Dialect\SqlServer\**" />
+		<Compile Remove="Dialect\PostgreSql\**" />
+		<Compile Remove="Dialect\SqlServer\**" />
+		<EmbeddedResource Remove="Dialect\PostgreSql\**" />
+		<EmbeddedResource Remove="Dialect\SqlServer\**" />
+		<None Remove="Dialect\PostgreSql\**" />
+		<None Remove="Dialect\SqlServer\**" />
+	</ItemGroup>
+	<ItemGroup>
+		<Compile Remove="Ifaces\IFromCommand.cs" />
+		<Compile Remove="Ifaces\IGroupingCommand.cs" />
+		<Compile Remove="Impls\FromCommand.cs" />
+		<Compile Remove="Impls\GroupingCommand.cs" />
 	</ItemGroup>
 	<ItemGroup>
 		<None Include="README.md" Pack="true" PackagePath="\" />
+		<PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

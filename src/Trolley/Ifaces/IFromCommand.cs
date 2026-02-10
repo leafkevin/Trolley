@@ -955,7 +955,7 @@ public interface IFromCommand<T1, T2> : IFromCommand
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, TTarget>> specialMemberSelector = null);
-    #endregion    
+    #endregion
 }
 /// <summary>
 /// 多表T1, T2, T3查询
@@ -2464,5 +2464,5 @@ public interface IFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> specialMemberSelector = null);
-    #endregion    
+    #endregion
 }

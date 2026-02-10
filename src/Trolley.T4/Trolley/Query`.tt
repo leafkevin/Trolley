@@ -344,5 +344,17 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     public virtual async Task<TField> MinAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => await base.MinInternalAsync<TField>(fieldExpr, cancellationToken);
     #endregion
+
+    #region ToCreate
+    public virtual IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<<#=tables#>, object>> fieldsSelector)
+    {
+        if (fieldsSelector == null)
+            throw new ArgumentNullException(nameof(fieldsSelector));
+
+        this.SelectInternal(fieldsSelector);
+        var createVisitor = this.NewCreateVisitor();
+        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
+    }
+    #endregion
 }
 <#  }#>

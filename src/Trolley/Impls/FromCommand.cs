@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public class FromCommand : QueryInternal, IFromCommand
+public class FromCommand : QueryInternal
 {
     #region Constructor
     public FromCommand(DbContext dbContext, IQueryVisitor visitor)
@@ -50,7 +50,7 @@ public class FromCommand : QueryInternal, IFromCommand
     public void Dispose() => this.Visitor.Dispose();
     #endregion
 }
-public class FromCommand<T> : FromCommand, IFromCommand<T>
+public class FromCommand<T> : FromCommand 
 {
     #region Constructor
     public FromCommand(DbContext dbContext, IQueryVisitor visitor)
@@ -348,7 +348,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         if (isNeedClose) await connection.CloseAsync();
         return result;
     }
-    #endregion   
+    #endregion
 }
 public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
 {
