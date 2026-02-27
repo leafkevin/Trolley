@@ -14,10 +14,12 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     public bool HasWhere { get; protected set; }
     public string OutputSql { get; set; }
 
-    public DeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
+    public DeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
     {
         this.DbContext = dbContext;
         this.TableAsStart = tableAsStart;
+        this.Command = command ?? dbContext.OrmProvider.CreateCommand();
+        this.DbParameters = this.Command.Parameters;
         this.Tables = new()
         {
             new TableSegment
@@ -25,7 +27,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                 TableType = TableType.Entity,
                 EntityType = entityType,
                 AliasName = "a",
-                Mapper = this.MapProvider.GetEntityMap(entityType)
+                Mapper = this.EntityMapProvider.GetEntityMap(entityType)
             }
         };
         if (this.TryGetTableShardingInfo(entityType, TableShardingUsageMode.WriteOnly, out var tableShardingInfo))

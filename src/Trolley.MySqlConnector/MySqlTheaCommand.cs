@@ -44,7 +44,7 @@ class MySqlTheaCommand : ITheaCommand
     public Action<CommandEventArgs> OnExecuting { get; set; }
     public Action<CommandCompletedEventArgs> OnExecuted { get; set; }
 
-    public MySqlTheaCommand(MySqlCommand command, ITheaConnection connection, ITheaTransaction transaction)
+    public MySqlTheaCommand(MySqlCommand command, ITheaConnection connection = null, ITheaTransaction transaction = null)
     {
         this.CommandId = Guid.NewGuid().ToString("N");
         this.command = command;

@@ -7,15 +7,16 @@ using System.Text;
 
 namespace Trolley;
 
-public interface IUpdateVisitor : IDisposable
+public interface IUpdateVisitor : ICommandContext, IDisposable
 {
-    IDataParameterCollection DbParameters { get; set; }
+    DbContext DbContext { get; }
     IOrmProvider OrmProvider { get; }
-    IEntityMapProvider MapProvider { get; }
-    bool HasWhere { get; }
+    IEntityMapProvider EntityMapProvider { get; }
+    List<TableSegment> Tables { get; set; }
     ITableShardingProvider ShardingProvider { get; }
+
+    bool HasWhere { get; }
     ActionMode ActionMode { get; set; }
-    List<TableSegment> Tables { get; }
     List<TableSegment> ShardingTables { get; set; }
 
     string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields);
@@ -53,5 +54,6 @@ public interface IUpdateVisitor : IDisposable
 
     DataTable ToDataTable(string tableName, IEnumerable entities, List<MemberMap> memberMappers, List<Func<object, object>> valueGetters);
     (List<MemberMap>, List<Func<object, object>>) GetRefMemberMappers(Type parameterType, EntityMap entityMapper, object parameterSample, bool isUpdate = false);
+
     bool IsMemberVisit(Expression expr);
 }

@@ -37,11 +37,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public int PageSize => this.limit ?? 0;
     public bool IsNeedPaging { get; set; }
 
-    public QueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
+    public QueryVisitor(DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
     {
         this.DbContext = dbContext;
         this.TableAsStart = tableAsStart;
-        this.DbParameters = dbParameters ?? new TheaDbParameterCollection();
+        this.Command = command ?? dbContext.OrmProvider.CreateCommand();
+        this.DbParameters = this.Command.Parameters;
         this.IsNeedTableAlias = true;
     }
     public virtual string BuildSql(bool isBuildCteSql, out List<SqlFieldSegment> readerFields)
@@ -587,7 +588,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var tableSegment = new TableSegment
             {
                 EntityType = entityType,
-                Mapper = this.MapProvider.GetEntityMap(entityType),
+                Mapper = this.EntityMapProvider.GetEntityMap(entityType),
                 AliasName = $"{(char)tableIndex}",
                 Path = $"{(char)tableIndex}",
                 TableType = TableType.Entity,
@@ -607,7 +608,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var tableSegment = new TableSegment
             {
                 EntityType = entityType,
-                Mapper = this.MapProvider.GetEntityMap(entityType),
+                Mapper = this.EntityMapProvider.GetEntityMap(entityType),
                 AliasName = $"{(char)(tableIndex++)}",
                 Path = $"{(char)tableIndex}",
                 TableType = TableType.Entity,
@@ -1019,7 +1020,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         while (memberExprs.TryPop(out var currentExpr))
         {
             //多级成员访问，fromSegment.Mapper可能为null，如：f.Order.Seller.Company
-            fromSegment.Mapper ??= this.MapProvider.GetEntityMap(fromType);
+            fromSegment.Mapper ??= this.EntityMapProvider.GetEntityMap(fromType);
             var memberMapper = fromSegment.Mapper.GetMemberMap(currentExpr.Member.Name);
 
             if (!memberMapper.IsNavigation)
@@ -1028,7 +1029,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             //实体类型是成员的声明类型，映射类型不一定是成员的声明类型，一定是成员的Map类型
             //如：成员是UserInfo类型，对应的模型是User类型，UserInfo类型只是User类型的一个子集，成员名称和映射关系完全一致
             var entityType = memberMapper.NavigationType;
-            var entityMapper = this.MapProvider.GetEntityMap(entityType, memberMapper.MapType);
+            var entityMapper = this.EntityMapProvider.GetEntityMap(entityType, memberMapper.MapType);
             if (entityMapper.KeyMembers.Count > 1)
                 throw new Exception($"导航属性表，暂时不支持多个主键字段，实体：{memberMapper.MapType.FullName}");
 
@@ -1453,7 +1454,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 existsMembers = this.ReaderFields.Select(f => f.TargetMember.Name).ToList();
                 isExistsFields = true;
             }
-            var targetMembers = RepositoryHelper.GetMembers(targetType).FindAll(f => f.CanWrite());
+            var targetMembers = RepositoryHelper.GetMembers(targetType).FindAll(f => f.CanWrite);
             foreach (var memberInfo in targetMembers)
             {
                 if (isExistsFields && existsMembers.Contains(memberInfo.Name)) continue;
@@ -1464,7 +1465,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else
         {
             this.ReaderFields = new();
-            var targetMembers = RepositoryHelper.GetMembers(targetType).FindAll(f => f.CanWrite());
+            var targetMembers = RepositoryHelper.GetMembers(targetType).FindAll(f => f.CanWrite);
             foreach (var memberInfo in targetMembers)
             {
                 if (this.TryFindReaderField(memberInfo, out var readerField))

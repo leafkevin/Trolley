@@ -162,22 +162,8 @@ partial class BaseOrmProvider
     public virtual IDeleted NewDeleted(DbContext dbContext, IDeleteVisitor visitor) => new Deleted(dbContext);
     public virtual IBulkResultCommand<TResult> NewResultDeleted<TResult>(DbContext dbContext, IDeleteVisitor visitor) => new ResultDeleted<TResult>(dbContext, visitor);
 
-    public virtual IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null) => new QueryVisitor(dbContext, tableAsStart, dbParameters);
-    public virtual ICreateVisitor NewCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a') => new CreateVisitor(entityType, dbContext, tableAsStart);
-    public virtual ICreateVisitor NewCreateVisitor(Type entityType, DbContext dbContext, IQueryVisitor queryVisitor, string fromSql = null)
-    {
-        var createVisitor = new CreateVisitor(entityType, dbContext, queryVisitor.TableAsStart);
-        createVisitor.Tables = queryVisitor.Tables;
-        createVisitor.DbParameters = queryVisitor.DbParameters;
-        createVisitor.RefQueries = queryVisitor.RefQueries;
-        createVisitor.ShardingTables = queryVisitor.ShardingTables;
-        createVisitor.RefTableAliases = queryVisitor.RefTableAliases;
-        createVisitor.IsRecursive = queryVisitor.IsRecursive;
-        createVisitor.CteQueryObj = queryVisitor.CteQueryObj;
-        createVisitor.RefFrom = this;
-        createVisitor.FromSql = fromSql;
-        return createVisitor;
-    }
-    public virtual IUpdateVisitor NewUpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a') => new UpdateVisitor(entityType, dbContext, tableAsStart);
-    public virtual IDeleteVisitor NewDeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a') => new DeleteVisitor(entityType, dbContext, tableAsStart);
+    public virtual IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null) => new QueryVisitor(dbContext, tableAsStart, command);
+    public virtual ICreateVisitor NewCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null) => new CreateVisitor(entityType, dbContext, tableAsStart, command);
+    public virtual IUpdateVisitor NewUpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null) => new UpdateVisitor(entityType, dbContext, tableAsStart, command);
+    public virtual IDeleteVisitor NewDeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null) => new DeleteVisitor(entityType, dbContext, tableAsStart, command);
 }

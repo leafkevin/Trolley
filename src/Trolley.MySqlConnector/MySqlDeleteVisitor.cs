@@ -9,8 +9,8 @@ public class MySqlDeleteVisitor : DeleteVisitor
 {
     private MySqlProvider dialectProvider => this.OrmProvider as MySqlProvider;
 
-    public MySqlDeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
-        : base(entityType, dbContext, tableAsStart) { }
+    public MySqlDeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
+        : base(entityType, dbContext, tableAsStart, command) { }
 
     public override void UseTableSchema(bool isIncludeMany, string tableSchema)
     {

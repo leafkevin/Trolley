@@ -6,11 +6,10 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-public interface IMultipleQuery : IDisposable
+public interface IMultipleQuery : ICommandContext, IDisposable
 {
     #region Properties
     DbContext DbContext { get; }
-    IDbCommand Command { get; }
     List<ReaderAfter> ReaderAfters { get; }
     #endregion
 

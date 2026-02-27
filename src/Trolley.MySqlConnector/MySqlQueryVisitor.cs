@@ -11,8 +11,8 @@ public class MySqlQueryVisitor : QueryVisitor
 {
     public bool IsUseIgnoreInto { get; set; }
 
-    public MySqlQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
-        : base(dbContext, tableAsStart, dbParameters) { }
+    public MySqlQueryVisitor(DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
+        : base(dbContext, tableAsStart, command) { }
 
     public override string BuildCommandSql(bool isBuildCteSql, out IDataParameterCollection dbParameters)
     {

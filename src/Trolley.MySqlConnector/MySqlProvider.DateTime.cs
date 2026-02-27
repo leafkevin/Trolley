@@ -371,52 +371,52 @@ partial class MySqlProvider
                             formatArgument = $"'{formatSegment.Value}'";
 
                             if (formatArgument.Contains("mm"))
-                                formatArgument = formatArgument.NextReplace("mm", "%i");
-                            else formatArgument = formatArgument.NextReplace("m", "%i");
+                                formatArgument = formatArgument.Replace("mm", "%i");
+                            else formatArgument = formatArgument.Replace("m", "%i");
 
                             if (formatArgument.Contains("yyyy"))
-                                formatArgument = formatArgument.NextReplace("yyyy", "%Y");
+                                formatArgument = formatArgument.Replace("yyyy", "%Y");
                             else if (formatArgument.Contains("yyy"))
-                                formatArgument = formatArgument.NextReplace("yyy", "%Y");
+                                formatArgument = formatArgument.Replace("yyy", "%Y");
                             else if (formatArgument.Contains("yy"))
-                                formatArgument = formatArgument.NextReplace("yy", "%y");
+                                formatArgument = formatArgument.Replace("yy", "%y");
 
                             if (formatArgument.Contains("MMMM"))
-                                formatArgument = formatArgument.NextReplace("MMMM", "%M");
+                                formatArgument = formatArgument.Replace("MMMM", "%M");
                             else if (formatArgument.Contains("MMM"))
-                                formatArgument = formatArgument.NextReplace("MMM", "%b");
+                                formatArgument = formatArgument.Replace("MMM", "%b");
                             else if (formatArgument.Contains("MM"))
-                                formatArgument = formatArgument.NextReplace("MM", "%m");
+                                formatArgument = formatArgument.Replace("MM", "%m");
                             else if (formatArgument.Contains("M"))
-                                formatArgument = formatArgument.NextReplace("M", "%c");
+                                formatArgument = formatArgument.Replace("M", "%c");
 
                             if (formatArgument.Contains("dddd"))
-                                formatArgument = formatArgument.NextReplace("dddd", "%W");
+                                formatArgument = formatArgument.Replace("dddd", "%W");
                             else if (formatArgument.Contains("ddd"))
-                                formatArgument = formatArgument.NextReplace("ddd", "%a");
+                                formatArgument = formatArgument.Replace("ddd", "%a");
                             else if (formatArgument.Contains("dd"))
-                                formatArgument = formatArgument.NextReplace("dd", "%d");
+                                formatArgument = formatArgument.Replace("dd", "%d");
                             else if (formatArgument.Contains("d"))
-                                formatArgument = formatArgument.NextReplace("d", "%e");
+                                formatArgument = formatArgument.Replace("d", "%e");
 
                             if (formatArgument.Contains("HH"))
-                                formatArgument = formatArgument.NextReplace("HH", "%H");
+                                formatArgument = formatArgument.Replace("HH", "%H");
                             else if (formatArgument.Contains("H"))
-                                formatArgument = formatArgument.NextReplace("H", "%k");
+                                formatArgument = formatArgument.Replace("H", "%k");
                             else if (formatArgument.Contains("hh"))
-                                formatArgument = formatArgument.NextReplace("hh", "%h");
+                                formatArgument = formatArgument.Replace("hh", "%h");
                             else if (formatArgument.Contains("h"))
-                                formatArgument = formatArgument.NextReplace("h", "%l");
+                                formatArgument = formatArgument.Replace("h", "%l");
 
                             if (formatArgument.Contains("ss"))
-                                formatArgument = formatArgument.NextReplace("ss", "%s");
+                                formatArgument = formatArgument.Replace("ss", "%s");
                             else if (formatArgument.Contains("s"))
-                                formatArgument = formatArgument.NextReplace("s", "%s");
+                                formatArgument = formatArgument.Replace("s", "%s");
 
                             if (formatArgument.Contains("tt"))
-                                formatArgument = formatArgument.NextReplace("tt", "%p");
+                                formatArgument = formatArgument.Replace("tt", "%p");
                             else if (formatArgument.Contains("t"))
-                                formatArgument = formatArgument.NextReplace("t", "%p");
+                                formatArgument = formatArgument.Replace("t", "%p");
                         }
                         else formatArgument = visitor.GetQuotedValue(formatSegment);
                         var valueArgument = visitor.GetQuotedValue(valueSegment);
@@ -698,52 +698,52 @@ partial class MySqlProvider
 
                                 //分钟
                                 if (formatArgument.Contains("mm"))
-                                    formatArgument = formatArgument.NextReplace("mm", "%i");
-                                else formatArgument = formatArgument.NextReplace("m", "%i");
+                                    formatArgument = formatArgument.Replace("mm", "%i");
+                                else formatArgument = formatArgument.Replace("m", "%i");
 
                                 if (formatArgument.Contains("yyyy"))
-                                    formatArgument = formatArgument.NextReplace("yyyy", "%Y");
+                                    formatArgument = formatArgument.Replace("yyyy", "%Y");
                                 else if (formatArgument.Contains("yyy"))
-                                    formatArgument = formatArgument.NextReplace("yyy", "%Y");
+                                    formatArgument = formatArgument.Replace("yyy", "%Y");
                                 else if (formatArgument.Contains("yy"))
-                                    formatArgument = formatArgument.NextReplace("yy", "%y");
+                                    formatArgument = formatArgument.Replace("yy", "%y");
 
                                 if (formatArgument.Contains("MMMM"))
-                                    formatArgument = formatArgument.NextReplace("MMMM", "%M");
+                                    formatArgument = formatArgument.Replace("MMMM", "%M");
                                 else if (formatArgument.Contains("MMM"))
-                                    formatArgument = formatArgument.NextReplace("MMM", "%b");
+                                    formatArgument = formatArgument.Replace("MMM", "%b");
                                 else if (formatArgument.Contains("MM"))
-                                    formatArgument = formatArgument.NextReplace("MM", "%m");
+                                    formatArgument = formatArgument.Replace("MM", "%m");
                                 else if (formatArgument.Contains("M"))
-                                    formatArgument = formatArgument.NextReplace("M", "%c");
+                                    formatArgument = formatArgument.Replace("M", "%c");
 
                                 if (formatArgument.Contains("dddd"))
-                                    formatArgument = formatArgument.NextReplace("dddd", "%W");
+                                    formatArgument = formatArgument.Replace("dddd", "%W");
                                 else if (formatArgument.Contains("ddd"))
-                                    formatArgument = formatArgument.NextReplace("ddd", "%a");
+                                    formatArgument = formatArgument.Replace("ddd", "%a");
                                 else if (formatArgument.Contains("dd"))
-                                    formatArgument = formatArgument.NextReplace("dd", "%d");
+                                    formatArgument = formatArgument.Replace("dd", "%d");
                                 else if (formatArgument.Contains("d"))
-                                    formatArgument = formatArgument.NextReplace("d", "%e");
+                                    formatArgument = formatArgument.Replace("d", "%e");
 
                                 if (formatArgument.Contains("HH"))
-                                    formatArgument = formatArgument.NextReplace("HH", "%H");
+                                    formatArgument = formatArgument.Replace("HH", "%H");
                                 else if (formatArgument.Contains("H"))
-                                    formatArgument = formatArgument.NextReplace("H", "%k");
+                                    formatArgument = formatArgument.Replace("H", "%k");
                                 else if (formatArgument.Contains("hh"))
-                                    formatArgument = formatArgument.NextReplace("hh", "%h");
+                                    formatArgument = formatArgument.Replace("hh", "%h");
                                 else if (formatArgument.Contains("h"))
-                                    formatArgument = formatArgument.NextReplace("h", "%l");
+                                    formatArgument = formatArgument.Replace("h", "%l");
 
                                 if (formatArgument.Contains("ss"))
-                                    formatArgument = formatArgument.NextReplace("ss", "%s");
+                                    formatArgument = formatArgument.Replace("ss", "%s");
                                 else if (formatArgument.Contains("s"))
-                                    formatArgument = formatArgument.NextReplace("s", "%s");
+                                    formatArgument = formatArgument.Replace("s", "%s");
 
                                 if (formatArgument.Contains("tt"))
-                                    formatArgument = formatArgument.NextReplace("tt", "%p");
+                                    formatArgument = formatArgument.Replace("tt", "%p");
                                 else if (formatArgument.Contains("t"))
-                                    formatArgument = formatArgument.NextReplace("t", "%p");
+                                    formatArgument = formatArgument.Replace("t", "%p");
                             }
                             else formatArgument = visitor.GetQuotedValue(formatSegment);
 

@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -10,7 +9,7 @@ using System.Text;
 
 namespace Trolley;
 
-public class SqlVisitor : ISqlVisitor
+public class SqlVisitor : ISqlVisitor, ICommandContext
 {
     private bool isDisposed;
     private static MethodInfo IsNullMethodInfo = typeof(Sql).GetMethods().Where(f => f.Name == nameof(Sql.IsNull) && f.GetParameters().Length == 2).First();
@@ -18,12 +17,13 @@ public class SqlVisitor : ISqlVisitor
     public DbContext DbContext { get; set; }
     public string DbKey => this.DbContext.DbKey;
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
-    public IEntityMapProvider MapProvider => this.DbContext.EntityMapProvider;
+    public IEntityMapProvider EntityMapProvider => this.DbContext.EntityMapProvider;
     public ITableShardingProvider ShardingProvider => this.DbContext.TableShardingProvider;
     public string DefaultTableSchema => this.DbContext.DefaultTableSchema;
     public bool IsConstantParameterized => this.DbContext.IsConstantParameterized;
     public string UserParameterPrefix => this.DbContext.UserParameterPrefix;
 
+    public ITheaCommand Command { get; set; }
     public IDataParameterCollection DbParameters { get; set; }
     public IDataParameterCollection NextDbParameters { get; set; }
     public char TableAsStart { get; set; }
@@ -1176,7 +1176,7 @@ public class SqlVisitor : ISqlVisitor
                             if (this.TableAliases.ContainsKey(aliasName))
                                 continue;
 
-                            var tableMapper = this.MapProvider.GetEntityMap(tableType);
+                            var tableMapper = this.EntityMapProvider.GetEntityMap(tableType);
                             var tableSegment = new TableSegment
                             {
                                 EntityType = tableType,
@@ -2334,7 +2334,7 @@ public class SqlVisitor : ISqlVisitor
     {
         //Union的时候，tableAsStart会传入'a'，表示从'a'开始
         //Join的时候，tableAsStart不传值，使用当前Visitor中的
-        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAsStart, this.DbParameters);
+        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAsStart, this.Command);
         queryVisitor.RefQueries = this.RefQueries;
         queryVisitor.ShardingTables = this.ShardingTables;
         queryVisitor.RefTableAliases = this.RefTableAliases;

@@ -7,17 +7,17 @@ using System.Text;
 
 namespace Trolley;
 
-public class MultipleQuery : IMultipleQuery
+public class MultipleQuery : IMultipleQuery, ICommandContext
 {
     #region Fields
     protected StringBuilder sqlBuilder = new();
     #endregion
 
     #region Properties
-    public DbContext DbContext { get; protected set; }
+    public DbContext DbContext { get; set; }
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
-    public IEntityMapProvider MapProvider => this.DbContext.EntityMapProvider;
-    public IDbCommand Command { get; private set; }
+    public ITheaCommand Command { get; set; }
+    public IDataParameterCollection DbParameters { get; set; }
     public List<ReaderAfter> ReaderAfters { get; private set; }
     #endregion
 
@@ -26,7 +26,8 @@ public class MultipleQuery : IMultipleQuery
     {
         this.DbContext = dbContext;
         this.ReaderAfters = new();
-        this.Command = this.OrmProvider.CreateCommand();
+        this.Command = dbContext.OrmProvider.CreateCommand();
+        this.DbParameters = this.Command.Parameters;
     }
     #endregion
 
@@ -269,7 +270,7 @@ public class MultipleQuery : IMultipleQuery
 
     #region Others
     private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a')
-        => this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart, this.Command.Parameters);
+        => this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart, this.Command);
     private void CreateRawReader(string rawSql, Type targetType, ReaderResultType resultType, bool isExists)
     {
         if (string.IsNullOrEmpty(rawSql))

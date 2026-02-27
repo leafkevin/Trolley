@@ -956,9 +956,7 @@ public class UnitTest6 : UnitTestBase
     public async Task Insert_Select_From_SubQuery_Returning()
     {
         var repository = this.dbFactory.Create();
-        var sql = repository.Create<Order>()
-            .UseTableBy("104", DateTime.Parse("2024-05-01"))
-            .From<OrderDetail>()
+        var sql = repository.From<OrderDetail>()
             .UseTableBy("104", DateTime.Parse("2024-05-01"))
             .Where(f => f.Id.Length < 1050)
             .GroupBy(f => f.OrderId)
@@ -978,6 +976,8 @@ public class UnitTest6 : UnitTestBase
                 UpdatedAt = DateTime.Now,
                 UpdatedBy = 1
             })
+            .ToCreate<Order>()
+            .UseTableBy("104", DateTime.Parse("2024-05-01"))
             .Returning<OrderInfo>("BuyerId,TotalAmount")
             .ToSql(out var parameters);
         Assert.Equal("INSERT INTO `sys_order_104_202405` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) SELECT b.`OrderId` AS `Id`,b.`TenantId`,CONCAT('ON-',b.`OrderId`) AS `OrderNo`,1 AS `BuyerId`,1 AS `SellerId`,'Taobao' AS `BuyerSource`,2 AS `ProductCount`,IFNULL(SUM(b.`Amount`),0) AS `TotalAmount`,1 AS `IsEnabled`,NOW() AS `CreatedAt`,1 AS `CreatedBy`,NOW() AS `UpdatedAt`,1 AS `UpdatedBy` FROM `sys_order_detail_104_202405` b WHERE CHAR_LENGTH(b.`Id`)<1050 GROUP BY b.`OrderId` RETURNING BuyerId,TotalAmount", sql);
@@ -986,9 +986,7 @@ public class UnitTest6 : UnitTestBase
             .UseTableBy("104", DateTime.Parse("2024-05-01"))
             .Where(f => f.Id.Length < 10)
             .ExecuteAsync();
-        var result = await repository.Create<Order>()
-            .UseTableBy("104", DateTime.Parse("2024-05-01"))
-            .From<OrderDetail>()
+        var result = await repository.From<OrderDetail>()
             .UseTableBy("104", DateTime.Parse("2024-05-01"))
             .Where(f => f.Id.Length < 1050)
             .GroupBy(f => f.OrderId)
@@ -1008,6 +1006,8 @@ public class UnitTest6 : UnitTestBase
                 UpdatedAt = DateTime.Now,
                 UpdatedBy = 1
             })
+            .ToCreate<Order>()
+            .UseTableBy("104", DateTime.Parse("2024-05-01"))
             .Returning<OrderInfo>("BuyerId,TotalAmount")
             .ExecuteAsync();
         await repository.CommitAsync();
@@ -2079,7 +2079,7 @@ public class UnitTest6 : UnitTestBase
         var tableName1 = repository.GetShardingTableName<OrderDetail>(tenantId, now);
         var tableName2 = repository.GetShardingTableName<OrderDetail>(tenantId, now.AddMonths(1));
         var sql = $"DROP TABLE {tableName1};DROP TABLE {tableName1};DROP TABLE {tableName2}";
-        await repository.ExecuteAsync(sql); 
+        await repository.ExecuteAsync(sql);
         repository.CreateShardingTable<OrderDetail>(tableName1);
         await repository.CreateShardingTableAsync<OrderDetail>(tableName2);
         sql = $"DROP TABLE {tableName1};DROP TABLE {tableName2}";

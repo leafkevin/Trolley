@@ -1958,9 +1958,7 @@ public class AllUnitTest : UnitTestBase
         var name = "雪中飞羽绒裤";
         int categoryId = 1;
         var brand = repository.QueryById<Brand>(brandId);
-        var sql = repository.Create<Product>()
-            .IgnoreInto()
-            .From<Brand>()
+        var sql = repository.From<Brand>()
             .Where(f => f.Id == brandId)
             .Select(f => new
             {
@@ -1977,14 +1975,14 @@ public class AllUnitTest : UnitTestBase
                 UpdatedBy = 1,
                 UpdatedAt = DateTime.Now
             })
+            .ToCreate<Product>()
+            .IgnoreInto()
             .ToSql(out _);
         Assert.Equal("INSERT IGNORE INTO `sys_product` (`Id`,`ProductNo`,`Name`,`Price`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT @p1,CONCAT('PN_',@p2),@p3,25.85,b.`Id`,@p4,b.`CompanyId`,1,1,NOW(),1,NOW() FROM `sys_brand` b WHERE b.`Id`=@p0", sql);
 
         repository.BeginTransaction();
         repository.DeleteById<Product>(id);
-        var count = repository.Create<Product>()
-            .IgnoreInto()
-            .From<Brand>()
+        var count = repository.From<Brand>()
             .Where(f => f.Id == brandId)
             .Select(f => new
             {
@@ -2001,7 +1999,9 @@ public class AllUnitTest : UnitTestBase
                 UpdatedBy = 1,
                 UpdatedAt = DateTime.Now
             })
-           .Execute();
+            .ToCreate<Product>()
+            .IgnoreInto()
+            .Execute();
         var product = repository.QueryById<Product>(id);
         repository.Commit();
         Assert.True(count > 0);
@@ -2010,9 +2010,7 @@ public class AllUnitTest : UnitTestBase
         Assert.True(product.Name == name);
         Assert.True(product.BrandId == brandId);
 
-        count = await repository.Create<Product>()
-            .IgnoreInto()
-            .From<Brand>()
+        count = await repository.From<Brand>()
             .Where(f => f.Id == brandId)
             .Select(f => new Product
             {
@@ -2029,16 +2027,16 @@ public class AllUnitTest : UnitTestBase
                 UpdatedBy = 1,
                 UpdatedAt = DateTime.Now
             })
-           .ExecuteAsync();
+            .ToCreate<Product>()
+            .IgnoreInto()
+            .ExecuteAsync();
         Assert.Equal(0, count);
     }
     [Fact]
     public async Task Insert_Select_From_Table2()
     {
         var repository = this.dbFactory.Create();
-        var sql = repository.Create<OrderDetail>()
-            .IgnoreInto()
-            .From<Order, Product>()
+        var sql = repository.From<Order, Product>()
             .Where((a, b) => a.Id == "3" && b.Id == 1)
             .Select((x, y) => new OrderDetail
             {
@@ -2055,13 +2053,13 @@ public class AllUnitTest : UnitTestBase
                 UpdatedBy = x.UpdatedBy,
                 UpdatedAt = x.UpdatedAt
             })
+            .ToCreate<OrderDetail>()
+            .IgnoreInto()
             .ToSql(out var parameters);
         Assert.Equal("INSERT IGNORE INTO `sys_order_detail` (`Id`,`TenantId`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT '7','1',b.`Id`,c.`Id`,c.`Price`,3,(c.`Price`*3),b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt` FROM `sys_order` b,`sys_product` c WHERE b.`Id`='3' AND c.`Id`=1", sql);
         await repository.BeginTransactionAsync();
         repository.DeleteById<OrderDetail>("7");
-        var result = await repository.Create<OrderDetail>()
-            .IgnoreInto()
-            .From<Order, Product>()
+        var result = await repository.From<Order, Product>()
             .Where((a, b) => a.Id == "3" && b.Id == 1)
             .Select((x, y) => new OrderDetail
             {
@@ -2078,7 +2076,9 @@ public class AllUnitTest : UnitTestBase
                 UpdatedBy = x.UpdatedBy,
                 UpdatedAt = x.UpdatedAt
             })
-           .ExecuteAsync();
+            .ToCreate<OrderDetail>()
+            .IgnoreInto()
+            .ExecuteAsync();
         var orderDetail = repository.QueryById<OrderDetail>("7");
         var product = repository.QueryById<Product>(1);
         await repository.CommitAsync();
@@ -2111,22 +2111,20 @@ public class AllUnitTest : UnitTestBase
                 UpdatedBy = 1
             })
             .AsCteTable("orders");
-        var sql = repository.Create<Order>()
-            .FromQuery(ordersQuery)
-            .Select(f => f)
+        var sql = repository.FromQuery(ordersQuery)
+            .ToCreate<Order>()
             .ToSql(out var parameters);
         Assert.Equal("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) WITH \r\n`orders`(`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) AS \r\n(\r\nSELECT a.`OrderId`,'1',CONCAT('ON-',a.`OrderId`),1,1,'Taobao',2,SUM(a.`Amount`),1,NOW(),1,NOW(),1 FROM `sys_order_detail` a GROUP BY a.`OrderId`\r\n)\r\nSELECT b.`Id`,b.`TenantId`,b.`OrderNo`,b.`BuyerId`,b.`SellerId`,b.`BuyerSource`,b.`ProductCount`,b.`TotalAmount`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `orders` b", sql);
         var orderIds = ordersQuery.Select(f => f.Id).ToList();
         await repository.BeginTransactionAsync();
         repository.DeleteByIds<Order>(orderIds);
-        var result = await repository.Create<Order>()
-            .FromQuery(ordersQuery)
+        var result = await repository.FromQuery(ordersQuery)
+            .ToCreate<Order>()
             .ExecuteAsync();
         await repository.CommitAsync();
         Assert.Equal(orderIds.Count, result);
 
-        sql = repository.Create<Order>()
-            .From<OrderDetail>()
+        sql = repository.From<OrderDetail>()
             .GroupBy(f => f.OrderId)
             .Select((x, f) => new
             {
@@ -2144,13 +2142,13 @@ public class AllUnitTest : UnitTestBase
                 UpdatedAt = DateTime.Now,
                 UpdatedBy = 1
             })
+            .ToCreate<Order>()
             .ToSql(out parameters);
         Assert.Equal("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) SELECT b.`OrderId`,'1',CONCAT('ON-',b.`OrderId`),1,1,'Taobao',2,SUM(b.`Amount`),1,NOW(),1,NOW(),1 FROM `sys_order_detail` b GROUP BY b.`OrderId`", sql);
         await repository.BeginTransactionAsync();
         repository.DeleteByIds<Order>(orderIds);
-        result = await repository.Create<Order>()
-            .FromQuery(ordersQuery)
-            .Select()
+        result = await repository.FromQuery(ordersQuery)
+            .ToCreate<Order>()
             .ExecuteAsync();
         await repository.CommitAsync();
         Assert.Equal(orderIds.Count, result);

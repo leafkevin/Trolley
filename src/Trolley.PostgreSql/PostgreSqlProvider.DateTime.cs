@@ -370,76 +370,76 @@ partial class PostgreSqlProvider
                             formatArgument = $"'{formatSegment.Value}'";
 
                             if (formatArgument.Contains("yyyy"))
-                                formatArgument = formatArgument.NextReplace("yyyy", "YYYY");
+                                formatArgument = formatArgument.Replace("yyyy", "YYYY");
                             else if (formatArgument.Contains("yyy"))
-                                formatArgument = formatArgument.NextReplace("yyy", "YYY");
+                                formatArgument = formatArgument.Replace("yyy", "YYY");
                             else if (formatArgument.Contains("yy"))
-                                formatArgument = formatArgument.NextReplace("yy", "YY");
+                                formatArgument = formatArgument.Replace("yy", "YY");
 
                             if (formatArgument.Contains("MMMM"))
-                                formatArgument = formatArgument.NextReplace("MMMM", "Month");
+                                formatArgument = formatArgument.Replace("MMMM", "Month");
                             else if (formatArgument.Contains("MMM"))
-                                formatArgument = formatArgument.NextReplace("MMM", "Mon");
+                                formatArgument = formatArgument.Replace("MMM", "Mon");
                             else if (formatArgument.Contains("M") && !formatArgument.Contains("MM"))
-                                formatArgument = formatArgument.NextReplace("M", "FMMM");
+                                formatArgument = formatArgument.Replace("M", "FMMM");
 
                             if (formatArgument.Contains("dddd"))
-                                formatArgument = formatArgument.NextReplace("dddd", "Day");
+                                formatArgument = formatArgument.Replace("dddd", "Day");
                             else if (formatArgument.Contains("ddd"))
-                                formatArgument = formatArgument.NextReplace("ddd", "DY");
+                                formatArgument = formatArgument.Replace("ddd", "DY");
                             else if (formatArgument.Contains("dd"))
-                                formatArgument = formatArgument.NextReplace("dd", "DD");
+                                formatArgument = formatArgument.Replace("dd", "DD");
                             else if (formatArgument.Contains("d"))
-                                formatArgument = formatArgument.NextReplace("d", "FMDD");
+                                formatArgument = formatArgument.Replace("d", "FMDD");
 
                             if (formatArgument.Contains("HH"))
-                                formatArgument = formatArgument.NextReplace("HH", "HH24");
+                                formatArgument = formatArgument.Replace("HH", "HH24");
                             else if (formatArgument.Contains("H"))
-                                formatArgument = formatArgument.NextReplace("H", "FMHH24");
+                                formatArgument = formatArgument.Replace("H", "FMHH24");
                             else if (formatArgument.Contains("hh"))
-                                formatArgument = formatArgument.NextReplace("hh", "HH12");
+                                formatArgument = formatArgument.Replace("hh", "HH12");
                             else if (formatArgument.Contains("h"))
-                                formatArgument = formatArgument.NextReplace("h", "FMHH12");
+                                formatArgument = formatArgument.Replace("h", "FMHH12");
 
                             if (formatArgument.Contains("mm"))
-                                formatArgument = formatArgument.NextReplace("mm", "MI");
-                            else formatArgument = formatArgument.NextReplace("m", "FMMI");
+                                formatArgument = formatArgument.Replace("mm", "MI");
+                            else formatArgument = formatArgument.Replace("m", "FMMI");
 
                             if (formatArgument.Contains("ss"))
-                                formatArgument = formatArgument.NextReplace("ss", "SS");
+                                formatArgument = formatArgument.Replace("ss", "SS");
                             else if (formatArgument.Contains("s"))
-                                formatArgument = formatArgument.NextReplace("s", "FMSS");
+                                formatArgument = formatArgument.Replace("s", "FMSS");
 
                             if (formatArgument.Contains("tt"))
-                                formatArgument = formatArgument.NextReplace("tt", "AM");
+                                formatArgument = formatArgument.Replace("tt", "AM");
                             else if (formatArgument.Contains("t"))
-                                formatArgument = formatArgument.NextReplace("t", "AM");
+                                formatArgument = formatArgument.Replace("t", "AM");
 
                             if (formatArgument.Contains("FFFFFF"))
-                                formatArgument = formatArgument.NextReplace("FFFFFF", "US");
+                                formatArgument = formatArgument.Replace("FFFFFF", "US");
                             else if (formatArgument.Contains("FFFFF"))
-                                formatArgument = formatArgument.NextReplace("FFFFF", "FMUS");
+                                formatArgument = formatArgument.Replace("FFFFF", "FMUS");
                             else if (formatArgument.Contains("FFFF"))
-                                formatArgument = formatArgument.NextReplace("FFFF", "FMUS");
+                                formatArgument = formatArgument.Replace("FFFF", "FMUS");
                             else if (formatArgument.Contains("ffffff"))
-                                formatArgument = formatArgument.NextReplace("ffffff", "US");
+                                formatArgument = formatArgument.Replace("ffffff", "US");
                             else if (formatArgument.Contains("fffff"))
-                                formatArgument = formatArgument.NextReplace("fffff", "FMUS");
+                                formatArgument = formatArgument.Replace("fffff", "FMUS");
                             else if (formatArgument.Contains("ffff"))
-                                formatArgument = formatArgument.NextReplace("ffff", "FMUS");
+                                formatArgument = formatArgument.Replace("ffff", "FMUS");
 
                             if (formatArgument.Contains("FFF"))
-                                formatArgument = formatArgument.NextReplace("FFF", "MS");
+                                formatArgument = formatArgument.Replace("FFF", "MS");
                             else if (formatArgument.Contains("FF"))
-                                formatArgument = formatArgument.NextReplace("FF", "FMMS");
+                                formatArgument = formatArgument.Replace("FF", "FMMS");
                             else if (formatArgument.Contains("F"))
-                                formatArgument = formatArgument.NextReplace("F", "FMMS");
+                                formatArgument = formatArgument.Replace("F", "FMMS");
                             else if (formatArgument.Contains("fff"))
-                                formatArgument = formatArgument.NextReplace("fff", "MS");
+                                formatArgument = formatArgument.Replace("fff", "MS");
                             else if (formatArgument.Contains("ff"))
-                                formatArgument = formatArgument.NextReplace("ff", "FMMS");
+                                formatArgument = formatArgument.Replace("ff", "FMMS");
                             else if (formatArgument.Contains("f"))
-                                formatArgument = formatArgument.NextReplace("f", "FMMS");
+                                formatArgument = formatArgument.Replace("f", "FMMS");
                         }
                         else formatArgument = visitor.GetQuotedValue(formatSegment);
                         var valueArgument = visitor.GetQuotedValue(valueSegment);
@@ -707,76 +707,76 @@ partial class PostgreSqlProvider
                                 formatArgument = $"'{formatSegment.Value}'";
 
                                 if (formatArgument.Contains("yyyy"))
-                                    formatArgument = formatArgument.NextReplace("yyyy", "YYYY");
+                                    formatArgument = formatArgument.Replace("yyyy", "YYYY");
                                 else if (formatArgument.Contains("yyy"))
-                                    formatArgument = formatArgument.NextReplace("yyy", "YYY");
+                                    formatArgument = formatArgument.Replace("yyy", "YYY");
                                 else if (formatArgument.Contains("yy"))
-                                    formatArgument = formatArgument.NextReplace("yy", "YY");
+                                    formatArgument = formatArgument.Replace("yy", "YY");
 
                                 if (formatArgument.Contains("MMMM"))
-                                    formatArgument = formatArgument.NextReplace("MMMM", "Month");
+                                    formatArgument = formatArgument.Replace("MMMM", "Month");
                                 else if (formatArgument.Contains("MMM"))
-                                    formatArgument = formatArgument.NextReplace("MMM", "Mon");
+                                    formatArgument = formatArgument.Replace("MMM", "Mon");
                                 else if (formatArgument.Contains("M") && !formatArgument.Contains("MM"))
-                                    formatArgument = formatArgument.NextReplace("M", "FMMM");
+                                    formatArgument = formatArgument.Replace("M", "FMMM");
 
                                 if (formatArgument.Contains("dddd"))
-                                    formatArgument = formatArgument.NextReplace("dddd", "Day");
+                                    formatArgument = formatArgument.Replace("dddd", "Day");
                                 else if (formatArgument.Contains("ddd"))
-                                    formatArgument = formatArgument.NextReplace("ddd", "DY");
+                                    formatArgument = formatArgument.Replace("ddd", "DY");
                                 else if (formatArgument.Contains("dd"))
-                                    formatArgument = formatArgument.NextReplace("dd", "DD");
+                                    formatArgument = formatArgument.Replace("dd", "DD");
                                 else if (formatArgument.Contains("d"))
-                                    formatArgument = formatArgument.NextReplace("d", "FMDD");
+                                    formatArgument = formatArgument.Replace("d", "FMDD");
 
                                 if (formatArgument.Contains("HH"))
-                                    formatArgument = formatArgument.NextReplace("HH", "HH24");
+                                    formatArgument = formatArgument.Replace("HH", "HH24");
                                 else if (formatArgument.Contains("H"))
-                                    formatArgument = formatArgument.NextReplace("H", "FMHH24");
+                                    formatArgument = formatArgument.Replace("H", "FMHH24");
                                 else if (formatArgument.Contains("hh"))
-                                    formatArgument = formatArgument.NextReplace("hh", "HH12");
+                                    formatArgument = formatArgument.Replace("hh", "HH12");
                                 else if (formatArgument.Contains("h"))
-                                    formatArgument = formatArgument.NextReplace("h", "FMHH12");
+                                    formatArgument = formatArgument.Replace("h", "FMHH12");
 
                                 if (formatArgument.Contains("mm"))
-                                    formatArgument = formatArgument.NextReplace("mm", "MI");
-                                else formatArgument = formatArgument.NextReplace("m", "FMMI");
+                                    formatArgument = formatArgument.Replace("mm", "MI");
+                                else formatArgument = formatArgument.Replace("m", "FMMI");
 
                                 if (formatArgument.Contains("ss"))
-                                    formatArgument = formatArgument.NextReplace("ss", "SS");
+                                    formatArgument = formatArgument.Replace("ss", "SS");
                                 else if (formatArgument.Contains("s"))
-                                    formatArgument = formatArgument.NextReplace("s", "FMSS");
+                                    formatArgument = formatArgument.Replace("s", "FMSS");
 
                                 if (formatArgument.Contains("tt"))
-                                    formatArgument = formatArgument.NextReplace("tt", "AM");
+                                    formatArgument = formatArgument.Replace("tt", "AM");
                                 else if (formatArgument.Contains("t"))
-                                    formatArgument = formatArgument.NextReplace("t", "AM");
+                                    formatArgument = formatArgument.Replace("t", "AM");
 
                                 if (formatArgument.Contains("FFFFFF"))
-                                    formatArgument = formatArgument.NextReplace("FFFFFF", "US");
+                                    formatArgument = formatArgument.Replace("FFFFFF", "US");
                                 else if (formatArgument.Contains("FFFFF"))
-                                    formatArgument = formatArgument.NextReplace("FFFFF", "FMUS");
+                                    formatArgument = formatArgument.Replace("FFFFF", "FMUS");
                                 else if (formatArgument.Contains("FFFF"))
-                                    formatArgument = formatArgument.NextReplace("FFFF", "FMUS");
+                                    formatArgument = formatArgument.Replace("FFFF", "FMUS");
                                 else if (formatArgument.Contains("ffffff"))
-                                    formatArgument = formatArgument.NextReplace("ffffff", "US");
+                                    formatArgument = formatArgument.Replace("ffffff", "US");
                                 else if (formatArgument.Contains("fffff"))
-                                    formatArgument = formatArgument.NextReplace("fffff", "FMUS");
+                                    formatArgument = formatArgument.Replace("fffff", "FMUS");
                                 else if (formatArgument.Contains("ffff"))
-                                    formatArgument = formatArgument.NextReplace("ffff", "FMUS");
+                                    formatArgument = formatArgument.Replace("ffff", "FMUS");
 
                                 if (formatArgument.Contains("FFF"))
-                                    formatArgument = formatArgument.NextReplace("FFF", "MS");
+                                    formatArgument = formatArgument.Replace("FFF", "MS");
                                 else if (formatArgument.Contains("FF"))
-                                    formatArgument = formatArgument.NextReplace("FF", "FMMS");
+                                    formatArgument = formatArgument.Replace("FF", "FMMS");
                                 else if (formatArgument.Contains("F"))
-                                    formatArgument = formatArgument.NextReplace("F", "FMMS");
+                                    formatArgument = formatArgument.Replace("F", "FMMS");
                                 else if (formatArgument.Contains("fff"))
-                                    formatArgument = formatArgument.NextReplace("fff", "MS");
+                                    formatArgument = formatArgument.Replace("fff", "MS");
                                 else if (formatArgument.Contains("ff"))
-                                    formatArgument = formatArgument.NextReplace("ff", "FMMS");
+                                    formatArgument = formatArgument.Replace("ff", "FMMS");
                                 else if (formatArgument.Contains("f"))
-                                    formatArgument = formatArgument.NextReplace("f", "FMMS");
+                                    formatArgument = formatArgument.Replace("f", "FMMS");
                             }
                             else formatArgument = visitor.GetQuotedValue(formatSegment);
 

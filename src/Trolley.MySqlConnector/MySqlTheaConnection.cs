@@ -123,7 +123,7 @@ class MySqlTheaConnection : ITheaConnection
         if (command is not MySqlCommand myCommand)
             return null;
         myCommand.Connection = this.connection;
-        return new MySqlTheaCommand(myCommand, this, null);
+        return new MySqlTheaCommand(myCommand, this);
     }
     public ITheaTransaction BeginTransaction()
     {

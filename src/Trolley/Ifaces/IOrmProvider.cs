@@ -24,7 +24,7 @@ public interface IOrmProvider
     string DefaultTableSchema { get; }
     ICollection<ITypeHandler> TypeHandlers { get; }
     ITheaConnection CreateConnection(string dbKey, string connectionString);
-    IDbCommand CreateCommand();
+    ITheaCommand CreateCommand();
     IDbDataParameter CreateParameter(string parameterName, object value);
     IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
     void ChangeParameter(object dbParameter, Type targetType, object value);
@@ -187,10 +187,10 @@ public interface IOrmProvider
     IDeleted NewDeleted(DbContext dbContext, IDeleteVisitor visitor);
     IBulkResultCommand<TResult> NewResultDeleted<TResult>(DbContext dbContext, IDeleteVisitor visitor);
 
-    IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null);
-    ICreateVisitor NewCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a');
-    IUpdateVisitor NewUpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a');
-    IDeleteVisitor NewDeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a');
+    IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null);
+    ICreateVisitor NewCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null);
+    IUpdateVisitor NewUpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null);
+    IDeleteVisitor NewDeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null);
 
     string GetTableName(string tableName);
     string GetFieldName(string fieldName);

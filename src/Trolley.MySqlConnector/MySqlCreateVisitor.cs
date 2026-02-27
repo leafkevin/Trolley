@@ -15,8 +15,8 @@ public class MySqlCreateVisitor : CreateVisitor
     public bool IsUseSetAlias { get; set; }
     public string RowAlias { get; set; } = "newRow";
 
-    public MySqlCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
-        : base(entityType, dbContext, tableAsStart) { }
+    public MySqlCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
+        : base(entityType, dbContext, tableAsStart, command) { }
 
     public override string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
@@ -517,7 +517,7 @@ public class MySqlCreateVisitor : CreateVisitor
     }
     public override IQueryVisitor CreateQueryVisitor(char? tableAsStart = null)
     {
-        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAsStart, this.DbParameters) as MySqlQueryVisitor;
+        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAsStart, this.Command) as MySqlQueryVisitor;
         queryVisitor.RefQueries = this.RefQueries;
         queryVisitor.ShardingTables = this.ShardingTables;
         queryVisitor.RefTableAliases = this.RefTableAliases;

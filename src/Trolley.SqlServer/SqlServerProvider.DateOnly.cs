@@ -369,27 +369,27 @@ partial class SqlServerProvider
                                 formatArgument = $"'{formatSegment.Value}'";
 
                                 if (formatArgument.Contains("yyyy"))
-                                    formatArgument = formatArgument.NextReplace("yyyy", "YYYY");
+                                    formatArgument = formatArgument.Replace("yyyy", "YYYY");
                                 else if (formatArgument.Contains("yyy"))
-                                    formatArgument = formatArgument.NextReplace("yyy", "YYY");
+                                    formatArgument = formatArgument.Replace("yyy", "YYY");
                                 else if (formatArgument.Contains("yy"))
-                                    formatArgument = formatArgument.NextReplace("yy", "YY");
+                                    formatArgument = formatArgument.Replace("yy", "YY");
 
                                 if (formatArgument.Contains("MMMM"))
-                                    formatArgument = formatArgument.NextReplace("MMMM", "Month");
+                                    formatArgument = formatArgument.Replace("MMMM", "Month");
                                 else if (formatArgument.Contains("MMM"))
-                                    formatArgument = formatArgument.NextReplace("MMM", "Mon");
+                                    formatArgument = formatArgument.Replace("MMM", "Mon");
                                 else if (formatArgument.Contains("M") && !formatArgument.Contains("MM"))
-                                    formatArgument = formatArgument.NextReplace("M", "FMMM");
+                                    formatArgument = formatArgument.Replace("M", "FMMM");
 
                                 if (formatArgument.Contains("dddd"))
-                                    formatArgument = formatArgument.NextReplace("dddd", "Day");
+                                    formatArgument = formatArgument.Replace("dddd", "Day");
                                 else if (formatArgument.Contains("ddd"))
-                                    formatArgument = formatArgument.NextReplace("ddd", "DY");
+                                    formatArgument = formatArgument.Replace("ddd", "DY");
                                 else if (formatArgument.Contains("dd"))
-                                    formatArgument = formatArgument.NextReplace("dd", "DD");
+                                    formatArgument = formatArgument.Replace("dd", "DD");
                                 else if (formatArgument.Contains("d"))
-                                    formatArgument = formatArgument.NextReplace("d", "FMDD");
+                                    formatArgument = formatArgument.Replace("d", "FMDD");
                             }
                             else formatArgument = visitor.GetQuotedValue(formatSegment);
 

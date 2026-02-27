@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq.Expressions;
 
 namespace Trolley;
 
-public interface IDeleteVisitor : IDisposable
+public interface IDeleteVisitor : ICommandContext, IDisposable
 {
-    IDataParameterCollection DbParameters { get; set; }
+    DbContext DbContext { get; }
     IOrmProvider OrmProvider { get; }
-    IEntityMapProvider MapProvider { get; }
-    List<TableSegment> Tables { get; }
+    IEntityMapProvider EntityMapProvider { get; }
+    List<TableSegment> Tables { get; set; }
     ITableShardingProvider ShardingProvider { get; }
+
     bool HasWhere { get; }
     List<TableSegment> ShardingTables { get; }
 

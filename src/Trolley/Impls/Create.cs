@@ -109,7 +109,7 @@ public class Created : ICreated
     public virtual int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand(this.Visitor);
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.Bulk:
@@ -177,7 +177,7 @@ public class Created : ICreated
     public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand(this.Visitor);
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.Bulk:
@@ -247,7 +247,7 @@ public class Created : ICreated
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (_, _, var command) = this.DbContext.UseMasterCommand();
+        (_, _, var command) = this.DbContext.UseMasterCommand(this.Visitor);
         var sql = this.Visitor.BuildSql(command, out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
@@ -384,7 +384,7 @@ public class ResultCreated<TResult> : IResultCommand<TResult>
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (_, _, var command) = this.DbContext.UseMasterCommand();
+        (_, _, var command) = this.DbContext.UseMasterCommand(this.Visitor);
         var sql = this.Visitor.BuildSql(command, out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
@@ -419,7 +419,7 @@ public class BulkResultCreated<TResult> : IBulkResultCommand<TResult>
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (_, _, var command) = this.DbContext.UseMasterCommand();
+        (_, _, var command) = this.DbContext.UseMasterCommand(this.Visitor);
         var sql = this.Visitor.BuildSql(command, out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();

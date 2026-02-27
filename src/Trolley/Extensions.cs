@@ -12,7 +12,7 @@ namespace Trolley;
 
 public static class Extensions
 {
-    private static readonly HashSet<Type> valueTypes = new HashSet<Type> 
+    private static readonly HashSet<Type> valueTypes = new HashSet<Type>
     {
         typeof(byte),typeof(sbyte),typeof(short),typeof(ushort),
         typeof(int),typeof(uint),typeof(long),typeof(ulong),typeof(float),typeof(double),typeof(decimal),
@@ -29,312 +29,422 @@ public static class Extensions
     private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> queryReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> deferredValueReaderDeserializerCache = new();
 
-    public static OrmDbFactoryBuilder UseMapping<TModelConfiguration>(this OrmDbFactoryBuilder builder, OrmProviderType ormProviderType) where TModelConfiguration : class, IModelMappingConfiguration, new()
-        => builder.UseMapping(ormProviderType, new TModelConfiguration());
-    public static OrmDbFactoryBuilder UseMapping<TModelConfiguration>(this OrmDbFactoryBuilder builder, string dbKey) where TModelConfiguration : class, IModelMappingConfiguration, new()
-        => builder.UseMapping(dbKey, new TModelConfiguration());
-    public static OrmDbFactoryBuilder UseTableSharding<TTableShardingConfiguration>(this OrmDbFactoryBuilder builder, OrmProviderType ormProviderType) where TTableShardingConfiguration : class, ITableShardingConfiguration, new()
-        => builder.UseTableSharding(ormProviderType, new TTableShardingConfiguration());
-    public static OrmDbFactoryBuilder UseTableSharding<TTableShardingConfiguration>(this OrmDbFactoryBuilder builder, string dbKey) where TTableShardingConfiguration : class, ITableShardingConfiguration, new()
-        => builder.UseTableSharding(dbKey, new TTableShardingConfiguration());
-
-    public static bool IsCanMapTo(this IEntityMapProvider entityMapProvider, MemberInfo fromName, MemberInfo toName)
+    extension(OrmDbFactoryBuilder builder)
     {
-        if (fromName == null || toName == null)
-            return false;
-        return entityMapProvider.IsCanMapTo(fromName.Name, toName.Name);
+        public OrmDbFactoryBuilder UseMapping<TModelConfiguration>(OrmProviderType ormProviderType) where TModelConfiguration : class, IModelMappingConfiguration, new()
+            => builder.UseMapping(ormProviderType, new TModelConfiguration());
+        public OrmDbFactoryBuilder UseMapping<TModelConfiguration>(string dbKey) where TModelConfiguration : class, IModelMappingConfiguration, new()
+            => builder.UseMapping(dbKey, new TModelConfiguration());
+        public OrmDbFactoryBuilder UseTableSharding<TTableShardingConfiguration>(OrmProviderType ormProviderType) where TTableShardingConfiguration : class, ITableShardingConfiguration, new()
+            => builder.UseTableSharding(ormProviderType, new TTableShardingConfiguration());
+        public OrmDbFactoryBuilder UseTableSharding<TTableShardingConfiguration>(string dbKey) where TTableShardingConfiguration : class, ITableShardingConfiguration, new()
+            => builder.UseTableSharding(dbKey, new TTableShardingConfiguration());
     }
-    public static bool TryMapMember(this IEntityMapProvider entityMapProvider, string fieldName, List<MemberMap> memberMappers, out MemberMap memberMapper)
+    extension(IEntityMapProvider entityMapProvider)
     {
-        if (string.IsNullOrEmpty(fieldName))
-            throw new ArgumentNullException(nameof(fieldName));
-        memberMapper = memberMappers.Find(f => entityMapProvider.IsCanMapTo(fieldName, f.MemberName));
-        return memberMapper != null;
-    }
-    public static bool TryMapMember(this IEntityMapProvider entityMapProvider, string fieldName, List<MemberInfo> memberInfos, out MemberInfo memberInfo)
-    {
-        if (string.IsNullOrEmpty(fieldName))
-            throw new ArgumentNullException(nameof(fieldName));
-        memberInfo = memberInfos.Find(f => entityMapProvider.IsCanMapTo(fieldName, f.Name));
-        return memberInfo != null;
-    }
-
-    public static string GetQuotedValue(this IOrmProvider ormProvider, object value)
-        => ormProvider.GetQuotedValue(value.GetType(), value);
-
-    public static EntityMap GetEntityMap(this IEntityMapProvider entityMapProvider, Type entityType)
-    {
-        if (!entityMapProvider.TryGetEntityMap(entityType, out var mapper))
-            throw new Exception($"实体类型{entityType.FullName}没有配置映射，请在IModelConfiguration.OnModelCreating方法中配置映射");
-        return mapper;
-    }
-    public static EntityMap GetEntityMap(this IEntityMapProvider mapProvider, Type entityType, Type mapToType)
-    {
-        if (!mapProvider.TryGetEntityMap(mapToType, out var mapper))
-            throw new Exception($"实体类型{mapToType.FullName}没有配置映射，请在IModelConfiguration.OnModelCreating方法中配置映射");
-        var entityMapper = mapper.CreateDefaultMap(entityType);
-        mapProvider.UseEntityMap(entityType, entityMapper);
-        return entityMapper;
-    }
-    internal static bool IsNullableType(this Type type, out Type underlyingType)
-    {
-        if (type.IsValueType)
+        public bool IsCanMapTo(MemberInfo fromName, MemberInfo toName)
         {
-            underlyingType = Nullable.GetUnderlyingType(type);
-            if (underlyingType == null)
-            {
-                underlyingType = type;
+            if (fromName == null || toName == null)
                 return false;
+            return entityMapProvider.IsCanMapTo(fromName.Name, toName.Name);
+        }
+        public bool TryMapMember(string fieldName, List<MemberMap> memberMappers, out MemberMap memberMapper)
+        {
+            if (string.IsNullOrEmpty(fieldName))
+                throw new ArgumentNullException(nameof(fieldName));
+            memberMapper = memberMappers.Find(f => entityMapProvider.IsCanMapTo(fieldName, f.MemberName));
+            return memberMapper != null;
+        }
+        public bool TryMapMember(string fieldName, List<MemberInfo> memberInfos, out MemberInfo memberInfo)
+        {
+            if (string.IsNullOrEmpty(fieldName))
+                throw new ArgumentNullException(nameof(fieldName));
+            memberInfo = memberInfos.Find(f => entityMapProvider.IsCanMapTo(fieldName, f.Name));
+            return memberInfo != null;
+        }
+        public EntityMap GetEntityMap(Type entityType)
+        {
+            if (!entityMapProvider.TryGetEntityMap(entityType, out var mapper))
+                throw new Exception($"实体类型{entityType.FullName}没有配置映射，请在IModelConfiguration.OnModelCreating方法中配置映射");
+            return mapper;
+        }
+        public EntityMap GetEntityMap(Type entityType, Type mapToType)
+        {
+            if (!entityMapProvider.TryGetEntityMap(mapToType, out var mapper))
+                throw new Exception($"实体类型{mapToType.FullName}没有配置映射，请在IModelConfiguration.OnModelCreating方法中配置映射");
+            var entityMapper = mapper.CreateDefaultMap(entityType);
+            entityMapProvider.UseEntityMap(entityType, entityMapper);
+            return entityMapper;
+        }
+    }
+    extension(Type type)
+    {
+        public bool IsNullableType(out Type underlyingType)
+        {
+            if (type.IsValueType)
+            {
+                underlyingType = Nullable.GetUnderlyingType(type);
+                if (underlyingType == null)
+                {
+                    underlyingType = type;
+                    return false;
+                }
+                return true;
+            }
+            underlyingType = type;
+            return false;
+        }
+        public Type ToUnderlyingType() => Nullable.GetUnderlyingType(type) ?? type;
+        public bool IsEnumType(out Type underlyingType, out Type enumUnderlyingType)
+        {
+            type.IsNullableType(out underlyingType);
+            if (underlyingType.IsEnum)
+            {
+                enumUnderlyingType = underlyingType.GetEnumUnderlyingType();
+                return true;
+            }
+            enumUnderlyingType = null;
+            return false;
+        }
+        public bool IsEnumType(out Type enumUnderlyingType)
+        {
+            if (type.IsEnum)
+            {
+                enumUnderlyingType = type.GetEnumUnderlyingType();
+                return true;
+            }
+            enumUnderlyingType = null;
+            return false;
+        }
+        /// <summary>
+        /// 只要当前对象是存在多个成员(字段或是属性)的结构或是类对象，都属于属于实体类型
+        /// </summary>
+        /// <param name="underlyingType"></param>
+        /// <returns></returns>
+        public bool IsEntityType(out Type underlyingType)
+        {
+            underlyingType = type;
+            if (valueTypes.Contains(type) || type.FullName == "System.Data.Linq.Binary")
+                return false;
+            underlyingType = type.ToUnderlyingType();
+            if (valueTypes.Contains(underlyingType) || underlyingType.FullName == "System.Data.Linq.Binary" || underlyingType.IsEnum)
+                return false;
+            if (type.IsArray)
+            {
+                var elementType = type.GetElementType();
+                return elementType!.IsEntityType(out underlyingType);
+            }
+            if (type.IsGenericType)
+            {
+                if (type.FullName.StartsWith("System.ValueTuple`") && type.GenericTypeArguments.Length == 1)
+                    return false;
+                if (typeof(IEnumerable).IsAssignableFrom(type))
+                {
+                    if (typeof(IDictionary).IsAssignableFrom(type))
+                        return true;
+                    foreach (var elementType in type.GenericTypeArguments)
+                    {
+                        if (elementType.IsEntityType(out underlyingType))
+                            return true;
+                    }
+                    return false;
+                }
             }
             return true;
         }
-        underlyingType = type;
-        return false;
-    }
-    internal static Type ToUnderlyingType(this Type type) => Nullable.GetUnderlyingType(type) ?? type;
-    internal static bool IsEnumType(this Type type, out Type underlyingType, out Type enumUnderlyingType)
-    {
-        type.IsNullableType(out underlyingType);
-        if (underlyingType.IsEnum)
+        public bool TryGetMember(string memberName, out MemberInfo memberInfo)
         {
-            enumUnderlyingType = underlyingType.GetEnumUnderlyingType();
-            return true;
+            var memberInfos = RepositoryHelper.GetMembers(type);
+            return memberInfos.TryFind(memberName, out memberInfo);
         }
-        enumUnderlyingType = null;
-        return false;
     }
-    public static bool IsEnumType(this Type enumType, out Type enumUnderlyingType)
+    extension(MemberInfo member)
     {
-        if (enumType.IsEnum)
+        public Type GetMemberType()
         {
-            enumUnderlyingType = enumType.GetEnumUnderlyingType();
-            return true;
-        }
-        enumUnderlyingType = null;
-        return false;
-    }
-    public static Type GetMemberType(this MemberInfo member)
-    {
-        switch (member.MemberType)
-        {
-            case MemberTypes.Property:
-                var propertyInfo = member as PropertyInfo;
-                return propertyInfo.PropertyType;
-            case MemberTypes.Field:
-                var fieldInfo = member as FieldInfo;
-                return fieldInfo.FieldType;
-        }
-        throw new NotSupportedException("成员member，不是属性也不是字段");
-    }
-    public static bool CanWrite(this MemberInfo member)
-    {
-        switch (member.MemberType)
-        {
-            case MemberTypes.Property:
-                var propertyInfo = member as PropertyInfo;
-                return propertyInfo.CanWrite;
-            case MemberTypes.Field:
-                return true;
-        }
-        return false;
-    }
-    public static bool IsParameter(this Expression expr, out string parameterName)
-    {
-        var visitor = new IsParameterVisitor();
-        visitor.Visit(expr);
-        if (visitor.IsParameter)
-        {
-            parameterName = visitor.LastParameterName;
-            return visitor.IsParameter;
-        }
-        parameterName = null;
-        return false;
-    }
-    public static bool GetParameters(this Expression expr, out List<ParameterExpression> parameters)
-    {
-        var visitor = new IsParameterVisitor();
-        visitor.Visit(expr);
-        if (visitor.IsParameter)
-        {
-            parameters = visitor.Parameters;
-            return visitor.IsParameter;
-        }
-        parameters = null;
-        return false;
-    }
-    public static bool GetParameterNames(this Expression expr, out List<string> parameterNames)
-    {
-        var visitor = new IsParameterVisitor();
-        visitor.Visit(expr);
-        if (visitor.IsParameter)
-        {
-            parameterNames = visitor.Parameters.Select(f => f.Name).ToList();
-            return visitor.IsParameter;
-        }
-        parameterNames = null;
-        return false;
-    }
-    public static string NextReplace(this string content, string oldValue, string newValue)
-    {
-        if (!content.Contains(oldValue))
-            return content;
-        return content.Replace(oldValue, newValue);
-    }
-    /// <summary>
-    /// 只要当前对象是存在多个成员(字段或是属性)的结构或是类对象，都属于属于实体类型
-    /// </summary>
-    /// <param name="type"></param>
-    /// <param name="underlyingType"></param>
-    /// <returns></returns>
-    public static bool IsEntityType(this Type type, out Type underlyingType)
-    {
-        underlyingType = type;
-        if (valueTypes.Contains(type) || type.FullName == "System.Data.Linq.Binary")
-            return false;
-        underlyingType = type.ToUnderlyingType();
-        if (valueTypes.Contains(underlyingType) || underlyingType.FullName == "System.Data.Linq.Binary" || underlyingType.IsEnum)
-            return false;
-        if (type.IsArray)
-        {
-            var elementType = type.GetElementType();
-            return elementType!.IsEntityType(out underlyingType);
-        }
-        if (type.IsGenericType)
-        {
-            if (type.FullName.StartsWith("System.ValueTuple`") && type.GenericTypeArguments.Length == 1)
-                return false;
-            if (typeof(IEnumerable).IsAssignableFrom(type))
+            switch (member.MemberType)
             {
-                if (typeof(IDictionary).IsAssignableFrom(type))
-                    return true;
-                foreach (var elementType in type.GenericTypeArguments)
+                case MemberTypes.Property:
+                    var propertyInfo = member as PropertyInfo;
+                    return propertyInfo.PropertyType;
+                case MemberTypes.Field:
+                    var fieldInfo = member as FieldInfo;
+                    return fieldInfo.FieldType;
+            }
+            throw new NotSupportedException("成员member，不是属性也不是字段");
+        }
+        public bool CanWrite
+        {
+            get
+            {
+                switch (member.MemberType)
                 {
-                    if (elementType.IsEntityType(out underlyingType))
+                    case MemberTypes.Property:
+                        var propertyInfo = member as PropertyInfo;
+                        return propertyInfo.CanWrite;
+                    case MemberTypes.Field:
                         return true;
                 }
                 return false;
             }
         }
-        return true;
     }
-    /// <summary>
-    /// 返回的是单个基础值类型数据，如：int,DateTime等基础类型的数据
-    /// </summary>
-    /// <typeparam name="TValue"></typeparam>
-    /// <param name="reader"></param>
-    /// <param name="dbContext"></param>
-    /// <returns></returns>
-    public static TValue ToValue<TValue>(this ITheaDataReader reader, DbContext dbContext)
+    extension(IOrmProvider ormProvider)
     {
-        var targetType = typeof(TValue);
-        var fieldType = reader.GetFieldType(0);
-        if (fieldType == targetType)
-            return (TValue)reader.GetValue(0);
-
-        var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext);
-        return (TValue)valueGetter.Invoke(reader.GetValue(0));
+        public string GetQuotedValue(object value)
+            => ormProvider.GetQuotedValue(value.GetType(), value);
     }
-    public static Func<ITheaDataReader, object> GetReaderDeserializer(this ITheaDataReader reader, Type entityType, DbContext dbContext)
+    extension(Expression expr)
     {
-        if (reader.FieldCount == 1 && !entityType.IsEntityType(out _))
+        public bool IsParameter(out string parameterName)
         {
-            var fieldType = reader.GetFieldType(0);
-            if (fieldType == entityType)
-                return reader => reader.GetValue(0);
-            else
+            var visitor = new IsParameterVisitor();
+            visitor.Visit(expr);
+            if (visitor.IsParameter)
             {
-                var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(entityType, fieldType, dbContext);
-                return reader => valueGetter.Invoke(reader.GetValue(0));
+                parameterName = visitor.LastParameterName;
+                return visitor.IsParameter;
             }
+            parameterName = null;
+            return false;
         }
-        var ormProviderType = dbContext.OrmProvider.OrmProviderType;
-        var cacheKey = GetTypeReaderKey(entityType, ormProviderType, reader);
-        if (entityType.FullName.StartsWith("System.ValueTuple`"))
+        public bool GetParameters(out List<ParameterExpression> parameters)
         {
-            if (!valueTupleReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
-                valueTupleReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderValueTupleDeserializer(entityType, dbContext, reader));
-            return deserializer;
-        }
-        else if (typeof(IDictionary<string, object>).IsAssignableFrom(entityType))
-        {
-            return reader =>
+            var visitor = new IsParameterVisitor();
+            visitor.Visit(expr);
+            if (visitor.IsParameter)
             {
-                var row = new Dictionary<string, object>();
-                for (var i = 0; i < reader.FieldCount; i++)
-                {
-                    var dbValue = reader.GetValue(i);
-                    row[reader.GetName(i).Trim()] = dbValue is DBNull ? null : dbValue;
-                }
-                return row;
-            };
+                parameters = visitor.Parameters;
+                return visitor.IsParameter;
+            }
+            parameters = null;
+            return false;
         }
-        else
+        public bool GetParameterNames(out List<string> parameterNames)
         {
-            if (!typeReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
-                typeReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderEntityDeserializer(entityType, dbContext, reader));
-            return deserializer;
+            var visitor = new IsParameterVisitor();
+            visitor.Visit(expr);
+            if (visitor.IsParameter)
+            {
+                parameterNames = visitor.Parameters.Select(f => f.Name).ToList();
+                return visitor.IsParameter;
+            }
+            parameterNames = null;
+            return false;
         }
     }
-    public static Func<ITheaDataReader, object> GetReaderDeserializer(this ITheaDataReader reader, Type entityType, DbContext dbContext, List<SqlFieldSegment> readerFields)
+    extension(ITheaDataReader reader)
     {
-        if (readerFields == null)
-            return GetReaderDeserializer(reader, entityType, dbContext);
-
-        int cacheKey = 0;
-        var ormProviderType = dbContext.OrmProvider.OrmProviderType;
-        if (reader.FieldCount == 1 && !entityType.IsEntityType(out _))
+        /// <summary>
+        /// 返回的是单个基础值类型数据，如：int,DateTime等基础类型的数据
+        /// </summary>
+        /// <typeparam name="TValue"></typeparam>
+        /// <param name="reader"></param>
+        /// <param name="dbContext"></param>
+        /// <returns></returns>
+        public TValue ToValue<TValue>(DbContext dbContext)
         {
-            if (readerFields.Exists(f => f.FieldType == SqlFieldType.DeferredFields))
-            {
-                cacheKey = GetTypeReaderKey(entityType, ormProviderType, reader, readerFields);
-                if (!deferredValueReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
-                    deferredValueReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderDeferredValueDeserializer(entityType, dbContext, reader, readerFields));
-                return deserializer;
-            }
-
+            var targetType = typeof(TValue);
             var fieldType = reader.GetFieldType(0);
-            if (fieldType != entityType)
+            if (fieldType == targetType)
+                return (TValue)reader.GetValue(0);
+
+            var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext);
+            return (TValue)valueGetter.Invoke(reader.GetValue(0));
+        }
+        public Func<ITheaDataReader, object> GetReaderDeserializer(Type entityType, DbContext dbContext)
+        {
+            if (reader.FieldCount == 1 && !entityType.IsEntityType(out _))
             {
-                var typeHandler = readerFields[0].TypeHandler;
-                if (typeHandler != null)
-                    return reader => typeHandler.Parse(readerFields[0].SegmentType, reader.GetValue(0));
+                var fieldType = reader.GetFieldType(0);
+                if (fieldType == entityType)
+                    return reader => reader.GetValue(0);
                 else
                 {
                     var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(entityType, fieldType, dbContext);
                     return reader => valueGetter.Invoke(reader.GetValue(0));
                 }
             }
-            return reader => reader.GetValue(0);
-        }
-
-        cacheKey = GetTypeReaderKey(entityType, ormProviderType, reader, readerFields);
-        if (entityType.FullName.StartsWith("System.ValueTuple`"))
-        {
-            if (!valueTupleReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
-                valueTupleReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderValueTupleDeserializer(entityType, dbContext, reader));
-            return deserializer;
-        }
-        else if (typeof(IDictionary<string, object>).IsAssignableFrom(entityType))
-        {
-            return reader =>
+            var ormProviderType = dbContext.OrmProvider.OrmProviderType;
+            var cacheKey = HashCode.Combine(entityType, ormProviderType, reader);
+            if (entityType.FullName.StartsWith("System.ValueTuple`"))
             {
-                var row = new Dictionary<string, object>();
-                for (var i = 0; i < reader.FieldCount; i++)
+                if (!valueTupleReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
+                    valueTupleReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderValueTupleDeserializer(entityType, dbContext, reader));
+                return deserializer;
+            }
+            else if (typeof(IDictionary<string, object>).IsAssignableFrom(entityType))
+            {
+                return reader =>
                 {
-                    var dbValue = reader.GetValue(i);
-                    row[reader.GetName(i)] = dbValue is DBNull ? null : dbValue;
-                }
-                return row;
-            };
+                    var row = new Dictionary<string, object>();
+                    for (var i = 0; i < reader.FieldCount; i++)
+                    {
+                        var dbValue = reader.GetValue(i);
+                        row[reader.GetName(i).Trim()] = dbValue is DBNull ? null : dbValue;
+                    }
+                    return row;
+                };
+            }
+            else
+            {
+                if (!typeReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
+                    typeReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderEntityDeserializer(entityType, dbContext, reader));
+                return deserializer;
+            }
         }
-        else
+        public Func<ITheaDataReader, object> GetReaderDeserializer(Type entityType, DbContext dbContext, List<SqlFieldSegment> readerFields)
         {
-            //TEntity类型与Target类型，不一定一致，可能是dynamic或是object类型，内部还是它真正的Target类型
-            if (!queryReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
-                queryReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderEntityDeserializer(entityType, dbContext, reader, readerFields));
-            return deserializer;
+            if (readerFields == null)
+                return GetReaderDeserializer(reader, entityType, dbContext);
+
+            int cacheKey = 0;
+            var ormProviderType = dbContext.OrmProvider.OrmProviderType;
+            if (reader.FieldCount == 1 && !entityType.IsEntityType(out _))
+            {
+                if (readerFields.Exists(f => f.FieldType == SqlFieldType.DeferredFields))
+                {
+                    cacheKey = HashCode.Combine(entityType, ormProviderType, reader, readerFields);
+                    if (!deferredValueReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
+                        deferredValueReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderDeferredValueDeserializer(entityType, dbContext, reader, readerFields));
+                    return deserializer;
+                }
+
+                var fieldType = reader.GetFieldType(0);
+                if (fieldType != entityType)
+                {
+                    var typeHandler = readerFields[0].TypeHandler;
+                    if (typeHandler != null)
+                        return reader => typeHandler.Parse(readerFields[0].SegmentType, reader.GetValue(0));
+                    else
+                    {
+                        var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(entityType, fieldType, dbContext);
+                        return reader => valueGetter.Invoke(reader.GetValue(0));
+                    }
+                }
+                return reader => reader.GetValue(0);
+            }
+
+            cacheKey = HashCode.Combine(entityType, ormProviderType, reader, readerFields);
+            if (entityType.FullName.StartsWith("System.ValueTuple`"))
+            {
+                if (!valueTupleReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
+                    valueTupleReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderValueTupleDeserializer(entityType, dbContext, reader));
+                return deserializer;
+            }
+            else if (typeof(IDictionary<string, object>).IsAssignableFrom(entityType))
+            {
+                return reader =>
+                {
+                    var row = new Dictionary<string, object>();
+                    for (var i = 0; i < reader.FieldCount; i++)
+                    {
+                        var dbValue = reader.GetValue(i);
+                        row[reader.GetName(i)] = dbValue is DBNull ? null : dbValue;
+                    }
+                    return row;
+                };
+            }
+            else
+            {
+                //TEntity类型与Target类型，不一定一致，可能是dynamic或是object类型，内部还是它真正的Target类型
+                if (!queryReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
+                    queryReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderEntityDeserializer(entityType, dbContext, reader, readerFields));
+                return deserializer;
+            }
         }
     }
+    extension(IDataReader reader)
+    {
+        public T ToFieldValue<T>(int index)
+        {
+            var readerValue = reader.GetValue(index);
+            if (readerValue == null || readerValue is DBNull)
+                return default;
+            if (readerValue is IConvertible convertible)
+                return (T)Convert.ChangeType(readerValue, typeof(T));
+
+            var targetType = typeof(T);
+            //兼容某些分布式数据库，byte[]类型转换为string类型
+            if (readerValue is byte[] bytes && targetType == typeof(string))
+                return (T)(object)UTF8Encoding.UTF8.GetString(bytes);
+            var fieldType = readerValue.GetType();
+            throw new NotSupportedException($"不支持的类型转换，{fieldType.FullName}->{targetType.FullName}");
+        }
+    }
+    extension(string value)
+    {
+        public string ToCamel()
+        {
+            if (string.IsNullOrEmpty(value)) return value;
+            if (value.Length > 1)
+            {
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+            return string.Create(value.Length, value, (span, str) =>
+            {
+                str.AsSpan().CopyTo(span);
+                span[0] = char.ToLower(span[0]);
+            });
+#else
+                return string.Concat(char.ToLower(value[0]), value.Substring(1));
+#endif
+            }
+            else return value.ToLower();
+        }
+    }
+    extension(IDataParameterCollection dbParameters)
+    {
+        public void CopyTo(IDataParameterCollection other)
+        {
+            if (dbParameters == null || dbParameters.Count == 0)
+                return;
+            if (dbParameters.Equals(other)) return;
+            foreach (var dbParameter in dbParameters)
+            {
+                other.Add(dbParameter);
+            }
+        }
+        public List<IDbDataParameter> ToList()
+        {
+            if (dbParameters == null || dbParameters.Count == 0)
+                return null;
+            if (dbParameters is TheaDbParameterCollection theaDbParameters)
+                return theaDbParameters.ToList();
+            return dbParameters.Cast<IDbDataParameter>().ToList();
+            //var result = new List<IDbDataParameter>(dbParameters.Count);
+            //foreach (var dbParameter in dbParameters)
+            //{
+            //    result.Add((IDbDataParameter)dbParameter);
+            //}
+            //return result;
+        }
+    }
+#if !NETCOREAPP2_0_OR_GREATER || !NETSTANDARD2_1_OR_GREATER
+    extension<TElement>(Stack<TElement> stack)
+    {
+        public bool TryPop(out TElement element)
+        {
+            if (stack.Count > 0)
+            {
+                element = stack.Pop();
+                return true;
+            }
+            element = default;
+            return false;
+        }
+        public bool TryPeek(out TElement element)
+        {
+            if (stack.Count > 0)
+            {
+                element = stack.Peek();
+                return true;
+            }
+            element = default;
+            return false;
+        }
+    }
+#endif
+
     /// <summary>
     /// 用在方法调用中，判断!=,NOT IN,NOT LIKE三种情况
     /// </summary>
@@ -342,9 +452,9 @@ public static class Extensions
     /// <returns></returns>
     public static bool IsDeferredNot(this Stack<DeferredExpr> deferExprs)
     {
-        int notIndex = 0;
         if (deferExprs != null && deferExprs.Count > 0)
         {
+            int notIndex = 0;
             while (deferExprs.Count > 0)
             {
                 var deferredExpr = deferExprs.Pop();
@@ -361,54 +471,7 @@ public static class Extensions
         }
         return false;
     }
-    public static void CopyTo(this IQuery subQuery, SqlVisitor visitor)
-    {
-        //TODO:状态类属性也需要拷贝
-        if (subQuery == null || visitor.Equals(subQuery.Visitor)) return;
-        if (!visitor.RefQueries.Contains(subQuery))
-            visitor.RefQueries.Add(subQuery);
-        if (visitor.DbParameters.Equals(subQuery.Visitor.DbParameters))
-            return;
-        if (subQuery.Visitor.DbParameters?.Count > 0)
-            subQuery.Visitor.DbParameters.CopyTo(visitor.DbParameters);
-    }
-    public static T ToFieldValue<T>(this IDataReader reader, int index)
-    {
-        var readerValue = reader.GetValue(index);
-        if (readerValue == null || readerValue is DBNull)
-            return default;
-        if (readerValue is IConvertible convertible)
-            return (T)Convert.ChangeType(readerValue, typeof(T));
 
-        var targetType = typeof(T);
-        //兼容某些分布式数据库，byte[]类型转换为string类型
-        if (readerValue is byte[] bytes && targetType == typeof(string))
-            return (T)(object)UTF8Encoding.UTF8.GetString(bytes);
-        var fieldType = readerValue.GetType();
-        throw new NotSupportedException($"不支持的类型转换，{fieldType.FullName}->{targetType.FullName}");
-    }
-#if !NETCOREAPP2_0_OR_GREATER || !NETSTANDARD2_1_OR_GREATER
-    public static bool TryPop<TElement>(this Stack<TElement> stack, out TElement element)
-    {
-        if (stack.Count > 0)
-        {
-            element = stack.Pop();
-            return true;
-        }
-        element = default;
-        return false;
-    }
-    public static bool TryPeek<TElement>(this Stack<TElement> stack, out TElement element)
-    {
-        if (stack.Count > 0)
-        {
-            element = stack.Peek();
-            return true;
-        }
-        element = default;
-        return false;
-    }
-#endif
     public static bool TryGetKeyIgnoreCase(this IDictionary<string, object> dict, string memberName, out string itemKey)
     {
         itemKey = null;
@@ -422,26 +485,6 @@ public static class Extensions
         }
         return false;
     }
-    public static bool TryGetMember(this Type entityType, string memberName, out MemberInfo memberInfo)
-    {
-        var memberInfos = RepositoryHelper.GetMembers(entityType);
-        return memberInfos.TryFind(memberName, out memberInfo);
-    }
-    //public static bool TryGetValueIgnoreCase(this IDictionary<string, object> dict, string lowerKey, out object value)
-    //{
-    //    bool isContainsKey = false;
-    //    value = null;
-    //    foreach (var dictKey in dict.Keys)
-    //    {
-    //        if (dictKey.ToLower() == lowerKey)
-    //        {
-    //            value = dict[dictKey];
-    //            isContainsKey = true;
-    //            break;
-    //        }
-    //    }
-    //    return isContainsKey;
-    //}
     public static bool TryFind(this List<MemberInfo> memberInfos, string memberName, out MemberInfo memberInfo)
     {
         foreach (var myMemberInfo in memberInfos)
@@ -454,109 +497,5 @@ public static class Extensions
         }
         memberInfo = null;
         return false;
-    }
-    internal static void CopyTo(this IDataParameterCollection dbParameters, IDataParameterCollection other)
-    {
-        if (dbParameters == null || dbParameters.Count == 0)
-            return;
-        if (dbParameters.Equals(other)) return;
-        foreach (var dbParameter in dbParameters)
-        {
-            other.Add(dbParameter);
-        }
-    }
-    internal static string ToCamel(this string value)
-    {
-        if (string.IsNullOrEmpty(value)) return value;
-        if (value.Length > 1) return value.Substring(0, 1).ToLower() + value.Substring(1);
-        else return value.ToLower();
-    }
-    private static int GetTypeReaderKey(Type entityType, OrmProviderType ormProviderType, ITheaDataReader reader, List<SqlFieldSegment> readerFields)
-    {
-#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        var hashCode = new HashCode();
-        hashCode.Add(ormProviderType);
-        hashCode.Add(entityType);
-        hashCode.Add(reader.FieldCount);
-        for (int i = 0; i < reader.FieldCount; i++)
-        {
-            hashCode.Add(reader.GetFieldType(i));
-        }
-        hashCode.Add(readerFields.Count);
-        int index = 0;
-        foreach (var readerField in readerFields)
-        {
-            hashCode.Add(readerField.FieldType);
-            if (readerField.FieldType == SqlFieldType.Entity && readerField.IsTargetType)
-                hashCode.Add("TargetEntity");
-            else if (readerField.FieldType == SqlFieldType.RawSql)
-                hashCode.Add($"RawSql:{readerField.Body}");
-            else if (readerField.FieldType == SqlFieldType.DeferredFields)
-            {
-                string fieldName = readerField.TargetMember?.Name ?? $"DeferredField{index++}";
-                hashCode.Add($"{fieldName}:{readerField.DeferredExpression.ToString()}");
-            }
-            else hashCode.Add(readerField.TargetMember.Name);
-        }
-        return hashCode.ToHashCode();
-#else
-        int hashCode = 17;
-        unchecked
-        {
-            hashCode = hashCode * 23 + ormProviderType.GetHashCode();
-            hashCode = hashCode * 23 + entityType.GetHashCode();
-            hashCode = hashCode * 23 + reader.FieldCount.GetHashCode();
-            for (int i = 0; i < reader.FieldCount; i++)
-            {
-                hashCode = hashCode * 23 + reader.GetFieldType(i).GetHashCode();
-            }
-            hashCode = hashCode * 23 + readerFields.Count.GetHashCode();
-            int index = 0;
-            foreach (var readerField in readerFields)
-            {
-                hashCode = hashCode * 23 + readerField.FieldType.GetHashCode();
-                if (readerField.FieldType == SqlFieldType.Entity && readerField.IsTargetType)
-                    hashCode = hashCode * 23 + "TargetEntity".GetHashCode();
-                else if (readerField.FieldType == SqlFieldType.RawSql)
-                    hashCode = hashCode * 23 + $"RawSql:{readerField.Body}".GetHashCode();
-                else if (readerField.FieldType == SqlFieldType.DeferredFields)
-                {
-                    string fieldName = readerField.TargetMember?.Name ?? $"DeferredField{index++}";
-                    hashCode = hashCode * 23 + $"{fieldName}:{readerField.DeferredExpression.ToString()}".GetHashCode();
-                }
-                else hashCode = hashCode * 23 + readerField.TargetMember.Name.GetHashCode();
-            }
-        }
-        return hashCode;
-#endif
-    }
-    private static int GetTypeReaderKey(Type entityType, OrmProviderType ormProviderType, ITheaDataReader reader)
-    {
-#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        var hashCode = new HashCode();
-        hashCode.Add(ormProviderType);
-        hashCode.Add(entityType);
-        hashCode.Add(reader.FieldCount);
-        for (int i = 0; i < reader.FieldCount; i++)
-        {
-            hashCode.Add(reader.GetFieldType(i));
-            hashCode.Add(reader.GetName(i));
-        }
-        return hashCode.ToHashCode();
-#else
-        int hashCode = 17;
-        unchecked
-        {
-            hashCode = hashCode * 23 + ormProviderType.GetHashCode();
-            hashCode = hashCode * 23 + entityType.GetHashCode();
-            hashCode = hashCode * 23 + reader.FieldCount.GetHashCode();
-            for (int i = 0; i < reader.FieldCount; i++)
-            {
-                hashCode = hashCode * 23 + reader.GetFieldType(i).GetHashCode();
-                hashCode = hashCode * 23 + reader.GetName(i).GetHashCode();
-            }
-        }
-        return hashCode;
-#endif
     }
 }

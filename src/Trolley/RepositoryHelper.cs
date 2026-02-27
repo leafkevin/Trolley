@@ -169,7 +169,7 @@ public static class RepositoryHelper
     public static string BuildSelectFieldsSqlPart(DbContext dbContext, EntityMap entityMapper, Type parametersType)
     {
         var builder = new StringBuilder();
-        var memberInfos = GetMembers(parametersType).Where(f => f.CanWrite()).ToList();
+        var memberInfos = GetMembers(parametersType).Where(f => f.CanWrite).ToList();
 
         var index = 0;
         var ormProvider = dbContext.OrmProvider;
@@ -1435,7 +1435,7 @@ public static class RepositoryHelper
     {
         var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
-        var memberInfos = GetMembers(entityType).Where(f => f.CanWrite()).ToList();
+        var memberInfos = GetMembers(entityType).Where(f => f.CanWrite).ToList();
         var entityMapProvider = dbContext.EntityMapProvider;
         var hasMapper = entityMapProvider.TryGetEntityMap(entityType, out var entityMapper);
         var index = 0;
@@ -1463,7 +1463,7 @@ public static class RepositoryHelper
 
             if (!target.IsDefault)
                 target.Arguments.Add(readerValueExpr);
-            else if (memberInfo.CanWrite())
+            else if (memberInfo.CanWrite)
                 target.Bindings.Add(Expression.Bind(memberInfo, readerValueExpr));
             index++;
         }
@@ -1518,7 +1518,7 @@ public static class RepositoryHelper
 
         if (readerFields.Count == 1 && readerFields[0].FieldType == SqlFieldType.RawSql)
         {
-            var memberInfos = GetMembers(entityType).Where(f => f.CanWrite()).ToList();
+            var memberInfos = GetMembers(entityType).Where(f => f.CanWrite).ToList();
 
             if (!root.IsDefault)
                 throw new NotSupportedException($"不支持使用原始SQL创建没有默认构造函数的实体，实体类型:{entityType.FullName}");
@@ -1528,7 +1528,7 @@ public static class RepositoryHelper
                 var fieldName = reader.GetName(index);
                 if (!memberInfos.TryFind(fieldName, out var memberInfo))
                     continue;
-                if (!memberInfo.CanWrite()) continue;
+                if (!memberInfo.CanWrite) continue;
                 Expression readerValueExpr = null;
                 var fieldType = reader.GetFieldType(index);
 
@@ -1537,7 +1537,7 @@ public static class RepositoryHelper
                     indexExpr, memberInfo.GetMemberType(), fieldType, null, blockParameters, blockBodies);
                 if (!root.IsDefault)
                     root.Arguments.Add(readerValueExpr);
-                else if (memberInfo.CanWrite())
+                else if (memberInfo.CanWrite)
                     root.Bindings.Add(Expression.Bind(memberInfo, readerValueExpr));
                 index++;
             }
@@ -1562,7 +1562,7 @@ public static class RepositoryHelper
                     var readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr, Expression.Constant(index),
                         readerField.SegmentType, fieldType, readerField.TypeHandler, blockParameters, blockBodies);
                     if (!root.IsDefault) root.Arguments.Add(readerValueExpr);
-                    else if (readerField.TargetMember.CanWrite()) root.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
+                    else if (readerField.TargetMember.CanWrite) root.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
                     index++;
                 }
                 else
@@ -1611,7 +1611,7 @@ public static class RepositoryHelper
                         else executeExpr = Expression.Invoke(Expression.Lambda(bodyExpr));
                         //把延迟方法调用委托当作参数传进来，这样缓存才有效，相同key，不同的延迟方法
                         if (!current.IsDefault) current.Arguments.Add(executeExpr);
-                        else if (readerField.TargetMember.CanWrite()) current.Bindings.Add(Expression.Bind(readerField.TargetMember, executeExpr));
+                        else if (readerField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(readerField.TargetMember, executeExpr));
                     }
                     else if (readerField.FieldType == SqlFieldType.IncludeRef)
                     {
@@ -1621,7 +1621,7 @@ public static class RepositoryHelper
                         var instanceExpr = readerBuilders[refReaderField].InstanceExpr;
                         //此处生成的副本，从新new的一个对象
                         if (!parent.IsDefault) parent.Arguments.Add(instanceExpr);
-                        else if (readerField.TargetMember.CanWrite()) parent.Bindings.Add(Expression.Bind(readerField.TargetMember, instanceExpr));
+                        else if (readerField.TargetMember.CanWrite) parent.Bindings.Add(Expression.Bind(readerField.TargetMember, instanceExpr));
                         readerIndex++;
                         continue;
                     }
@@ -1643,7 +1643,7 @@ public static class RepositoryHelper
                                 childReaderField.SegmentType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
 
                             if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
-                            else if (childReaderField.TargetMember.CanWrite()) current.Bindings.Add(Expression.Bind(childReaderField.TargetMember, readerValueExpr));
+                            else if (childReaderField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(childReaderField.TargetMember, readerValueExpr));
                             childIndex++;
                             index++;
                         }
@@ -1668,7 +1668,7 @@ public static class RepositoryHelper
                                 if (current.Parent == null)
                                     break;
                                 if (!current.Parent.IsDefault) current.Parent.Arguments.Add(instanceExpr);
-                                else if (current.FromMember.CanWrite()) current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
+                                else if (current.FromMember.CanWrite) current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
                             }
                             while (deferredBuilds.TryPop(out current));
                         }

@@ -7,151 +7,204 @@ namespace Trolley.MySqlConnector;
 
 public static class MySqlExtensions
 {
-    #region Values
-    /// <summary>
-    /// 获取插入字段原值
-    /// </summary>
-    /// <typeparam name="TInsertObj">插入对象</typeparam>
-    /// <typeparam name="TField">插入字段类型</typeparam>
-    /// <param name="insertObj">插入对象</param>
-    /// <param name="field">插入字段值</param>
-    /// <returns>插入对象原值</returns>
-    /// <exception cref="NotImplementedException"></exception>
-    public static TField Values<TInsertObj, TField>(this TInsertObj insertObj, TField field) => throw new NotImplementedException();
-    #endregion
-
-    #region IgnoreInto
-    public static ICreate IgnoreInto(this ICreate instance)
+    extension<TInsertObj>(TInsertObj instance)
     {
-        var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
-        dialectVisitor.IsUseIgnoreInto = true;
-        return instance;
+        /// <summary>
+        /// 获取插入字段原值
+        /// </summary>
+        /// <typeparam name="TField">插入字段类型</typeparam>
+        /// <param name="field">插入字段值</param>
+        /// <returns>插入对象原值</returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public TField Values<TField>(TField field) => throw new NotImplementedException();
     }
-    public static ICreate<TEntity> IgnoreInto<TEntity>(this ICreate<TEntity> instance)
+    extension(ICreate instance)
     {
-        var baseInstance = instance as ICreate;
-        return baseInstance.IgnoreInto() as ICreate<TEntity>;
-    }
-    #endregion     
-
-    #region WithBulkCopy
-    public static IBulkContinuedCreate WithBulkCopy(this ICreate instance, IEnumerable insertObjs, int? timeoutSeconds = null)
-    {
-        if (insertObjs == null)
-            throw new ArgumentNullException(nameof(insertObjs));
-        bool isEmpty = true;
-        foreach (var insertObj in insertObjs)
+        public ICreate IgnoreInto()
         {
-            isEmpty = false;
-            break;
+            var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
+            dialectVisitor.IsUseIgnoreInto = true;
+            return instance;
         }
-        if (isEmpty) throw new Exception("批量更新，insertObjs参数至少要有一条数据");
-        var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
-        dialectVisitor.WithBulkCopy(insertObjs, timeoutSeconds);
-        return dialectVisitor.OrmProvider.NewBulkContinuedCreate(instance.DbContext, dialectVisitor);
-    }
-    public static IBulkContinuedCreate<TEntity> WithBulkCopy<TEntity>(this ICreate<TEntity> instance, IEnumerable insertObjs, int? timeoutSeconds = null)
-    {
-        if (insertObjs == null)
-            throw new ArgumentNullException(nameof(insertObjs));
-        bool isEmpty = true;
-        foreach (var insertObj in insertObjs)
+        public IBulkContinuedCreate WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds = null)
         {
-            isEmpty = false;
-            break;
+            if (insertObjs == null)
+                throw new ArgumentNullException(nameof(insertObjs));
+            bool isEmpty = true;
+            foreach (var insertObj in insertObjs)
+            {
+                isEmpty = false;
+                break;
+            }
+            if (isEmpty) throw new Exception("批量更新，insertObjs参数至少要有一条数据");
+            var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
+            dialectVisitor.WithBulkCopy(insertObjs, timeoutSeconds);
+            return dialectVisitor.OrmProvider.NewBulkContinuedCreate(instance.DbContext, dialectVisitor);
         }
-        if (isEmpty) throw new Exception("批量更新，insertObjs参数至少要有一条数据");
-        var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
-        dialectVisitor.WithBulkCopy(insertObjs, timeoutSeconds);
-        return dialectVisitor.OrmProvider.NewBulkContinuedCreate<TEntity>(instance.DbContext, dialectVisitor);
     }
-    #endregion
 
-    #region SetBulkCopy
-    public static IBulkContinuedUpdate SetBulkCopy(this IUpdate instance, IEnumerable updateObjs, int? timeoutSeconds = null)
+    extension<TEntity>(ICreate<TEntity> instance)
     {
-        if (updateObjs == null)
-            throw new ArgumentNullException(nameof(updateObjs));
-
-        if (updateObjs is IDictionary<string, object>)
-            throw new NotSupportedException("批量更新，单个对象类型只支持命名对象、匿名对象或是字典对象");
-
-        bool isEmpty = true;
-        foreach (var updateObj in updateObjs)
+        public ICreate<TEntity> IgnoreInto()
         {
-            isEmpty = false;
-            break;
+            var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
+            dialectVisitor.IsUseIgnoreInto = true;
+            return instance;
         }
-        if (isEmpty) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
-        var dialectVisitor = instance.Visitor as MySqlUpdateVisitor;
-        dialectVisitor.SetBulkCopy(updateObjs, timeoutSeconds);
-        return dialectVisitor.OrmProvider.NewBulkContinuedUpdate(instance.DbContext, dialectVisitor);
-    }
-    public static IBulkContinuedUpdate<TEntity> SetBulkCopy<TEntity>(this IUpdate<TEntity> instance, IEnumerable updateObjs, int? timeoutSeconds = null)
-    {
-        if (updateObjs == null)
-            throw new ArgumentNullException(nameof(updateObjs));
-
-        if (updateObjs is IDictionary<string, object>)
-            throw new NotSupportedException("批量更新，单个对象类型只支持命名对象、匿名对象或是字典对象");
-
-        bool isEmpty = true;
-        foreach (var updateObj in updateObjs)
+        public IBulkContinuedCreate<TEntity> WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds = null)
         {
-            isEmpty = false;
-            break;
+            if (insertObjs == null)
+                throw new ArgumentNullException(nameof(insertObjs));
+            bool isEmpty = true;
+            foreach (var insertObj in insertObjs)
+            {
+                isEmpty = false;
+                break;
+            }
+            if (isEmpty) throw new Exception("批量更新，insertObjs参数至少要有一条数据");
+            var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
+            dialectVisitor.WithBulkCopy(insertObjs, timeoutSeconds);
+            return dialectVisitor.OrmProvider.NewBulkContinuedCreate<TEntity>(instance.DbContext, dialectVisitor);
         }
-        if (isEmpty) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
-        var dialectVisitor = instance.Visitor as MySqlUpdateVisitor;
-        dialectVisitor.SetBulkCopy(updateObjs, timeoutSeconds);
-        return dialectVisitor.OrmProvider.NewBulkContinuedUpdate<TEntity>(instance.DbContext, dialectVisitor);
     }
-    #endregion
+    extension(IContinuedCreate instance)
+    {
+        public IMySqlCreateDuplicateKeyUpdate OnDuplicateKeyUpdate()
+            => new MySqlCreateDuplicateKeyUpdate(instance.DbContext, instance.Visitor);
+        public IResultCommand<TResult> Returning<TResult>(string fieldNames)
+        {
+            var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
+            dialectVisitor.Returning(fieldNames);
+            return dialectVisitor.OrmProvider.NewResultCreated<TResult>(instance.DbContext, instance.Visitor);
+        }
+    }
+    extension<TEntity>(IContinuedCreate<TEntity> instance)
+    {
+        public IMySqlCreateDuplicateKeyUpdate<TEntity> OnDuplicateKeyUpdate()
+            => new MySqlCreateDuplicateKeyUpdate<TEntity>(instance.DbContext, instance.Visitor);
+        public IResultCommand<TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
+        {
+            var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
+            dialectVisitor.Returning(fieldsSelector);
+            return dialectVisitor.OrmProvider.NewResultCreated<TResult>(instance.DbContext, instance.Visitor);
+        }
+    }
+    extension(IBulkContinuedCreate instance)
+    {
+        public IMySqlBulkCreateDuplicateKeyUpdate OnDuplicateKeyUpdate()
+            => new MySqlBulkCreateDuplicateKeyUpdate(instance.DbContext, instance.Visitor);
+        public IBulkResultCommand<TResult> Returning<TResult>(string fieldNames)
+        {
+            var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
+            dialectVisitor.Returning(fieldNames);
+            return dialectVisitor.OrmProvider.NewBulkResultCreated<TResult>(instance.DbContext, instance.Visitor);
+        }
+    }
+    extension<TEntity>(IBulkContinuedCreate<TEntity> instance)
+    {
+        public IMySqlBulkCreateDuplicateKeyUpdate<TEntity> OnDuplicateKeyUpdate()
+            => new MySqlBulkCreateDuplicateKeyUpdate<TEntity>(instance.DbContext, instance.Visitor);
+        public IBulkResultCommand<TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
+        {
+            var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
+            dialectVisitor.Returning(fieldsSelector);
+            return dialectVisitor.OrmProvider.NewBulkResultCreated<TResult>(instance.DbContext, instance.Visitor);
+        }
+    }
+    extension(IFromCreated instance)
+    {
+        public IFromCreated IgnoreInto()
+        {
+            var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
+            dialectVisitor.IsUseIgnoreInto = true;
+            return instance;
+        }
+        public IMySqlBulkCreateDuplicateKeyUpdate OnDuplicateKeyUpdate()
+            => new MySqlBulkCreateDuplicateKeyUpdate(instance.DbContext, instance.Visitor);
+        public IBulkResultCommand<TResult> Returning<TResult>(string fieldNames)
+        {
+            var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
+            dialectVisitor.Returning(fieldNames);
+            return dialectVisitor.OrmProvider.NewBulkResultCreated<TResult>(instance.DbContext, instance.Visitor);
+        }
+    }
+    extension<TEntity>(IFromCreated<TEntity> instance)
+    {
+        public IFromCreated<TEntity> IgnoreInto()
+        {
+            var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
+            dialectVisitor.IsUseIgnoreInto = true;
+            return instance;
+        }
+        public IMySqlBulkCreateDuplicateKeyUpdate<TEntity> OnDuplicateKeyUpdate()
+            => new MySqlBulkCreateDuplicateKeyUpdate<TEntity>(instance.DbContext, instance.Visitor);
+        public IBulkResultCommand<TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
+        {
+            var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
+            dialectVisitor.Returning(fieldsSelector);
+            return dialectVisitor.OrmProvider.NewBulkResultCreated<TResult>(instance.DbContext, instance.Visitor);
+        }
+    }
+    extension(IUpdate instance)
+    {
+        public IBulkContinuedUpdate SetBulkCopy(IEnumerable updateObjs, int? timeoutSeconds = null)
+        {
+            if (updateObjs == null)
+                throw new ArgumentNullException(nameof(updateObjs));
 
-    #region OnDuplicateKeyUpdate
-    public static IMySqlCreateDuplicateKeyUpdate<TEntity> OnDuplicateKeyUpdate<TEntity>(this IContinuedCreate<TEntity> instance)
-        => new MySqlCreateDuplicateKeyUpdate<TEntity>(instance.DbContext, instance.Visitor);
-    public static IMySqlBulkCreateDuplicateKeyUpdate<TEntity> OnDuplicateKeyUpdate<TEntity>(this IBulkContinuedCreate<TEntity> instance)
-        => new MySqlBulkCreateDuplicateKeyUpdate<TEntity>(instance.DbContext, instance.Visitor);
-    #endregion
+            if (updateObjs is IDictionary<string, object>)
+                throw new NotSupportedException("批量更新，单个对象类型只支持命名对象、匿名对象或是字典对象");
 
-    #region Returnning
-    public static IResultCommand<TResult> Returning<TResult>(this IContinuedCreate instance, string fieldNames)
-    {
-        var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
-        dialectVisitor.Returning(fieldNames);
-        return dialectVisitor.OrmProvider.NewResultCreated<TResult>(instance.DbContext, instance.Visitor);
+            bool isEmpty = true;
+            foreach (var updateObj in updateObjs)
+            {
+                isEmpty = false;
+                break;
+            }
+            if (isEmpty) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
+            var dialectVisitor = instance.Visitor as MySqlUpdateVisitor;
+            dialectVisitor.SetBulkCopy(updateObjs, timeoutSeconds);
+            return dialectVisitor.OrmProvider.NewBulkContinuedUpdate(instance.DbContext, dialectVisitor);
+        }
     }
-    public static IResultCommand<TResult> Returning<TEntity, TResult>(this IContinuedCreate<TEntity> instance, Expression<Func<TEntity, TResult>> fieldsSelector)
+    extension<TEntity>(IUpdate<TEntity> instance)
     {
-        var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
-        dialectVisitor.Returning(fieldsSelector);
-        return dialectVisitor.OrmProvider.NewResultCreated<TResult>(instance.DbContext, instance.Visitor);
-    }
-    public static IBulkResultCommand<TResult> Returning<TResult>(this IBulkContinuedCreate instance, string fieldNames)
-    {
-        var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
-        dialectVisitor.Returning(fieldNames);
-        return dialectVisitor.OrmProvider.NewBulkResultCreated<TResult>(instance.DbContext, instance.Visitor);
-    }
-    public static IBulkResultCommand<TResult> Returning<TEntity, TResult>(this IBulkContinuedCreate<TEntity> instance, Expression<Func<TEntity, TResult>> fieldsSelector)
-    {
-        var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
-        dialectVisitor.Returning(fieldsSelector);
-        return dialectVisitor.OrmProvider.NewBulkResultCreated<TResult>(instance.DbContext, instance.Visitor);
-    } 
+        public IBulkContinuedUpdate<TEntity> SetBulkCopy(IEnumerable updateObjs, int? timeoutSeconds = null)
+        {
+            if (updateObjs == null)
+                throw new ArgumentNullException(nameof(updateObjs));
 
-    public static IBulkResultCommand<TResult> Returning<TResult>(this IDelete instance, string fieldNames)
-    {
-        var dialectVisitor = instance.Visitor as MySqlDeleteVisitor;
-        dialectVisitor.Returning(fieldNames);
-        return dialectVisitor.OrmProvider.NewResultDeleted<TResult>(instance.DbContext, instance.Visitor);
+            if (updateObjs is IDictionary<string, object>)
+                throw new NotSupportedException("批量更新，单个对象类型只支持命名对象、匿名对象或是字典对象");
+
+            bool isEmpty = true;
+            foreach (var updateObj in updateObjs)
+            {
+                isEmpty = false;
+                break;
+            }
+            if (isEmpty) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
+            var dialectVisitor = instance.Visitor as MySqlUpdateVisitor;
+            dialectVisitor.SetBulkCopy(updateObjs, timeoutSeconds);
+            return dialectVisitor.OrmProvider.NewBulkContinuedUpdate<TEntity>(instance.DbContext, dialectVisitor);
+        }
     }
-    public static IBulkResultCommand<TResult> Returning<TEntity, TResult>(this IDelete<TEntity> instance, Expression<Func<TEntity, TResult>> fieldsSelector)
+    extension(IDelete instance)
     {
-        var dialectVisitor = instance.Visitor as MySqlDeleteVisitor;
-        dialectVisitor.Returning(fieldsSelector);
-        return dialectVisitor.OrmProvider.NewResultDeleted<TResult>(instance.DbContext, instance.Visitor);
+        public IBulkResultCommand<TResult> Returning<TResult>(string fieldNames)
+        {
+            var dialectVisitor = instance.Visitor as MySqlDeleteVisitor;
+            dialectVisitor.Returning(fieldNames);
+            return dialectVisitor.OrmProvider.NewResultDeleted<TResult>(instance.DbContext, instance.Visitor);
+        }
     }
-    #endregion     
+    extension<TEntity>(IDelete<TEntity> instance)
+    {
+        public IBulkResultCommand<TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
+        {
+            var dialectVisitor = instance.Visitor as MySqlDeleteVisitor;
+            dialectVisitor.Returning(fieldsSelector);
+            return dialectVisitor.OrmProvider.NewResultDeleted<TResult>(instance.DbContext, instance.Visitor);
+        }
+    }
 }

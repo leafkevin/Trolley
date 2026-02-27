@@ -187,7 +187,8 @@ public class QueryBase : QueryInternal, IQueryBase
     public virtual ICreateVisitor NewCreateVisitor()
     {
         var entityType = this.Visitor.Tables[0].EntityType;
-        var createVisiter = this.OrmProvider.NewCreateVisitor(entityType, this.DbContext, this.Visitor.TableAsStart);
+        var createVisiter = this.OrmProvider.NewCreateVisitor(entityType,
+            this.DbContext, this.Visitor.TableAsStart, this.Visitor.Command);
         createVisiter.Tables = this.Visitor.Tables;
         createVisiter.DbParameters = this.Visitor.DbParameters;
         createVisiter.RefQueries = this.Visitor.RefQueries;

@@ -31,7 +31,7 @@ public sealed class DbContext
     #endregion
 
     #region UseMasterCommand/UseSlaveCommand
-    public (bool, ITheaConnection, ITheaCommand) UseMasterCommand()
+    public (bool, ITheaConnection, ITheaCommand) UseMasterCommand(ICommandContext commandContext = null)
     {
         bool isNeedClose = false;
         ITheaConnection connection;
@@ -44,8 +44,8 @@ public sealed class DbContext
             var connString = this.ConnectionString ?? this.Database.Select();
             connection = this.CreateConnection(connString);
         }
-        var dbCommand = this.OrmProvider.CreateCommand();
-        command = connection.CreateCommand(dbCommand);
+        command = commandContext?.Command ?? this.OrmProvider.CreateCommand();
+        command.Connection = connection;
         command.CommandType = CommandType.Text;
         command.CommandTimeout = this.CommandTimeout;
         command.Transaction = this.Transaction;
@@ -53,7 +53,7 @@ public sealed class DbContext
         command.OnExecuted = this.DbInterceptors.OnCommandExecuted;
         return (isNeedClose, connection, command);
     }
-    public (bool, ITheaConnection, ITheaCommand) UseSlaveCommand(IDbCommand dbCommand = null)
+    public (bool, ITheaConnection, ITheaCommand) UseSlaveCommand(ICommandContext commandContext = null)
     {
         bool isNeedClose = false;
         ITheaConnection connection;
@@ -66,8 +66,8 @@ public sealed class DbContext
             var connString = this.ConnectionString ?? this.Database.SelectSlave();
             connection = this.CreateConnection(connString);
         }
-        dbCommand ??= this.OrmProvider.CreateCommand();
-        command = connection.CreateCommand(dbCommand);
+        command = commandContext?.Command ?? this.OrmProvider.CreateCommand();
+        command.Connection = connection;
         command.CommandType = CommandType.Text;
         command.CommandTimeout = this.CommandTimeout;
         command.Transaction = this.Transaction;
@@ -182,11 +182,10 @@ public sealed class DbContext
     }
     public TResult QueryScalar<TResult>(IQueryVisitor visitor)
     {
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor);
         (var sql, _) = this.BuildSql(visitor);
         sql = this.BuildScalarShardingSql(visitor, sql);
         command.CommandText = sql;
-        visitor.DbParameters.CopyTo(command.Parameters);
 
         connection.Open();
         TResult result = default;
@@ -201,11 +200,10 @@ public sealed class DbContext
     }
     public async Task<TResult> QueryScalarAsync<TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor);
         (var sql, var readerFields) = this.BuildSql(visitor);
         sql = this.BuildScalarShardingSql(visitor, sql);
         command.CommandText = sql;
-        visitor.DbParameters.CopyTo(command.Parameters);
 
         await connection.OpenAsync(cancellationToken);
         TResult result = default;
@@ -220,10 +218,9 @@ public sealed class DbContext
     }
     public bool QueryExists(IQueryVisitor visitor)
     {
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor);
         var sql = visitor.BuildSql(true, out var readerFields);
         command.CommandText = sql;
-        visitor.DbParameters.CopyTo(command.Parameters);
 
         connection.Open();
         var objResult = command.ExecuteScalar(CommandSqlType.Select);
@@ -236,10 +233,9 @@ public sealed class DbContext
     }
     public async Task<bool> QueryExistsAsync(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor);
         var sql = visitor.BuildSql(true, out var readerFields);
         command.CommandText = sql;
-        visitor.DbParameters.CopyTo(command.Parameters);
 
         await connection.OpenAsync(cancellationToken);
         var objResult = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
@@ -525,13 +521,11 @@ public sealed class DbContext
     public TResult QueryFrom<TEntity, TResult>(IQueryVisitor visitor, bool isBulk, Func<Type, ITheaDataReader, List<SqlFieldSegment>, TResult> readerInitializer)
     {
         var entityType = typeof(TEntity);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor);
         Expression<Func<TEntity, TEntity>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         (var sql, var readerFields) = this.BuildSql(visitor);
-
         command.CommandText = sql;
-        visitor.DbParameters.CopyTo(command.Parameters);
 
         connection.Open();
         var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
@@ -556,14 +550,12 @@ public sealed class DbContext
     public async Task<TResult> QueryFromAsync<TEntity, TResult>(IQueryVisitor visitor, bool isBulk, Func<Type, ITheaDataReader, List<SqlFieldSegment>, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
     {
         var entityType = typeof(TEntity);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor);
 
         Expression<Func<TEntity, TEntity>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         (var sql, var readerFields) = this.BuildSql(visitor);
-
         command.CommandText = sql;
-        visitor.DbParameters.CopyTo(command.Parameters);
 
         await connection.OpenAsync(cancellationToken);
         var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
@@ -588,14 +580,12 @@ public sealed class DbContext
     public IPagedList<TResult> QueryPage<TResult>(IQueryVisitor visitor)
     {
         var result = new PagedList<TResult> { Data = new List<TResult>() };
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor);
         Expression<Func<TResult, TResult>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         visitor.IsNeedPaging = true;
         (var sql, var readerFields) = this.BuildSql(visitor);
-
         command.CommandText = sql;
-        visitor.DbParameters.CopyTo(command.Parameters);
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess;
@@ -629,15 +619,13 @@ public sealed class DbContext
     public async Task<IPagedList<TResult>> QueryPageAsync<TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
         var result = new PagedList<TResult> { Data = new List<TResult>() };
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor);
 
         Expression<Func<TResult, TResult>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         visitor.IsNeedPaging = true;
         (var sql, var readerFields) = this.BuildSql(visitor);
-
         command.CommandText = sql;
-        visitor.DbParameters.CopyTo(command.Parameters);
 
         await connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess;
@@ -999,7 +987,7 @@ public sealed class DbContext
     public TResult CreateIdentity<TResult>(ICreateVisitor visitor)
     {
         TResult result = default;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(visitor);
         visitor.IsReturnIdentity = true;
         command.CommandText = visitor.BuildSql(command, out _);
 
@@ -1016,7 +1004,7 @@ public sealed class DbContext
     public async Task<TResult> CreateIdentityAsync<TResult>(ICreateVisitor visitor, CancellationToken cancellationToken = default)
     {
         TResult result = default;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(visitor);
         visitor.IsReturnIdentity = true;
         command.CommandText = visitor.BuildSql(command, out _);
 
@@ -1034,7 +1022,7 @@ public sealed class DbContext
     public TResult CreateResult<TResult>(ICreateVisitor visitor)
     {
         TResult result = default;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(visitor);
         command.CommandText = visitor.BuildSql(command, out var readerFields);
 
         connection.Open();
@@ -1051,7 +1039,7 @@ public sealed class DbContext
     public async Task<TResult> CreateResultAsync<TResult>(ICreateVisitor visitor, CancellationToken cancellationToken = default)
     {
         TResult result = default;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(visitor);
         command.CommandText = visitor.BuildSql(command, out var readerFields);
 
         await connection.OpenAsync(cancellationToken);

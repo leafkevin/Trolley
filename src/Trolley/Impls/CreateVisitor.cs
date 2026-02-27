@@ -23,10 +23,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     public Dictionary<string, object> ShardingValues { get; set; }
     public Dictionary<string, object> FieldValues { get; set; }
 
-    public CreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
+    public CreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
     {
         this.DbContext = dbContext;
         this.TableAsStart = tableAsStart;
+        this.Command = command ?? dbContext.OrmProvider.CreateCommand();
+        this.DbParameters = this.Command.Parameters;
         this.Tables = new()
         {
             new TableSegment
@@ -34,7 +36,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 TableType = TableType.Entity,
                 EntityType = entityType,
                 AliasName = "a",
-                Mapper = this.MapProvider.GetEntityMap(entityType)
+                Mapper = this.EntityMapProvider.GetEntityMap(entityType)
             }
         };
         if (this.TryGetTableShardingInfo(entityType, TableShardingUsageMode.WriteOnly, out var tableShardingInfo))
@@ -80,16 +82,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 this.FromSql = builder.ToString();
                 break;
             case ActionMode.Single:
-                //当Insert Select From操作时，DbParameters也有值，但不是command.Parameters，需要赋值到command.Parameters
-                if (this.DbParameters == null) this.DbParameters = command.Parameters;
-                else if (this.DbParameters != command.Parameters)
-                {
-                    foreach (var dbParameter in this.DbParameters)
-                    {
-                        command.Parameters.Add(dbParameter);
-                    }
-                    this.DbParameters = command.Parameters;
-                }
                 var tableSegment = this.Tables[0];
                 if (string.IsNullOrEmpty(this.FromSql))
                 {
@@ -268,8 +260,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (this.deferredSegments.Count > 1)
         {
             this.ValuesBuilder = new StringBuilder("(");
-            var tempDbParameters = new TheaDbParameterCollection();
-            this.DbParameters = tempDbParameters;
             for (int i = 1; i < this.deferredSegments.Count; i++)
             {
                 var deferredSegment = this.deferredSegments[i];
@@ -304,7 +294,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             fixedValuesSql = this.ValuesBuilder.ToString();
             this.ValuesBuilder.Clear();
             if (this.DbParameters.Count > 0)
-                fixedDbParameters = tempDbParameters.ToList();
+                fixedDbParameters = command.Parameters.ToList();
             this.DbParameters = command.Parameters;
         }
 
@@ -743,7 +733,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public override IQueryVisitor CreateQueryVisitor(char? tableAsStart = null)
     {
-        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAsStart, this.DbParameters);
+        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAsStart, this.Command);
         queryVisitor.RefQueries = this.RefQueries;
         queryVisitor.ShardingTables = this.ShardingTables;
         queryVisitor.RefTableAliases = this.RefTableAliases;

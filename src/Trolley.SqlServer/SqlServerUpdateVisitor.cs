@@ -26,7 +26,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
         {
             this.Tables = new();
             this.TableAliases = new();
-            var mapper = this.MapProvider.GetEntityMap(entityType);
+            var mapper = this.EntityMapProvider.GetEntityMap(entityType);
             this.Tables.Add(new TableSegment
             {
                 TableType = TableType.Entity,

@@ -15,15 +15,15 @@ partial class MySqlProvider
     public override IUpdated NewUpdated(DbContext dbContext, IUpdateVisitor visitor)
         => new MySqlUpdated(dbContext, visitor);
 
-    public override IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
-        => new MySqlQueryVisitor(dbContext, tableAsStart, dbParameters);
+    public override IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
+        => new MySqlQueryVisitor(dbContext, tableAsStart, command);
 
-    public override ICreateVisitor NewCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
-        => new MySqlCreateVisitor(entityType, dbContext, tableAsStart);
+    public override ICreateVisitor NewCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
+        => new MySqlCreateVisitor(entityType, dbContext, tableAsStart, command);
 
-    public override IUpdateVisitor NewUpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
-        => new MySqlUpdateVisitor(entityType, dbContext, tableAsStart);
+    public override IUpdateVisitor NewUpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
+        => new MySqlUpdateVisitor(entityType, dbContext, tableAsStart, command);
 
-    public override IDeleteVisitor NewDeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
-        => new MySqlDeleteVisitor(entityType, dbContext, tableAsStart);
+    public override IDeleteVisitor NewDeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
+        => new MySqlDeleteVisitor(entityType, dbContext, tableAsStart, command);
 }

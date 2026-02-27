@@ -7,16 +7,17 @@ using System.Text;
 
 namespace Trolley;
 
-public interface ICreateVisitor : IDisposable
+public interface ICreateVisitor : ICommandContext, IDisposable
 {
-    IDataParameterCollection DbParameters { get; set; }
+    DbContext DbContext { get; }
     IOrmProvider OrmProvider { get; }
-    IEntityMapProvider MapProvider { get; }
+    IEntityMapProvider EntityMapProvider { get; }
+    List<TableSegment> Tables { get; set; }
     ITableShardingProvider ShardingProvider { get; }
+
     ActionMode ActionMode { get; set; }
     bool IsReturnIdentity { get; set; }
 
-    List<TableSegment> Tables { get; set; }
     List<IQuery> RefQueries { get; set; }
     List<TableSegment> ShardingTables { get; set; }
     Dictionary<string, TableSegment> RefTableAliases { get; set; }
@@ -25,13 +26,11 @@ public interface ICreateVisitor : IDisposable
     string FromSql { get; set; }
     bool IsRecursive { get; set; }
 
-
     string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields);
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command);
 
     IQueryVisitor CreateQueryVisitor(char? tableAsStart = null);
-
     void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
     void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
     void UseTable(TableShardingUsageMode usageMode, Func<object, string> tableNameGetter);

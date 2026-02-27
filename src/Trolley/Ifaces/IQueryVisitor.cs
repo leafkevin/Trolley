@@ -9,10 +9,21 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public interface IQueryVisitor : ICloneable, IDisposable
+public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
 {
-    StringBuilder WhereBuilder { get; }
+    DbContext DbContext { get; }
+    IOrmProvider OrmProvider { get; }
+    IEntityMapProvider EntityMapProvider { get; }
     List<TableSegment> Tables { get; set; }
+    ITableShardingProvider ShardingProvider { get; }
+
+    /// <summary>
+    /// IncludeMany表，第二次执行时的参数列表，通常是Filter中使用的参数
+    /// </summary>
+    IDataParameterCollection NextDbParameters { get; set; }
+    List<SqlFieldSegment> ReaderFields { get; set; }
+
+    StringBuilder WhereBuilder { get; }
     List<TableSegment> IncludeTables { get; set; }
     Dictionary<string, TableSegment> TableAliases { get; }
     /// <summary>
@@ -30,12 +41,7 @@ public interface IQueryVisitor : ICloneable, IDisposable
     ICteQuery CteQueryObj { get; set; }
     bool IsRecursive { get; set; }
     string UnionSql { get; set; }
-    IDataParameterCollection DbParameters { get; set; }
-    /// <summary>
-    /// IncludeMany表，第二次执行时的参数列表，通常是Filter中使用的参数
-    /// </summary>
-    IDataParameterCollection NextDbParameters { get; set; }
-    List<SqlFieldSegment> ReaderFields { get; set; }
+
     object RefFrom { get; set; }
 
     bool IsSecondUnion { get; set; }
@@ -49,8 +55,6 @@ public interface IQueryVisitor : ICloneable, IDisposable
     string AggFieldAlias { get; set; }
     List<TableSegment> ShardingTables { get; set; }
     string ShardingTableJointMark { get; set; }
-    //bool IsFromQuery { get; set; }
-    //bool IsFromCommand { get; set; }
     bool IsNeedPaging { get; set; }
     bool HasAggFields { get; set; }
 

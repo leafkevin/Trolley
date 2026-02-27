@@ -118,7 +118,7 @@ public class Repository : IRepository
     #region FromQuery
     public virtual IQuery<T> FromQuery<T>(IQuery<T> subQuery)
     {
-        var visitor = this.CreateQueryVisitor();
+        var visitor = this.CreateQueryVisitor('a', subQuery.Visitor);
         visitor.UseQuery(typeof(T), subQuery, true);
         return this.OrmProvider.NewQuery<T>(this.DbContext, visitor);
     }
@@ -337,8 +337,7 @@ public class Repository : IRepository
 
         using var multiQuery = this.OrmProvider.NewMultipleQuery(this.DbContext);
         subQueries.Invoke(multiQuery);
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(multiQuery.Command);
-        multiQuery.Command.Connection = connection.BaseConnection;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(multiQuery);
         command.CommandText = multiQuery.BuildSql(out var readerAfters);
         connection.Open();
         var reader = command.ExecuteReader(CommandSqlType.MultiQuery, CommandBehavior.SequentialAccess);
@@ -352,8 +351,7 @@ public class Repository : IRepository
 
         using var multiQuery = this.OrmProvider.NewMultipleQuery(this.DbContext);
         subQueries.Invoke(multiQuery);
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(multiQuery.Command);
-        multiQuery.Command.Connection = connection.BaseConnection;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(multiQuery);
         command.CommandText = multiQuery.BuildSql(out var readerAfters);
         await connection.OpenAsync(cancellationToken);
         var reader = await command.ExecuteReaderAsync(CommandSqlType.MultiQuery, CommandBehavior.SequentialAccess, cancellationToken);
@@ -380,7 +378,7 @@ public class Repository : IRepository
         return this;
     }
     //抛异常的时候，会走到析构函数，但是Transaction，没有提交也没有回滚
-    private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a')
-        => this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart);
+    private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a', IQueryVisitor fromVisitor = null)
+        => this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart, fromVisitor?.Command);
     #endregion
 }

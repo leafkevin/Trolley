@@ -25,10 +25,12 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public Dictionary<string, object> ShardingValues { get; set; }
 
 
-    public UpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
+    public UpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
     {
         this.DbContext = dbContext;
         this.TableAsStart = tableAsStart;
+        this.Command = command ?? dbContext.OrmProvider.CreateCommand();
+        this.DbParameters = this.Command.Parameters;
         this.Tables = new()
         {
             new TableSegment
@@ -36,7 +38,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 TableType = TableType.Entity,
                 EntityType = entityType,
                 AliasName = "a",
-                Mapper = this.MapProvider.GetEntityMap(entityType)
+                Mapper = this.EntityMapProvider.GetEntityMap(entityType)
             }
         };
         if (this.TryGetTableShardingInfo(entityType, TableShardingUsageMode.WriteOnly, out var tableShardingInfo))
@@ -363,7 +365,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         {
             TableType = TableType.Entity,
             EntityType = entityType,
-            Mapper = this.MapProvider.GetEntityMap(entityType),
+            Mapper = this.EntityMapProvider.GetEntityMap(entityType),
             AliasName = aliasName,
             JoinType = joinType,
             Path = aliasName,
