@@ -22,28 +22,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
     private List<IEntityMapProvider> allEntityMapProviders = null;
     private List<ITableShardingProvider> allTableShardingProviders = null;
     private DbInterceptors dbInterceptors = new DbInterceptors();
-
-    /// <summary>
-    /// 获取或设置命令超时时间，单位是秒，默认是30秒
-    /// </summary>
-    public int CommandTimeout { get; set; } = 30;
-    /// <summary>
-    /// 表达式中使用变量默认的参数名前缀，默认值是p，如：@p1,@p2等
-    /// </summary>
-    public string UserParameterPrefix { get; set; } = "p";
-    /// <summary>
-    /// 表达式解析中，常量是否参数化。如果设置为true，所有常量也将都会参数化，所有变量都会做参数化处理。
-    /// </summary>
-    public bool IsConstantParameterized { get; set; } = false;
-    /// <summary>
-    /// 枚举类型常量或变量，在未指定dbType类型时映射到数据库的默认类型，默认值是int类型
-    /// </summary>
-    public Type DefaultEnumMapDbType { get; set; } = typeof(int);
-    /// <summary>
-    /// DateTime、DateTimeOffset类型的DateTimeKind，默认是DateTimeKind.Local，如果返回的日期类型不是默认是DefaultDateTimeKind，将转换为DefaultDateTimeKind类型，如果值为DateTimeKind.Unspecified，将不做处理
-    /// </summary>
-    public DateTimeKind DefaultDateTimeKind { get; set; } = DateTimeKind.Local;
-
+    private OrmDbFactoryOptions options = new OrmDbFactoryOptions();
 
     public Delegate DbKeySelector => this.dbKeySelector;
     public List<TheaDatabase> Databases => this.allDatabases;
@@ -51,6 +30,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
     public List<IEntityMapProvider> EntityMapProviders => this.allEntityMapProviders;
     public List<ITableShardingProvider> TableShardingProviders => this.allTableShardingProviders;
     public DbInterceptors DbInterceptors => this.dbInterceptors;
+    public OrmDbFactoryOptions Options => this.options;
 
     public void Register(TheaDatabase database)
     {
@@ -135,7 +115,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
     public bool TryGetTableShardingProvider(OrmProviderType ormProviderType, out ITableShardingProvider tableShardingProvider)
         => this.globalTableShardingProviders.TryGetValue(ormProviderType, out tableShardingProvider);
 
-    public void UseTypeHandler(ITypeHandler typeHandler)
+    public void AddTypeHandler(ITypeHandler typeHandler)
     {
         if (typeHandler == null)
             throw new ArgumentNullException(nameof(typeHandler));
@@ -151,20 +131,16 @@ public sealed class OrmDbFactory : IOrmDbFactory
             dbKey = this.defaultDatabase.DbKey;
         }
         var database = this.GetDatabase(dbKey);
-        return database.OrmProvider.CreateRepository(new DbContext
+        var dbContext = new DbContext
         {
             DbKey = dbKey,
             Database = database,
             //mysql默认Schema是数据库名，暂时此处为null,pgsql的默认Schema是public，sqlserver的默认Schema是dbo
             DefaultTableSchema = database.OrmProvider.DefaultTableSchema,
-            DbInterceptors = this.DbInterceptors,
-
-            DefaultDateTimeKind = this.DefaultDateTimeKind,
-            UserParameterPrefix = this.UserParameterPrefix,
-            CommandTimeout = this.CommandTimeout,
-            DefaultEnumMapDbType = this.DefaultEnumMapDbType,
-            IsConstantParameterized = this.IsConstantParameterized
-        });
+            DbInterceptors = this.DbInterceptors
+        };
+        this.options.CopyTo(dbContext.Options);
+        return database.OrmProvider.CreateRepository(dbContext);
     }
     public void Build()
     {
@@ -179,7 +155,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
             {
                 var database = this.GetDatabase(dbKey);
                 var entityMapProvider = this.entityMapProviders[dbKey];
-                entityMapProvider.Build(database);
+                entityMapProvider.Build(database, this.options);
                 database.UseEntityMapProvider(entityMapProvider);
                 this.allEntityMapProviders.Add(entityMapProvider);
             }
@@ -196,7 +172,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
                         continue;
                     //确保每个实体都映射到，如果映射过了，不再映射
                     //有时候一个数据库并不能映射完所有实体，有的实体在其他数据库中使用，所以需要遍历所有数据库映射
-                    entityMapProvider.Build(database);
+                    entityMapProvider.Build(database, this.options);
                     database.UseEntityMapProvider(entityMapProvider);
                 }
                 this.allEntityMapProviders.Add(entityMapProvider);

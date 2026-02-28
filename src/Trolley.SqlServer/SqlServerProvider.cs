@@ -285,7 +285,7 @@ public partial class SqlServerProvider : BaseOrmProvider
             default: return SqlDbType.Variant;
         }
     }
-    public override bool MapTables(string connectionString, IEntityMapProvider entityMapProvider)
+    public override bool MapTables(string connectionString, IEntityMapProvider entityMapProvider, OrmDbFactoryOptions options)
     {
         var tableNames = entityMapProvider.EntityMaps.Where(f => !f.IsMapped).Select(f => f.TableName).ToList();
         if (tableNames == null || tableNames.Count == 0)
@@ -414,14 +414,11 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
                         Position = columnInfo.Position
                     });
                 }
+                memberMapper.MappedTargetType = this.MapDefaultType(memberMapper);
                 if (memberMapper.TypeHandler == null && !memberMapper.IsIgnore)
                 {
-                    //object类型
-                    if (memberMapper.MemberType == typeof(object) && this.MapDefaultType(memberMapper) == typeof(string))
-                        memberMapper.TypeHandlerType = typeof(ToStringTypeHandler);
-
                     //允许自定义TypeHandlerType设置，默认设置
-                    if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string)
+                    if (options.IsAutoMapJsonTypeHandler && (memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string)
                         || memberMapper.UnderlyingType.IsEntityType(out _))
                         && memberMapper.MappedTargetType == typeof(string))
                         memberMapper.TypeHandlerType = typeof(JsonTypeHandler);

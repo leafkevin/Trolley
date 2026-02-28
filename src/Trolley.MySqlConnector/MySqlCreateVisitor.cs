@@ -236,14 +236,10 @@ public class MySqlCreateVisitor : CreateVisitor
         }
         else
         {
-            (var fieldsSql, var sqlSetter) = ((string, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>))
+            (var fieldsSql, var sqlSetter) = ((string, Action<IDataParameterCollection, StringBuilder, DbContext, string, string, object, string>))
                 RepositoryHelper.BuildTypedBulkCommandInitializer(this.DbContext, entityType, insertObjType, 1, null, null);
             this.FieldsBuilder.Append(fieldsSql);
-            loopSqlSetter = (dbParameters, builder, dbContext, insertObj, suffix) =>
-            {
-                sqlSetter.Invoke(dbParameters, builder, dbContext, fixedValuesSql, insertObj, suffix);
-                builder.Append("),");
-            };
+            loopSqlSetter = (dbParameters, builder, dbContext, insertObj, suffix) => sqlSetter.Invoke(dbParameters, builder, dbContext, fixedValuesSql, "),", insertObj, suffix);
         }
         this.FieldsBuilder.Append(") VALUES ");
         fixedFieldsSql = this.FieldsBuilder.ToString();
@@ -252,10 +248,8 @@ public class MySqlCreateVisitor : CreateVisitor
         {
             firstSqlSetter = (dbParameters, builder, tableName) =>
             {
-                builder.Append(headSql);
-                builder.Append(this.OrmProvider.GetTableName(tableName));
+                builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)}");
                 builder.Append(fixedFieldsSql);
-                builder.Append(fixedValuesSql);
                 fixedDbParameters.ForEach(f => dbParameters.Add(f));
             };
         }
@@ -263,10 +257,8 @@ public class MySqlCreateVisitor : CreateVisitor
         {
             firstSqlSetter = (dbParameters, builder, tableName) =>
             {
-                builder.Append(headSql);
-                builder.Append(this.OrmProvider.GetTableName(tableName));
+                builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)}");
                 builder.Append(fixedFieldsSql);
-                builder.Append(fixedValuesSql);
             };
         }
         var shardingType = tableSegment.ShardingType;
@@ -562,7 +554,7 @@ public class MySqlCreateVisitor : CreateVisitor
             else
             {
                 var targetType = memberMapper.MappedTargetType;
-                var valueGetter = this.OrmProvider.GetParameterValueGetter(dbFieldValue.GetType(), targetType, false, this.DbContext);
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(dbFieldValue.GetType(), targetType, false, this.DbContext.Options);
                 dbFieldValue = valueGetter.Invoke(dbFieldValue);
             }
 
@@ -591,7 +583,7 @@ public class MySqlCreateVisitor : CreateVisitor
             else
             {
                 var targetType = memberMapper.MappedTargetType;
-                var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext);
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext.Options);
                 fieldValue = valueGetter.Invoke(fieldValue);
             }
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -58,7 +59,22 @@ public static class OrmExtensions
         /// <param name="wherePredicate">where条件表达式，可以为null</param>
         /// <returns>返回是否存在</returns>
         public bool Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null)
-            => repository.From<TEntity>().Where(wherePredicate).Count() > 0;
+        {
+            var entityType = typeof(TEntity);
+            var dbContext = repository.DbContext;
+            var entityMapper = dbContext.EntityMapProvider.GetEntityMap(entityType);
+            var body = dbContext.OrmProvider.GetTableName(entityMapper.TableName);
+            if (wherePredicate != null)
+            {
+                using var queryVisitor = dbContext.OrmProvider.NewQueryVisitor(dbContext);
+                queryVisitor.From('a', entityType);
+                queryVisitor.And(wherePredicate);
+                var whereSql = queryVisitor.WhereBuilder.ToString();
+                body += $" a WHERE {whereSql}";
+            }
+            var sql = $"SELECT 1 FROM {body} LIMIT 1";
+            return repository.DbContext.QueryScalar<int>(sql) > 0;
+        }
         /// <summary>
         /// 判断TEntity表是否存在满足wherePredicate条件的记录，存在返回true，否则返回false，不支持分表
         /// </summary>
@@ -67,7 +83,22 @@ public static class OrmExtensions
         /// <param name="cancellationToken">取消Token</param>
         /// <returns>返回是否存在，布尔值</returns>
         public async Task<bool> ExistsAsync<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null, CancellationToken cancellationToken = default)
-            => await repository.From<TEntity>().Where(wherePredicate).CountAsync(cancellationToken) > 0;
+        {
+            var entityType = typeof(TEntity);
+            var dbContext = repository.DbContext;
+            var entityMapper = dbContext.EntityMapProvider.GetEntityMap(entityType);
+            var body = dbContext.OrmProvider.GetTableName(entityMapper.TableName);
+            if (wherePredicate != null)
+            {
+                using var queryVisitor = dbContext.OrmProvider.NewQueryVisitor(dbContext);
+                queryVisitor.From('a', entityType);
+                queryVisitor.And(wherePredicate);
+                var whereSql = queryVisitor.WhereBuilder.ToString();
+                body += $" a WHERE {whereSql}";
+            }
+            var sql = $"SELECT 1 FROM {body} LIMIT 1";
+            return await repository.DbContext.QueryScalarAsync<int>(sql, cancellationToken: cancellationToken) > 0;
+        }
         #endregion
 
         #region Update

@@ -201,11 +201,11 @@ public interface IOrmProvider
     string CastTo(Type type, object value, string characterSetOrCollation = null);
     string GetQuotedValue(Type expectType, object value);
     string GetBinaryOperator(ExpressionType nodeType);
-    Func<object, object> GetParameterValueGetter(Type fromType, Type fieldType, bool isNullable, DbContext dbContext);
-    Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType, DbContext dbContext);
+    Func<object, object> GetParameterValueGetter(Type fromType, Type fieldType, bool isNullable, OrmDbFactoryOptions options);
+    Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType, OrmDbFactoryOptions options);
     ITypeHandler GetTypeHandler(Type typeHandlerType);
     object MapNativeDbType(DbColumnInfo columnInfo);
-    bool MapTables(string connectionString, IEntityMapProvider mapProvider);
+    bool MapTables(string connectionString, IEntityMapProvider mapProvider, OrmDbFactoryOptions options);
     bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
     bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
 }

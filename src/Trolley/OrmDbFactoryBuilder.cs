@@ -114,25 +114,12 @@ public sealed class OrmDbFactoryBuilder
         if (typeHandler == null)
             throw new ArgumentNullException(nameof(typeHandler));
 
-        this.dbFactory.UseTypeHandler(typeHandler);
+        this.dbFactory.AddTypeHandler(typeHandler);
         return this;
     }
     public OrmDbFactoryBuilder WithOptions(Action<OrmDbFactoryOptions> optionsInitializer)
     {
-        var options = new OrmDbFactoryOptions
-        {
-            CommandTimeout = this.dbFactory.CommandTimeout,
-            UserParameterPrefix = this.dbFactory.UserParameterPrefix,
-            IsConstantParameterized = this.dbFactory.IsConstantParameterized,
-            DefaultEnumMapDbType = this.dbFactory.DefaultEnumMapDbType,
-            DefaultDateTimeKind = this.dbFactory.DefaultDateTimeKind
-        };
-        optionsInitializer.Invoke(options);
-        this.dbFactory.CommandTimeout = options.CommandTimeout;
-        this.dbFactory.UserParameterPrefix = options.UserParameterPrefix;
-        this.dbFactory.IsConstantParameterized = options.IsConstantParameterized;
-        this.dbFactory.DefaultEnumMapDbType = options.DefaultEnumMapDbType;
-        this.dbFactory.DefaultDateTimeKind = options.DefaultDateTimeKind;
+        optionsInitializer.Invoke(this.dbFactory.Options);
         return this;
     }
 

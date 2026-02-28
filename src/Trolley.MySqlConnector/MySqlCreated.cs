@@ -38,11 +38,6 @@ public class MySqlCreated : Created
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
 
-                    for (int i = 0; i < memberMappers.Count; i++)
-                    {
-                        bulkCopyObj.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, memberMappers[i].FieldName));
-                    }
-
                     connection.Open();
                     if (shardingType == ShardingTableType.SplitTables)
                     {
@@ -142,11 +137,6 @@ public class MySqlCreated : Created
                     var bulkCopyObj = new MySqlBulkCopy(mySqlConnection, mySqlTransaction);
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
-
-                    for (int i = 0; i < memberMappers.Count; i++)
-                    {
-                        bulkCopyObj.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, memberMappers[i].FieldName));
-                    }
 
                     await connection.OpenAsync(cancellationToken);
                     if (shardingType == ShardingTableType.SplitTables)
@@ -262,11 +252,6 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
 
-                    for (int i = 0; i < memberMappers.Count; i++)
-                    {
-                        bulkCopyObj.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, memberMappers[i].FieldName));
-                    }
-
                     connection.Open();
                     if (shardingType == ShardingTableType.SplitTables)
                     {
@@ -366,11 +351,6 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
                     var bulkCopyObj = new MySqlBulkCopy(mySqlConnection, mySqlTransaction);
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
-
-                    for (int i = 0; i < memberMappers.Count; i++)
-                    {
-                        bulkCopyObj.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, memberMappers[i].FieldName));
-                    }
 
                     await connection.OpenAsync(cancellationToken);
                     if (shardingType == ShardingTableType.SplitTables)
@@ -487,11 +467,6 @@ public class MySqlContinuedCreate : ContinuedCreate
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
 
-                    for (int i = 0; i < memberMappers.Count; i++)
-                    {
-                        bulkCopyObj.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, memberMappers[i].FieldName));
-                    }
-
                     connection.Open();
                     if (shardingType == ShardingTableType.SplitTables)
                     {
@@ -591,11 +566,6 @@ public class MySqlContinuedCreate : ContinuedCreate
                     var bulkCopyObj = new MySqlBulkCopy(mySqlConnection, mySqlTransaction);
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
-
-                    for (int i = 0; i < memberMappers.Count; i++)
-                    {
-                        bulkCopyObj.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, memberMappers[i].FieldName));
-                    }
 
                     await connection.OpenAsync(cancellationToken);
                     if (shardingType == ShardingTableType.SplitTables)

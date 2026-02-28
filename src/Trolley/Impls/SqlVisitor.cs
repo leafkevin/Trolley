@@ -20,8 +20,8 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     public IEntityMapProvider EntityMapProvider => this.DbContext.EntityMapProvider;
     public ITableShardingProvider ShardingProvider => this.DbContext.TableShardingProvider;
     public string DefaultTableSchema => this.DbContext.DefaultTableSchema;
-    public bool IsConstantParameterized => this.DbContext.IsConstantParameterized;
-    public string UserParameterPrefix => this.DbContext.UserParameterPrefix;
+    public bool IsConstantParameterized => this.DbContext.Options.IsConstantParameterized;
+    public string UserParameterPrefix => this.DbContext.Options.UserParameterPrefix;
 
     public ITheaCommand Command { get; set; }
     public IDataParameterCollection DbParameters { get; set; }
@@ -97,16 +97,12 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
 
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
-        if (!this.TrySetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
-        {
-            //没有配置分表，直接设置第一个表名
-            if (tableNames.Length == 1) tableSegment.Body = tableNames[0];
+        if (tableNames.Length > 1 && !this.TrySetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
             return;
-        }
 
         //多个分表，才当作分表处理
-        tableSegment.IsSharding = true;
-        tableSegment.IsIncludeManySharding = isIncludeMany;
+        tableSegment.IsSharding = tableSegment.TableShardingInfo != null;
+        if (tableSegment.IsSharding) tableSegment.IsIncludeManySharding = isIncludeMany;
         if (tableNames.Length > 1)
         {
             tableSegment.ShardingType = ShardingTableType.MultiTable;
@@ -124,7 +120,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         //一个分表的，当作不分表处理
         else
         {
-            tableSegment.ShardingType = ShardingTableType.SingleTable;
+            if (tableSegment.IsSharding) tableSegment.ShardingType = ShardingTableType.SingleTable;
             tableSegment.Body = tableNames[0];
         }
     }
@@ -2131,7 +2127,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                         var targetType = sqlSegment.MappedTargetType;
                         if (sqlSegment.SegmentType != targetType)
                         {
-                            var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, this.DbContext);
+                            var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, this.DbContext.Options);
                             dbFieldValue = valueGetter.Invoke(dbFieldValue);
                             sqlSegment.SegmentType = targetType;
                         }
@@ -2179,14 +2175,14 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     targetType = sqlSegment.MappedTargetType;
                     if (sqlSegment.SegmentType != targetType)
                     {
-                        var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, this.DbContext);
+                        var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, this.DbContext.Options);
                         dbFieldValue = valueGetter.Invoke(dbFieldValue);
                     }
                 }
                 //枚举类型常量，无法确定数据库是什么类型，取默认配置类型，通常是SELECT场景
                 else if (targetType.IsEnum)
                 {
-                    targetType = this.DbContext.DefaultEnumMapDbType;
+                    targetType = this.DbContext.Options.DefaultEnumMapDbType;
                     dbFieldValue = Convert.ChangeType(dbFieldValue, targetType);
                 }
                 body = this.OrmProvider.GetQuotedValue(targetType, dbFieldValue);
@@ -2275,7 +2271,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                         var targetType = elementSegment.MappedTargetType;
                         if (segmentType != targetType)
                         {
-                            var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext);
+                            var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext.Options);
                             dbFieldValue = valueGetter.Invoke(dbFieldValue);
                         }
                         dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, nativeDbType, dbFieldValue));
@@ -2308,14 +2304,14 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     targetType = elementSegment.MappedTargetType;
                     if (segmentType != targetType)
                     {
-                        var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext);
+                        var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext.Options);
                         dbFieldValue = valueGetter.Invoke(dbFieldValue);
                     }
                 }
                 //枚举类型常量，无法确定数据库是什么类型，取默认配置类型，通常是SELECT场景
                 else if (targetType.IsEnum)
                 {
-                    targetType = this.DbContext.DefaultEnumMapDbType;
+                    targetType = this.DbContext.Options.DefaultEnumMapDbType;
                     dbFieldValue = Convert.ChangeType(dbFieldValue, targetType);
                 }
                 return this.OrmProvider.GetQuotedValue(targetType, dbFieldValue);
@@ -2583,7 +2579,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                                 throw new InvalidOperationException($"参数字典中成员{memberMapper.MemberName}对应的值不能为空");
 
                             typedValueGetter = this.OrmProvider.GetParameterValueGetter(
-                                fieldValue.GetType(), memberMapper.MappedTargetType, true, this.DbContext);
+                                fieldValue.GetType(), memberMapper.MappedTargetType, true, this.DbContext.Options);
                             valueGetter = value =>
                             {
                                 var dict = value as IDictionary<string, object>;
@@ -2595,7 +2591,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                         else
                         {
                             typedValueGetter = this.OrmProvider.GetParameterValueGetter(dict[itemKey].GetType(),
-                                memberMapper.MappedTargetType, !memberMapper.IsRequired, this.DbContext);
+                                memberMapper.MappedTargetType, !memberMapper.IsRequired, this.DbContext.Options);
                             valueGetter = value =>
                             {
                                 var dict = value as IDictionary<string, object>;
@@ -2638,7 +2634,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     {
                         Func<object, object> typedValueGetter = null;
                         typedValueGetter = this.OrmProvider.GetParameterValueGetter(memberInfo.GetMemberType(),
-                            memberMapper.MappedTargetType, !memberMapper.IsRequired, this.DbContext);
+                            memberMapper.MappedTargetType, !memberMapper.IsRequired, this.DbContext.Options);
                         valueGetter = value =>
                         {
                             var fieldValue = memberInfo.Evaluate(value);

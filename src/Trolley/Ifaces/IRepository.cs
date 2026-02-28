@@ -789,5 +789,6 @@ public interface IRepository
 
     #region Other
     IRepository WithTimeout(int seconds);
+    IRepository WithOptions(Action<OrmDbFactoryOptions> optionsInitializer);
     #endregion
 }

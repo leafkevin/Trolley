@@ -13,12 +13,12 @@ public class EntityMapProvider : IEntityMapProvider
         this.entityMappers.AddOrUpdate(entityType, entityMapper, (k, o) => entityMapper);
     public bool TryGetEntityMap(Type entityType, out EntityMap entityMapper)
         => this.entityMappers.TryGetValue(entityType, out entityMapper);
-    public void Build(TheaDatabase database)
+    public void Build(TheaDatabase database, OrmDbFactoryOptions options)
     {
         //获取数据库元数据，如果全部实体映射都已经存在，则不需要重新映射
         foreach (var connectionString in database.ConnectionStrings)
         {
-            if (database.OrmProvider.MapTables(connectionString, this))
+            if (database.OrmProvider.MapTables(connectionString, this, options))
                 break;
         }
         //映射实体每个字段

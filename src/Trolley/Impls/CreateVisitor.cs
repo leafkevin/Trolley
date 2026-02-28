@@ -406,7 +406,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     var fieldValueType = fieldValue.GetType();
                     if (fieldValueType != targetType)
                     {
-                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext);
+                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext.Options);
                         fieldValue = myValueGetter.Invoke(fieldValue);
                     }
                 }
@@ -448,7 +448,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         else
         {
             var targetType = memberMapper.MappedTargetType;
-            var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext);
+            var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext.Options);
             fieldValue = valueGetter.Invoke(fieldValue);
         }
         if (this.FieldsBuilder.Length > 0)
@@ -481,7 +481,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         else
         {
             var targetType = memberMapper.MappedTargetType;
-            var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext);
+            var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext.Options);
             fieldValue = valueGetter.Invoke(fieldValue);
         }
         if (this.FieldsBuilder.Length > 0)
@@ -528,7 +528,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                         var fieldValueType = fieldValue.GetType();
                         if (fieldValueType != targetType)
                         {
-                            var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext);
+                            var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext.Options);
                             fieldValue = myValueGetter.Invoke(fieldValue);
                         }
                     }
@@ -565,7 +565,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             else
             {
                 var targetType = memberMapper.MappedTargetType;
-                var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext);
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext.Options);
                 fieldValue = valueGetter.Invoke(fieldValue);
             }
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
@@ -594,7 +594,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             else
             {
                 var targetType = memberMapper.MappedTargetType;
-                var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext);
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext.Options);
                 fieldValue = valueGetter.Invoke(fieldValue);
             }
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
@@ -677,7 +677,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 var fieldValueType = dict[key].GetType();
                 if (fieldValueType.ToUnderlyingType() != targetType)
                 {
-                    var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext);
+                    var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext.Options);
                     valueGetter = insertObj => myValueGetter.Invoke(insertObj[key]);
                 }
                 else valueGetter = insertObj => insertObj[key];

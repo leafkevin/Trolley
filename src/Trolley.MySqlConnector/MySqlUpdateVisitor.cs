@@ -138,12 +138,11 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
         else
         {
             var commandInitializer = RepositoryHelper.BuildTypedBulkCommandInitializer(this.DbContext, entityType, updateObjType, 2, this.OnlyFieldNames, this.IgnoreFieldNames)
-                as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+                as Action<IDataParameterCollection, StringBuilder, DbContext, string, string, object, string>;
             loopSqlSetter = (dbParameters, builder, dbContext, tableName, updateObj, index) =>
             {
-                builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} {fixedHeadSql}");
-                commandInitializer.Invoke(dbParameters, builder, dbContext, updateObj, index.ToString());
-                builder.Append(fixedTailSql);
+                builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} ");
+                commandInitializer.Invoke(dbParameters, builder, dbContext, fixedHeadSql, fixedTailSql, updateObj, index.ToString());
             };
         }
 

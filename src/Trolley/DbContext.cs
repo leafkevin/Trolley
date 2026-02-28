@@ -11,6 +11,9 @@ namespace Trolley;
 
 public sealed class DbContext
 {
+    //默认配置的副本，方便单次设置有效
+    private OrmDbFactoryOptions options = new OrmDbFactoryOptions();
+
     #region Properties
     public string DbKey { get; internal set; }
     public string ConnectionString { get; internal set; }
@@ -22,12 +25,7 @@ public sealed class DbContext
     public IEntityMapProvider EntityMapProvider => this.Database.EntityMapProvider;
     public ITableShardingProvider TableShardingProvider => this.Database.TableShardingProvider;
     public DbInterceptors DbInterceptors { get; internal set; }
-
-    public int CommandTimeout { get; internal set; }
-    public string UserParameterPrefix { get; internal set; }
-    public bool IsConstantParameterized { get; internal set; }
-    public Type DefaultEnumMapDbType { get; internal set; }
-    public DateTimeKind DefaultDateTimeKind { get; internal set; }
+    public OrmDbFactoryOptions Options => this.options;
     #endregion
 
     #region UseMasterCommand/UseSlaveCommand
@@ -47,7 +45,7 @@ public sealed class DbContext
         command = commandContext?.Command ?? this.OrmProvider.CreateCommand();
         command.Connection = connection;
         command.CommandType = CommandType.Text;
-        command.CommandTimeout = this.CommandTimeout;
+        command.CommandTimeout = this.options.CommandTimeout;
         command.Transaction = this.Transaction;
         command.OnExecuting = this.DbInterceptors.OnCommandExecuting;
         command.OnExecuted = this.DbInterceptors.OnCommandExecuted;
@@ -69,7 +67,7 @@ public sealed class DbContext
         command = commandContext?.Command ?? this.OrmProvider.CreateCommand();
         command.Connection = connection;
         command.CommandType = CommandType.Text;
-        command.CommandTimeout = this.CommandTimeout;
+        command.CommandTimeout = this.options.CommandTimeout;
         command.Transaction = this.Transaction;
         command.OnExecuting = this.DbInterceptors.OnCommandExecuting;
         command.OnExecuted = this.DbInterceptors.OnCommandExecuted;
@@ -728,12 +726,12 @@ public sealed class DbContext
         var builder = new StringBuilder(headSql);
         foreach (var insertObj in insertObjs)
         {
-            if (index > 0) builder.Append(',');
             commandInitializer.Invoke(command.Parameters, builder, this, insertObj, index.ToString());
             index++;
 
             if (index >= bulkCount)
             {
+                builder.Remove(builder.Length - 1, 1);
                 command.CommandText = builder.ToString();
                 result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
                 builder.Clear();
@@ -744,6 +742,7 @@ public sealed class DbContext
         }
         if (index > 0)
         {
+            builder.Remove(builder.Length - 1, 1);
             command.CommandText = builder.ToString();
             result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
             builder.Clear();
@@ -764,12 +763,12 @@ public sealed class DbContext
         var builder = new StringBuilder(headSql);
         foreach (var insertObj in insertObjs)
         {
-            if (index > 0) builder.Append(',');
             commandInitializer.Invoke(command.Parameters, builder, this, insertObj, index.ToString());
             index++;
 
             if (index >= bulkCount)
             {
+                builder.Remove(builder.Length - 1, 1);
                 command.CommandText = builder.ToString();
                 result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
                 builder.Clear();
@@ -780,6 +779,7 @@ public sealed class DbContext
         }
         if (index > 0)
         {
+            builder.Remove(builder.Length - 1, 1);
             command.CommandText = builder.ToString();
             result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
             builder.Clear();
@@ -857,7 +857,7 @@ public sealed class DbContext
                     var fieldValueType = fieldValue.GetType();
                     if (fieldValueType != targetType)
                     {
-                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this);
+                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.options);
                         fieldValue = myValueGetter.Invoke(fieldValue);
                     }
                 }
@@ -895,7 +895,6 @@ public sealed class DbContext
         object firstInsertObj = null;
         foreach (var insertObj in insertObjs)
         {
-            if (insertObj == null) throw new ArgumentNullException(nameof(insertObj));
             firstInsertObj = insertObj;
             break;
         }
@@ -932,7 +931,7 @@ public sealed class DbContext
                     var fieldValueType = dict[key].GetType();
                     if (fieldValueType.ToUnderlyingType() != targetType)
                     {
-                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this);
+                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.options);
                         valueGetter = insertObj => myValueGetter.Invoke(insertObj[key]);
                     }
                     else valueGetter = insertObj => insertObj[key];
@@ -972,14 +971,16 @@ public sealed class DbContext
                 builder.Append('(');
                 foreach (var valueSetter in valueSetters)
                     valueSetter.Invoke(dbParameters, builder, dictObj, suffix);
-                builder.Append(')');
+                builder.Append("),");
             };
         }
         else
         {
-            (var fieldsSql, commandInitializer) = ((string, Action<IDataParameterCollection, StringBuilder, DbContext, object, string>))
+            (var fieldsSql, var typedCommandInitializer) = ((string, Action<IDataParameterCollection, StringBuilder, DbContext, string, string, object, string>))
                 RepositoryHelper.BuildTypedBulkCommandInitializer(this, entityType, insertObjType, 1, null, null);
             headSql = $"INSERT INTO {this.OrmProvider.GetTableName(entityMapper.TableName)} ({fieldsSql}) VALUES ";
+            commandInitializer = (dbParameters, builder, dbContext, insertObj, suffix) =>
+                typedCommandInitializer.Invoke(dbParameters, builder, dbContext, "(", "),", insertObj, suffix);
         }
         return (isNeedClose, connection, command, headSql, commandInitializer);
     }
@@ -1111,7 +1112,7 @@ public sealed class DbContext
                     var fieldValueType = fieldValue.GetType();
                     if (fieldValueType != targetType)
                     {
-                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this);
+                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.options);
                         fieldValue = myValueGetter.Invoke(fieldValue);
                     }
                 }
@@ -1244,7 +1245,7 @@ public sealed class DbContext
                     var fieldValueType = dict[key].GetType();
                     if (fieldValueType.ToUnderlyingType() != targetType)
                     {
-                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this);
+                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.options);
                         valueGetter = insertObj => myValueGetter.Invoke(insertObj[key]);
                     }
                     else valueGetter = insertObj => insertObj[key];

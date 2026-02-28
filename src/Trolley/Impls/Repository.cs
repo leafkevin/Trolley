@@ -15,7 +15,6 @@ public class Repository : IRepository
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     public IEntityMapProvider MapProvider => this.DbContext.EntityMapProvider;
     public ITableShardingProvider ShardingProvider => this.DbContext.TableShardingProvider;
-    public bool IsParameterized => this.DbContext.IsConstantParameterized;
     #endregion
 
     #region Constructor
@@ -374,11 +373,20 @@ public class Repository : IRepository
         => await this.DbContext.RollbackAsync(cancellationToken);
     public virtual IRepository WithTimeout(int seconds)
     {
-        this.DbContext.CommandTimeout = seconds;
+        this.DbContext.Options.CommandTimeout = seconds;
+        return this;
+    }
+    public virtual IRepository WithOptions(Action<OrmDbFactoryOptions> optionsInitializer)
+    {
+        if (optionsInitializer == null) throw new ArgumentNullException(nameof(optionsInitializer));
+        optionsInitializer.Invoke(this.DbContext.Options);
         return this;
     }
     //抛异常的时候，会走到析构函数，但是Transaction，没有提交也没有回滚
-    private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a', IQueryVisitor fromVisitor = null)
-        => this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart, fromVisitor?.Command);
+    private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a', ICommandContext commandContext = null)
+    {
+        var command = commandContext?.Command ?? this.OrmProvider.CreateCommand();
+        return this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart, command);
+    }
     #endregion
 }

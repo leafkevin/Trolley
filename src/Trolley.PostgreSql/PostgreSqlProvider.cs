@@ -401,7 +401,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
             default: return value.ToString();
         }
     }
-    public override Func<object, object> GetParameterValueGetter(Type fromType, Type fieldType, bool isNullable, DbContext dbContext)
+    public override Func<object, object> GetParameterValueGetter(Type fromType, Type fieldType, bool isNullable, OrmDbFactoryOptions options)
     {
         var hashKey = HashCode.Combine(fromType, fieldType, isNullable);
         return parameterValueGetters.GetOrAdd(hashKey, f =>
@@ -1023,9 +1023,9 @@ public partial class PostgreSqlProvider : BaseOrmProvider
             return typeHandler;
         });
     }
-    public override Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType, DbContext dbContext)
+    public override Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType, OrmDbFactoryOptions options)
     {
-        var hashKey = HashCode.Combine(targetType, fieldType, dbContext.DefaultDateTimeKind);
+        var hashKey = HashCode.Combine(targetType, fieldType, options.DefaultDateTimeKind);
         return readerValueGetters.GetOrAdd(hashKey, f =>
         {
             var underlyingType = Nullable.GetUnderlyingType(targetType);
@@ -1044,14 +1044,14 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                 if (underlyingType == typeof(DateTime) || underlyingType == typeof(DateTimeOffset))
                 {
                     MethodInfo methodInfo;
-                    if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                    if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                     {
                         typedValueExpr = Expression.Convert(valueExpr, underlyingType);
                         methodInfo = typeof(RepositoryHelper).GetMethod(nameof(RepositoryHelper.ToUtcTime), BindingFlags.Public | BindingFlags.Static, null, [underlyingType], null);
                         typedValueExpr = Expression.Call(methodInfo, typedValueExpr);
                         typedValueExpr = Expression.Convert(typedValueExpr, typeof(object));
                     }
-                    else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
+                    else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                     {
                         typedValueExpr = Expression.Convert(valueExpr, underlyingType);
                         methodInfo = typeof(RepositoryHelper).GetMethod(nameof(RepositoryHelper.ToLocalTime), BindingFlags.Public | BindingFlags.Static, null, [underlyingType], null);
@@ -1249,7 +1249,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                         {
                             if (isNullableType)
                             {
-                                if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1257,7 +1257,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return RepositoryHelper.ToUtcTime(DateTimeOffset.Parse((string)value));
                                     };
                                 }
-                                else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1276,7 +1276,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                             }
                             else
                             {
-                                if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1284,7 +1284,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return RepositoryHelper.ToUtcTime(DateTimeOffset.Parse((string)value));
                                     };
                                 }
-                                else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1306,7 +1306,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                         {
                             if (isNullableType)
                             {
-                                if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1314,7 +1314,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return RepositoryHelper.ToUtcTime(new DateTimeOffset(((DateTime)value)));
                                     };
                                 }
-                                else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1333,7 +1333,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                             }
                             else
                             {
-                                if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1341,7 +1341,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return RepositoryHelper.ToUtcTime(new DateTimeOffset(((DateTime)value)));
                                     };
                                 }
-                                else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1366,7 +1366,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                         {
                             if (isNullableType)
                             {
-                                if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1374,7 +1374,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return RepositoryHelper.ToUtcTime(DateTime.Parse((string)value));
                                     };
                                 }
-                                else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1393,7 +1393,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                             }
                             else
                             {
-                                if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1401,7 +1401,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return RepositoryHelper.ToUtcTime(DateTime.Parse((string)value));
                                     };
                                 }
-                                else if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1444,7 +1444,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                         {
                             if (isNullableType)
                             {
-                                if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1452,7 +1452,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return RepositoryHelper.ToUtcTime((DateTimeOffset)value);
                                     };
                                 }
-                                else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1471,7 +1471,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                             }
                             else
                             {
-                                if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1479,7 +1479,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return RepositoryHelper.ToUtcTime((DateTimeOffset)value);
                                     };
                                 }
-                                else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1524,7 +1524,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                         {
                             if (isNullableType)
                             {
-                                if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1532,7 +1532,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return DateOnly.FromDateTime(RepositoryHelper.ToUtcTime((DateTime)value));
                                     };
                                 }
-                                else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1551,7 +1551,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                             }
                             else
                             {
-                                if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1559,7 +1559,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return DateOnly.FromDateTime(RepositoryHelper.ToUtcTime((DateTime)value));
                                     };
                                 }
-                                else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1581,7 +1581,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                         {
                             if (isNullableType)
                             {
-                                if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1589,7 +1589,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return DateOnly.FromDateTime(RepositoryHelper.ToUtcTime((DateTimeOffset)value).DateTime);
                                     };
                                 }
-                                else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1608,7 +1608,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                             }
                             else
                             {
-                                if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1616,7 +1616,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return DateOnly.FromDateTime(RepositoryHelper.ToUtcTime((DateTimeOffset)value).DateTime);
                                     };
                                 }
-                                else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1701,7 +1701,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                         {
                             if (isNullableType)
                             {
-                                if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1709,7 +1709,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return RepositoryHelper.ToUtcTime((DateTime)value).TimeOfDay;
                                     };
                                 }
-                                else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1728,7 +1728,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                             }
                             else
                             {
-                                if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1736,7 +1736,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return RepositoryHelper.ToUtcTime((DateTime)value).TimeOfDay;
                                     };
                                 }
-                                else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1758,7 +1758,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                         {
                             if (isNullableType)
                             {
-                                if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1766,7 +1766,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return RepositoryHelper.ToUtcTime((DateTimeOffset)value).TimeOfDay;
                                     };
                                 }
-                                else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1785,7 +1785,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                             }
                             else
                             {
-                                if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1793,7 +1793,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return RepositoryHelper.ToUtcTime((DateTimeOffset)value).TimeOfDay;
                                     };
                                 }
-                                else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1876,7 +1876,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                         {
                             if (isNullableType)
                             {
-                                if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1884,7 +1884,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return TimeOnly.FromTimeSpan(RepositoryHelper.ToUtcTime((DateTime)value).TimeOfDay);
                                     };
                                 }
-                                else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1903,7 +1903,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                             }
                             else
                             {
-                                if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1911,7 +1911,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return TimeOnly.FromTimeSpan(RepositoryHelper.ToUtcTime((DateTime)value).TimeOfDay);
                                     };
                                 }
-                                else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1933,7 +1933,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                         {
                             if (isNullableType)
                             {
-                                if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1941,7 +1941,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return TimeOnly.FromTimeSpan(RepositoryHelper.ToUtcTime((DateTimeOffset)value).TimeOfDay);
                                     };
                                 }
-                                else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1960,7 +1960,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                             }
                             else
                             {
-                                if (dbContext.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
                                     typeHandler = value =>
                                     {
@@ -1968,7 +1968,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return TimeOnly.FromTimeSpan(RepositoryHelper.ToUtcTime((DateTimeOffset)value).TimeOfDay);
                                     };
                                 }
-                                else if (dbContext.DefaultDateTimeKind == DateTimeKind.Local)
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
                                     typeHandler = value =>
                                     {
@@ -2297,7 +2297,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
             result = result | NpgsqlDbType.Array;
         return result;
     }
-    public override bool MapTables(string connectionString, IEntityMapProvider entityMapProvider)
+    public override bool MapTables(string connectionString, IEntityMapProvider entityMapProvider, OrmDbFactoryOptions options)
     {
         var tableNames = entityMapProvider.EntityMaps.Where(f => !f.IsMapped).Select(f => f.TableName).ToList();
         if (tableNames == null || tableNames.Count == 0)
@@ -2449,14 +2449,11 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                         Position = columnInfo.Position
                     });
                 }
+                memberMapper.MappedTargetType = this.MapDefaultType(memberMapper);
                 if (memberMapper.TypeHandler == null && !memberMapper.IsIgnore)
                 {
-                    //object类型
-                    if (memberMapper.MemberType == typeof(object) && this.MapDefaultType(memberMapper) == typeof(string))
-                        memberMapper.TypeHandlerType = typeof(ToStringTypeHandler);
-
                     //允许自定义TypeHandlerType设置，默认设置，刨除内置的支持类型
-                    if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string) || memberMapper.UnderlyingType.IsEntityType(out _))
+                    if (options.IsAutoMapJsonTypeHandler && (memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string) || memberMapper.UnderlyingType.IsEntityType(out _))
                         && memberMapper.MappedTargetType == typeof(string) && !selfTypes.Contains(memberMapper.UnderlyingType))
                         memberMapper.TypeHandlerType = typeof(JsonTypeHandler);
 
