@@ -136,7 +136,6 @@ partial class BaseOrmProvider
     public virtual IFromCreated NewFromCreated(DbContext dbContext, ICreateVisitor visitor) => new FromCreated(dbContext, visitor);
     public virtual IFromCreated<TEntity> NewFromCreated<TEntity>(DbContext dbContext, ICreateVisitor visitor) => new FromCreated<TEntity>(dbContext, visitor);
 
-
     public virtual IResultCommand<TResult> NewResultCreated<TResult>(DbContext dbContext, ICreateVisitor visitor) => new ResultCreated<TResult>(dbContext, visitor);
     public virtual IBulkResultCommand<TResult> NewBulkResultCreated<TResult>(DbContext dbContext, ICreateVisitor visitor) => new BulkResultCreated<TResult>(dbContext, visitor);
 

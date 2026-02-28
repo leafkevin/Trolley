@@ -477,70 +477,7 @@ public class Create<TEntity> : Create, ICreate<TEntity>
         base.WithBulk(insertObjs, bulkCount);
         return this.OrmProvider.NewBulkContinuedCreate<TEntity>(this.DbContext, this.Visitor);
     }
-    #endregion
-    //#region From
-    //public IFromCommand<T> From<T>()
-    //{
-    //    var queryVisitor = this.Visitor.CreateQueryVisitor();
-    //    queryVisitor.From('a', typeof(T));
-    //    queryVisitor.IsFromCommand = true;
-    //    return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
-    //}
-    //public IFromCommand<T1, T2> From<T1, T2>()
-    //{
-    //    var queryVisitor = this.Visitor.CreateQueryVisitor();
-    //    queryVisitor.From('a', typeof(T1), typeof(T2));
-    //    queryVisitor.IsFromCommand = true;
-    //    return this.OrmProvider.NewFromCommand<T1, T2>(this.DbContext, queryVisitor);
-    //}
-    //public IFromCommand<T1, T2, T3> From<T1, T2, T3>()
-    //{
-    //    var queryVisitor = this.Visitor.CreateQueryVisitor();
-    //    queryVisitor.From('a', typeof(T1), typeof(T2), typeof(T3));
-    //    queryVisitor.IsFromCommand = true;
-    //    return this.OrmProvider.NewFromCommand<T1, T2, T3>(this.DbContext, queryVisitor);
-    //}
-    //public IFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>()
-    //{
-    //    var queryVisitor = this.Visitor.CreateQueryVisitor();
-    //    queryVisitor.From('a', typeof(T1), typeof(T2), typeof(T3), typeof(T4));
-    //    queryVisitor.IsFromCommand = true;
-    //    return this.OrmProvider.NewFromCommand<T1, T2, T3, T4>(this.DbContext, queryVisitor);
-    //}
-    //public IFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
-    //{
-    //    var queryVisitor = this.Visitor.CreateQueryVisitor();
-    //    queryVisitor.From('a', typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
-    //    queryVisitor.IsFromCommand = true;
-    //    return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5>(this.DbContext, queryVisitor);
-    //}
-    //public IFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
-    //{
-    //    var queryVisitor = this.Visitor.CreateQueryVisitor();
-    //    queryVisitor.From('a', typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
-    //    queryVisitor.IsFromCommand = true;
-    //    return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, T6>(this.DbContext, queryVisitor);
-    //}
-    //#endregion
-
-    //#region FromQuery
-    //public IFromCommand<T> FromQuery<T>(IQuery<T> subQuery)
-    //{
-    //    var queryVisitor = this.Visitor.CreateQueryVisitor();
-    //    queryVisitor.IsFromCommand = true;
-    //    queryVisitor.IsFromQuery = true;
-    //    queryVisitor.UseQuery(typeof(T), subQuery, true);
-    //    return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
-    //}
-    //public IFromCommand<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
-    //{
-    //    var queryVisitor = this.Visitor.CreateQueryVisitor();
-    //    queryVisitor.IsFromCommand = true;
-    //    queryVisitor.IsFromQuery = true;
-    //    queryVisitor.UseNewQuery(typeof(T), subQueryExpr, true);
-    //    return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
-    //}
-    //#endregion
+    #endregion  
 }
 public class ContinuedCreate<TEntity> : ContinuedCreate, IContinuedCreate<TEntity>
 {

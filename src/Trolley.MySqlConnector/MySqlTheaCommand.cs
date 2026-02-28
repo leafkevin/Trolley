@@ -28,7 +28,8 @@ class MySqlTheaCommand : ITheaCommand
         set
         {
             this.connection = value;
-            this.BaseCommand.Connection = value.BaseConnection;
+            if (value != null)
+                this.BaseCommand.Connection = value.BaseConnection;
         }
     }
     public ITheaTransaction Transaction
@@ -37,7 +38,8 @@ class MySqlTheaCommand : ITheaCommand
         set
         {
             this.transaction = value;
-            this.BaseCommand.Transaction = value?.BaseTransaction ?? null;
+            if (value != null)
+                this.BaseCommand.Transaction = value.BaseTransaction;
         }
     }
 

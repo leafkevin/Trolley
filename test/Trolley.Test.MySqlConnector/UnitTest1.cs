@@ -2222,10 +2222,10 @@ public class UnitTest1 : UnitTestBase
     public async Task Insert_BulkCopy()
     {
         var repository = this.dbFactory.Create();
-        var orders = new List<dynamic>();
+        var orders = new List<Order>();
         for (int i = 1000; i < 2000; i++)
         {
-            orders.Add(new
+            orders.Add(new Order
             {
                 Id = $"ON_{i + 1}",
                 TenantId = "3",

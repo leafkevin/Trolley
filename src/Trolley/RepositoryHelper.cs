@@ -260,7 +260,6 @@ public static class RepositoryHelper
         }
         else whereObjType = whereObjs.GetType();
         bool hasWhere = whereObjs != null;
-        whereObjType ??= entityType;
 
         var cacheKey = HashCode.Combine(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, isMultiple);
         var commandInitializerCache = commandType switch
@@ -372,6 +371,7 @@ public static class RepositoryHelper
         List<Expression> myBlockBodies = blockBodies;
         List<Expression> loopBodies = null;
         var breakLabel = Expression.Label();
+        Expression myWhereObjExpr = whereObjExpr;
 
         if (isBulk)
         {
@@ -395,6 +395,7 @@ public static class RepositoryHelper
 
             //var typedWhereObj = enumerator.Current as TType;
             var currentExpr = Expression.Property(enumeratorExpr, nameof(IEnumerator.Current));
+            myWhereObjExpr = currentExpr;
             loopBodies.Add(Expression.Assign(typedWhereObjExpr, Expression.Convert(currentExpr, whereObjType)));
 
             // if (index > 0) builder.Append(jointMark);
@@ -482,12 +483,7 @@ public static class RepositoryHelper
                 Expression fieldValueExpr = null;
                 if (isDictionary) fieldValueExpr = Expression.Property(typedWhereObjExpr, dictItemPropertyInfo, itemKeyExpr);
                 else if (isEntityType) fieldValueExpr = Expression.PropertyOrField(typedWhereObjExpr, targetMemberInfo.Name);
-                else
-                {
-                    fieldValueExpr = isBulk ? typedWhereObjExpr : whereObjExpr;
-                    if (fieldValueExpr.Type != typeof(object))
-                        fieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
-                }
+                else fieldValueExpr = myWhereObjExpr;
                 AddValueParameter(dbContext, dbParametersExpr, ormProviderExpr, isDictionary, myParameterNameExpr, fieldValueExpr, memberMapper, myBlockBodies);
                 index++;
             }
@@ -737,7 +733,8 @@ public static class RepositoryHelper
             }
 
             int index = 0, whereIndex = 0;
-            var targetMemberInfos = GetMembers(parameterType);
+            var targetMemberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
 
             foreach (var memberMapper in entityMapper.MemberMaps)
             {
@@ -752,11 +749,9 @@ public static class RepositoryHelper
                 if (hasIgnoreFields && ignoreFields.Contains(memberMapper.MemberName.ToLower()))
                     continue;
 
-                var parameterValueExpr = Expression.PropertyOrField(typedParameterExpr, memberInfo.Name);
                 var parameterName = ormProvider.ParameterPrefix + memberMapper.MemberName;
                 var parameterNameExpr = Expression.Constant(parameterName);
                 var memberNameExpr = Expression.Constant(memberMapper.MemberName);
-                var memberType = memberInfo.GetMemberType();
                 var lowerMemberNameExpr = Expression.Constant(memberMapper.MemberName.ToLower());
 
                 if (commandType == 1)
@@ -766,8 +761,8 @@ public static class RepositoryHelper
                     if (index > 0) blockBodies.AddRange([addExpr1, addExpr2]);
                     else
                     {
-                        var lengthExpr = Expression.Property(fieldBuilderExpr, nameof(StringBuilder.Length));
-                        var greaterExpr = Expression.GreaterThan(lengthExpr, Expression.Constant(0));
+                        var countExpr = Expression.Property(dbParametersExpr, typeof(ICollection).GetProperty(nameof(ICollection.Count)));
+                        var greaterExpr = Expression.GreaterThan(countExpr, Expression.Constant(0));
                         blockBodies.Add(Expression.IfThen(greaterExpr, Expression.Block([addExpr1, addExpr2])));
                     }
                     var fieldNameExpr = Expression.Constant(ormProvider.GetFieldName(memberMapper.FieldName));
@@ -799,8 +794,8 @@ public static class RepositoryHelper
                         if (index > 0) blockBodies.Add(addExpr);
                         else
                         {
-                            var lengthExpr = Expression.Property(fieldBuilderExpr, nameof(StringBuilder.Length));
-                            var greaterExpr = Expression.GreaterThan(lengthExpr, Expression.Constant(0));
+                            var countExpr = Expression.Property(dbParametersExpr, typeof(ICollection).GetProperty(nameof(ICollection.Count)));
+                            var greaterExpr = Expression.GreaterThan(countExpr, Expression.Constant(0));
                             blockBodies.Add(Expression.IfThen(greaterExpr, addExpr));
                         }
                         blockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, setSqlExpr));
@@ -818,6 +813,7 @@ public static class RepositoryHelper
                 myBlockParameters.Add(fieldValueExpr);
 
                 Expression memberValueExpr = null;
+                var parameterValueExpr = Expression.PropertyOrField(typedParameterExpr, memberInfo.Name);
                 if (memberMapper.TypeHandler != null)
                 {
                     var typeHandlerMethodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
@@ -826,14 +822,18 @@ public static class RepositoryHelper
                 }
                 else
                 {
-                    if (memberType.ToUnderlyingType() == memberMapper.MappedTargetType)
-                        memberValueExpr = parameterValueExpr;
-                    else
+                    var memberType = memberInfo.GetMemberType();
+                    if (memberType.ToUnderlyingType() != memberMapper.MappedTargetType)
                     {
                         var valueGetter = ormProvider.GetParameterValueGetter(memberType, memberMapper.MappedTargetType, !memberMapper.IsRequired, dbContext);
-                        memberValueExpr = Expression.Invoke(Expression.Constant(valueGetter), parameterValueExpr);
+                        if (memberType != typeof(object))
+                            memberValueExpr = Expression.Convert(parameterValueExpr, typeof(object));
+                        memberValueExpr = Expression.Invoke(Expression.Constant(valueGetter), memberValueExpr);
                     }
+                    else memberValueExpr = parameterValueExpr;
                 }
+                if (memberValueExpr.Type != typeof(object))
+                    memberValueExpr = Expression.Convert(memberValueExpr, typeof(object));
                 myBlockBodies.Add(Expression.Assign(fieldValueExpr, memberValueExpr));
 
                 Expression nativeDbTypeExpr = Expression.Constant(memberMapper.NativeDbType);
@@ -1031,7 +1031,9 @@ public static class RepositoryHelper
                 if (memberType.ToUnderlyingType() != memberMapper.MappedTargetType)
                 {
                     var valueGetter = ormProvider.GetParameterValueGetter(memberType, memberMapper.MappedTargetType, !memberMapper.IsRequired, dbContext);
-                    memberValueExpr = Expression.Invoke(Expression.Constant(valueGetter), parameterValueExpr);
+                    if (memberType != typeof(object))
+                        memberValueExpr = Expression.Convert(parameterValueExpr, typeof(object));
+                    memberValueExpr = Expression.Invoke(Expression.Constant(valueGetter), memberValueExpr);
                 }
                 else memberValueExpr = parameterValueExpr;
             }

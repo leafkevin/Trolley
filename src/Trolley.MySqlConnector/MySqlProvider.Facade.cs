@@ -7,6 +7,15 @@ partial class MySqlProvider
 {
     public override IRepository CreateRepository(DbContext dbContext) => new MySqlRepository(dbContext);
 
+    public override IContinuedCreate NewContinuedCreate(DbContext dbContext, ICreateVisitor visitor)
+        => new MySqlContinuedCreate(dbContext, visitor);
+    public override IContinuedCreate<TEntity> NewContinuedCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor)
+        => new MySqlContinuedCreate<TEntity>(dbContext, visitor);
+    public override IBulkContinuedCreate NewBulkContinuedCreate(DbContext dbContext, ICreateVisitor visitor)
+        => new MySqlBulkContinuedCreate(dbContext, visitor);
+    public override IBulkContinuedCreate<TEntity> NewBulkContinuedCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor)
+        => new MySqlBulkContinuedCreate<TEntity>(dbContext, visitor);
+
     public override IIdentitiedCreated NewIdentitiedCreated(DbContext dbContext, ICreateVisitor visitor)
         => new MySqlIdentitiedCreated(dbContext, visitor);
     public override ICreated NewCreated(DbContext dbContext, ICreateVisitor visitor)
