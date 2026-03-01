@@ -59,15 +59,6 @@ public class MySqlCreateVisitor : CreateVisitor
                 break;
             case ActionMode.Single:
                 //当Insert Select From操作时，DbParameters也有值，但不是command.Parameters，需要赋值到command.Parameters
-                if (this.DbParameters == null) this.DbParameters = command.Parameters;
-                else if (this.DbParameters != command.Parameters)
-                {
-                    foreach (var dbParameter in this.DbParameters)
-                    {
-                        command.Parameters.Add(dbParameter);
-                    }
-                    this.DbParameters = command.Parameters;
-                }
                 var tableSegment = this.Tables[0];
                 if (string.IsNullOrEmpty(this.FromSql))
                 {

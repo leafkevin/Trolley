@@ -130,12 +130,11 @@ public class EntityMap
                 throw new Exception($"未找到表：{this.TableName}或是未找到实体类{this.EntityType.FullName}成员{memberMapper.MemberName}的映射字段");
             if (memberMapper.NativeDbType is int nativeDbType)
                 memberMapper.NativeDbType = Enum.ToObject(ormProvider.NativeDbTypeType, nativeDbType);
-            
-            if (memberMapper.IsRequired && memberMapper.MemberType.IsNullableType(out _))
-                throw new NotSupportedException($"实体类{this.EntityType.FullName}成员{memberMapper.MemberName}的映射字段，配置为必需字段，但是成员类型却是可为null对象");
+
             if (memberMapper.TypeHandlerType != null && memberMapper.TypeHandler == null)
                 memberMapper.TypeHandler = ormProvider.GetTypeHandler(memberMapper.TypeHandlerType);
-            if (memberMapper.IsRequired && memberMapper.MappedTargetType.IsValueType)
+            //这个默认值是实体参数存在字段，但没有赋值
+            if (memberMapper.IsRequired && memberMapper.UnderlyingType.IsValueType)
                 memberMapper.DefaultValue = Activator.CreateInstance(memberMapper.MappedTargetType);
             else memberMapper.DefaultValue = DBNull.Value;
             this.AddFieldMap(memberMapper.FieldName, memberMapper);

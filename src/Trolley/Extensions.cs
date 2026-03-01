@@ -81,18 +81,18 @@ public static class Extensions
     {
         public bool IsNullableType(out Type underlyingType)
         {
-            if (type.IsValueType)
+            if (!type.IsValueType)
             {
-                underlyingType = Nullable.GetUnderlyingType(type);
-                if (underlyingType == null)
-                {
-                    underlyingType = type;
-                    return false;
-                }
+                underlyingType = type;
                 return true;
             }
-            underlyingType = type;
-            return false;
+            underlyingType = Nullable.GetUnderlyingType(type);
+            if (underlyingType == null)
+            {
+                underlyingType = type;
+                return false;
+            }
+            return true;
         }
         public Type ToUnderlyingType() => Nullable.GetUnderlyingType(type) ?? type;
         public bool IsEnumType(out Type underlyingType, out Type enumUnderlyingType)
@@ -380,11 +380,11 @@ public static class Extensions
             if (value.Length > 1)
             {
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-            return string.Create(value.Length, value, (span, str) =>
-            {
-                str.AsSpan().CopyTo(span);
-                span[0] = char.ToLower(span[0]);
-            });
+                return string.Create(value.Length, value, (span, str) =>
+                {
+                    str.AsSpan().CopyTo(span);
+                    span[0] = char.ToLower(span[0]);
+                });
 #else
                 return string.Concat(char.ToLower(value[0]), value.Substring(1));
 #endif

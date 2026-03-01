@@ -123,7 +123,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 break;
             case ActionMode.Single:
                 this.FieldsBuilder = new();
-                this.DbParameters = command.Parameters;
                 var entityType = tableSegment.EntityType;
                 Func<IDataParameterCollection, DbContext, object, string> whereSqlInitializer = null;
                 foreach (var deferredSegment in this.deferredSegments)
@@ -303,7 +302,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 fixedHeadSql = $"SET {this.FieldsBuilder.ToString()},";
             if (this.WhereBuilder.Length > 0)
                 fixedTailSql = $" AND {this.WhereBuilder.ToString()};";
-            this.DbParameters = command.Parameters;
+            this.DbParameters.Clear();
         }
 
         if (firstUpdateObj is IDictionary<string, object> dict)
@@ -866,8 +865,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         foreach (var key in dict.Keys)
         {
             if (!entityMapper.TryGetMemberMap(key, out var memberMapper) || memberMapper.IsIgnore
-               || memberMapper.IsAutoIncrement || memberMapper.IsNavigation
-               || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
+               || memberMapper.IsNavigation || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
                 continue;
             if (this.hasOnlyFields || this.hasIgnoreFields)
             {
@@ -887,9 +885,21 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 if (fieldValueType.ToUnderlyingType() != targetType)
                 {
                     var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext.Options);
-                    valueGetter = insertObj => myValueGetter.Invoke(insertObj[key]);
+                    if (!memberMapper.IsRequired)
+                    {
+                        valueGetter = insertObj =>
+                        {
+                            var fieldValue = insertObj[key];
+                            return fieldValue == null ? memberMapper.DefaultValue : myValueGetter.Invoke(fieldValue);
+                        };
+                    }
+                    else valueGetter = insertObj => myValueGetter.Invoke(insertObj[key]);
                 }
-                else valueGetter = insertObj => insertObj[key];
+                else
+                {
+                    if (memberMapper.IsRequired) valueGetter = insertObj => insertObj[key];
+                    else valueGetter = insertObj => insertObj[key] ?? memberMapper.DefaultValue;
+                }
             }
 
             Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string> valueSetter = null;

@@ -295,7 +295,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             this.ValuesBuilder.Clear();
             if (this.DbParameters.Count > 0)
                 fixedDbParameters = command.Parameters.ToList();
-            this.DbParameters = command.Parameters;
+            this.DbParameters.Clear();
         }
 
         Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
@@ -398,7 +398,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 this.FieldsBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
                 this.ValuesBuilder.Append(parameterName);
 
-                if (memberMapper.TypeHandler != null)
+                if (fieldValue == null)
+                    fieldValue = memberMapper.DefaultValue;
+                else if (memberMapper.TypeHandler != null)
                     fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
                 else
                 {
@@ -520,7 +522,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 //此前参数可能有添加，也可能没有添加过，此处需要判断是否需要添加过
                 if (!this.DbParameters.Contains(parameterName))
                 {
-                    if (memberMapper.TypeHandler != null)
+                    if (fieldValue == null)
+                        fieldValue = memberMapper.DefaultValue;
+                    else if (memberMapper.TypeHandler != null)
                         fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
                     else
                     {
@@ -678,9 +682,21 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 if (fieldValueType.ToUnderlyingType() != targetType)
                 {
                     var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext.Options);
-                    valueGetter = insertObj => myValueGetter.Invoke(insertObj[key]);
+                    if (!memberMapper.IsRequired)
+                    {
+                        valueGetter = insertObj =>
+                        {
+                            var fieldValue = insertObj[key];
+                            return fieldValue == null ? memberMapper.DefaultValue : myValueGetter.Invoke(fieldValue);
+                        };
+                    }
+                    else valueGetter = insertObj => myValueGetter.Invoke(insertObj[key]);
                 }
-                else valueGetter = insertObj => insertObj[key];
+                else
+                {
+                    if (memberMapper.IsRequired) valueGetter = insertObj => insertObj[key];
+                    else valueGetter = insertObj => insertObj[key] ?? memberMapper.DefaultValue;
+                }
             }
 
             Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string> valueSetter = null;
