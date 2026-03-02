@@ -13,6 +13,7 @@ public class MySqlCreateDuplicateKeyUpdate : MySqlIdentitiedCreated, IMySqlCreat
     public IMySqlCreateDuplicateKeyUpdate UseAlias(string aliasName = "newRow")
     {
         this.dialectVisitor.RowAlias = aliasName;
+        this.dialectVisitor.IsUseSetAlias = true;
         return this;
     }
     public IMySqlCreateDuplicateKeyUpdate Set(object updateObj)

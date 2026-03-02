@@ -546,7 +546,12 @@ public class MySqlCreateVisitor : CreateVisitor
         //带有参数或字段的表达式或函数调用、或是只有参数或字段
         //.Set(true, f => f.TotalAmount))
         //.Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
-        else this.UpdateBuilder.Append($"{fieldName}={sqlSegment.Body}");
+        else
+        {
+            var fieldValue = sqlSegment.Body;
+            if (this.IsUseSetAlias) fieldValue = $"{this.RowAlias}.{fieldValue}";
+            this.UpdateBuilder.Append($"{fieldName}={fieldValue}");
+        }
     }
     public override void Dispose()
     {
