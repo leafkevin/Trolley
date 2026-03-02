@@ -1211,7 +1211,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                         (existsSql, _, _) = this.VisitFromQuery(predicateExpr);
                     }
                 }
-                else if (methodCallExpr.GetParameters(out var parameters))
+                else if (methodCallExpr.TryGetParameters(out var parameters))
                 {
                     //repository.Exists<TEntity>
                     //repository.ExistsAsync<TEntity>

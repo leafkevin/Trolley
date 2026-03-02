@@ -669,7 +669,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         continue;
 
                     var argumentExpr = newExpr.Arguments[i];
-                    if (argumentExpr.GetParameters(out var argumentParameters)
+                    if (argumentExpr.TryGetParameters(out var argumentParameters)
                         && argumentParameters.Exists(f => f.Type == typeof(IFromQuery)))
                     {
                         var newLambdaExpr = Expression.Lambda(argumentExpr, lambdaExpr.Parameters.ToList());
@@ -696,7 +696,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         continue;
 
                     var argumentExpr = memberAssignment.Expression;
-                    if (argumentExpr.GetParameters(out var argumentParameters)
+                    if (argumentExpr.TryGetParameters(out var argumentParameters)
                         && argumentParameters.Exists(f => f.Type == typeof(IFromQuery)))
                     {
                         var newLambdaExpr = Expression.Lambda(argumentExpr, lambdaExpr.Parameters.ToList());

@@ -114,18 +114,11 @@ public static class RepositoryHelper
         }
         blockBodies.Add(addParameterExpr);
     }
-    private static void AddMemberValueParameter(DbContext dbContext, Expression dbParametersExpr, Expression ormProviderExpr, bool isNeedJudgeContains,
-        Type parameterType, Expression parameterNameExpr, Expression parameterValueExpr, MemberMap memberMapper, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
+    private static void AddMemberValueParameter(DbContext dbContext, Expression dbParametersExpr, Expression ormProviderExpr, Type parameterType,
+        Expression parameterNameExpr, Expression parameterValueExpr, MemberMap memberMapper, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
     {
-        var myBlockParameters = blockParameters;
-        var myBlockBodies = blockBodies;
         var fieldValueExpr = Expression.Variable(typeof(object), $"{memberMapper.MemberName.ToCamel()}Value");
-        if (isNeedJudgeContains)
-        {
-            myBlockParameters = new List<ParameterExpression>();
-            myBlockBodies = new List<Expression>();
-        }
-        myBlockParameters.Add(fieldValueExpr);
+        blockParameters.Add(fieldValueExpr);
 
         MethodInfo methodInfo = null;
         Expression memberValueExpr = parameterValueExpr;
@@ -153,7 +146,7 @@ public static class RepositoryHelper
             var dbNullExpr = Expression.Constant(memberMapper.DefaultValue, typeof(object));
             memberValueExpr = Expression.Condition(conditionExpr, dbNullExpr, memberValueExpr);
         }
-        myBlockBodies.Add(Expression.Assign(fieldValueExpr, memberValueExpr));
+        blockBodies.Add(Expression.Assign(fieldValueExpr, memberValueExpr));
 
         Expression nativeDbTypeExpr = Expression.Constant(memberMapper.NativeDbType);
         if (nativeDbTypeExpr.Type != typeof(object))
@@ -161,17 +154,7 @@ public static class RepositoryHelper
         methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), [typeof(string), typeof(object), typeof(object)]);
         var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
         methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add));
-        Expression addParameterExpr = Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr);
-
-        if (isNeedJudgeContains)
-        {
-            methodInfo = typeof(IDataParameterCollection).GetMethod(nameof(IDataParameterCollection.Contains));
-            var containsExpr = Expression.Call(dbParametersExpr, methodInfo, parameterNameExpr);
-            myBlockBodies.Add(addParameterExpr);
-            var bodyExpr = Expression.Block(myBlockParameters, myBlockBodies);
-            addParameterExpr = Expression.IfThen(Expression.IsFalse(containsExpr), bodyExpr);
-        }
-        blockBodies.Add(addParameterExpr);
+        blockBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
     }
     public static string BuildSelectFieldsSqlPart(DbContext dbContext, EntityMap entityMapper, Type parametersType)
     {
@@ -494,7 +477,7 @@ public static class RepositoryHelper
                 else if (isEntityType) fieldValueExpr = Expression.PropertyOrField(typedWhereObjExpr, targetMemberInfo.Name);
                 else fieldValueExpr = myWhereObjExpr;
 
-                AddMemberValueParameter(dbContext, dbParametersExpr, ormProviderExpr, false, whereObjType,
+                AddMemberValueParameter(dbContext, dbParametersExpr, ormProviderExpr, whereObjType,
                     myParameterNameExpr, fieldValueExpr, memberMapper, blockParameters, myBlockBodies);
                 index++;
             }
@@ -761,8 +744,8 @@ public static class RepositoryHelper
                     continue;
                 if (hasIgnoreFields && ignoreFields.Contains(memberMapper.MemberName.ToLower()))
                     continue;
-
-                var parameterName = ormProvider.ParameterPrefix + memberMapper.MemberName;
+                //Insert And Update场景，直接使用p+MemberName作为参数名，防止重名
+                var parameterName = ormProvider.ParameterPrefix + (commandType == 3 ? "p" : "") + memberMapper.MemberName;
                 var parameterNameExpr = Expression.Constant(parameterName);
                 if (commandType == 1)
                 {
@@ -802,7 +785,7 @@ public static class RepositoryHelper
                     {
                         var addExpr = Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Constant(","));
                         if (index > 0) blockBodies.Add(addExpr);
-                        else
+                        else if (commandType == 2)
                         {
                             var countExpr = Expression.Property(dbParametersExpr, typeof(ICollection).GetProperty(nameof(ICollection.Count)));
                             var greaterExpr = Expression.GreaterThan(countExpr, Expression.Constant(0));
@@ -815,8 +798,8 @@ public static class RepositoryHelper
 
                 var parameterType = memberInfo.GetMemberType();
                 var parameterValueExpr = Expression.PropertyOrField(typedParameterExpr, memberInfo.Name);
-                AddMemberValueParameter(dbContext, dbParametersExpr, ormProviderExpr, commandType == 3,
-                    parameterType, parameterNameExpr, parameterValueExpr, memberMapper, blockParameters, blockBodies);
+                AddMemberValueParameter(dbContext, dbParametersExpr, ormProviderExpr, parameterType,
+                    parameterNameExpr, parameterValueExpr, memberMapper, blockParameters, blockBodies);
             }
             if (index <= 0) throw new Exception($"没有找到{(commandType == 1 ? "插入" : "更新")}语句");
 
@@ -950,8 +933,8 @@ public static class RepositoryHelper
 
                 var parameterType = memberInfo.GetMemberType();
                 var parameterValueExpr = Expression.PropertyOrField(typedParameterExpr, memberInfo.Name);
-                AddMemberValueParameter(dbContext, dbParametersExpr, ormProviderExpr, commandType == 3,
-                    parameterType, parameterNameExpr, parameterValueExpr, memberMapper, blockParameters, blockBodies);
+                AddMemberValueParameter(dbContext, dbParametersExpr, ormProviderExpr, parameterType,
+                    parameterNameExpr, parameterValueExpr, memberMapper, blockParameters, blockBodies);
                 index++;
             }
             if (index <= 0) throw new Exception($"没有找到{(commandType == 1 ? "插入" : "更新")}语句");

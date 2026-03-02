@@ -9,7 +9,7 @@ namespace Trolley.MySqlConnector;
 
 public class MySqlCreated : Created
 {
-    private MySqlCreateVisitor dialectVisitor;
+    protected MySqlCreateVisitor dialectVisitor;
 
     #region Constructor
     public MySqlCreated(DbContext dbContext, ICreateVisitor visitor)
@@ -223,7 +223,7 @@ public class MySqlCreated : Created
 }
 public class MySqlIdentitiedCreated : IdentitiedCreated
 {
-    private MySqlCreateVisitor dialectVisitor;
+    protected MySqlCreateVisitor dialectVisitor;
 
     #region Constructor
     public MySqlIdentitiedCreated(DbContext dbContext, ICreateVisitor visitor)
@@ -438,7 +438,7 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
 
 public class MySqlContinuedCreate : ContinuedCreate
 {
-    private MySqlCreateVisitor dialectVisitor;
+    protected MySqlCreateVisitor dialectVisitor;
 
     #region Constructor
     public MySqlContinuedCreate(DbContext dbContext, ICreateVisitor visitor)
@@ -652,7 +652,7 @@ public class MySqlContinuedCreate : ContinuedCreate
 }
 public class MySqlBulkContinuedCreate : BulkContinuedCreate
 {
-    private MySqlCreateVisitor dialectVisitor;
+    protected MySqlCreateVisitor dialectVisitor;
 
     #region Constructor
     public MySqlBulkContinuedCreate(DbContext dbContext, ICreateVisitor visitor)
@@ -876,7 +876,7 @@ public class MySqlBulkContinuedCreate : BulkContinuedCreate
 }
 public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>
 {
-    private MySqlCreateVisitor dialectVisitor;
+    protected MySqlCreateVisitor dialectVisitor;
 
     #region Constructor
     public MySqlContinuedCreate(DbContext dbContext, ICreateVisitor visitor)
@@ -1100,7 +1100,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>
 }
 public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
 {
-    private MySqlCreateVisitor dialectVisitor;
+    protected MySqlCreateVisitor dialectVisitor;
 
     #region Constructor
     public MySqlBulkContinuedCreate(DbContext dbContext, ICreateVisitor visitor)

@@ -720,7 +720,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     private void Join(string joinType, Expression joinOn, Func<LambdaExpression, TableSegment> joinTableSegmentGetter = null)
     {
         var lambdaExpr = joinOn as LambdaExpression;
-        if (!lambdaExpr.Body.GetParameters(out var parameters))
+        if (!lambdaExpr.Body.TryGetParameters(out var parameters))
             throw new NotSupportedException("当前Join操作，没有表关联");
         if (parameters.Count != 2)
             throw new NotSupportedException("Join操作，只支持两个表进行关联，但可以多次Join操作");
@@ -982,7 +982,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //    throw new NotSupportedException("Include/ThenInclude操作必须要在Where/And/GroupBy/OrderBy/Select等操作之前完成，紧跟From/Join等操作之后");
         var lambdaExpr = memberSelector as LambdaExpression;
         var memberExpr = lambdaExpr.Body as MemberExpression;
-        lambdaExpr.Body.GetParameters(out var parameters);
+        lambdaExpr.Body.TryGetParameters(out var parameters);
         tableAliasInitializer.Invoke(lambdaExpr, parameters);
         (var includeSegment, var isIncludeMany) = this.AddIncludeTables(memberExpr);
 

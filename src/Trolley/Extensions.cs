@@ -208,7 +208,7 @@ public static class Extensions
             parameterName = null;
             return false;
         }
-        public bool GetParameters(out List<ParameterExpression> parameters)
+        public bool TryGetParameters(out List<ParameterExpression> parameters)
         {
             var visitor = new IsParameterVisitor();
             visitor.Visit(expr);

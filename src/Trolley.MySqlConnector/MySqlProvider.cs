@@ -437,15 +437,14 @@ public partial class MySqlProvider : BaseOrmProvider
         switch (methodInfo.Name)
         {
             case "Values":
-                var genericArgumentTypes = methodInfo.DeclaringType.GetGenericArguments();
-                if (genericArgumentTypes.Length == 1 && methodInfo.DeclaringType == typeof(IMySqlCreateDuplicateKeyUpdate<>).MakeGenericType(genericArgumentTypes[0]))
+                if (methodInfo.DeclaringType == typeof(MySqlExtensions))
                 {
-                    cacheKey = HashCode.Combine(typeof(IMySqlCreateDuplicateKeyUpdate<>), methodInfo.GetGenericMethodDefinition());
+                    cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo.GetGenericMethodDefinition());
                     //.Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var myVisitor = visitor as MySqlCreateVisitor;
-                        if (args[0] is not MemberExpression memberExpr)
+                        if (args[1] is not MemberExpression memberExpr)
                             throw new NotSupportedException($"不支持的表达式访问，类型{methodInfo.DeclaringType.FullName}.Values方法，只支持MemberAccess访问，如：.Set(f =&gt; new {{TotalAmount = x.Values(f.TotalAmount)}})");
                         if (!myVisitor.Tables[0].Mapper.TryGetMemberMap(memberExpr.Member.Name, out var memberMapper))
                             throw new MissingMemberException($"类{myVisitor.Tables[0].EntityType.FullName}未找到成员{memberExpr.Member.Name}");

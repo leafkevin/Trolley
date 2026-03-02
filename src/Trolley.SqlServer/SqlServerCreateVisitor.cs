@@ -239,7 +239,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
     public void InitTableAlias(LambdaExpression lambdaExpr)
     {
         this.TableAliases.Clear();
-        lambdaExpr.Body.GetParameters(out var parameters);
+        lambdaExpr.Body.TryGetParameters(out var parameters);
         if (parameters == null || parameters.Count == 0)
             return;
         foreach (var parameterExpr in parameters)

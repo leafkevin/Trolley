@@ -89,6 +89,9 @@ public class MySqlCreateVisitor : CreateVisitor
                             case "SetObject":
                                 this.VisitSetObject(deferredSegment.Value);
                                 break;
+                            case "SetObjectExpr":
+                                this.VisitSetObjectExpr(deferredSegment.Value);
+                                break;
                             case "SetField":
                                 this.VisitSetField(deferredSegment.Value);
                                 break;
@@ -187,6 +190,9 @@ public class MySqlCreateVisitor : CreateVisitor
                         break;
                     case "SetObject":
                         this.VisitSetObject(deferredSegment.Value);
+                        break;
+                    case "SetObjectExpr":
+                        this.VisitSetObjectExpr(deferredSegment.Value);
                         break;
                     case "SetField":
                         this.VisitSetField(deferredSegment.Value);
@@ -513,24 +519,9 @@ public class MySqlCreateVisitor : CreateVisitor
         queryVisitor.IsUseIgnoreInto = this.IsUseIgnoreInto;
         return queryVisitor;
     }
-    public virtual void InitTableAlias(LambdaExpression lambdaExpr)
-    {
-        this.TableAliases.Clear();
-        lambdaExpr.Body.GetParameters(out var parameters);
-        if (parameters == null || parameters.Count == 0)
-            return;
-        foreach (var parameterExpr in parameters)
-        {
-            if (parameterExpr.Type == typeof(IMySqlCreateDuplicateKeyUpdate<>).MakeGenericType(this.Tables[0].EntityType))
-                continue;
-            if (this.TableAliases.ContainsKey(parameterExpr.Name))
-                continue;
-            this.TableAliases.Add(parameterExpr.Name, this.Tables[0]);
-        }
-    }
     public virtual void AddMemberElement(SqlFieldSegment sqlSegment, MemberMap memberMapper)
     {
-        if (this.UpdateBuilder.Length > 0) this.UpdateBuilder.Append(',');
+        if (this.UpdateIndex > 0) this.UpdateBuilder.Append(',');
         var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
 
         if (sqlSegment == SqlFieldSegment.Null)
@@ -556,31 +547,6 @@ public class MySqlCreateVisitor : CreateVisitor
         //.Set(true, f => f.TotalAmount))
         //.Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
         else this.UpdateBuilder.Append($"{fieldName}={sqlSegment.Body}");
-    }
-    public virtual void VisitSetExpression(Expression assignmentExpr)
-        => this.VisitAndDeferred(new SqlFieldSegment { Expression = assignmentExpr });
-    public virtual void VisitWithSetField(Expression fieldSelector, object fieldValue)
-    {
-        var lambdaExpr = this.EnsureLambda(fieldSelector);
-        var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;
-        var entityMapper = this.Tables[0].Mapper;
-        var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
-        var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
-        //在前面insert的时候，参数有可能已经添加过了，此处需要判断是否需要添加
-        if (!this.DbParameters.Contains(parameterName))
-        {
-            if (memberMapper.TypeHandler != null)
-                fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
-            else
-            {
-                var targetType = memberMapper.MappedTargetType;
-                var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext.Options);
-                fieldValue = valueGetter.Invoke(fieldValue);
-            }
-            this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
-        }
-        if (this.UpdateBuilder.Length > 0) this.UpdateBuilder.Append(',');
-        this.UpdateBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
     }
     public override void Dispose()
     {

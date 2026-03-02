@@ -5,13 +5,10 @@ namespace Trolley.MySqlConnector;
 
 public class MySqlCreateDuplicateKeyUpdate : MySqlIdentitiedCreated, IMySqlCreateDuplicateKeyUpdate
 {
-    private MySqlCreateVisitor dialectVisitor;
-
     public MySqlCreateDuplicateKeyUpdate(DbContext dbContext, ICreateVisitor visitor)
         : base(dbContext, visitor)
     {
-        this.dialectVisitor = visitor as MySqlCreateVisitor;
-        this.dialectVisitor.UpdateBuilder = new();
+        this.dialectVisitor.UpdateBuilder = new(" ON DUPLICATE KEY UPDATE ");
     }
     public IMySqlCreateDuplicateKeyUpdate UseAlias(string aliasName = "newRow")
     {
@@ -46,13 +43,10 @@ public class MySqlCreateDuplicateKeyUpdate : MySqlIdentitiedCreated, IMySqlCreat
 }
 public class MySqlBulkCreateDuplicateKeyUpdate : MySqlCreated, IMySqlBulkCreateDuplicateKeyUpdate
 {
-    private MySqlCreateVisitor dialectVisitor;
-
     public MySqlBulkCreateDuplicateKeyUpdate(DbContext dbContext, ICreateVisitor visitor)
         : base(dbContext, visitor)
     {
-        this.dialectVisitor = visitor as MySqlCreateVisitor;
-        this.dialectVisitor.UpdateBuilder = new();
+        this.dialectVisitor.UpdateBuilder = new(" ON DUPLICATE KEY UPDATE ");
     }
     public TField Values<TField>(TField fieldSelector) => throw new NotImplementedException();
     public IMySqlBulkCreateDuplicateKeyUpdate UseAlias(string aliasName = "newRow")
@@ -89,13 +83,9 @@ public class MySqlBulkCreateDuplicateKeyUpdate : MySqlCreated, IMySqlBulkCreateD
 
 public class MySqlCreateDuplicateKeyUpdate<TEntity> : MySqlCreateDuplicateKeyUpdate, IMySqlCreateDuplicateKeyUpdate<TEntity>
 {
-    private MySqlCreateVisitor dialectVisitor;
-
     public MySqlCreateDuplicateKeyUpdate(DbContext dbContext, ICreateVisitor visitor)
-        : base(dbContext, visitor)
-    {
-        this.dialectVisitor = visitor as MySqlCreateVisitor;
-    }
+        : base(dbContext, visitor) { }
+
     public new IMySqlCreateDuplicateKeyUpdate<TEntity> UseAlias(string aliasName = "newRow")
         => base.UseAlias(aliasName) as IMySqlCreateDuplicateKeyUpdate<TEntity>;
     public new IMySqlCreateDuplicateKeyUpdate<TEntity> Set(object updateObj)
@@ -145,14 +135,9 @@ public class MySqlCreateDuplicateKeyUpdate<TEntity> : MySqlCreateDuplicateKeyUpd
 }
 public class MySqlBulkCreateDuplicateKeyUpdate<TEntity> : MySqlBulkCreateDuplicateKeyUpdate, IMySqlBulkCreateDuplicateKeyUpdate<TEntity>
 {
-    private MySqlCreateVisitor dialectVisitor;
-
     public MySqlBulkCreateDuplicateKeyUpdate(DbContext dbContext, ICreateVisitor visitor)
-        : base(dbContext, visitor)
-    {
-        this.dialectVisitor = visitor as MySqlCreateVisitor;
-        this.dialectVisitor.UpdateBuilder = new();
-    }
+        : base(dbContext, visitor) { }
+
     public new IMySqlBulkCreateDuplicateKeyUpdate<TEntity> UseAlias(string aliasName = "newRow")
         => base.UseAlias(aliasName) as IMySqlBulkCreateDuplicateKeyUpdate<TEntity>;
     public new IMySqlBulkCreateDuplicateKeyUpdate<TEntity> Set(object updateObj)

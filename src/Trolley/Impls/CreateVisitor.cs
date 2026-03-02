@@ -14,6 +14,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     public StringBuilder FieldsBuilder { get; set; } = new();
     public StringBuilder ValuesBuilder { get; set; }
     public StringBuilder UpdateBuilder { get; set; }
+    public int UpdateIndex { get; set; }
     public ActionMode ActionMode { get; set; }
     public bool IsReturnIdentity { get; set; }
     public string FromSql { get; set; }
@@ -220,7 +221,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     {
         this.deferredSegments.Add(new CommandSegment
         {
-            Type = "SetFieldsExpr",
+            Type = "SetObjectExpr",
             Value = fieldsAssignment
         });
     }
@@ -276,6 +277,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                         break;
                     case "SetObject":
                         this.VisitSetObject(deferredSegment.Value);
+                        break;
+                    case "SetObjectExpr":
+                        this.VisitSetObjectExpr(deferredSegment.Value);
                         break;
                     case "SetField":
                         this.VisitSetField(deferredSegment.Value);
@@ -503,7 +507,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
         var updateObjType = updateObj.GetType();
-        if (this.UpdateBuilder.Length > 0) this.UpdateBuilder.Append(',');
+        if (this.UpdateIndex > 0) this.UpdateBuilder.Append(',');
 
         if (updateObj is IDictionary<string, object> dict)
         {
@@ -548,6 +552,15 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
             typedCommandInitializer.Invoke(this.DbParameters, this.UpdateBuilder, this.DbContext, updateObj);
         }
+        this.UpdateIndex++;
+    }
+    public virtual void VisitSetObjectExpr(object deferredSegmentValue)
+    {
+        var assignmentExpr = deferredSegmentValue as LambdaExpression;
+        this.InitTableAlias(assignmentExpr);
+        if (this.UpdateIndex > 0) this.UpdateBuilder.Append(',');
+        this.VisitAndDeferred(new SqlFieldSegment { Expression = assignmentExpr });
+        this.UpdateIndex++;
     }
     public virtual void VisitSetField(object deferredSegmentValue)
     {
@@ -574,8 +587,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             }
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
         }
-        if (this.UpdateBuilder.Length > 0) this.UpdateBuilder.Append(',');
+        if (this.UpdateIndex > 0) this.UpdateBuilder.Append(',');
         this.UpdateBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+        this.UpdateIndex++;
     }
     public virtual void VisitSetFieldExpr(object deferredSegmentValue)
     {
@@ -603,16 +617,20 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             }
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
         }
-        if (this.UpdateBuilder.Length > 0) this.UpdateBuilder.Append(',');
+        if (this.UpdateIndex > 0) this.UpdateBuilder.Append(',');
         this.UpdateBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+        this.UpdateIndex++;
     }
     public virtual void VisitSetFieldExprs(object deferredSegmentValue)
     {
         (var fieldSelector, var valueGetter) = ((Expression, Expression))deferredSegmentValue;
+        this.InitTableAlias(fieldSelector as LambdaExpression);
         var fieldSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = fieldSelector });
+        this.InitTableAlias(valueGetter as LambdaExpression);
         var valueSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = valueGetter });
-        if (this.UpdateBuilder.Length > 0) this.UpdateBuilder.Append(',');
+        if (this.UpdateIndex > 0) this.UpdateBuilder.Append(',');
         this.UpdateBuilder.Append($"{fieldSegment.Body}={valueSegment.Body}");
+        this.UpdateIndex++;
     }
     public virtual List<string> VisitFields(Expression fieldsSelector, bool isIgnoreCase = true)
     {
@@ -760,5 +778,17 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
 
         queryVisitor.Tables = this.Tables;
         return queryVisitor;
+    }
+    public virtual void InitTableAlias(LambdaExpression lambdaExpr)
+    {
+        if (!lambdaExpr.Body.TryGetParameters(out var parameters))
+            return;
+        this.TableAliases.Clear();
+        foreach (var parameterExpr in parameters)
+        {
+            if (this.TableAliases.ContainsKey(parameterExpr.Name))
+                continue;
+            this.TableAliases.Add(parameterExpr.Name, this.Tables[0]);
+        }
     }
 }
