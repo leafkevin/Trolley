@@ -95,7 +95,6 @@ public class MySqlCreateDuplicateKeyUpdate<TEntity> : MySqlCreateDuplicateKeyUpd
         : base(dbContext, visitor)
     {
         this.dialectVisitor = visitor as MySqlCreateVisitor;
-        this.dialectVisitor.UpdateBuilder = new();
     }
     public new IMySqlCreateDuplicateKeyUpdate<TEntity> UseAlias(string aliasName = "newRow")
         => base.UseAlias(aliasName) as IMySqlCreateDuplicateKeyUpdate<TEntity>;

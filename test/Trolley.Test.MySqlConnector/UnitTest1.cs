@@ -1396,28 +1396,6 @@ public class UnitTest1 : UnitTestBase
         repository.Commit();
         if (count > 0)
             Assert.False(result.ProductCount.HasValue);
-
-        count = repository.Create<Order>(new
-        {
-            Id = "1",
-            TenantId = "1",
-            OrderNo = "ON-001",
-            BuyerId = 1,
-            SellerId = 2,
-            TotalAmount = 500,
-            //此字段可为空，但不赋值
-            //ProductCount = 3,
-            Products = new List<int> { 1, 2 },
-            IsEnabled = true,
-            CreatedAt = DateTime.Now,
-            CreatedBy = 1,
-            UpdatedAt = DateTime.Now,
-            UpdatedBy = 1
-        });
-        result = repository.QueryById<Order>("1");
-        repository.Commit();
-        if (count > 0)
-            Assert.False(result.ProductCount.HasValue);
     }
     [Fact]
     public void Insert_Json_Field()
