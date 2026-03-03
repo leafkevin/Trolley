@@ -1646,8 +1646,8 @@ public class UnitTest1 : UnitTestBase
             })
             .OnDuplicateKeyUpdate()
             .UseAlias()
-            .Set(f => new { TotalAmount = f.Values(f.TotalAmount) })
-            .Set(f => f.Products, f => f.Values(f.Products))
+            .Set(f => new { f.TotalAmount })
+            .Set(f => f.Products, f => f.Products)
             .ToSql(out _);
         Assert.Equal("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`TotalAmount`,`BuyerId`,`BuyerSource`,`SellerId`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@OrderNo,@TotalAmount,@BuyerId,@BuyerSource,@SellerId,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) AS newRow ON DUPLICATE KEY UPDATE `TotalAmount`=newRow.`TotalAmount`,`Products`=newRow.`Products`", sql3);
 

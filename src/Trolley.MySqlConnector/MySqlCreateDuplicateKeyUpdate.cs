@@ -14,6 +14,7 @@ public class MySqlCreateDuplicateKeyUpdate : MySqlIdentitiedCreated, IMySqlCreat
     {
         this.dialectVisitor.RowAlias = aliasName;
         this.dialectVisitor.IsUseSetAlias = true;
+        this.dialectVisitor.UpdateBuilder.Insert(0, $" AS {aliasName}");
         return this;
     }
     public IMySqlCreateDuplicateKeyUpdate Set(object updateObj)

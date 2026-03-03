@@ -443,16 +443,17 @@ public partial class MySqlProvider : BaseOrmProvider
                     //.Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var myVisitor = visitor as MySqlCreateVisitor;
+                        var dialectVisitor = visitor as MySqlCreateVisitor;
                         if (args[1] is not MemberExpression memberExpr)
                             throw new NotSupportedException($"不支持的表达式访问，类型{methodInfo.DeclaringType.FullName}.Values方法，只支持MemberAccess访问，如：.Set(f =&gt; new {{TotalAmount = x.Values(f.TotalAmount)}})");
-                        if (!myVisitor.Tables[0].Mapper.TryGetMemberMap(memberExpr.Member.Name, out var memberMapper))
-                            throw new MissingMemberException($"类{myVisitor.Tables[0].EntityType.FullName}未找到成员{memberExpr.Member.Name}");
+                        if (!dialectVisitor.Tables[0].Mapper.TryGetMemberMap(memberExpr.Member.Name, out var memberMapper))
+                            throw new MissingMemberException($"类{dialectVisitor.Tables[0].EntityType.FullName}未找到成员{memberExpr.Member.Name}");
 
                         //使用别名，一定要先使用，后使用的话，存在表达式计算场景无法解析，如：.Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
                         var fieldName = this.GetFieldName(memberMapper.FieldName);
-                        if (myVisitor.IsUseSetAlias) fieldName = myVisitor.RowAlias + "." + fieldName;
-                        else fieldName = $"VALUES({fieldName})";
+                        //忽略更新别名
+                        if (!dialectVisitor.IsUseSetAlias)
+                            fieldName = $"VALUES({fieldName})";
                         return new SqlFieldSegment
                         {
                             HasField = true,

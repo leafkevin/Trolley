@@ -14,6 +14,7 @@ public class MySqlCreateVisitor : CreateVisitor
     public bool IsUseIgnoreInto { get; set; }
     public bool IsUseSetAlias { get; set; }
     public string RowAlias { get; set; } = "newRow";
+    public bool IsSetValue { get; set; }
 
     public MySqlCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
         : base(entityType, dbContext, tableAsStart, command) { }
@@ -455,7 +456,13 @@ public class MySqlCreateVisitor : CreateVisitor
         if (this.IsUseIgnoreInto) return "INSERT IGNORE INTO";
         return "INSERT INTO";
     }
-
+    public override SqlFieldSegment VisitMemberAccess(SqlFieldSegment sqlSegment)
+    {
+        var mySqlSegment = base.VisitMemberAccess(sqlSegment);
+        if (this.IsUseSetAlias && this.IsSetValue)
+            mySqlSegment.Body = $"{this.RowAlias}.{mySqlSegment.Body}";
+        return mySqlSegment;
+    }
     public override SqlFieldSegment VisitNew(SqlFieldSegment sqlSegment)
     {
         //只有OnDuplicateKeyUpdate.Set时，才会走到此场景，如：.Set(f => new { TotalAmount = f.TotalAmount + f.Values(f.TotalAmount) })
@@ -503,6 +510,19 @@ public class MySqlCreateVisitor : CreateVisitor
             this.AddMemberElement(sqlSegment, memberMapper);
         }
         return this.Evaluate(sqlSegment);
+    }
+    public override void VisitSetFieldExprs(object deferredSegmentValue)
+    {
+        (var fieldSelector, var valueGetter) = ((Expression, Expression))deferredSegmentValue;
+        this.InitTableAlias(fieldSelector as LambdaExpression);
+        var fieldSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = fieldSelector });
+        this.IsSetValue = true;
+        this.InitTableAlias(valueGetter as LambdaExpression);
+        var valueSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = valueGetter });
+        this.IsSetValue = false;
+        if (this.UpdateIndex > 0) this.UpdateBuilder.Append(',');
+        this.UpdateBuilder.Append($"{fieldSegment.Body}={valueSegment.Body}");
+        this.UpdateIndex++;
     }
     public override IQueryVisitor CreateQueryVisitor(char? tableAsStart = null)
     {
