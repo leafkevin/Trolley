@@ -218,7 +218,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         builder.Clear();
         return sql;
     }
-    public virtual string BuildCommandSql(bool isBuildCteSql, out IDataParameterCollection dbParameters)
+    public virtual string BuildCommandSql(Type entityType, out IDataParameterCollection dbParameters)
     {
         var builder = new StringBuilder("(");
         var entityMapper = this.Tables[0].Mapper;
@@ -240,7 +240,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         builder.Append(") ");
         //有CTE表
-        if (isBuildCteSql && this.RefQueries != null && this.RefQueries.Count > 0)
+        if (this.RefQueries != null && this.RefQueries.Count > 0)
         {
             var fieldsSql = builder.ToString();
             builder.Clear();

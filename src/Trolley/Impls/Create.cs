@@ -376,9 +376,11 @@ public class ResultCreated<TResult> : IResultCommand<TResult>
     #endregion
 
     #region Execute
-    public TResult Execute() => this.DbContext.CreateResult<TResult>(this.Visitor);
+    public TResult Execute() => this.DbContext.CreateResult<TResult, TResult>(this.Visitor,
+        (reader, deserializer) => reader.Read() ? (TResult)deserializer.Invoke(reader) : default);
     public async Task<TResult> ExecuteAsync(CancellationToken cancellationToken)
-        => await this.DbContext.CreateResultAsync<TResult>(this.Visitor, cancellationToken);
+        => await this.DbContext.CreateResultAsync<TResult, TResult>(this.Visitor,
+        (reader, deserializer) => reader.Read() ? (TResult)deserializer.Invoke(reader) : default, cancellationToken);
     #endregion
 
     #region ToSql
@@ -411,9 +413,21 @@ public class BulkResultCreated<TResult> : IBulkResultCommand<TResult>
     #endregion
 
     #region Execute
-    public List<TResult> Execute() => this.DbContext.CreateResult<List<TResult>>(this.Visitor);
+    public List<TResult> Execute() => this.DbContext.CreateResult<TResult, List<TResult>>(this.Visitor, (reader, deserializer) =>
+    {
+        var result = new List<TResult>();
+        while (reader.Read())
+            result.Add((TResult)deserializer.Invoke(reader));
+        return result;
+    });
     public async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken)
-        => await this.DbContext.CreateResultAsync<List<TResult>>(this.Visitor, cancellationToken);
+        => await this.DbContext.CreateResultAsync<TResult, List<TResult>>(this.Visitor, (reader, deserializer) =>
+        {
+            var result = new List<TResult>();
+            while (reader.Read())
+                result.Add((TResult)deserializer.Invoke(reader));
+            return result;
+        }, cancellationToken);
     #endregion
 
     #region ToSql

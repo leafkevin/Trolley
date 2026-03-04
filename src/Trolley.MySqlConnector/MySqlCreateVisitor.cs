@@ -255,7 +255,7 @@ public class MySqlCreateVisitor : CreateVisitor
         {
             firstSqlSetter = (dbParameters, builder, tableName) =>
             {
-                builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)}");
+                builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} ");
                 builder.Append(fixedFieldsSql);
             };
         }

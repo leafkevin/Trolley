@@ -59,7 +59,7 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     bool HasAggFields { get; set; }
 
     string BuildSql(bool isBuildCteSql, out List<SqlFieldSegment> readerFields);
-    string BuildCommandSql(bool isBuildCteSql, out IDataParameterCollection dbParameters);
+    string BuildCommandSql(Type entityType, out IDataParameterCollection dbParameters);
     string BuildShardingSql(string formatSql);
     string BuildCteTableSql(string tableName, out List<SqlFieldSegment> readerFields);
 

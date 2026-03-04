@@ -239,7 +239,6 @@ public static class Extensions
         /// 返回的是单个基础值类型数据，如：int,DateTime等基础类型的数据
         /// </summary>
         /// <typeparam name="TValue"></typeparam>
-        /// <param name="reader"></param>
         /// <param name="dbContext"></param>
         /// <returns></returns>
         public TValue ToValue<TValue>(DbContext dbContext)
@@ -266,7 +265,7 @@ public static class Extensions
                 }
             }
             var ormProviderType = dbContext.OrmProvider.OrmProviderType;
-            var cacheKey = HashCode.Combine(entityType, ormProviderType, reader);
+            var cacheKey = GetTypeReaderKey(entityType, ormProviderType, reader);
             if (entityType.FullName.StartsWith("System.ValueTuple`"))
             {
                 if (!valueTupleReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
@@ -304,7 +303,7 @@ public static class Extensions
             {
                 if (readerFields.Exists(f => f.FieldType == SqlFieldType.DeferredFields))
                 {
-                    cacheKey = HashCode.Combine(entityType, ormProviderType, reader, readerFields);
+                    cacheKey = GetTypeReaderKey(entityType, ormProviderType, reader, readerFields);
                     if (!deferredValueReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
                         deferredValueReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderDeferredValueDeserializer(entityType, dbContext, reader, readerFields));
                     return deserializer;
@@ -325,7 +324,7 @@ public static class Extensions
                 return reader => reader.GetValue(0);
             }
 
-            cacheKey = HashCode.Combine(entityType, ormProviderType, reader, readerFields);
+            cacheKey = GetTypeReaderKey(entityType, ormProviderType, reader, readerFields);
             if (entityType.FullName.StartsWith("System.ValueTuple`"))
             {
                 if (!valueTupleReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
@@ -497,5 +496,93 @@ public static class Extensions
         }
         memberInfo = null;
         return false;
+    }
+    private static int GetTypeReaderKey(Type entityType, OrmProviderType ormProviderType, ITheaDataReader reader, List<SqlFieldSegment> readerFields)
+    {
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+        var hashCode = new HashCode();
+        hashCode.Add(ormProviderType);
+        hashCode.Add(entityType);
+        hashCode.Add(reader.FieldCount);
+        for (int i = 0; i < reader.FieldCount; i++)
+        {
+            hashCode.Add(reader.GetFieldType(i));
+        }
+        hashCode.Add(readerFields.Count);
+        int index = 0;
+        foreach (var readerField in readerFields)
+        {
+            hashCode.Add(readerField.FieldType);
+            if (readerField.FieldType == SqlFieldType.Entity && readerField.IsTargetType)
+                hashCode.Add("TargetEntity");
+            else if (readerField.FieldType == SqlFieldType.RawSql)
+                hashCode.Add($"RawSql:{readerField.Body}");
+            else if (readerField.FieldType == SqlFieldType.DeferredFields)
+            {
+                string fieldName = readerField.TargetMember?.Name ?? $"DeferredField{index++}";
+                hashCode.Add($"{fieldName}:{readerField.DeferredExpression.ToString()}");
+            }
+            else hashCode.Add(readerField.TargetMember.Name);
+        }
+        return hashCode.ToHashCode();
+#else
+        int hashCode = 17;
+        unchecked
+        {
+            hashCode = hashCode * 23 + ormProviderType.GetHashCode();
+            hashCode = hashCode * 23 + entityType.GetHashCode();
+            hashCode = hashCode * 23 + reader.FieldCount.GetHashCode();
+            for (int i = 0; i < reader.FieldCount; i++)
+            {
+                hashCode = hashCode * 23 + reader.GetFieldType(i).GetHashCode();
+            }
+            hashCode = hashCode * 23 + readerFields.Count.GetHashCode();
+            int index = 0;
+            foreach (var readerField in readerFields)
+            {
+                hashCode = hashCode * 23 + readerField.FieldType.GetHashCode();
+                if (readerField.FieldType == SqlFieldType.Entity && readerField.IsTargetType)
+                    hashCode = hashCode * 23 + "TargetEntity".GetHashCode();
+                else if (readerField.FieldType == SqlFieldType.RawSql)
+                    hashCode = hashCode * 23 + $"RawSql:{readerField.Body}".GetHashCode();
+                else if (readerField.FieldType == SqlFieldType.DeferredFields)
+                {
+                    string fieldName = readerField.TargetMember?.Name ?? $"DeferredField{index++}";
+                    hashCode = hashCode * 23 + $"{fieldName}:{readerField.DeferredExpression.ToString()}".GetHashCode();
+                }
+                else hashCode = hashCode * 23 + readerField.TargetMember.Name.GetHashCode();
+            }
+        }
+        return hashCode;
+#endif
+    }
+    private static int GetTypeReaderKey(Type entityType, OrmProviderType ormProviderType, ITheaDataReader reader)
+    {
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+        var hashCode = new HashCode();
+        hashCode.Add(ormProviderType);
+        hashCode.Add(entityType);
+        hashCode.Add(reader.FieldCount);
+        for (int i = 0; i < reader.FieldCount; i++)
+        {
+            hashCode.Add(reader.GetFieldType(i));
+            hashCode.Add(reader.GetName(i));
+        }
+        return hashCode.ToHashCode();
+#else
+        int hashCode = 17;
+        unchecked
+        {
+            hashCode = hashCode * 23 + ormProviderType.GetHashCode();
+            hashCode = hashCode * 23 + entityType.GetHashCode();
+            hashCode = hashCode * 23 + reader.FieldCount.GetHashCode();
+            for (int i = 0; i < reader.FieldCount; i++)
+            {
+                hashCode = hashCode * 23 + reader.GetFieldType(i).GetHashCode();
+                hashCode = hashCode * 23 + reader.GetName(i).GetHashCode();
+            }
+        }
+        return hashCode;
+#endif
     }
 }

@@ -3,9 +3,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Schema;
 
 namespace Trolley;
 
@@ -718,6 +720,9 @@ public sealed class DbContext
 
     public int Create<TEntity>(IEnumerable insertObjs, int bulkCount)
     {
+        if (insertObjs is IDictionary<string, object> dict)
+            return this.Create<TEntity>(dict);
+
         (var isNeedClose, var connection, var command, var headSql, var commandInitializer)
             = this.CreateInsertBulkCommand(typeof(TEntity), insertObjs, bulkCount);
 
@@ -755,6 +760,9 @@ public sealed class DbContext
     }
     public async Task<int> CreateAsync<TEntity>(IEnumerable insertObjs, int bulkCount, CancellationToken cancellationToken = default)
     {
+        if (insertObjs is IDictionary<string, object> dict)
+            return await this.CreateAsync<TEntity>(dict, cancellationToken);
+
         (var isNeedClose, var connection, var command, var headSql, var commandInitializer)
             = this.CreateInsertBulkCommand(typeof(TEntity), insertObjs, bulkCount);
 
@@ -849,7 +857,9 @@ public sealed class DbContext
                 }
                 fieldsBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
                 valuesBuilder.Append(parameterName);
-                if (memberMapper.TypeHandler != null)
+                if (fieldValue == null)
+                    fieldValue = DBNull.Value;
+                else if (memberMapper.TypeHandler != null)
                     fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
                 else
                 {
@@ -911,30 +921,52 @@ public sealed class DbContext
             builder.Append($"INSERT INTO {this.OrmProvider.GetTableName(entityMapper.TableName)} (");
             foreach (var key in dict.Keys)
             {
-                if (!entityMapper.TryGetMemberMap(key, out var memberMapper))
-                    continue;
-                if (memberMapper.IsIgnore || memberMapper.IsAutoIncrement
-                    || memberMapper.IsNavigation || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
+                if (!entityMapper.TryGetMemberMap(key, out var memberMapper) || memberMapper.IsIgnore
+                    || memberMapper.IsAutoIncrement || memberMapper.IsNavigation
+                    || memberMapper.IsIgnoreInsert || memberMapper.IsRowVersion)
                     continue;
 
-                if (index > 0)
-                {
-                    builder.Append(',');
-                    builder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
-                }
+                if (index > 0) builder.Append(',');
+                builder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
                 Func<IDictionary<string, object>, object> valueGetter = null;
+
                 if (memberMapper.TypeHandler != null)
                     valueGetter = insertObj => memberMapper.TypeHandler.ToFieldValue(insertObj[key]);
                 else
                 {
                     var targetType = memberMapper.MappedTargetType;
-                    var fieldValueType = dict[key].GetType();
-                    if (fieldValueType.ToUnderlyingType() != targetType)
+                    var fieldValue = dict[key];
+                    if (memberMapper.IsRequired)
                     {
-                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.options);
-                        valueGetter = insertObj => myValueGetter.Invoke(insertObj[key]);
+                        if (fieldValue == null)
+                            throw new Exception($"实体{entityMapper.EntityType.FullName}表，字段{memberMapper.FieldName}为必填，值不能为空");
+
+                        var fieldValueType = fieldValue.GetType();
+                        if (fieldValueType.ToUnderlyingType() != targetType)
+                        {
+                            var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.Options);
+                            valueGetter = insertObj => myValueGetter.Invoke(insertObj[key]);
+                        }
+                        else valueGetter = insertObj => insertObj[key];
                     }
-                    else valueGetter = insertObj => insertObj[key];
+                    else
+                    {
+                        if (fieldValue != null)
+                        {
+                            var fieldValueType = dict[key].GetType();
+                            if (fieldValueType.ToUnderlyingType() != targetType)
+                            {
+                                var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.Options);
+                                valueGetter = insertObj =>
+                                {
+                                    var fieldValue = insertObj[key];
+                                    return fieldValue == null ? memberMapper.DefaultValue : myValueGetter.Invoke(fieldValue);
+                                };
+                            }
+                            else valueGetter = insertObj => insertObj[key] ?? memberMapper.DefaultValue;
+                        }
+                        else valueGetter = insertObj => insertObj[key] ?? memberMapper.DefaultValue;
+                    }
                 }
 
                 Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string> valueSetter = null;
@@ -944,6 +976,7 @@ public sealed class DbContext
                     {
                         var fieldValue = valueGetter.Invoke(insertObj);
                         var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
+                        builder.Append(',');
                         builder.Append(parameterName);
                         dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                     };
@@ -954,7 +987,6 @@ public sealed class DbContext
                     {
                         var fieldValue = valueGetter.Invoke(insertObj);
                         var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
-                        builder.Append(',');
                         builder.Append(parameterName);
                         dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                     };
@@ -1020,34 +1052,30 @@ public sealed class DbContext
         return result;
     }
 
-    public TResult CreateResult<TResult>(ICreateVisitor visitor)
+    public TResult CreateResult<TTarget, TResult>(ICreateVisitor visitor, Func<ITheaDataReader, Func<ITheaDataReader, object>, TResult> readerInitializer)
     {
-        TResult result = default;
         (var isNeedClose, var connection, var command) = this.UseMasterCommand(visitor);
         command.CommandText = visitor.BuildSql(command, out var readerFields);
 
         connection.Open();
         using var reader = command.ExecuteReader(CommandSqlType.Insert, CommandBehavior.SequentialAccess);
-        var deserializer = reader.GetReaderDeserializer(typeof(TResult), this, readerFields);
-        if (reader.Read())
-            result = (TResult)deserializer.Invoke(reader);
+        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this, readerFields);
+        var result = readerInitializer.Invoke(reader, deserializer);
 
         reader.Dispose();
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<TResult> CreateResultAsync<TResult>(ICreateVisitor visitor, CancellationToken cancellationToken = default)
+    public async Task<TResult> CreateResultAsync<TTarget, TResult>(ICreateVisitor visitor, Func<ITheaDataReader, Func<ITheaDataReader, object>, TResult> readerInitializer, CancellationToken cancellationToken = default)
     {
-        TResult result = default;
         (var isNeedClose, var connection, var command) = this.UseMasterCommand(visitor);
         command.CommandText = visitor.BuildSql(command, out var readerFields);
 
         await connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Insert, CommandBehavior.SequentialAccess, cancellationToken);
-        var deserializer = reader.GetReaderDeserializer(typeof(TResult), this, readerFields);
-        if (await reader.ReadAsync(cancellationToken))
-            result = (TResult)deserializer.Invoke(reader);
+        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this, readerFields);
+        var result = readerInitializer.Invoke(reader, deserializer);
 
         await reader.DisposeAsync();
         await command.DisposeAsync();
@@ -1104,7 +1132,9 @@ public sealed class DbContext
                 if (memberMapper.IsKey) whereBuilder.Append(sql);
                 else fieldsBuilder.Append(sql);
 
-                if (memberMapper.TypeHandler != null)
+                if (fieldValue == null)
+                    fieldValue = DBNull.Value;
+                else if (memberMapper.TypeHandler != null)
                     fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
                 else
                 {
@@ -1230,25 +1260,49 @@ public sealed class DbContext
             var whereSetters = new List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>>();
             foreach (var key in dict.Keys)
             {
-                if (!entityMapper.TryGetMemberMap(key, out var memberMapper))
-                    continue;
-                if (memberMapper.IsIgnore || memberMapper.IsAutoIncrement
-                    || memberMapper.IsNavigation || memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion)
+                if (!entityMapper.TryGetMemberMap(key, out var memberMapper)
+                    || memberMapper.IsIgnore || memberMapper.IsNavigation
+                    || memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion)
                     continue;
 
                 Func<IDictionary<string, object>, object> valueGetter = null;
                 if (memberMapper.TypeHandler != null)
-                    valueGetter = insertObj => memberMapper.TypeHandler.ToFieldValue(insertObj[key]);
+                    valueGetter = updateObj => memberMapper.TypeHandler.ToFieldValue(updateObj[key]);
                 else
                 {
                     var targetType = memberMapper.MappedTargetType;
-                    var fieldValueType = dict[key].GetType();
-                    if (fieldValueType.ToUnderlyingType() != targetType)
+                    var fieldValue = dict[key];
+                    if (memberMapper.IsRequired)
                     {
-                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.options);
-                        valueGetter = insertObj => myValueGetter.Invoke(insertObj[key]);
+                        if (fieldValue == null)
+                            throw new Exception($"实体{entityMapper.EntityType.FullName}表，字段{memberMapper.FieldName}为必填，值不能为空");
+
+                        var fieldValueType = fieldValue.GetType();
+                        if (fieldValueType.ToUnderlyingType() != targetType)
+                        {
+                            var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.Options);
+                            valueGetter = updateObj => myValueGetter.Invoke(updateObj[key]);
+                        }
+                        else valueGetter = updateObj => updateObj[key];
                     }
-                    else valueGetter = insertObj => insertObj[key];
+                    else
+                    {
+                        if (fieldValue != null)
+                        {
+                            var fieldValueType = dict[key].GetType();
+                            if (fieldValueType.ToUnderlyingType() != targetType)
+                            {
+                                var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.Options);
+                                valueGetter = updateObj =>
+                                {
+                                    var fieldValue = updateObj[key];
+                                    return fieldValue == null ? memberMapper.DefaultValue : myValueGetter.Invoke(fieldValue);
+                                };
+                            }
+                            else valueGetter = updateObj => updateObj[key] ?? memberMapper.DefaultValue;
+                        }
+                        else valueGetter = updateObj => updateObj[key] ?? memberMapper.DefaultValue;
+                    }
                 }
 
                 Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string> valueSetter = null;

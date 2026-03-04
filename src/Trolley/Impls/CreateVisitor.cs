@@ -696,23 +696,36 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             else
             {
                 var targetType = memberMapper.MappedTargetType;
-                var fieldValueType = dict[key].GetType();
-                if (fieldValueType.ToUnderlyingType() != targetType)
+                var fieldValue = dict[key];
+                if (memberMapper.IsRequired)
                 {
-                    var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext.Options);
-                    if (!memberMapper.IsRequired)
+                    if (fieldValue == null)
+                        throw new Exception($"实体{entityMapper.EntityType.FullName}表，字段{memberMapper.FieldName}为必填，值不能为空");
+
+                    var fieldValueType = fieldValue.GetType();
+                    if (fieldValueType.ToUnderlyingType() != targetType)
                     {
-                        valueGetter = insertObj =>
-                        {
-                            var fieldValue = insertObj[key];
-                            return fieldValue == null ? memberMapper.DefaultValue : myValueGetter.Invoke(fieldValue);
-                        };
+                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext.Options);
+                        valueGetter = insertObj => myValueGetter.Invoke(insertObj[key]);
                     }
-                    else valueGetter = insertObj => myValueGetter.Invoke(insertObj[key]);
+                    else valueGetter = insertObj => insertObj[key];
                 }
                 else
                 {
-                    if (memberMapper.IsRequired) valueGetter = insertObj => insertObj[key];
+                    if (fieldValue != null)
+                    {
+                        var fieldValueType = dict[key].GetType();
+                        if (fieldValueType.ToUnderlyingType() != targetType)
+                        {
+                            var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext.Options);
+                            valueGetter = insertObj =>
+                            {
+                                var fieldValue = insertObj[key];
+                                return fieldValue == null ? memberMapper.DefaultValue : myValueGetter.Invoke(fieldValue);
+                            };
+                        }
+                        else valueGetter = insertObj => insertObj[key] ?? memberMapper.DefaultValue;
+                    }
                     else valueGetter = insertObj => insertObj[key] ?? memberMapper.DefaultValue;
                 }
             }
@@ -724,6 +737,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 {
                     var fieldValue = valueGetter.Invoke(insertObj);
                     var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
+                    builder.Append(',');
                     builder.Append(parameterName);
                     dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                 };
@@ -734,7 +748,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 {
                     var fieldValue = valueGetter.Invoke(insertObj);
                     var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
-                    builder.Append(',');
                     builder.Append(parameterName);
                     dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                 };

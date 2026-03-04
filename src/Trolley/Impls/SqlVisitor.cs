@@ -2670,8 +2670,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             }
             else tableName = tableSegment.Body;
         }
-        else tableName = tableSegment.Mapper.TableName;
-
+        else tableName = tableSegment.Body ?? tableSegment.Mapper.TableName;
         if (tableSegment.TableType != TableType.FromQuery)
         {
             if (!string.IsNullOrEmpty(tableSegment.TableSchema))

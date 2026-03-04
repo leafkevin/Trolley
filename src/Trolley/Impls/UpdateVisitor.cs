@@ -877,28 +877,41 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
             Func<IDictionary<string, object>, object> valueGetter = null;
             if (memberMapper.TypeHandler != null)
-                valueGetter = insertObj => memberMapper.TypeHandler.ToFieldValue(insertObj[key]);
+                valueGetter = updateObj => memberMapper.TypeHandler.ToFieldValue(updateObj[key]);
             else
             {
                 var targetType = memberMapper.MappedTargetType;
-                var fieldValueType = dict[key].GetType();
-                if (fieldValueType.ToUnderlyingType() != targetType)
+                var fieldValue = dict[key];
+                if (memberMapper.IsRequired)
                 {
-                    var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext.Options);
-                    if (!memberMapper.IsRequired)
+                    if (fieldValue == null)
+                        throw new Exception($"实体{entityMapper.EntityType.FullName}表，字段{memberMapper.FieldName}为必填，值不能为空");
+
+                    var fieldValueType = fieldValue.GetType();
+                    if (fieldValueType.ToUnderlyingType() != targetType)
                     {
-                        valueGetter = insertObj =>
-                        {
-                            var fieldValue = insertObj[key];
-                            return fieldValue == null ? memberMapper.DefaultValue : myValueGetter.Invoke(fieldValue);
-                        };
+                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext.Options);
+                        valueGetter = updateObj => myValueGetter.Invoke(updateObj[key]);
                     }
-                    else valueGetter = insertObj => myValueGetter.Invoke(insertObj[key]);
+                    else valueGetter = updateObj => updateObj[key];
                 }
                 else
                 {
-                    if (memberMapper.IsRequired) valueGetter = insertObj => insertObj[key];
-                    else valueGetter = insertObj => insertObj[key] ?? memberMapper.DefaultValue;
+                    if (fieldValue != null)
+                    {
+                        var fieldValueType = dict[key].GetType();
+                        if (fieldValueType.ToUnderlyingType() != targetType)
+                        {
+                            var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext.Options);
+                            valueGetter = updateObj =>
+                            {
+                                var fieldValue = updateObj[key];
+                                return fieldValue == null ? memberMapper.DefaultValue : myValueGetter.Invoke(fieldValue);
+                            };
+                        }
+                        else valueGetter = updateObj => updateObj[key] ?? memberMapper.DefaultValue;
+                    }
+                    else valueGetter = updateObj => updateObj[key] ?? memberMapper.DefaultValue;
                 }
             }
 

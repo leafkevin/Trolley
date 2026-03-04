@@ -184,9 +184,8 @@ public class QueryBase : QueryInternal, IQueryBase
     #endregion
 
     #region NewCreateVisitor
-    public virtual ICreateVisitor NewCreateVisitor()
+    public virtual ICreateVisitor NewCreateVisitor(Type entityType)
     {
-        var entityType = this.Visitor.Tables[0].EntityType;
         var createVisiter = this.OrmProvider.NewCreateVisitor(entityType,
             this.DbContext, this.Visitor.TableAsStart, this.Visitor.Command);
         createVisiter.Tables = this.Visitor.Tables;
@@ -197,7 +196,7 @@ public class QueryBase : QueryInternal, IQueryBase
         createVisiter.IsRecursive = this.Visitor.IsRecursive;
         createVisiter.CteQueryObj = this.Visitor.CteQueryObj;
         createVisiter.RefFrom = this;
-        createVisiter.FromSql = this.Visitor.BuildCommandSql(true, out _);
+        createVisiter.FromSql = this.Visitor.BuildCommandSql(entityType, out _);
         return createVisiter;
     }
     #endregion
@@ -700,7 +699,7 @@ public class Query<T> : QueryBase, IQuery<T>
     {
         Expression<Func<T, T>> defaultExpr = f => f;
         this.Visitor.SelectDefault(defaultExpr);
-        var createVisitor = this.NewCreateVisitor();
+        var createVisitor = this.NewCreateVisitor(typeof(TEntity));
         return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
     }
     /// <summary>
@@ -716,7 +715,7 @@ public class Query<T> : QueryBase, IQuery<T>
             throw new ArgumentNullException(nameof(fieldsSelector));
 
         this.SelectInternal(fieldsSelector);
-        var createVisitor = this.NewCreateVisitor();
+        var createVisitor = this.NewCreateVisitor(typeof(TEntity));
         return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
     }
     #endregion

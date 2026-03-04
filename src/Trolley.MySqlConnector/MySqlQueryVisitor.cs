@@ -14,33 +14,37 @@ public class MySqlQueryVisitor : QueryVisitor
     public MySqlQueryVisitor(DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
         : base(dbContext, tableAsStart, command) { }
 
-    public override string BuildCommandSql(bool isBuildCteSql, out IDataParameterCollection dbParameters)
+    public override string BuildCommandSql(Type entityType, out IDataParameterCollection dbParameters)
     {
         var builder = new StringBuilder();
-        var entityMapper = this.Tables[0].Mapper;
+        var entityMapper = this.EntityMapProvider.GetEntityMap(entityType);
         if (this.IsUseIgnoreInto)
             builder.Append("INSERT IGNORE INTO");
         else builder.Append("INSERT INTO");
-        builder.Append($" {this.GetFormatTableName(this.Tables[0])} (");
+        builder.Append($" {this.OrmProvider.GetTableName(entityMapper.TableName)} (");
         int index = 0;
         //如果ReaderFields没有设置，通常是从Query中来的，ReaderFields是从Query中获取的
-        //if (this.ReaderFields == null && this.IsFromQuery)
-        //    this.ReaderFields = this.Tables[1].Fields;
+
         foreach (var readerField in this.ReaderFields)
         {
             //Union后，如果没有select语句时，通常实体类型或是select分组对象
-            var memberName = readerField.TargetMember.Name;
-            if (!entityMapper.TryGetMemberMap(memberName, out var memberMapper)
-                || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert
-                || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion)
-                continue;
-            if (index > 0) builder.Append(',');
-            builder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}");
+            if (readerField.FieldType != SqlFieldType.Field)
+                this.AddVisitedFieldsSqlWithoutAlias(builder, readerField);
+            else
+            {
+                var memberName = readerField.TargetMember.Name;
+                if (!entityMapper.TryGetMemberMap(memberName, out var memberMapper)
+                    || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert
+                    || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion)
+                    continue;
+                if (index > 0) builder.Append(',');
+                builder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}");
+            }
             index++;
         }
         builder.Append(") ");
         //有CTE表
-        if (isBuildCteSql && this.RefQueries != null && this.RefQueries.Count > 0)
+        if (this.RefQueries != null && this.RefQueries.Count > 0)
         {
             var fieldsSql = builder.ToString();
             builder.Clear();
