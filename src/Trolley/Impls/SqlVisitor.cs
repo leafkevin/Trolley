@@ -481,7 +481,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                    && (rightSegment.IsConstant || rightSegment.IsVariable))
                 {
                     var isConstant = leftSegment.IsConstant && rightSegment.IsConstant;
-                    var value = binaryExpr.Evaluate(leftSegment.Value, leftSegment.Value);
+                    var value = binaryExpr.Evaluate(leftSegment.Value, rightSegment.Value);
                     return sqlSegment.ChangeValue(value, isConstant);
                 }
 
@@ -547,7 +547,6 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 if (binaryExpr.Type == typeof(bool) && (binaryExpr.NodeType == ExpressionType.AndAlso || binaryExpr.NodeType == ExpressionType.OrElse))
                 {
                     var trueExpr = this.OrmProvider.GetQuotedValue(typeof(bool), true);
-                    var falseExpr = this.OrmProvider.GetQuotedValue(typeof(bool), false);
                     if (!leftSegment.IsExpression && !leftSegment.IsMethodCall)
                         strLeft = $"{strLeft}={trueExpr}";
                     if (!rightSegment.IsExpression && !rightSegment.IsMethodCall)
