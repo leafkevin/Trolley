@@ -27,7 +27,11 @@ public enum SqlFieldType : byte
     /// <summary>
     /// 原始SQL
     /// </summary>
-    RawSql
+    RawSql,
+    /// <summary>
+    /// 值
+    /// </summary>
+    Value
 }
 [DebuggerDisplay("FieldType: {FieldType,nq} Body: {Body,nq} Value: {Value,nq} Expression: {Expression,nq}")]
 public class SqlFieldSegment : ICloneable
@@ -75,10 +79,6 @@ public class SqlFieldSegment : ICloneable
     /// 是否参数化当前值，本次解析有效
     /// </summary>
     public bool IsParameterized { get; set; }
-    /// <summary>
-    /// 是否是数组
-    /// </summary>
-    public bool IsArray { get; set; }
     /// <summary>
     /// 去掉Nullable后的枚举类型，此外无值
     /// </summary>

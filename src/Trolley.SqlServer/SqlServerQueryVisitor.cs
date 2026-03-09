@@ -517,7 +517,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
 
     public virtual bool IsNeedAlias(SqlFieldSegment readerField, bool isOnlyField, bool isSecondUnionWrap)
     {
-        if (!isSecondUnionWrap && (this.IsSecondUnion || this.IsFromCommand || this.IsSecondUnion || this.IsCteTable)) return false;
+        if (!isSecondUnionWrap && (this.IsSecondUnion || this.IsSecondUnion || this.IsCteTable)) return false;
         if (readerField.IsNeedAlias) return true;
         if (isOnlyField) return false;
         if (readerField.Fields != null && readerField.Fields.Count > 1)

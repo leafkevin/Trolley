@@ -41,7 +41,6 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     #region Build Sql时使用，临时状态变量
     public bool IsSelect { get; set; }
     public bool IsWhere { get; set; }
-    public bool IsFromCommand { get; set; }
     public bool IsIncludeMany { get; set; }
     #endregion
 
@@ -894,6 +893,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         //两种场景：.Select((x, y) => new { Order = x, x.Seller, x.Buyer, ... }) 和 .Select((x, y) => x)
         //参数访问通常都是SELECT语句的实体访问
         if (!this.IsSelect) throw new NotSupportedException($"不支持的参数表达式访问，只支持Select语句中，{parameterExpr}");
+        
         var fromSegment = this.TableAliases[parameterExpr.Name];
         var readerField = new SqlFieldSegment
         {
@@ -904,9 +904,8 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             Path = parameterExpr.Name
         };
         //include表的ReaderField字段，紧跟在主表ReaderField后面
-        var readerFields = new List<SqlFieldSegment>() { readerField };
-        this.AddIncludeTableReaderFields(readerField, readerFields);
-        sqlSegment.Value = readerFields;
+        sqlSegment.Fields = new List<SqlFieldSegment>() { readerField };
+        this.AddIncludeTableReaderFields(readerField, sqlSegment.Fields);
         return sqlSegment;
     }
     protected void AddIncludeTableReaderFields(SqlFieldSegment parent, List<SqlFieldSegment> readerFields)
@@ -959,7 +958,6 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     }
     public virtual SqlFieldSegment VisitNewArray(SqlFieldSegment sqlSegment)
     {
-        sqlSegment.IsArray = true;
         var newArrayExpr = sqlSegment.Expression as NewArrayExpression;
         var result = new List<object>();
         foreach (var elementExpr in newArrayExpr.Expressions)
@@ -1034,7 +1032,6 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     }
     public virtual SqlFieldSegment VisitListInit(SqlFieldSegment sqlSegment)
     {
-        sqlSegment.IsArray = true;
         var listExpr = sqlSegment.Expression as ListInitExpression;
         var result = new List<object>();
         foreach (var elementInit in listExpr.Initializers)
@@ -2732,7 +2729,6 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         var readerFields = new List<SqlFieldSegment>();
         if (subQueryObj is ICteQuery cteQueryObj)
         {
-            readerFields = new List<SqlFieldSegment>();
             cteQueryObj.ReaderFields.ForEach(f => readerFields.Add(f.Clone()));
             tableSegment = this.AddJoinTable(targetType, null, TableType.CteSelfRef, cteQueryObj.TableName, readerFields);
             if (!this.RefQueries.Contains(cteQueryObj))
@@ -2825,15 +2821,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     public void CopyRefParametersFromQueryVisitor(IQueryVisitor visitor)
     {
         if (this.Equals(visitor) || this.Equals(visitor.RefFrom)) return;
-        if (visitor.DbParameters != null && visitor.DbParameters.Count > 0)
-        {
-            this.DbParameters ??= new TheaDbParameterCollection();
-            foreach (var dbParameter in visitor.DbParameters)
-            {
-                if (this.DbParameters.Contains(dbParameter)) continue;
-                this.DbParameters.Add(dbParameter);
-            }
-        }
+
         if (visitor.NextDbParameters != null && visitor.NextDbParameters.Count > 0)
         {
             this.NextDbParameters ??= new TheaDbParameterCollection();

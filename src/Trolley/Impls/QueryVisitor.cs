@@ -626,17 +626,18 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //或是 f => myCteOrders.Where(o=>o.Id==1) ... 或是 f => myRefOrders.Where(o=>o.Id==1)等
         //都是从引用现有子查询、CTE表、新建子查询生成一个子查询加入到当前Tables中，后续会有Join/Where...等操作，子查询中表别名从'a'开始
         //必须新建一个QueryVisitor对象，不能使用已有表，后续的字段引用只存在于新表中
-        IQueryVisitor queryVisiter = null;
-        if (isFirstTable) queryVisiter = this;
+        IQueryVisitor queryVisitor = null;
+        if (isFirstTable) queryVisitor = this;
         else
         {
-            queryVisiter = this.CreateQueryVisitor();
-            queryVisiter.CteQueryObj = null;
-            queryVisiter.IsRecursive = false;
+            //queryVisiter = this.CreateQueryVisitor();
+            queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, 'a', this.Command);
+            //queryVisiter.CteQueryObj = null;
+            //queryVisiter.IsRecursive = false;
         }
         //TODO:子查询中，有多分表并且还有Group By + Having/Count(Distinct)操作，出子查询后，需要把所有多分表都打开UNION ALL起来，合成新的子查询，并去掉分表属性，以单表处理后续操作
         //除此之外，其他场景，还需要继续保留多分表属性，以便后面映射多分表
-        var fromQuery = new FromQuery(this.DbContext, queryVisiter);
+        var fromQuery = new FromQuery(this.DbContext, queryVisitor);
         (var sql, var tableSegment, var readerFields) = this.VisitFromQuery(subQueryExpr, fromQuery);
         //变成子查询了，不再需要UnionAll操作了
         this.IsNeedUnionShardingTables = false;
@@ -1384,22 +1385,20 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             switch (toTargetExpr.Body.NodeType)
             {
                 case ExpressionType.Parameter:
-                    sqlSegment = this.VisitParameter(sqlSegment);
-                    this.ReaderFields = sqlSegment.Value as List<SqlFieldSegment>;
+                    this.VisitParameter(sqlSegment);
+                    this.ReaderFields = sqlSegment.Fields;
                     this.ReaderFields[0].IsTargetType = true;
                     break;
                 case ExpressionType.New:
                 case ExpressionType.MemberInit:
                     sqlSegment = this.VisitAndDeferred(sqlSegment);
-                    this.ReaderFields = sqlSegment.Value as List<SqlFieldSegment>;
+                    this.ReaderFields = sqlSegment.Fields;
                     break;
                 case ExpressionType.MemberAccess:
-                    MemberInfo memberInfo = null;
                     if (toTargetExpr.Body is MemberExpression memberExpr)
-                        memberInfo = memberExpr.Member;
-                    sqlSegment = this.VisitAndDeferred(sqlSegment);
-                    sqlSegment.TargetMember = memberInfo;
-                    this.ReaderFields = new List<SqlFieldSegment> { sqlSegment };
+                        sqlSegment.TargetMember = memberExpr.Member;
+                    this.VisitAndDeferred(sqlSegment);
+                    this.ReaderFields = [sqlSegment];
                     break;
                 default:
                     //单个字段或单个值，常量、方法调用、表达式计算场景
@@ -1408,10 +1407,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     sqlSegment = this.VisitAndDeferred(sqlSegment);
                     //延迟方法调用，参数可能有多个，返回的ReaderField只有一个
                     //不一定有成员名称，无需设置TableSegment/FromMember/TargetMember，如：.Select(f => f.Age / 10 * 10)
-                    //sqlSegment.FieldType = SqlFieldType.Field;
                     sqlSegment.SegmentType ??= selectExpr.Type;
                     //常量和变量body没有值，最后BuildSql时，再进行设置
-                    this.ReaderFields = new List<SqlFieldSegment> { sqlSegment };
+                    this.ReaderFields = [sqlSegment];
                     break;
             }
         }
@@ -1552,8 +1550,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         {
             //延迟属性访问，两种场景：
             //主动延迟方法调用：如，把返回的枚举列转成描述，参数就是枚举列，返回值是对应的描述
-            string fields = null;
-            List<SqlFieldSegment> readerFields = null;
             var visitor = new MemberVisitor();
             visitor.Visit(memberExpr);
             //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
@@ -1562,7 +1558,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             //this.DeferredInvoke(f.Price, f.Quantity)
             if (visitor.Members.Count > 0)
             {
-                readerFields = new List<SqlFieldSegment>();
+                sqlSegment.Fields = new();
                 var builder = new StringBuilder();
                 foreach (var argsExpr in visitor.Members)
                 {
@@ -1571,7 +1567,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     {
                         sqlSegment.HasField = true;
                         var fieldName = argumentSegment.Body;
-                        readerFields.Add(new SqlFieldSegment
+                        sqlSegment.Fields.Add(new SqlFieldSegment
                         {
                             SegmentType = argsExpr.Type,
                             TargetMember = argsExpr.Member,
@@ -1583,17 +1579,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         builder.Append(fieldName);
                     }
                 }
-                if (readerFields.Count > 0)
-                    fields = builder.ToString();
+                if (sqlSegment.Fields.Count > 0)
+                    sqlSegment.Body = builder.ToString();
             }
-
-            if (readerFields == null)
-                fields = "NULL";
+            else sqlSegment.Body = "NULL";
             sqlSegment.IsDeferredFields = true;
             sqlSegment.FieldType = SqlFieldType.DeferredFields;
-            sqlSegment.Body = fields;
             sqlSegment.DeferredExpression = memberExpr;
-            sqlSegment.Fields = readerFields;
             sqlSegment.IsMethodCall = true;
             return sqlSegment;
         }
@@ -1685,7 +1677,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 if (memberExpr.Type.IsEntityType(out _))
                 {
                     //TODO:匿名实体类型类似于Grouping对象，在子查询后续会支持
-                    //if (this.IsFromQuery && this.IsSelectMember)
                     if (this.IsSelectMember)
                         throw new NotSupportedException("FROM子查询中不支持实体类型成员MemberAccess表达式访问，只支持基础字段访问");
 
@@ -1879,16 +1870,16 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (this.IsSelect && newExpr.Type.Name.StartsWith("<>"))
         {
             this.IsSelectMember = true;
-            var readerFields = new List<SqlFieldSegment>();
+            sqlSegment.Fields = new List<SqlFieldSegment>();
             //为给里面的成员访问提供数据，有参数访问、引用Include成员访问的场景提供数据参数访问的ReaderField查询
-            this.ReaderFields = readerFields;
+            this.ReaderFields = sqlSegment.Fields;
             for (int i = 0; i < newExpr.Arguments.Count; i++)
             {
-                this.AddSelectElement(newExpr.Arguments[i], newExpr.Members[i], readerFields);
+                this.AddSelectElement(newExpr.Arguments[i], newExpr.Members[i], sqlSegment.Fields);
             }
             this.IsSelectMember = false;
             sqlSegment.FieldType = SqlFieldType.Entity;
-            return sqlSegment.ChangeValue(readerFields);
+            return sqlSegment;
         }
         return this.Evaluate(sqlSegment);
     }
@@ -1899,18 +1890,18 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (this.IsSelect)
         {
             this.IsSelectMember = true;
-            var readerFields = new List<SqlFieldSegment>();
+            sqlSegment.Fields = new List<SqlFieldSegment>();
             //为给里面的成员访问提供数据，有参数访问、引用Include成员访问的场景提供数据参数访问的ReaderField查询
-            this.ReaderFields = readerFields;
+            this.ReaderFields = sqlSegment.Fields;
             for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
             {
                 if (memberInitExpr.Bindings[i].BindingType != MemberBindingType.Assignment)
                     throw new NotSupportedException("暂时不支持除MemberBindingType.Assignment类型外的成员绑定表达式");
                 var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-                this.AddSelectElement(memberAssignment.Expression, memberAssignment.Member, readerFields);
+                this.AddSelectElement(memberAssignment.Expression, memberAssignment.Member, sqlSegment.Fields);
             }
             this.IsSelectMember = false;
-            return sqlSegment.ChangeValue(readerFields);
+            return sqlSegment;
         }
         return this.Evaluate(sqlSegment);
     }
@@ -1942,13 +1933,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         switch (elementExpr.NodeType)
         {
             case ExpressionType.Parameter:
-                //if (this.IsFromQuery)
-                //    throw new NotSupportedException("FROM子查询中不支持参数Parameter表达式访问，只支持基础字段访问访问");
                 //两种场景：.Select((x, y) => new { Order = x, x.Seller, x.Buyer, ... }) 和 .Select((x, y) => x)，可能有include操作
                 sqlSegment = this.VisitParameter(sqlSegment);
-                var tableReaderFields = sqlSegment.Value as List<SqlFieldSegment>;
-                tableReaderFields[0].FromMember = memberInfo;
-                tableReaderFields[0].TargetMember = memberInfo;
+                sqlSegment.Fields[0].FromMember = memberInfo;
+                sqlSegment.Fields[0].TargetMember = memberInfo;
                 readerFields.AddRange(tableReaderFields);
                 break;
             case ExpressionType.New:
@@ -2079,6 +2067,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     if (readerField.Fields == null)
                         continue;
                     if (index > 0) builder.Append(',');
+                    //TODO:需要调整,使用
                     body = this.GetQuotedValue(readerField);
                     builder.Append(body);
                     //延迟方法调用字段，不需要加别名
