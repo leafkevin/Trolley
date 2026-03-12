@@ -2077,8 +2077,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     case SqlFieldType.RawSql:
                         if (index > 0) builder.Append(',');
                         builder.Append(readerField.Body);
-                        if (readerField.FieldsCount == 1)
-                            builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
+                        //if (readerField.FieldsCount == 1)
+                        //    builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
                         break;
                     default:
                         if (readerField.IsDeferredFields)
@@ -2100,8 +2100,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                                 body = $"AVG({body})";
                             builder.Append(body);
                             //生成SQL的时候，才加上AS别名
-                            if (this.IsNeedAlias(readerField))
-                                builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
+                            //if (this.IsNeedAlias(readerField))
+                            //    builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
                         }
                         break;
                 }
@@ -2135,9 +2135,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 case SqlFieldType.Entity:
                     this.AddSelectFieldsSql(builder, readerField.Fields);
                     break;
-                default:
-                    this.AddSelectFieldsSql(builder, readerField.Fields);
-                    break;
+                default: throw new NotSupportedException($"不支持的字段类型{readerField.FieldType}");
             }
         }
     }
@@ -2168,7 +2166,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         if (this.IsSecondUnion || this.IsCteTable) return false;
         //单个字段RawSql场景，需要加别名，多个字段RawSql不需要加别名
-        if (readerField.IsNeedAlias || readerField.IsRawSqlFields) return true;
+        if (readerField.IsNeedAlias) return true;
         //GroupFields中的ReaderField只设置了必须加as别名的情况，没有设置TargetMember.Name !=FromMember.Name的情况，这里把这种情况补上
         //PostgreSql时，DistinctOnFields中的ReaderField也是这个场景
         if (readerField.IsExpression || readerField.IsMethodCall) return true;

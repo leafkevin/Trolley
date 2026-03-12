@@ -1406,7 +1406,6 @@ public static class RepositoryHelper
         var blockBodies = new List<Expression>();
         var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
-        //TODO: 考虑以后所有reader返回字段，都不需要AS，此处不需要判断
 
         //IDataReader的索引，readerFields的索引
         int index = 0, readerFieldIndex = 0;
@@ -1511,28 +1510,34 @@ public static class RepositoryHelper
                         break;
                     case SqlFieldType.RawSql:
                         var myTargetType = targetType;
-                        var memberInfos = targetType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                            .Where(f => f.CanWrite).ToList();
                         if (readerField.FieldsCount > 1)
                         {
                             current = NewBuildInfo(readerField.SegmentType, readerField.TargetMember, parent);
                             readerBuilders.Add(readerField, current);
-                            memberInfos = readerField.SegmentType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                                .Where(f => f.CanWrite).ToList();
+                            myTargetType = readerField.SegmentType;
                         }
+                        var memberInfos = myTargetType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                            .Where(f => f.CanWrite).ToList();
                         for (int i = 0; i < readerField.FieldsCount; i++)
                         {
                             var fieldName = reader.GetName(index);
                             //手写sql，有时没有写AS，或是写错了，导致字段名与成员名不一致，所以需要尝试映射一下
                             //支持忽略大小写、去除多余下划线的映射，增加映射成功率
-                            if (!entityMapProvider.TryMapMember(fieldName, memberInfos, out var memberInfo))
+                            var memberType = readerField.SegmentType;
+                            var memberInfo = readerField.TargetMember;
+                            if (readerField.FieldsCount > 1)
                             {
-                                index++;
-                                continue;
+                                if (!entityMapProvider.TryMapMember(fieldName, memberInfos, out var myMemberInfo))
+                                {
+                                    index++;
+                                    continue;
+                                }
+                                memberInfo = myMemberInfo;
+                                memberType = memberInfo.GetMemberType();
                             }
                             var fieldType = reader.GetFieldType(index);
                             var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                                memberInfo.GetMemberType(), fieldType, null, blockParameters, blockBodies);
+                                memberType, fieldType, null, blockParameters, blockBodies);
                             if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
                             else if (memberInfo.CanWrite) current.Bindings.Add(Expression.Bind(memberInfo, readerValueExpr));
                             index++;
