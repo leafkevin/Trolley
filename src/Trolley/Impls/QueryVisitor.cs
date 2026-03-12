@@ -26,7 +26,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     protected string HavingSql { get; set; }
     protected string OrderBySql { get; set; }
     protected bool IsDistinct { get; set; }
-    protected bool IsSelectMember { get; set; }
     public bool IsNeedCommandTableAlias { get; set; }
 
     public TableSegment LastIncludeSegment { get; set; }
@@ -150,6 +149,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
 
         this.AddSelectFieldsSql(builder, this.ReaderFields);
+        //TODO:需要重新审视一下逻辑
         if (this.IsManyShardingTables && this.IsNeedFormatShardingTables && this.AggFieldAlias != null)
             builder.Append($" AS {this.AggFieldAlias},COUNT(*) AS AVG_COUNT");
 
@@ -1373,6 +1373,15 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             return;
         this.Select(null, defaultExpr);
     }
+    public virtual void SelectRaw(Type targetType, string rawFields)
+    {
+        this.ReaderFields = [new SqlFieldSegment
+        {
+            FieldType = SqlFieldType.RawSql,
+            SegmentType = targetType,
+            Body = rawFields
+        }];
+    }
     public virtual void Select(string sqlFormat, Expression selectExpr = null)
     {
         this.IsSelect = true;
@@ -1402,12 +1411,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     break;
                 default:
                     //单个字段或单个值，常量、方法调用、表达式计算场景
-                    if (toTargetExpr.Body.NodeType == ExpressionType.Call)
-                        sqlSegment.OriginalExpression = toTargetExpr;
                     sqlSegment = this.VisitAndDeferred(sqlSegment);
                     //延迟方法调用，参数可能有多个，返回的ReaderField只有一个
                     //不一定有成员名称，无需设置TableSegment/FromMember/TargetMember，如：.Select(f => f.Age / 10 * 10)
                     sqlSegment.SegmentType ??= selectExpr.Type;
+                    if (sqlSegment.IsRawSqlFields)
+                        sqlSegment.FieldType = SqlFieldType.RawSql;
+
                     //常量和变量body没有值，最后BuildSql时，再进行设置
                     this.ReaderFields = [sqlSegment];
                     break;
@@ -1584,8 +1594,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             }
             else sqlSegment.Body = "NULL";
             sqlSegment.IsDeferredFields = true;
-            sqlSegment.FieldType = SqlFieldType.DeferredFields;
-            sqlSegment.DeferredExpression = memberExpr;
+            sqlSegment.OriginalExpression = memberExpr;
             sqlSegment.IsMethodCall = true;
             return sqlSegment;
         }
@@ -1870,14 +1879,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (this.IsSelect && newExpr.Type.Name.StartsWith("<>"))
         {
             this.IsSelectMember = true;
-            sqlSegment.Fields = new List<SqlFieldSegment>();
+            sqlSegment.Fields = new();
             //为给里面的成员访问提供数据，有参数访问、引用Include成员访问的场景提供数据参数访问的ReaderField查询
-            this.ReaderFields = sqlSegment.Fields;
             for (int i = 0; i < newExpr.Arguments.Count; i++)
             {
-                this.AddSelectElement(newExpr.Arguments[i], newExpr.Members[i], sqlSegment.Fields);
+                this.AddSelectElement(newExpr.Arguments[i], newExpr.Members[i], sqlSegment);
             }
             this.IsSelectMember = false;
+            this.ReaderFields = sqlSegment.Fields;
             sqlSegment.FieldType = SqlFieldType.Entity;
             return sqlSegment;
         }
@@ -1890,17 +1899,18 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (this.IsSelect)
         {
             this.IsSelectMember = true;
-            sqlSegment.Fields = new List<SqlFieldSegment>();
+            sqlSegment.Fields = new();
             //为给里面的成员访问提供数据，有参数访问、引用Include成员访问的场景提供数据参数访问的ReaderField查询
-            this.ReaderFields = sqlSegment.Fields;
             for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
             {
                 if (memberInitExpr.Bindings[i].BindingType != MemberBindingType.Assignment)
                     throw new NotSupportedException("暂时不支持除MemberBindingType.Assignment类型外的成员绑定表达式");
                 var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-                this.AddSelectElement(memberAssignment.Expression, memberAssignment.Member, sqlSegment.Fields);
+                this.AddSelectElement(memberAssignment.Expression, memberAssignment.Member, sqlSegment);
             }
             this.IsSelectMember = false;
+            this.ReaderFields = sqlSegment.Fields;
+            sqlSegment.FieldType = SqlFieldType.Entity;
             return sqlSegment;
         }
         return this.Evaluate(sqlSegment);
@@ -1927,70 +1937,71 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.CteQueryObj.ReaderFields = readerFields;
         this.CteQueryObj.TableName = tableName;
     }
-    public virtual void AddSelectElement(Expression elementExpr, MemberInfo memberInfo, List<SqlFieldSegment> readerFields)
+    public virtual void AddSelectElement(Expression elementExpr, MemberInfo memberInfo, SqlFieldSegment sqlSegment)
     {
-        var sqlSegment = new SqlFieldSegment { Expression = elementExpr };
+        SqlFieldSegment newFieldSegment = null;
         switch (elementExpr.NodeType)
         {
             case ExpressionType.Parameter:
                 //两种场景：.Select((x, y) => new { Order = x, x.Seller, x.Buyer, ... }) 和 .Select((x, y) => x)，可能有include操作
-                sqlSegment = this.VisitParameter(sqlSegment);
+                sqlSegment.Next(elementExpr);
+                this.VisitParameter(sqlSegment);
                 sqlSegment.Fields[0].FromMember = memberInfo;
                 sqlSegment.Fields[0].TargetMember = memberInfo;
-                readerFields.AddRange(tableReaderFields);
                 break;
             case ExpressionType.New:
             case ExpressionType.MemberInit:
                 //为了简化SELECT操作，只支持一次New/MemberInit表达式操作
                 throw new NotSupportedException("不支持的表达式访问，SELECT语句只支持一次New/MemberInit表达式访问操作");
             case ExpressionType.MemberAccess:
-                sqlSegment = this.VisitAndDeferred(sqlSegment);
-                if (sqlSegment.FieldType != SqlFieldType.IncludeRef)
+                newFieldSegment = new SqlFieldSegment { Expression = elementExpr };
+                this.VisitAndDeferred(newFieldSegment);
+                if (newFieldSegment.FieldType != SqlFieldType.IncludeRef)
                 {
-                    this.GetQuotedValue(sqlSegment, true);
+                    this.GetQuotedValue(newFieldSegment, true);
                     //if (!this.IsFromCommand && (sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression
                     //    || sqlSegment.IsMethodCall || !this.DbContext.FieldMapHandler.IsCanMap(sqlSegment.FromMember, memberInfo)))
                     //    sqlSegment.IsNeedAlias = true;
                 }
-                sqlSegment.TargetMember = memberInfo;
-                sqlSegment.SegmentType = memberInfo.GetMemberType();
-                readerFields.Add(sqlSegment);
+                newFieldSegment.TargetMember = memberInfo;
+                newFieldSegment.SegmentType = memberInfo.GetMemberType();
+                sqlSegment.Fields.Add(newFieldSegment);
                 break;
             case ExpressionType.AndAlso:
             case ExpressionType.OrElse:
                 var trueExpr = this.OrmProvider.GetQuotedValue(typeof(bool), true);
                 var falseExpr = this.OrmProvider.GetQuotedValue(typeof(bool), false);
-                sqlSegment = this.VisitAndDeferred(sqlSegment);
-                var boolExpr = this.GetQuotedValue(sqlSegment, false);
-                sqlSegment.Body = $"(CASE WHEN {boolExpr} THEN {trueExpr} ELSE {falseExpr} END)";
-                sqlSegment.TargetMember = memberInfo;
-                sqlSegment.IsNeedAlias = true;
-                sqlSegment.SegmentType = memberInfo.GetMemberType();
-                readerFields.Add(sqlSegment);
+                newFieldSegment = new SqlFieldSegment { Expression = elementExpr };
+                newFieldSegment = this.VisitAndDeferred(newFieldSegment);
+                var boolExpr = this.GetQuotedValue(newFieldSegment, false);
+                newFieldSegment.Body = $"(CASE WHEN {boolExpr} THEN {trueExpr} ELSE {falseExpr} END)";
+                newFieldSegment.TargetMember = memberInfo;
+                newFieldSegment.IsNeedAlias = true;
+                newFieldSegment.SegmentType = memberInfo.GetMemberType();
+                sqlSegment.Fields.Add(newFieldSegment);
                 break;
             default:
                 //常量或方法或表达式访问
-                sqlSegment = this.VisitAndDeferred(sqlSegment);
-                this.GetQuotedValue(sqlSegment, true);
+                newFieldSegment = new SqlFieldSegment { Expression = elementExpr };
+                newFieldSegment = this.VisitAndDeferred(newFieldSegment);
+                this.GetQuotedValue(newFieldSegment, true);
                 //DeferredFields场景
                 //函数调用，参数引用多个字段
                 //.SelectTo<DTO>((a, b ...) => new DTO
                 //{
                 //    ActivityTypeEnum = this.GetEmnuName(f.ActivityType)
                 //})
-                if (!sqlSegment.IsDeferredFields)
-                {
-                    sqlSegment.FieldType = SqlFieldType.Field;
-                    //只有常量、方法调用、表达式计算，没有设置NativeDbType和TypeHandler，需要根据memberInfo类型获取
-                    //常量和变量，暂时不做GetQuotedValue处理，在BuildSql时候，再进行处理，Value值保留
-                    //if (!this.IsFromCommand && (sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression
-                    //    || sqlSegment.IsMethodCall || !this.DbContext.FieldMapHandler.IsCanMap(sqlSegment.FromMember, memberInfo)))
-                    //    sqlSegment.IsNeedAlias = true;
-                }
-                sqlSegment.TargetMember = memberInfo;
+                //只有常量、方法调用、表达式计算，没有设置NativeDbType和TypeHandler，需要根据memberInfo类型获取
+                //常量和变量，暂时不做GetQuotedValue处理，在BuildSql时候，再进行处理，Value值保留
+                //if (!this.IsFromCommand && (sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression
+                //    || sqlSegment.IsMethodCall || !this.DbContext.FieldMapHandler.IsCanMap(sqlSegment.FromMember, memberInfo)))
+                //    sqlSegment.IsNeedAlias = true;
+                if (newFieldSegment.IsRawSqlFields)
+                    newFieldSegment.FieldType = SqlFieldType.RawSql;
+                newFieldSegment.TargetMember = memberInfo;
                 //常量或变量场景，此值为null
-                sqlSegment.SegmentType = memberInfo.GetMemberType();
-                readerFields.Add(sqlSegment);
+                newFieldSegment.SegmentType = memberInfo.GetMemberType();
+                sqlSegment.Fields.Add(newFieldSegment);
                 break;
         }
     }
@@ -2050,41 +2061,84 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual void AddSelectFieldsSql(StringBuilder builder, List<SqlFieldSegment> readerFields)
     {
-        int index = 0;
-        string body = null;
-        bool isOnlyField = readerFields.Count == 1 && readerFields[0].FieldType == SqlFieldType.Field;
-        foreach (var readerField in readerFields)
+        if (readerFields.Count > 1)
         {
-            if (readerField.FieldType == SqlFieldType.IncludeRef)
-                continue;
+            int index = 0;
+            foreach (var readerField in readerFields)
+            {
+                if (readerField.FieldType == SqlFieldType.IncludeRef)
+                    continue;
+                switch (readerField.FieldType)
+                {
+                    case SqlFieldType.Entity:
+                        if (index > 0) builder.Append(',');
+                        this.AddSelectFieldsSql(builder, readerField.Fields);
+                        break;
+                    case SqlFieldType.RawSql:
+                        if (index > 0) builder.Append(',');
+                        builder.Append(readerField.Body);
+                        if (readerField.FieldsCount == 1)
+                            builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
+                        break;
+                    default:
+                        if (readerField.IsDeferredFields)
+                        {
+                            //不引用任何字段，没必要访问数据库
+                            if (readerField.Fields == null)
+                                continue;
+                            if (index > 0) builder.Append(',');
+                            //延迟方法调用字段，不需要加别名
+                            builder.Append(readerField.Body);
+                        }
+                        else
+                        {
+                            if (index > 0) builder.Append(',');
+                            //TODO: 只有参数字段，不做数据库查询，否则，才使用参数
+                            var body = this.GetQuotedValue(readerField);
+                            //在前面select时，有可能是多分表并且是AVG操作时，没有包裹AVG函数，现在确认不是多分表，需要加上AVG函数包裹
+                            if (this.IsNeedFormatShardingTables && this.AggFieldAlias == "AVG_VALUE" && !this.IsManyShardingTables)
+                                body = $"AVG({body})";
+                            builder.Append(body);
+                            //生成SQL的时候，才加上AS别名
+                            if (this.IsNeedAlias(readerField))
+                                builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
+                        }
+                        break;
+                }
+                index++;
+            }
+        }
+        else
+        {
+            var readerField = readerFields[0];
             switch (readerField.FieldType)
             {
+                case SqlFieldType.Field:
+                    //不引用任何字段，没必要访问数据库
+                    var body = readerField.Body;
+                    if (readerField.IsDeferredFields && readerField.Fields == null)
+                        break;
+                    else
+                    {
+                        //TODO: 只有参数字段，不做数据库查询，否则，才使用参数
+                        body = this.GetQuotedValue(readerField);
+                        //在前面select时，有可能是多分表并且是AVG操作时，没有包裹AVG函数，现在确认不是多分表，需要加上AVG函数包裹
+                        if (this.IsNeedFormatShardingTables && this.AggFieldAlias == "AVG_VALUE" && !this.IsManyShardingTables)
+                            body = $"AVG({body})";
+                        builder.Append(body);
+                    }
+                    builder.Append(body);
+                    break;
+                case SqlFieldType.RawSql:
+                    builder.Append(readerField.Body);
+                    break;
                 case SqlFieldType.Entity:
-                    if (index > 0) builder.Append(',');
                     this.AddSelectFieldsSql(builder, readerField.Fields);
                     break;
-                case SqlFieldType.DeferredFields:
-                    if (readerField.Fields == null)
-                        continue;
-                    if (index > 0) builder.Append(',');
-                    //TODO:需要调整,使用
-                    body = this.GetQuotedValue(readerField);
-                    builder.Append(body);
-                    //延迟方法调用字段，不需要加别名
-                    break;
                 default:
-                    if (index > 0) builder.Append(',');
-                    body = this.GetQuotedValue(readerField);
-                    //在前面select时，有可能是多分表并且是AVG操作时，没有包裹AVG函数，现在确认不是多分表，需要加上AVG函数包裹
-                    if (this.IsNeedFormatShardingTables && this.AggFieldAlias == "AVG_VALUE" && !this.IsManyShardingTables)
-                        body = $"AVG({body})";
-                    builder.Append(body);
-                    //生成SQL的时候，才加上AS别名
-                    if (!isOnlyField && this.IsNeedAlias(readerField))
-                        builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
+                    this.AddSelectFieldsSql(builder, readerField.Fields);
                     break;
             }
-            index++;
         }
     }
     public virtual void AddVisitedFieldsSqlWithoutAlias(StringBuilder builder, SqlFieldSegment readerField, string suffix = null)
@@ -2113,12 +2167,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual bool IsNeedAlias(SqlFieldSegment readerField)
     {
         if (this.IsSecondUnion || this.IsCteTable) return false;
-        if (readerField.IsNeedAlias) return true;
-        //if (isOnlyField) return false;
+        //单个字段RawSql场景，需要加别名，多个字段RawSql不需要加别名
+        if (readerField.IsNeedAlias || readerField.IsRawSqlFields) return true;
         //GroupFields中的ReaderField只设置了必须加as别名的情况，没有设置TargetMember.Name !=FromMember.Name的情况，这里把这种情况补上
         //PostgreSql时，DistinctOnFields中的ReaderField也是这个场景
-        if (readerField.IsConstant || readerField.IsVariable || readerField.HasParameter
-            || readerField.IsExpression || readerField.IsMethodCall) return true;
+        if (readerField.IsExpression || readerField.IsMethodCall) return true;
+        //TODO:只有常量/变量/参数字段，不做数据库查询，这里只是占位，保存值
+        if (readerField.IsConstant || readerField.IsVariable || readerField.HasParameter) return false;
         return !Extensions.IsCanMapTo(this.DbContext.EntityMapProvider, readerField.FromMember, readerField.TargetMember);
     }
     public virtual void Clear(bool isClearReaderFields = false)

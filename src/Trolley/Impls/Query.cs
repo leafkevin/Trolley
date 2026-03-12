@@ -558,7 +558,7 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
     {
-        base.SelectInternal(rawFields);
+        base.SelectRawInternal(typeof(TTarget), rawFields);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
@@ -627,7 +627,7 @@ public class Query<T> : QueryBase, IQuery<T>
     #region First/ToList/ToPageList/ToDictionary
     public virtual T First()
     {
-        return this.DbContext.QueryFrom<T, T>(this.Visitor, true, (entityType, reader, readerFields) =>
+        return this.DbContext.QueryFrom<T, T>(this.Visitor, false, (entityType, reader, readerFields) =>
         {
             T result = default;
             var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
@@ -638,7 +638,7 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     public virtual async Task<T> FirstAsync(CancellationToken cancellationToken = default)
     {
-        return await this.DbContext.QueryFromAsync<T, T>(this.Visitor, true, async (entityType, reader, readerFields, cancellationToken) =>
+        return await this.DbContext.QueryFromAsync<T, T>(this.Visitor, false, async (entityType, reader, readerFields, cancellationToken) =>
         {
             T result = default;
             var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
@@ -649,7 +649,7 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     public virtual List<T> ToList()
     {
-        return this.DbContext.QueryFrom<T, List<T>>(this.Visitor, false, (entityType, reader, readerFields) =>
+        return this.DbContext.QueryFrom<T, List<T>>(this.Visitor, true, (entityType, reader, readerFields) =>
         {
             var result = new List<T>();
             var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
@@ -660,7 +660,7 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     public virtual async Task<List<T>> ToListAsync(CancellationToken cancellationToken = default)
     {
-        return await this.DbContext.QueryFromAsync<T, List<T>>(this.Visitor, false, async (entityType, reader, readerFields, cancellationToken) =>
+        return await this.DbContext.QueryFromAsync<T, List<T>>(this.Visitor, true, async (entityType, reader, readerFields, cancellationToken) =>
         {
             var result = new List<T>();
             var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);

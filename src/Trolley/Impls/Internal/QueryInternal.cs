@@ -321,6 +321,13 @@ public class QueryInternal
     #endregion
 
     #region Select
+    protected void SelectRawInternal(Type targetType, string rawFields)
+    {
+        if (string.IsNullOrEmpty(rawFields))
+            throw new ArgumentNullException(nameof(rawFields));
+
+        this.Visitor.SelectRaw(targetType, rawFields);
+    }
     protected void SelectInternal(string fields = "*")
     {
         if (string.IsNullOrEmpty(fields))

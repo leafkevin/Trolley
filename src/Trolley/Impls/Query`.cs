@@ -254,7 +254,7 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
     #region Select
     public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
     {
-        base.SelectInternal(rawFields);
+        base.SelectRawInternal(typeof(TTarget), rawFields);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, TTarget>> fieldsExpr)
@@ -567,7 +567,7 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
     #region Select
     public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
     {
-        base.SelectInternal(rawFields);
+        base.SelectRawInternal(typeof(TTarget), rawFields);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, TTarget>> fieldsExpr)
@@ -880,7 +880,7 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
     #region Select
     public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
     {
-        base.SelectInternal(rawFields);
+        base.SelectRawInternal(typeof(TTarget), rawFields);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> fieldsExpr)
@@ -1193,7 +1193,7 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
     #region Select
     public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
     {
-        base.SelectInternal(rawFields);
+        base.SelectRawInternal(typeof(TTarget), rawFields);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
@@ -1506,7 +1506,7 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
     #region Select
     public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
     {
-        base.SelectInternal(rawFields);
+        base.SelectRawInternal(typeof(TTarget), rawFields);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
@@ -1819,7 +1819,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
     #region Select
     public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
     {
-        base.SelectInternal(rawFields);
+        base.SelectRawInternal(typeof(TTarget), rawFields);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr)
@@ -2132,7 +2132,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
     #region Select
     public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
     {
-        base.SelectInternal(rawFields);
+        base.SelectRawInternal(typeof(TTarget), rawFields);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr)
@@ -2445,7 +2445,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
     #region Select
     public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
     {
-        base.SelectInternal(rawFields);
+        base.SelectRawInternal(typeof(TTarget), rawFields);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr)
@@ -2758,7 +2758,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
     #region Select
     public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
     {
-        base.SelectInternal(rawFields);
+        base.SelectRawInternal(typeof(TTarget), rawFields);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr)
@@ -3071,7 +3071,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
     #region Select
     public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
     {
-        base.SelectInternal(rawFields);
+        base.SelectRawInternal(typeof(TTarget), rawFields);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr)
@@ -3384,7 +3384,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
     #region Select
     public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
     {
-        base.SelectInternal(rawFields);
+        base.SelectRawInternal(typeof(TTarget), rawFields);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr)
@@ -3697,7 +3697,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
     #region Select
     public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
     {
-        base.SelectInternal(rawFields);
+        base.SelectRawInternal(typeof(TTarget), rawFields);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr)
@@ -4010,7 +4010,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
     #region Select
     public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
     {
-        base.SelectInternal(rawFields);
+        base.SelectRawInternal(typeof(TTarget), rawFields);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr)
@@ -4323,7 +4323,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     #region Select
     public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
     {
-        base.SelectInternal(rawFields);
+        base.SelectRawInternal(typeof(TTarget), rawFields);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr)
@@ -4570,7 +4570,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     #region Select
     public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
     {
-        base.SelectInternal(rawFields);
+        base.SelectRawInternal(typeof(TTarget), rawFields);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TTarget>> fieldsExpr)

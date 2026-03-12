@@ -2934,5 +2934,86 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .FirstAsync();
         Assert.True(result.IsEnabled);
     }
+    [Fact]
+    public async Task SelectRawSql()
+    {
+        var repository = this.dbFactory.Create();
+        var sql1 = repository.From<Product, Brand>()
+            .InnerJoin((x, y) => x.BrandId == y.Id)
+            .Select<MyProductInfo>("a.Id as ProductId,a.ProductNo,a.Name as ProductName,a.BrandId,b.Name as BrandName")
+            .ToSql(out _);
+        Assert.Equal("SELECT a.Id as ProductId,a.ProductNo,a.Name as ProductName,a.BrandId,b.Name as BrandName FROM `sys_product` a INNER JOIN `sys_brand` b ON a.`BrandId`=b.`Id`", sql1);
+        var result1 = await repository.From<Product, Brand>()
+            .InnerJoin((x, y) => x.BrandId == y.Id)
+            .Select<MyProductInfo>("a.Id as ProductId,a.ProductNo,a.Name as ProductName,a.BrandId,b.Name as BrandName")
+            .FirstAsync();
+        Assert.NotNull(result1);
+
+        var sql2 = repository.From<Product>()
+            .Select<string>("CONCAT(ProductNo,'-',Name)")
+            .ToSql(out _);
+        Assert.Equal("SELECT CONCAT(ProductNo,'-',Name) FROM `sys_product` a", sql2);
+        var result2 = await repository.From<Product>()
+            .Select<string>("CONCAT(ProductNo,'-',Name)")
+            .FirstAsync();
+        Assert.NotNull(result2);
+        Assert.Contains("-", result2);
+
+        var sql3 = repository.From<Product>()
+            .Select(f => new MyProductInfo
+            {
+                ProductId = f.Id,
+                ProductName = Sql.Raw<string>("CONCAT(ProductNo, '-', Name)")
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.`Id` AS `ProductId`,CONCAT(ProductNo, '-', Name) AS `ProductName` FROM `sys_product` a", sql3);
+        var result3 = await repository.From<Product>()
+            .Select(f => new MyProductInfo
+            {
+                ProductId = f.Id,
+                ProductName = Sql.Raw<string>("CONCAT(ProductNo, '-', Name)")
+            })
+            .FirstAsync();
+        Assert.NotNull(result3);
+
+        var sql4 = repository.From<Product, Brand>()
+            .InnerJoin((x, y) => x.BrandId == y.Id)
+            .Select((x, y) => new MyProductInfo
+            {
+                ProductId = x.Id,
+                ProductName = Sql.Raw<string>("CONCAT(a.ProductNo, '-', a.Name)"),
+                Brand = Sql.Raw<BrandInfo>("b.Id,b.BrandNo,b.Name", 3)
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.`Id` AS `ProductId`,CONCAT(a.ProductNo, '-', a.Name) AS `ProductName`,b.Id,b.BrandNo,b.Name FROM `sys_product` a INNER JOIN `sys_brand` b ON a.`BrandId`=b.`Id`", sql4);
+        var result4 = await repository.From<Product, Brand>()
+            .InnerJoin((x, y) => x.BrandId == y.Id)
+            .Select((x, y) => new MyProductInfo
+            {
+                ProductId = x.Id,
+                ProductName = Sql.Raw<string>("CONCAT(a.ProductNo, '-', a.Name)"),
+                Brand = Sql.Raw<BrandInfo>("b.Id,b.BrandNo,b.Name", 3)
+            })
+            .FirstAsync();
+        Assert.NotNull(result4);
+
+        var sql5 = repository.From<Brand>()
+            .Select(f => Sql.Raw<BrandInfo>("a.Id,a.BrandNo,a.Name"))
+            .ToSql(out _);
+        Assert.Equal("SELECT a.Id,a.BrandNo,a.Name FROM `sys_brand` a", sql5);
+        var result5 = await repository.From<Brand>()
+            .Select(f => Sql.Raw<BrandInfo>("a.Id,a.BrandNo,a.Name"))
+            .FirstAsync();
+        Assert.NotNull(result5);
+
+        var sql6 = repository.From<Brand>()
+            .Select(f => Sql.Raw<int>("a.Id"))
+            .ToSql(out _);
+        Assert.Equal("SELECT a.Id FROM `sys_brand` a", sql6);
+        var result6 = await repository.From<Brand>()
+            .Select(f => Sql.Raw<int>("a.Id"))
+            .FirstAsync();
+        Assert.True(result6 > 0);
+    }
     private string DeferInvoke() => "DeferInvoke";
 }

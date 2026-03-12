@@ -433,7 +433,7 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     }
     public virtual IMultiQuery<TTarget> Select<TTarget>(string rawFields)
     {
-        base.SelectInternal(rawFields);
+        base.SelectRawInternal(typeof(TTarget), rawFields);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     public virtual IMultiQuery<TTarget> SelectTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)

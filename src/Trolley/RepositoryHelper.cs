@@ -1304,19 +1304,19 @@ public static class RepositoryHelper
             return dateTimeOffset.ToLocalTime();
         return dateTimeOffset;
     }
-    public static Func<ITheaDataReader, object> CreateReaderValueTupleDeserializer(Type entityType, DbContext dbContext, ITheaDataReader reader)
+    public static Func<ITheaDataReader, object> CreateReaderValueTupleDeserializer(Type targetType, DbContext dbContext, ITheaDataReader reader)
     {
         var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
         var index = 0;
-        var target = NewBuildInfo(entityType);
+        var target = NewBuildInfo(targetType);
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
         while (index < reader.FieldCount)
         {
             //使用原始SQL才有可能SQL中的字段名与成员名不一致，或是没有加 AS成员名
             var fieldType = reader.GetFieldType(index);
-            var memberInfo = entityType.GetMember($"Item{index + 1}")[0];
+            var memberInfo = targetType.GetMember($"Item{index + 1}")[0];
             var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(index),
                 memberInfo.GetMemberType(), fieldType, null, blockParameters, blockBodies);
             target.Arguments.Add(readerValueExpr);
@@ -1330,15 +1330,15 @@ public static class RepositoryHelper
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(object))));
         return Expression.Lambda<Func<ITheaDataReader, object>>(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
     }
-    public static Func<ITheaDataReader, object> CreateReaderEntityDeserializer(Type entityType, DbContext dbContext, ITheaDataReader reader)
+    public static Func<ITheaDataReader, object> CreateReaderEntityDeserializer(Type targetType, DbContext dbContext, ITheaDataReader reader)
     {
         var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
-        var memberInfos = GetMembers(entityType).Where(f => f.CanWrite).ToList();
+        var memberInfos = GetMembers(targetType).Where(f => f.CanWrite).ToList();
         var entityMapProvider = dbContext.EntityMapProvider;
-        var hasMapper = entityMapProvider.TryGetEntityMap(entityType, out var entityMapper);
+        var hasMapper = entityMapProvider.TryGetEntityMap(targetType, out var entityMapper);
         var index = 0;
-        var target = NewBuildInfo(entityType);
+        var target = NewBuildInfo(targetType);
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
 
@@ -1354,7 +1354,7 @@ public static class RepositoryHelper
                 typeHandler = memberMapper.TypeHandler;
             }
             else if (!entityMapProvider.TryMapMember(memberName, memberInfos, out memberInfo))
-                throw new Exception($"SQL中字段{memberName}映射不到模型{entityType.FullName}任何栏位,或者没有添加AS子句");
+                throw new Exception($"SQL中字段{memberName}映射不到模型{targetType.FullName}任何栏位,或者没有添加AS子句");
 
             var fieldType = reader.GetFieldType(index);
             var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(index),
@@ -1385,7 +1385,7 @@ public static class RepositoryHelper
 
         var readerField = readerFields[0];
         var visitor = new ReplaceMemberVisitor();
-        var bodyExpr = visitor.Visit(readerField.DeferredExpression);
+        var bodyExpr = visitor.Visit(readerField.OriginalExpression);
 
         var fieldType = reader.GetFieldType(0);
         //延迟的方法调用，有字段值作为方法参数就读取，没有什么也不做
@@ -1400,31 +1400,33 @@ public static class RepositoryHelper
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(object))));
         return Expression.Lambda<Func<ITheaDataReader, object>>(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
     }
-    public static Func<ITheaDataReader, object> CreateReaderEntityDeserializer(Type entityType, DbContext dbContext, ITheaDataReader reader, List<SqlFieldSegment> readerFields)
+    public static Func<ITheaDataReader, object> CreateReaderEntityDeserializer(Type targetType, DbContext dbContext, ITheaDataReader reader, List<SqlFieldSegment> readerFields)
     {
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
         var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
+        //TODO: 考虑以后所有reader返回字段，都不需要AS，此处不需要判断
 
         //IDataReader的索引，readerFields的索引
-        int index = 0, readerIndex = 0;
-        var root = NewBuildInfo(entityType);
+        int index = 0, readerFieldIndex = 0;
+        var root = NewBuildInfo(targetType);
         var current = root;
         var parent = root;
         var readerBuilders = new Dictionary<SqlFieldSegment, EntityBuildInfo>();
         var deferredBuilds = new Stack<EntityBuildInfo>();
-
+        var entityMapProvider = dbContext.EntityMapProvider;
         if (readerFields.Count == 1 && readerFields[0].FieldType == SqlFieldType.RawSql)
         {
-            var memberInfos = GetMembers(entityType).Where(f => f.CanWrite).ToList();
+            var memberInfos = targetType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                .Where(f => f.CanWrite).ToList();
             if (!root.IsDefault)
-                throw new NotSupportedException($"不支持使用原始SQL创建没有默认构造函数的实体，实体类型:{entityType.FullName}");
+                throw new NotSupportedException($"不支持使用原始SQL创建没有默认构造函数的实体，实体类型:{targetType.FullName}");
 
             while (index < reader.FieldCount)
             {
                 var fieldName = reader.GetName(index);
-                if (!memberInfos.TryFind(fieldName, out var memberInfo))
+                if (!entityMapProvider.TryMapMember(fieldName, memberInfos, out var memberInfo))
                     continue;
                 if (!memberInfo.CanWrite) continue;
                 Expression readerValueExpr = null;
@@ -1442,137 +1444,173 @@ public static class RepositoryHelper
         }
         else
         {
-            while (readerIndex < readerFields.Count)
+            while (readerFieldIndex < readerFields.Count)
             {
-                var readerField = readerFields[readerIndex];
+                var readerField = readerFields[readerFieldIndex];
                 //readerFields个数与IDataReader返回的Field个数不一致的场景，readerFields是根据Type类型来生成的，
                 //SQL语句也不是生成的，通常是原始SQL，才会走到此处
-                if (index >= reader.FieldCount && readerField.FieldType != SqlFieldType.IncludeRef)
+                //TODO: 暂时注释，需要添加RawSql场景处理
+                //if (index >= reader.FieldCount && readerField.FieldType != SqlFieldType.IncludeRef)
+                //{
+                //    var readerValueExpr = Expression.Default(readerField.TargetMember.GetMemberType());
+                //    if (!root.IsDefault) root.Arguments.Add(readerValueExpr);
+                //    readerFieldIndex++;
+                //    continue;
+                //}
+                switch (readerField.FieldType)
                 {
-                    var readerValueExpr = Expression.Default(readerField.TargetMember.GetMemberType());
-                    if (!root.IsDefault) root.Arguments.Add(readerValueExpr);
-                    readerIndex++;
-                    continue;
-                }
-                if (readerField.FieldType == SqlFieldType.Field)
-                {
-                    var fieldType = reader.GetFieldType(index);
-                    var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                        readerField.SegmentType, fieldType, readerField.TypeHandler, blockParameters, blockBodies);
-                    if (!root.IsDefault) root.Arguments.Add(readerValueExpr);
-                    else if (readerField.TargetMember.CanWrite) root.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
-                    index++;
-                }
-                else
-                {
-                    Expression readerValueExpr = null;
-                    SqlFieldSegment childReaderField = null;
-                    var childIndex = 0;
-                    var endIndex = index;
-                    //当无参数的Deferred函数调用，ReaderFields的值为null，也没有从数据库读取字段，count=0
-                    if (readerField.Fields != null && readerField.Fields.Count > 0)
-                        endIndex += readerField.Fields.Count;
-
-                    //支持延迟方法调用、属性访问，一切均可延迟，但必须最后调用Deferred()方法
-                    if (readerField.FieldType == SqlFieldType.DeferredFields)
-                    {
-                        if (readerField.SegmentType.IsEntityType(out _))
+                    case SqlFieldType.Field:
+                        if (readerField.IsDeferredFields)
                         {
-                            current = NewBuildInfo(readerField.SegmentType, readerField.TargetMember, parent);
-                            readerBuilders.Add(readerField, current);
-                        }
-                        Expression bodyExpr = readerField.DeferredExpression;
-                        //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
-                        //f.TotalAmount.ToString("C")
-                        //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
-                        //this.DeferredInvoke(f.Price, f.Quantity)
-                        //new DateTimeOffset(DateTime.SpecifyKind(f.DateTimeField, DateTimeKind.Local)).UtcDateTime.Deferred()
-                        Expression executeExpr = null;
-                        if (readerField.Fields != null && readerField.Fields.Count > 0)
-                        {
-                            var visitor = new ReplaceMemberVisitor();
-                            bodyExpr = visitor.Visit(readerField.DeferredExpression);
-                            var argsExprs = new List<Expression>();
-                            while (index < endIndex)
+                            //支持延迟方法调用、属性访问，一切均可延迟，但必须最后调用Deferred()方法
+                            if (readerField.SegmentType.IsEntityType(out _))
                             {
-                                var fieldType = reader.GetFieldType(index);
-                                //延迟的方法调用，有字段值作为方法参数就读取，没有什么也不做
-                                childReaderField = readerField.Fields[childIndex];
-                                readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                                    childReaderField.SegmentType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
-                                argsExprs.Add(readerValueExpr);
-                                childIndex++;
-                                index++;
+                                current = NewBuildInfo(readerField.SegmentType, readerField.TargetMember, parent);
+                                readerBuilders.Add(readerField, current);
                             }
-                            executeExpr = Expression.Invoke(Expression.Lambda(bodyExpr, visitor.NewParameters), argsExprs);
-                        }
-                        else executeExpr = Expression.Invoke(Expression.Lambda(bodyExpr));
-                        //把延迟方法调用委托当作参数传进来，这样缓存才有效，相同key，不同的延迟方法
-                        if (!current.IsDefault) current.Arguments.Add(executeExpr);
-                        else if (readerField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(readerField.TargetMember, executeExpr));
-                    }
-                    else if (readerField.FieldType == SqlFieldType.IncludeRef)
-                    {
-                        //Include导航属性引用不能单独Select，前面一定有Parameter访问
-                        //Include导航属性引用单独处理，先设置默认值，在整个实体初始化完后，再设置具体值，初始化Action在成员访问的时候，已经构建好了
-                        var refReaderField = readerField.Value as SqlFieldSegment;
-                        var instanceExpr = readerBuilders[refReaderField].InstanceExpr;
-                        //此处生成的副本，从新new的一个对象
-                        if (!parent.IsDefault) parent.Arguments.Add(instanceExpr);
-                        else if (readerField.TargetMember.CanWrite) parent.Bindings.Add(Expression.Bind(readerField.TargetMember, instanceExpr));
-                        readerIndex++;
-                        continue;
-                    }
-                    else
-                    {
-                        //默认是目标类型，并且也只有第一个ReaderField才是目标类型
-                        if (!readerField.IsTargetType)
-                        {
-                            if (readerField.Parent != null)
-                                parent = readerBuilders[readerField.Parent];
-                            else parent = root;
-                            current = NewBuildInfo(readerField.SegmentType, readerField.TargetMember, parent);
-                        }
-                        while (index < endIndex)
-                        {
-                            var fieldType = reader.GetFieldType(index);
-                            childReaderField = readerField.Fields[childIndex];
-                            readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                                childReaderField.SegmentType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
+                            Expression bodyExpr = readerField.OriginalExpression;
+                            //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
+                            //f.TotalAmount.ToString("C")
+                            //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
+                            //this.DeferredInvoke(f.Price, f.Quantity)
+                            //new DateTimeOffset(DateTime.SpecifyKind(f.DateTimeField, DateTimeKind.Local)).UtcDateTime.Deferred()
+                            Expression executeExpr = null;
+                            if (readerField.Fields != null && readerField.Fields.Count > 0)
+                            {
+                                var visitor = new ReplaceMemberVisitor();
+                                bodyExpr = visitor.Visit(readerField.OriginalExpression);
+                                var argsExprs = new List<Expression>();
 
-                            if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
-                            else if (childReaderField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(childReaderField.TargetMember, readerValueExpr));
-                            childIndex++;
-                            index++;
-                        }
-
-                        //有include对象
-                        if (readerField.HasNextInclude)
-                        {
-                            deferredBuilds.Push(current);
-                            readerBuilders.Add(readerField, current);
+                                for (int i = 0; i < readerField.Fields.Count; i++)
+                                {
+                                    var fieldType = reader.GetFieldType(index);
+                                    //延迟的方法调用，有字段值作为方法参数就读取，没有什么也不做
+                                    var myReaderField = readerField.Fields[i];
+                                    var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(index),
+                                        myReaderField.SegmentType, fieldType, myReaderField.TypeHandler, blockParameters, blockBodies);
+                                    argsExprs.Add(readerValueExpr);
+                                    index++;
+                                }
+                                executeExpr = Expression.Invoke(Expression.Lambda(bodyExpr, visitor.NewParameters), argsExprs);
+                            }
+                            else executeExpr = Expression.Invoke(Expression.Lambda(bodyExpr));
+                            //把延迟方法调用委托当作参数传进来，这样缓存才有效，相同key，不同的延迟方法
+                            if (!current.IsDefault) current.Arguments.Add(executeExpr);
+                            else if (readerField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(readerField.TargetMember, executeExpr));
                         }
                         else
                         {
-                            do
-                            {
-                                //创建子对象，并赋值给父对象的属性,直到Select语句
-                                Expression instanceExpr = null;
-                                if (current.IsDefault)
-                                    instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
-                                else instanceExpr = Expression.New(current.Constructor, current.Arguments);
-                                current.InstanceExpr = instanceExpr;
-                                //赋值给父对象的属性
-                                if (current.Parent == null)
-                                    break;
-                                if (!current.Parent.IsDefault) current.Parent.Arguments.Add(instanceExpr);
-                                else if (current.FromMember.CanWrite) current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
-                            }
-                            while (deferredBuilds.TryPop(out current));
+                            //单个字段和RawSql单个字段场景
+                            var fieldType = reader.GetFieldType(index);
+                            var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(index),
+                                readerField.SegmentType, fieldType, readerField.TypeHandler, blockParameters, blockBodies);
+                            if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
+                            else if (readerField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
+                            index++;
                         }
-                    }
+                        break;
+                    case SqlFieldType.RawSql:
+                        var myTargetType = targetType;
+                        var memberInfos = targetType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                            .Where(f => f.CanWrite).ToList();
+                        if (readerField.FieldsCount > 1)
+                        {
+                            current = NewBuildInfo(readerField.SegmentType, readerField.TargetMember, parent);
+                            readerBuilders.Add(readerField, current);
+                            memberInfos = readerField.SegmentType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                                .Where(f => f.CanWrite).ToList();
+                        }
+                        for (int i = 0; i < readerField.FieldsCount; i++)
+                        {
+                            var fieldName = reader.GetName(index);
+                            //手写sql，有时没有写AS，或是写错了，导致字段名与成员名不一致，所以需要尝试映射一下
+                            //支持忽略大小写、去除多余下划线的映射，增加映射成功率
+                            if (!entityMapProvider.TryMapMember(fieldName, memberInfos, out var memberInfo))
+                            {
+                                index++;
+                                continue;
+                            }
+                            var fieldType = reader.GetFieldType(index);
+                            var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(index),
+                                memberInfo.GetMemberType(), fieldType, null, blockParameters, blockBodies);
+                            if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
+                            else if (memberInfo.CanWrite) current.Bindings.Add(Expression.Bind(memberInfo, readerValueExpr));
+                            index++;
+                        }
+                        if (readerField.FieldsCount > 1)
+                        {
+                            Expression instanceExpr = null;
+                            if (current.IsDefault)
+                                instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
+                            else instanceExpr = Expression.New(current.Constructor, current.Arguments);
+                            current.InstanceExpr = instanceExpr;
+                            if (!current.Parent.IsDefault) current.Parent.Arguments.Add(instanceExpr);
+                            else if (current.FromMember.CanWrite) current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
+                        }
+                        break;
+                    default:
+                        //实体类型、引用实体类型的导航属性场景
+                        if (readerField.FieldType == SqlFieldType.IncludeRef)
+                        {
+                            //Include导航属性引用不能单独Select，前面一定有Parameter访问
+                            //Include导航属性引用单独处理，先设置默认值，在整个实体初始化完后，再设置具体值，初始化Action在成员访问的时候，已经构建好了
+                            var refReaderField = readerField.Value as SqlFieldSegment;
+                            var instanceExpr = readerBuilders[refReaderField].InstanceExpr;
+                            //此处生成的副本，从新new的一个对象
+                            if (!parent.IsDefault) parent.Arguments.Add(instanceExpr);
+                            else if (readerField.TargetMember.CanWrite) parent.Bindings.Add(Expression.Bind(readerField.TargetMember, instanceExpr));
+                            readerFieldIndex++;
+                            continue;
+                        }
+                        else
+                        {
+                            //默认是目标类型，并且也只有第一个ReaderField才是目标类型
+                            if (!readerField.IsTargetType)
+                            {
+                                if (readerField.Parent != null)
+                                    parent = readerBuilders[readerField.Parent];
+                                else parent = root;
+                                current = NewBuildInfo(readerField.SegmentType, readerField.TargetMember, parent);
+                            }
+                            for (int i = 0; i < readerField.Fields.Count; i++)
+                            {
+                                var fieldType = reader.GetFieldType(index);
+                                var myReaderField = readerField.Fields[i];
+                                var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(index),
+                                    myReaderField.SegmentType, fieldType, myReaderField.TypeHandler, blockParameters, blockBodies);
+
+                                if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
+                                else if (myReaderField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(myReaderField.TargetMember, readerValueExpr));
+                                index++;
+                            }
+                            //有include对象
+                            if (readerField.HasNextInclude)
+                            {
+                                deferredBuilds.Push(current);
+                                readerBuilders.Add(readerField, current);
+                            }
+                            else
+                            {
+                                do
+                                {
+                                    //创建子对象，并赋值给父对象的属性,直到Select语句
+                                    Expression instanceExpr = null;
+                                    if (current.IsDefault)
+                                        instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
+                                    else instanceExpr = Expression.New(current.Constructor, current.Arguments);
+                                    current.InstanceExpr = instanceExpr;
+                                    //赋值给父对象的属性
+                                    if (current.Parent == null)
+                                        break;
+                                    if (!current.Parent.IsDefault) current.Parent.Arguments.Add(instanceExpr);
+                                    else if (current.FromMember.CanWrite) current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
+                                }
+                                while (deferredBuilds.TryPop(out current));
+                            }
+                        }
+                        break;
                 }
-                readerIndex++;
+                readerFieldIndex++;
             }
         }
 

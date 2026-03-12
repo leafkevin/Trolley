@@ -686,7 +686,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             sqlSegment.IsDeferredFields = true;
             sqlSegment.FieldType = SqlFieldType.DeferredFields;
             sqlSegment.Body = fields;
-            sqlSegment.DeferredExpression = memberExpr;
+            sqlSegment.OriginalExpression = memberExpr;
             sqlSegment.Fields = readerFields;
             sqlSegment.IsMethodCall = true;
             return sqlSegment;

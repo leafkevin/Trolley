@@ -21,10 +21,6 @@ public enum SqlFieldType : byte
     /// </summary>
     IncludeRef,
     /// <summary>
-    /// 先从数据库中查询连续的单个或多个字段，再执行函数调用返回一个字段
-    /// </summary>
-    DeferredFields,
-    /// <summary>
     /// 原始SQL
     /// </summary>
     RawSql,
@@ -130,6 +126,10 @@ public class SqlFieldSegment : ICloneable
     /// </summary>
     public string Body { get; set; }
     /// <summary>
+    /// 字段个数，当FieldType为RawSql时，Value中是原始SQ，FieldsCount表示原始SQL字符串中包含的字段个数
+    /// </summary>
+    public int FieldsCount { get; set; } = 1;
+    /// <summary>
     /// Include子表的主表SqlFieldSegment引用
     /// </summary>
     public SqlFieldSegment Parent { get; set; }
@@ -142,13 +142,13 @@ public class SqlFieldSegment : ICloneable
     /// </summary>
     public List<SqlFieldSegment> Fields { get; set; }
     /// <summary>
-    /// 是否DeferredFields,延迟方法调用
+    /// 是否DeferredFields,延迟解析表达式
     /// </summary>
     public bool IsDeferredFields { get; set; }
     /// <summary>
-    /// 延迟调用的委托
+    /// 是否RawSql字段, Select表达式场景下，引用了Sql.RawSql方法，如：.Select(x => Sql.RawSql&lt;Order&gt;("id,order_no,amount"))， .Select(x => new { Brand = Sql.RawSql&lt;BrandInfo&gt;("id,brand_no,name") })
     /// </summary>
-    public Expression DeferredExpression { get; set; }
+    public bool IsRawSqlFields { get; set; }
     /// <summary>
     /// 最外层Select时，原参数访问的路径，有参数访问时才有值，如：.Select(x => new { Order = x, x.Seller.Company })中的x, x.Seller.Company
     /// 当有Include导航属性成员访问时，查找其主表在Select返回的实体中的属性值，构造延迟属性设置方法
@@ -342,7 +342,7 @@ public class SqlFieldSegment : ICloneable
             Value = this.Value,
             Body = this.Body,
             IsDeferredFields = this.IsDeferredFields,
-            DeferredExpression = this.DeferredExpression,
+            OriginalExpression = this.OriginalExpression,
             SegmentType = this.SegmentType,
             TargetMember = this.TargetMember,
             FromMember = this.FromMember,

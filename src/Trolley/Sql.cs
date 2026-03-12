@@ -14,17 +14,28 @@ public static class Sql
     /// <exception cref="NotImplementedException"></exception>
     public static T As<T>(this object fields) => throw new NotImplementedException();
     /// <summary>
-    /// 原始SQL，可以做任何代码片段，解决Trolley无法完成的部分，可以是作为Select字段，Where条件，SQL函数调用，...任何位置的一部分，如：
-    /// .Select(f =&gt; new { RowNumber = Sql.Raw("ROW_NUMBER() OVER(ORDER BY e.CREATE_TIME DESC) AS RowNumber")})， .Returning(f =&gt; Sql.Raw&lt;string&gt;("myMethod(a.name,a.amount)+upper(a.order_no)")
+    /// 原始SQL，可以做任何代码片段，只能单个字段，不支持实体类型，如：
+    /// Sql.Raw&lt;int&gt;("ROW_NUMBER() OVER(ORDER BY e.CREATE_TIME DESC) AS RowNumber")})
     /// </summary>
-    /// <typeparam name="T">类型</typeparam>
-    /// <param name="rawSql"></param>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="rawSql">原始SQL</param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
     public static T Raw<T>(string rawSql) => throw new NotImplementedException();
+    /// <summary>
+    /// 原始SQL，可以做任何代码片段，支持实体类型，必须指定fieldsCount值，如：
+    /// Sql.Raw&lt;int&gt;("ROW_NUMBER() OVER(ORDER BY e.CREATE_TIME DESC) AS RowNumber", 1)})，Sql.Raw&lt;Order&gt;("id,order_no", 2)
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="rawSql">原始SQL</param>
+    /// <param name="fieldsCount">字段个数</param>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    public static T Raw<T>(string rawSql, int fieldsCount) => throw new NotImplementedException();
     public static TField Null<TField>() => throw new NotImplementedException();
     /// <summary>
-    /// 用在修饰方法调用之后，表示前面的方法不做sql解析，当方法的参数从数据库读取后，再执行方法调用并把返回值赋值到对应的成员上，只做实体赋值解析，不实现
+    /// 用在表达式之后，表示前面的表达式不做sql解析，当引用的字段从数据库读取后，再执行进行解析，如：
+    /// f.TotalAmount.ToString("C").Deferred()，DateTimeOffset.FromUnixTimeMilliseconds(f.CreatedAt).UtcDateTime.Deferred()
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="obj"></param>

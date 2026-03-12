@@ -40,6 +40,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
 
     #region Build Sql时使用，临时状态变量
     public bool IsSelect { get; set; }
+    public bool IsSelectMember { get; set; }
     public bool IsWhere { get; set; }
     public bool IsIncludeMany { get; set; }
     #endregion
@@ -613,9 +614,8 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             if (readerFields == null)
                 fields = "NULL";
             sqlSegment.IsDeferredFields = true;
-            sqlSegment.FieldType = SqlFieldType.DeferredFields;
             sqlSegment.Body = fields;
-            sqlSegment.DeferredExpression = memberExpr;
+            sqlSegment.OriginalExpression = memberExpr;
             sqlSegment.Fields = readerFields;
             sqlSegment.IsMethodCall = true;
             return sqlSegment;
@@ -753,6 +753,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
 
         sqlSegment.IsConstant = false;
         sqlSegment.IsVariable = true;
+        sqlSegment.FieldType = SqlFieldType.Value;
         sqlSegment.SegmentType = memberExpr.Type;
         return sqlSegment;
     }
@@ -762,8 +763,9 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         if (constantExpr.Value == null)
             return SqlFieldSegment.Null;
 
-        sqlSegment.Value = constantExpr.Value;
         sqlSegment.IsConstant = true;
+        sqlSegment.FieldType = SqlFieldType.Value;
+        sqlSegment.Value = constantExpr.Value;
         return sqlSegment;
     }
     public virtual SqlFieldSegment VisitMethodCall(SqlFieldSegment sqlSegment)
@@ -840,9 +842,8 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 if (readerFields == null)
                     fields = "NULL";
                 sqlSegment.IsDeferredFields = true;
-                sqlSegment.FieldType = SqlFieldType.DeferredFields;
                 sqlSegment.Body = fields;
-                sqlSegment.DeferredExpression = methodCallExpr;
+                sqlSegment.OriginalExpression = methodCallExpr;
                 sqlSegment.Fields = readerFields;
                 sqlSegment.IsMethodCall = true;
                 return sqlSegment;
@@ -893,7 +894,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         //两种场景：.Select((x, y) => new { Order = x, x.Seller, x.Buyer, ... }) 和 .Select((x, y) => x)
         //参数访问通常都是SELECT语句的实体访问
         if (!this.IsSelect) throw new NotSupportedException($"不支持的参数表达式访问，只支持Select语句中，{parameterExpr}");
-        
+
         var fromSegment = this.TableAliases[parameterExpr.Name];
         var readerField = new SqlFieldSegment
         {
@@ -904,7 +905,8 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             Path = parameterExpr.Name
         };
         //include表的ReaderField字段，紧跟在主表ReaderField后面
-        sqlSegment.Fields = new List<SqlFieldSegment>() { readerField };
+        sqlSegment.Fields ??= new();
+        sqlSegment.Fields.Add(readerField);
         this.AddIncludeTableReaderFields(readerField, sqlSegment.Fields);
         return sqlSegment;
     }
@@ -1085,8 +1087,14 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         switch (methodCallExpr.Method.Name)
         {
             case "Raw":
+                sqlSegment.IsRawSqlFields = true;
                 sqlSegment.Body = this.Evaluate<string>(methodCallExpr.Arguments[0]);
-                sqlSegment.SegmentType = methodCallExpr.Method.ReturnType;
+                if (sqlSegment.SegmentType.IsEntityType(out _) && this.IsSelectMember)
+                {
+                    if (methodCallExpr.Arguments.Count == 1)
+                        throw new NotSupportedException("当返回类型为多字段时，Sql.Raw方法必须指定fieldsCount");
+                    sqlSegment.FieldsCount = this.Evaluate<int>(methodCallExpr.Arguments[1]);
+                }
                 break;
             case "Deferred":
                 sqlSegment.IsDeferredFields = true;
@@ -1097,7 +1105,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 {
                     if (!this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var sqlFormatter))
                         throw new NotImplementedException($"当前Provider:{this.OrmProvider.GetType().FullName}未实现方法IsNull");
-                    sqlSegment = sqlFormatter.Invoke(this, sqlSegment.OriginalExpression, null, null, methodCallExpr.Arguments.ToArray());
+                    sqlSegment = sqlFormatter.Invoke(this, methodCallExpr, null, null, methodCallExpr.Arguments.ToArray());
                 }
                 else
                 {
@@ -2716,9 +2724,9 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         if (readerFields == null)
             fields = "NULL";
         sqlSegment.IsDeferredFields = true;
-        sqlSegment.FieldType = SqlFieldType.DeferredFields;
+        sqlSegment.FieldType = SqlFieldType.Field;
         sqlSegment.Body = fields;
-        sqlSegment.DeferredExpression = methodCallExpr;
+        sqlSegment.OriginalExpression = methodCallExpr;
         sqlSegment.Fields = readerFields;
         sqlSegment.IsMethodCall = true;
         return sqlSegment;

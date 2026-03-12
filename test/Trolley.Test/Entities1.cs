@@ -274,3 +274,17 @@ public class ProductInfo
 {
     public bool IsEnabled { get; set; }
 }
+public class MyProductInfo
+{
+    public int ProductId { get; set; }
+    public string ProductNo { get; set; }
+    public string ProductName { get; set; }
+    public double Price { get; set; }
+    public int BrandId { get; set; }
+    public string BrandName { get; set; }
+    public int CategoryId { get; set; }
+    public int CompanyId { get; }
+    public DateTime CreatedAt { get; set; }
+
+    public BrandInfo Brand { get; set; }
+}

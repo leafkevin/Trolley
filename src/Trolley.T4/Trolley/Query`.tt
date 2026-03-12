@@ -292,7 +292,7 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     #region Select
     public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
     {
-        base.SelectInternal(rawFields);
+        base.SelectRawInternal(typeof(TTarget), rawFields);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
