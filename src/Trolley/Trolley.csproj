@@ -32,6 +32,7 @@
 		<None Remove="Dialect\SqlServer\**" />
 	</ItemGroup>
 	<ItemGroup>
+		<Compile Remove="FasterEvaluator.cs" />
 		<Compile Remove="Ifaces\IFromCommand.cs" />
 		<Compile Remove="Ifaces\IGroupingCommand.cs" />
 		<Compile Remove="Impls\FromCommand.cs" />

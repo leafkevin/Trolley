@@ -59,15 +59,15 @@ public class QueryInternal
     }
     #endregion
 
-    #region WithQuery
-    protected void WithQueryInternal<TOther>(IQuery<TOther> subQuery)
+    #region WithTable
+    protected void WithTableInternal<TOther>(IQuery<TOther> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
         this.Visitor.UseQuery(typeof(TOther), subQuery, true);
     }
-    protected void WithQueryInternal<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    protected void WithTableInternal<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
         if (subQueryExpr == null)
             throw new ArgumentNullException(nameof(subQueryExpr));

@@ -527,14 +527,14 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public override SqlFieldSegment VisitNew(SqlFieldSegment sqlSegment)
     {
-        if (sqlSegment.Expression.IsParameter(out _))
+        if (sqlSegment.Expression.HasParameter(out _))
             throw new NotSupportedException($"不支持的表达式访问,{sqlSegment.Expression}");
         //当作常量处理
         return sqlSegment.ChangeValue(sqlSegment.Expression.Evaluate(), true);
     }
     public override SqlFieldSegment VisitMemberInit(SqlFieldSegment sqlSegment)
     {
-        if (sqlSegment.Expression.IsParameter(out _))
+        if (sqlSegment.Expression.HasParameter(out _))
             throw new NotSupportedException($"不支持的表达式访问,{sqlSegment.Expression}");
         //当作常量处理
         return sqlSegment.ChangeValue(sqlSegment.Expression.Evaluate(), true);
@@ -970,7 +970,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public virtual void InitTableAlias(LambdaExpression lambdaExpr)
     {
         this.TableAliases.Clear();
-        lambdaExpr.Body.GetParameterNames(out var parameters);
+        lambdaExpr.Body.TryGetParameterNames(out var parameters);
         if (parameters == null || parameters.Count == 0)
             return;
         int index = 0;

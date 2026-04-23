@@ -169,28 +169,28 @@ public interface IMySqlFromCommand<TEntity, T> : IFromCommand<TEntity, T>
     new IMySqlFromCommand<TEntity, T, TOther> WithTable<TOther>();
     #endregion
 
-    #region WithQuery
+    #region WithTable
     /// <summary>
-    /// 添加子查询，方便后面做JOIN关联，如：
+    /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// .From&lt;Menu&gt;().WithQuery(subQuery)
+    /// .From&lt;Menu&gt;().WithTable(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<TEntity, T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
+    new IMySqlFromCommand<TEntity, T, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 添加子查询，方便后面做JOIN关联，如：
+    /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
-    /// .From&lt;Menu&gt;().WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
+    /// .From&lt;Menu&gt;().WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<TEntity, T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    new IMySqlFromCommand<TEntity, T, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region InnerJoin
@@ -644,29 +644,29 @@ public interface IMySqlFromCommand<TEntity, <#=tables#>> : IFromCommand<TEntity,
     new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithTable<TOther>();
     #endregion
 
-    #region WithQuery
+    #region WithTable
     /// <summary>
-    /// 添加子查询，方便后面做JOIN关联，如：
+    /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
+    /// repository.From&lt;Menu&gt;().WithTable(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
+    new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加subQueryExpr子查询，方便后面做JOIN关联，如：
     /// <code>
     /// repository.From&lt;Menu&gt;()
-    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
+    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
 <#      }#>

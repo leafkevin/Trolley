@@ -16,7 +16,7 @@ namespace Trolley;
 public static class RepositoryHelper
 {
     private static readonly ConcurrentDictionary<Type, List<MemberInfo>> typeMemberInfos = new();
-    private static readonly ConcurrentDictionary<int, Func<object, object>> memberGetterCache = new();
+    private static readonly ConcurrentDictionary<int, Func<object, object[], object>> memberGetterCache = new();
     private static readonly ConcurrentDictionary<int, Action<object, object>> memberSetterCache = new();
 
     private static readonly ConcurrentDictionary<int, Func<object, IDictionary<string, object>, object[], string>> shardingTableGetters = new();
@@ -1110,6 +1110,8 @@ public static class RepositoryHelper
     }
     public static object CreateInstance(Type targetType)
     {
+        if (targetType.IsValueType)
+            return Activator.CreateInstance(targetType);
         var creator = creatorCache.GetOrAdd(targetType, f =>
         {
             var constructor = f.GetConstructor(Type.EmptyTypes);
@@ -1202,37 +1204,42 @@ public static class RepositoryHelper
         return result;
     }
 
-    public static Func<object, object> GetMemberValueGetter(MemberInfo memberInfo)
+    public static Func<object, object[], object> GetMemberValueGetter(MemberInfo memberInfo)
     {
         var entityType = memberInfo.DeclaringType;
         var cacheKey = HashCode.Combine(entityType, memberInfo);
         return memberGetterCache.GetOrAdd(cacheKey, f =>
         {
             Expression valueExpr;
-            var objExpr = Expression.Parameter(typeof(object), "obj");
+            var targetExpr = Expression.Parameter(typeof(object), "target");
+            var parametersExpr = Expression.Parameter(typeof(object[]), "parameters");
             if (memberInfo is FieldInfo fieldInfo)
             {
                 if (fieldInfo.IsStatic) valueExpr = Expression.Field(null, fieldInfo);
                 else
                 {
-                    var typedObjExpr = Expression.Convert(objExpr, entityType);
+                    var typedObjExpr = Expression.Convert(targetExpr, entityType);
                     valueExpr = Expression.Field(typedObjExpr, fieldInfo);
                 }
             }
             else if (memberInfo is PropertyInfo propertyInfo)
             {
+                var indexParameters = propertyInfo.GetIndexParameters();
+                var isIndex = indexParameters != null && indexParameters.Length > 0;
                 var methodInfo = propertyInfo.GetGetMethod();
                 if (methodInfo.IsStatic) valueExpr = Expression.Call(methodInfo);
                 else
                 {
-                    var typedObjExpr = Expression.Convert(objExpr, entityType);
-                    valueExpr = Expression.Call(typedObjExpr, methodInfo);
+                    var typedTargetExpr = Expression.Convert(targetExpr, entityType);
+                    if (isIndex) valueExpr = Expression.Call(typedTargetExpr, methodInfo, parametersExpr);
+                    else valueExpr = Expression.Call(typedTargetExpr, methodInfo);
                 }
             }
             else throw new NotSupportedException("不支持的成员访问");
+
             if (valueExpr.Type != typeof(object))
                 valueExpr = Expression.Convert(valueExpr, typeof(object));
-            return Expression.Lambda<Func<object, object>>(valueExpr, objExpr).Compile();
+            return Expression.Lambda<Func<object, object[], object>>(valueExpr, targetExpr, parametersExpr).Compile();
         });
     }
     public static Action<object, object> GetMemberValueSetter(MemberInfo memberInfo)
@@ -1462,7 +1469,9 @@ public static class RepositoryHelper
                         if (readerField.IsDeferredFields)
                         {
                             //支持延迟方法调用、属性访问，一切均可延迟，但必须最后调用Deferred()方法
-                            if (readerField.SegmentType.IsEntityType(out _))
+                            ExpressionType[] entityNodeTypes = [ExpressionType.New, ExpressionType.MemberInit];
+                            if (readerField.SegmentType.IsEntityType(out _)
+                                && entityNodeTypes.Contains(readerField.Expression.NodeType))
                             {
                                 current = NewBuildInfo(readerField.SegmentType, readerField.TargetMember, parent);
                                 readerBuilders.Add(readerField, current);

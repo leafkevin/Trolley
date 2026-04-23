@@ -7,37 +7,64 @@ using System.Reflection;
 
 namespace Trolley;
 
-public static class FasterEvaluator
+public class ValueVisitor
 {
-    private readonly static ConcurrentDictionary<int, Func<object, object, object>> binaryFuncCache = new();
+    private readonly ConcurrentDictionary<int, Func<object, object, object>> binaryFuncCache = new();
+    public SqlType SqlType { get; private set; }
 
-    public static object Evaluate(this Expression expression, object target = null)
+    public static SqlSegment Evaluate(Expression expression, object target = null)
+    {
+        var visitor = new ValueVisitor();
+        var objValue = visitor.Visit(expression, target);
+        if (objValue == null) return SqlSegment.Null;
+        return new SqlSegment { SqlType = visitor.SqlType, Value = objValue };
+    }
+    public static SqlSegment Evaluate(Expression expression, SqlType sqlType)
+    {
+        var visitor = new ValueVisitor();
+        var objValue = visitor.Visit(expression);
+        if (objValue == null) return SqlSegment.Null;
+        return new SqlSegment { SqlType = sqlType, Value = objValue };
+    }
+    public static T Evaluate<T>(Expression expression)
+    {
+        var visitor = new ValueVisitor();
+        var objValue = visitor.Visit(expression);
+        if (objValue == null) return default;
+        return (T)objValue;
+    }
+    public static object EvaluateValue(Expression expression)
+    {
+        var visitor = new ValueVisitor();
+        return visitor.Visit(expression);
+    }
+    public object Visit(Expression expression, object target = null)
     {
         return expression switch
         {
-            BinaryExpression binaryExpression => binaryExpression.Evaluate(),
+            BinaryExpression binaryExpression => this.Visit(binaryExpression),
             ConstantExpression constantExpression => constantExpression.Value,
-            UnaryExpression unaryExpression => unaryExpression.Evaluate(),
-            MethodCallExpression methodCallExpression => methodCallExpression.Evaluate(target),
-            MemberExpression memberExpression => memberExpression.Evaluate(),
-            IndexExpression indexExpression => indexExpression.Object.Evaluate()[Convert.ToInt32(indexExpression.Arguments.FirstOrDefault()?.Evaluate())],
-            NewArrayExpression newArrayExpression => newArrayExpression.Evaluate(),
-            ListInitExpression listInitExpression => listInitExpression.Evaluate(),
-            NewExpression newExpression => newExpression.Evaluate(),
-            MemberInitExpression memberInitExpression => memberInitExpression.Evaluate(),
-            ConditionalExpression conditionalExpression => conditionalExpression.Evaluate(),
-            ParameterExpression parameterExpression => parameterExpression.Evaluate(target),
-            DefaultExpression defaultExpression => defaultExpression.Evaluate(),
+            UnaryExpression unaryExpression => this.Visit(unaryExpression),
+            MethodCallExpression methodCallExpression => this.Visit(methodCallExpression, target),
+            MemberExpression memberExpression => this.Visit(memberExpression),
+            IndexExpression indexExpression => this.Visit(indexExpression),
+            NewArrayExpression newArrayExpression => this.Visit(newArrayExpression),
+            ListInitExpression listInitExpression => this.Visit(listInitExpression),
+            NewExpression newExpression => this.Visit(newExpression),
+            MemberInitExpression memberInitExpression => this.Visit(memberInitExpression),
+            ConditionalExpression conditionalExpression => this.Visit(conditionalExpression),
+            ParameterExpression parameterExpression => this.Visit(parameterExpression, target),
+            DefaultExpression defaultExpression => this.Visit(defaultExpression),
             _ => Expression.Lambda(expression).Compile().DynamicInvoke()
         };
     }
-    public static object Evaluate(this BinaryExpression expression)
+    public object Visit(BinaryExpression expression)
     {
-        var left = expression.Left.Evaluate();
-        var right = expression.Right.Evaluate();
-        return expression.Evaluate(left, right);
+        var left = this.Visit(expression.Left);
+        var right = this.Visit(expression.Right);
+        return this.Visit(expression, left, right);
     }
-    public static object Evaluate(this BinaryExpression expression, object left, object right)
+    public object Visit(BinaryExpression expression, object left, object right)
     {
         switch (expression.NodeType)
         {
@@ -73,9 +100,9 @@ public static class FasterEvaluator
                 return func(left, right);
         }
     }
-    public static object Evaluate(this UnaryExpression expression)
+    public object Visit(UnaryExpression expression)
     {
-        var operand = expression.Operand.Evaluate();
+        var operand = this.Visit(expression.Operand);
         return expression.NodeType switch
         {
             ExpressionType.Not => Not(operand),
@@ -88,97 +115,106 @@ public static class FasterEvaluator
             _ => Expression.Lambda(expression).Compile().DynamicInvoke()
         };
     }
-    public static object Evaluate(this MethodCallExpression expression, object target)
-        => expression.Method.Invoke(target ?? expression.Object?.Evaluate(), expression.Arguments.Select(argExpression => argExpression.Evaluate()).ToArray());
-    public static object Evaluate(this MemberExpression expression) => expression.Member.Evaluate(expression.Expression?.Evaluate());
-    public static object Evaluate(this IndexExpression expression) => expression.Object.Evaluate()[Convert.ToInt32(expression.Arguments.FirstOrDefault()?.Evaluate())];
-    public static object Evaluate(this NewArrayExpression expression)
+    public object Visit(MethodCallExpression expression, object target)
+    {
+        var myTarget = target;
+        if (expression.Object != null)
+            myTarget = this.Visit(expression.Object);
+        var parameters = expression.Arguments.Select(arg => this.Visit(arg)).ToArray();
+        return expression.Method.Invoke(myTarget, parameters);
+    }
+    public object Visit(MemberExpression expression)
+    {
+        this.SqlType = SqlType.Variable;
+        return this.Visit(expression.Member, this.Visit(expression.Expression));
+    }
+    public object Visit(IndexExpression expression)
+    {
+        var target = this.Visit(expression.Object);
+        var arguments = expression.Arguments.Select(arg => this.Visit(arg)).ToArray();
+        return this.Visit(expression.Indexer, target, arguments);
+    }
+    public object Visit(NewArrayExpression expression)
     {
         var arrayType = expression.Type.HasElementType ? expression.Type.GetElementType() : expression.Type;
         var array = Array.CreateInstance(arrayType, expression.Expressions.Count);
         for (var i = 0; i < expression.Expressions.Count; i++)
-        {
-            array.SetValue(expression.Expressions[i].Evaluate(), i);
-        }
+            array.SetValue(this.Visit(expression.Expressions[i]), i);
         return array;
     }
-    public static object Evaluate(this ListInitExpression expression)
+    public object Visit(ListInitExpression expression)
     {
         var list = RepositoryHelper.CreateInstance(expression.Type);
         foreach (var item in expression.Initializers)
-        {
-            item.AddMethod.Invoke(list, new[] { item.Arguments.FirstOrDefault().Evaluate() });
-        }
+            item.AddMethod.Invoke(list, [this.Visit(item.Arguments.FirstOrDefault())]);
         return list;
     }
-    public static object Evaluate(this NewExpression expression)
+    public object Visit(NewExpression expression)
     {
         if (expression.Arguments.Count > 0)
             return RepositoryHelper.CreateInstance(expression.Type, expression.Arguments.Select(f => f.Type).ToArray(),
-                expression.Arguments.Select(arg => arg.Evaluate()).ToArray());
+                expression.Arguments.Select(arg => this.Visit(arg)).ToArray());
         else return RepositoryHelper.CreateInstance(expression.Type);
     }
-    public static object Evaluate(this MemberInitExpression expression)
+    public object Visit(MemberInitExpression expression)
     {
-        var instance = expression.NewExpression.Evaluate();
+        var instance = this.Visit(expression.NewExpression);
         foreach (var binding in expression.Bindings)
-        {
-            binding.Member.SetValue(instance, binding.Evaluate());
-        }
+            this.SetValue(binding.Member, instance, this.Visit(binding));
         return instance;
     }
-    public static object Evaluate(this ConditionalExpression expression)
+    public object Visit(ConditionalExpression expression)
     {
-        var test = (bool)expression.Test.Evaluate();
-        var trueValue = expression.IfTrue.Evaluate();
-        var falseValue = expression.IfFalse.Evaluate();
+        var test = (bool)this.Visit(expression.Test);
+        var trueValue = this.Visit(expression.IfTrue);
+        var falseValue = this.Visit(expression.IfFalse);
         return test ? trueValue : falseValue;
     }
-    public static object Evaluate(this ParameterExpression expression, object target)
+    public object Visit(ParameterExpression expression, object target)
     {
         if (expression.Type.GetConstructors().Any(e => e.GetParameters().Length == 0))
             return RepositoryHelper.CreateInstance(expression.Type);
         return target;
     }
-    public static object Evaluate(this DefaultExpression expression) => expression.Type.IsValueType ? RepositoryHelper.CreateInstance(expression.Type) : null;
-    public static object Evaluate(this MemberInfo member, object obj, object[] parameters = null, bool isCache = true)
+    public object Visit(DefaultExpression expression) => expression.Type.IsValueType ? Activator.CreateInstance(expression.Type) : null;
+    public object Visit(MemberInfo member, object obj, object[] parameters = null, bool isCache = true)
     {
         return member switch
         {
-            FieldInfo fieldInfo => EvaluateAndCache(obj, fieldInfo),
-            PropertyInfo propertyInfo => EvaluateAndCache(obj, propertyInfo),
+            FieldInfo fieldInfo => VisitAndCache(obj, fieldInfo),
+            PropertyInfo propertyInfo => VisitAndCache(obj, propertyInfo, parameters),
             MethodInfo methodInfo => methodInfo.Invoke(obj, parameters),
             _ => throw new NotSupportedException($"不支持的成员访问，只支持字段、属性、方法访问，obj:{obj}")
         };
     }
-    public static object Evaluate(this MemberBinding member)
+    public object Visit(MemberBinding member)
     {
         if (member is MemberAssignment memberAssignment)
-            return memberAssignment.Expression.Evaluate();
+            return this.Visit(memberAssignment.Expression);
         return null;
     }
-    static void SetValue(this MemberInfo member, object obj, object value)
+    public void SetValue(MemberInfo member, object obj, object value)
     {
         if (member is not FieldInfo && member is not PropertyInfo)
             throw new NotSupportedException($"不支持的成员访问，只支持字段、属性访问，obj:{obj}");
         SetValueAndCache(obj, member, value);
     }
-    public static object EvaluateAndCache(object entity, MemberInfo memberInfo)
+    public object VisitAndCache(object entity, MemberInfo memberInfo, object[] parameters = null)
     {
         var memberGetter = RepositoryHelper.GetMemberValueGetter(memberInfo);
-        return memberGetter.Invoke(entity);
+        return memberGetter.Invoke(entity, parameters);
     }
-    public static void SetValueAndCache(object entity, MemberInfo memberInfo, object value)
+    public void SetValueAndCache(object entity, MemberInfo memberInfo, object value)
     {
         var memberSetter = RepositoryHelper.GetMemberValueSetter(memberInfo);
         memberSetter.Invoke(entity, value);
     }
-    private static int Compare(object left, object right)
+    private int Compare(object left, object right)
     {
         if (left is IComparable comparable) return comparable.CompareTo(right);
         return Comparer.Default.Compare(left, right);
     }
-    private static object Negate(object operand)
+    private object Negate(object operand)
     {
         if (operand == null) return null;
         else if (operand is int i) return -i;
@@ -192,7 +228,7 @@ public static class FasterEvaluator
         else if (operand is uint ui) return -ui;
         return -(dynamic)operand;
     }
-    private static object Not(object operand)
+    public object Not(object operand)
     {
         if (operand == null) return null;
         switch (operand)

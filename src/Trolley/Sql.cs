@@ -92,9 +92,10 @@ public static class Sql
     /// </summary>
     /// <typeparam name="TTarget"></typeparam>
     /// <param name="subQuery">直接引用的子查询对象</param>
+    /// <param name="predicate">关联条件表达式</param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    public static bool Exists<TTarget>(IQuery<TTarget> subQuery) => throw new NotImplementedException();
+    public static bool Exists<TTarget>(IQuery<TTarget> subQuery, Func<TTarget, bool> predicate) => throw new NotImplementedException();
     /// <summary>
     /// 判断数据是否存在子查询中，这个子查询对象可以是现有的子查询对象，也可以是新构造的子查询对象，如果引用现有子查询对象，请使用f =&gt; f.UseQuery()方法，如：
     /// <code>

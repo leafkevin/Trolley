@@ -272,12 +272,12 @@ public class Query<T> : QueryBase, IQuery<T>
         base.UnionAllInternal(subQueryExpr);
         return this;
     }
-    public virtual IQuery<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
+    public virtual IQuery<T> UnionRecursive(Expression<Func<IFromQuery, ICteQuery<T>, IQuery<T>>> subQueryExpr)
     {
         base.UnionRecursiveInternal(subQueryExpr);
         return this;
     }
-    public virtual IQuery<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
+    public virtual IQuery<T> UnionAllRecursive(Expression<Func<IFromQuery, ICteQuery<T>, IQuery<T>>> subQueryExpr)
     {
         base.UnionAllRecursiveInternal(subQueryExpr);
         return this;
@@ -290,17 +290,14 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.AddTable(typeof(TOther));
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
-    #endregion
-
-    #region WithQuery
-    public virtual IQuery<T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+    public virtual IQuery<T, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
     {
-        base.WithQueryInternal(subQuery);
+        base.WithTableInternal(subQuery);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IQuery<T, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithQueryInternal(subQueryExpr);
+        base.WithTableInternal(subQueryExpr);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -723,6 +720,7 @@ public class Query<T> : QueryBase, IQuery<T>
     #region AsCteTable
     public virtual ICteQuery<T> AsCteTable(string tableName)
     {
+        //TODO: 清除Command对象，参数列表单独整理出来，方便后面引用
         if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
             throw new NotSupportedException("CTE暂时不支持多分表，只支持单个分表");
 

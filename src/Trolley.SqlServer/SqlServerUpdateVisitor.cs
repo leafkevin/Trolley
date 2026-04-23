@@ -408,7 +408,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                 return sqlSegment;
             }
 
-            if (memberExpr.IsParameter(out var parameterName))
+            if (memberExpr.HasParameter(out var parameterName))
             {
                 //Where(f => f.Amount > 5)
                 //Select(f => new { f.OrderId, f.Disputes ...})

@@ -227,7 +227,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                 return sqlSegment;
             }
 
-            if (memberExpr.IsParameter(out _))
+            if (memberExpr.HasParameter(out _))
             {
                 //Where(f => f.Amount > 5)
                 //Select(f => new { f.OrderId, f.Disputes ...})

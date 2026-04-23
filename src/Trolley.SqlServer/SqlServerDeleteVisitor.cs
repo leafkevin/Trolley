@@ -212,7 +212,7 @@ public class SqlServerDeleteVisitor : DeleteVisitor
                 return sqlSegment;
             }
 
-            if (memberExpr.IsParameter(out _))
+            if (memberExpr.HasParameter(out _))
             {
                 //Where(f => f.Amount > 5)
                 //Select(f => new { f.OrderId, f.Disputes ...})
@@ -453,7 +453,7 @@ public class SqlServerDeleteVisitor : DeleteVisitor
     public virtual void InitTableAlias(LambdaExpression lambdaExpr)
     {
         this.TableAliases.Clear();
-        lambdaExpr.Body.GetParameterNames(out var parameters);
+        lambdaExpr.Body.TryGetParameterNames(out var parameters);
         if (parameters == null || parameters.Count == 0)
             return;
         int index = 0;

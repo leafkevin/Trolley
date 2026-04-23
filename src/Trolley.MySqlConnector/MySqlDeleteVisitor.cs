@@ -117,7 +117,7 @@ public class MySqlDeleteVisitor : DeleteVisitor
     public virtual void InitTableAlias(LambdaExpression lambdaExpr)
     {
         this.TableAliases.Clear();
-        lambdaExpr.Body.GetParameterNames(out var parameters);
+        lambdaExpr.Body.TryGetParameterNames(out var parameters);
         if (parameters == null || parameters.Count == 0)
             return;
         int index = 0;

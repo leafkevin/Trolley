@@ -79,15 +79,15 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     }
     #endregion
 
-    #region WithQuery
-    public virtual IQuery<<#=tables#>, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+    #region WithTable
+    public virtual IQuery<<#=tables#>, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
     {
-        base.WithQueryInternal(subQuery);
+        base.WithTableInternal(subQuery);
         return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<<#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IQuery<<#=tables#>, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithQueryInternal(subQueryExpr);
+        base.WithTableInternal(subQueryExpr);
         return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     #endregion

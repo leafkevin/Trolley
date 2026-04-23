@@ -196,38 +196,32 @@ public static class Extensions
     }
     extension(Expression expr)
     {
-        public bool IsParameter(out string parameterName)
+        public bool HasParameter()
         {
-            var visitor = new IsParameterVisitor();
+            var visitor = new HasParameterVisitor();
             visitor.Visit(expr);
-            if (visitor.IsParameter)
-            {
-                parameterName = visitor.LastParameterName;
-                return visitor.IsParameter;
-            }
-            parameterName = null;
-            return false;
+            return visitor.HasParameter;
         }
         public bool TryGetParameters(out List<ParameterExpression> parameters)
         {
-            var visitor = new IsParameterVisitor();
+            var visitor = new HasParameterVisitor();
             visitor.Visit(expr);
-            if (visitor.IsParameter)
+            if (visitor.HasParameter)
             {
                 parameters = visitor.Parameters;
-                return visitor.IsParameter;
+                return true;
             }
             parameters = null;
             return false;
         }
-        public bool GetParameterNames(out List<string> parameterNames)
+        public bool TryGetParameterNames(out List<string> parameterNames)
         {
-            var visitor = new IsParameterVisitor();
+            var visitor = new HasParameterVisitor();
             visitor.Visit(expr);
-            if (visitor.IsParameter)
+            if (visitor.HasParameter)
             {
                 parameterNames = visitor.Parameters.Select(f => f.Name).ToList();
-                return visitor.IsParameter;
+                return true;
             }
             parameterNames = null;
             return false;
@@ -449,27 +443,27 @@ public static class Extensions
     /// </summary>
     /// <param name="deferExprs"></param>
     /// <returns></returns>
-    public static bool IsDeferredNot(this Stack<DeferredExpr> deferExprs)
-    {
-        if (deferExprs != null && deferExprs.Count > 0)
-        {
-            int notIndex = 0;
-            while (deferExprs.Count > 0)
-            {
-                var deferredExpr = deferExprs.Pop();
-                switch (deferredExpr.OperationType)
-                {
-                    case OperationType.Equal:
-                        break;
-                    case OperationType.Not:
-                        notIndex++;
-                        break;
-                }
-            }
-            return notIndex % 2 > 0;
-        }
-        return false;
-    }
+    //public static bool IsDeferredNot(this Stack<DeferredExpr> deferExprs)
+    //{
+    //    if (deferExprs != null && deferExprs.Count > 0)
+    //    {
+    //        int notIndex = 0;
+    //        while (deferExprs.Count > 0)
+    //        {
+    //            var deferredExpr = deferExprs.Pop();
+    //            switch (deferredExpr.OperationType)
+    //            {
+    //                case OperationType.Equal:
+    //                    break;
+    //                case OperationType.Not:
+    //                    notIndex++;
+    //                    break;
+    //            }
+    //        }
+    //        return notIndex % 2 > 0;
+    //    }
+    //    return false;
+    //}
 
     public static bool TryGetKeyIgnoreCase(this IDictionary<string, object> dict, string memberName, out string itemKey)
     {
@@ -499,7 +493,6 @@ public static class Extensions
     }
     private static int GetTypeReaderKey(Type entityType, OrmProviderType ormProviderType, ITheaDataReader reader, List<SqlFieldSegment> readerFields)
     {
-#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         var hashCode = new HashCode();
         hashCode.Add(ormProviderType);
         hashCode.Add(entityType);
@@ -525,40 +518,9 @@ public static class Extensions
             else hashCode.Add(readerField.TargetMember.Name);
         }
         return hashCode.ToHashCode();
-#else
-        int hashCode = 17;
-        unchecked
-        {
-            hashCode = hashCode * 23 + ormProviderType.GetHashCode();
-            hashCode = hashCode * 23 + entityType.GetHashCode();
-            hashCode = hashCode * 23 + reader.FieldCount.GetHashCode();
-            for (int i = 0; i < reader.FieldCount; i++)
-            {
-                hashCode = hashCode * 23 + reader.GetFieldType(i).GetHashCode();
-            }
-            hashCode = hashCode * 23 + readerFields.Count.GetHashCode();
-            int index = 0;
-            foreach (var readerField in readerFields)
-            {
-                hashCode = hashCode * 23 + readerField.FieldType.GetHashCode();
-                if (readerField.FieldType == SqlFieldType.Entity && readerField.IsTargetType)
-                    hashCode = hashCode * 23 + "TargetEntity".GetHashCode();
-                else if (readerField.FieldType == SqlFieldType.RawSql)
-                    hashCode = hashCode * 23 + $"RawSql:{readerField.Body}".GetHashCode();
-                else if (readerField.IsDeferredFields)
-                {
-                    string fieldName = readerField.TargetMember?.Name ?? $"DeferredField{index++}";
-                    hashCode = hashCode * 23 + $"{fieldName}:{readerField.OriginalExpression.ToString()}".GetHashCode();
-                }
-                else hashCode = hashCode * 23 + readerField.TargetMember.Name.GetHashCode();
-            }
-        }
-        return hashCode;
-#endif
     }
     private static int GetTypeReaderKey(Type entityType, OrmProviderType ormProviderType, ITheaDataReader reader)
     {
-#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         var hashCode = new HashCode();
         hashCode.Add(ormProviderType);
         hashCode.Add(entityType);
@@ -569,20 +531,5 @@ public static class Extensions
             hashCode.Add(reader.GetName(i));
         }
         return hashCode.ToHashCode();
-#else
-        int hashCode = 17;
-        unchecked
-        {
-            hashCode = hashCode * 23 + ormProviderType.GetHashCode();
-            hashCode = hashCode * 23 + entityType.GetHashCode();
-            hashCode = hashCode * 23 + reader.FieldCount.GetHashCode();
-            for (int i = 0; i < reader.FieldCount; i++)
-            {
-                hashCode = hashCode * 23 + reader.GetFieldType(i).GetHashCode();
-                hashCode = hashCode * 23 + reader.GetName(i).GetHashCode();
-            }
-        }
-        return hashCode;
-#endif
     }
 }

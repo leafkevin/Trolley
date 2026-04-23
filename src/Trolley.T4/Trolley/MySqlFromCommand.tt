@@ -53,11 +53,11 @@ public class MySqlFromCommand<TEntity, T> : FromCommand<TEntity, T>, IMySqlFromC
         => base.WithTable<TOther>() as IMySqlFromCommand<TEntity, T, TOther>;
     #endregion
 
-    #region WithQuery
-    public new IMySqlFromCommand<TEntity, T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
-        => base.WithQuery(subQuery) as IMySqlFromCommand<TEntity, T, TOther>;
-    public new IMySqlFromCommand<TEntity, T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithQuery(subQueryExpr) as IMySqlFromCommand<TEntity, T, TOther>;
+    #region WithTable
+    public new IMySqlFromCommand<TEntity, T, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+        => base.WithTable(subQuery) as IMySqlFromCommand<TEntity, T, TOther>;
+    public new IMySqlFromCommand<TEntity, T, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithTable(subQueryExpr) as IMySqlFromCommand<TEntity, T, TOther>;
     #endregion
 
     #region InnerJoin
@@ -251,11 +251,11 @@ public class MySqlFromCommand<TEntity, <#=tables#>> : FromCommand<TEntity, <#=ta
         => base.WithTable<TOther>() as IMySqlFromCommand<TEntity, <#=tables#>, TOther>;
     #endregion
 
-    #region WithQuery
-    public new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
-        => base.WithQuery(subQuery) as IMySqlFromCommand<TEntity, <#=tables#>, TOther>;
-    public new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithQuery(subQueryExpr) as IMySqlFromCommand<TEntity, <#=tables#>, TOther>;
+    #region WithTable
+    public new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+        => base.WithTable(subQuery) as IMySqlFromCommand<TEntity, <#=tables#>, TOther>;
+    public new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithTable(subQueryExpr) as IMySqlFromCommand<TEntity, <#=tables#>, TOther>;
     #endregion
 
 <#      }#>

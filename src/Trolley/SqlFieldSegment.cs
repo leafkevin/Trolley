@@ -6,6 +6,118 @@ using System.Reflection;
 
 namespace Trolley;
 
+public enum DeferredOperation : byte
+{
+    None = 0,
+    Not,
+    IsNull,
+    IsTrue
+}
+
+public enum SqlType : byte
+{
+    FixedValue = 0,
+    Constant,
+    Variable,
+    OnlyField,
+    Expression,
+    MethodCall,
+    ReaderField
+}
+public struct SqlSegment
+{
+    public static readonly SqlSegment True = new SqlSegment { IsTrue = true, SqlType = SqlType.FixedValue, Value = true };
+    public static readonly SqlSegment Null = new SqlSegment { IsNull = true, SqlType = SqlType.FixedValue, Value = "NULL" };
+
+    public Expression Expression { get; set; }
+    public Expression OrigExpression { get; set; }
+    public SqlType SqlType { get; set; }
+    public object Value { get; set; }
+    public bool IsDeferredFields { get; set; }
+    /// <summary>
+    /// 是否参数化当前值，本次解析有效
+    /// </summary>
+    public bool IsParameterized { get; set; }
+    public bool IsEnum { get; set; }
+
+    public bool IsTrue { get; set; }
+    public bool IsNull { get; set; }
+    public string ParameterName { get; set; }
+    public TableSegment TableSegment { get; set; }
+    public Type TargetType { get; set; }
+    public MemberMap MemberMapper { get; set; }
+    public List<ReaderField> Fields { get; set; }
+    public bool IsRawSqlFields { get; set; }
+    public bool IsValue => this.SqlType > SqlType.FixedValue && this.SqlType < SqlType.OnlyField;
+    public bool HasField => this.SqlType > SqlType.Variable;
+    public bool IsFixedValue => this.SqlType == SqlType.FixedValue;
+    public bool HasDeferred => this.DeferredOperations != null && this.DeferredOperations.Count > 0;
+    public Stack<DeferredOperation> DeferredOperations { get; set; }
+
+    public SqlSegment Next(Expression expr)
+    {
+        this.Expression = expr;
+        return this;
+    }
+    public SqlSegment Change(object value)
+    {
+        this.Value = value;
+        return this;
+    }
+    public SqlSegment Change(object value, SqlType sqlType)
+    {
+        this.Value = value;
+        this.SqlType = sqlType;
+        return this;
+    }
+    public void Push(DeferredOperation deferredOperation)
+    {
+        this.DeferredOperations ??= new();
+        this.DeferredOperations.Push(deferredOperation);
+    }
+    public bool HasDeferredNot(out DeferredOperation lastOperation)
+    {
+        lastOperation = DeferredOperation.None;
+        if (this.HasDeferred)
+        {
+            int notIndex = 0;
+            while (this.DeferredOperations.Count > 0)
+            {
+                var operationType = this.DeferredOperations.Pop();
+                switch (operationType)
+                {
+                    case DeferredOperation.IsNull:
+                    case DeferredOperation.IsTrue:
+                        lastOperation = operationType;
+                        break;
+                    case DeferredOperation.Not:
+                        notIndex++;
+                        break;
+                }
+            }
+            return notIndex % 2 > 0;
+        }
+        return false;
+    }
+}
+public class ReaderField
+{
+    public SqlFieldType FieldType { get; set; }
+    public TableSegment TableSegment { get; set; }
+    public string Body { get; set; }
+    public int FieldsCount { get; set; }
+    public bool IsTargetType { get; set; }
+    public Expression Expression { get; set; }
+    public Type ReaderType { get; set; }
+    public MemberInfo TargetMember { get; set; }
+    public ITypeHandler TypeHandler { get; set; }
+    public bool IsDeferredFields { get; set; }
+    public List<ReaderField> Fields { get; set; }
+    public string Path { get; set; }
+    public bool HasNextInclude { get; set; }
+    public ReaderField Parent { get; set; }
+}
+
 public enum SqlFieldType : byte
 {
     /// <summary>
@@ -23,11 +135,7 @@ public enum SqlFieldType : byte
     /// <summary>
     /// 原始SQL
     /// </summary>
-    RawSql,
-    /// <summary>
-    /// 值
-    /// </summary>
-    Value
+    RawSql
 }
 [DebuggerDisplay("FieldType: {FieldType,nq} Body: {Body,nq} Value: {Value,nq} Expression: {Expression,nq}")]
 public class SqlFieldSegment : ICloneable
@@ -71,6 +179,7 @@ public class SqlFieldSegment : ICloneable
     /// 是否方法调用
     /// </summary>
     public bool IsMethodCall { get; set; }
+    public bool IsEnum { get; set; }
     /// <summary>
     /// 是否参数化当前值，本次解析有效
     /// </summary>
