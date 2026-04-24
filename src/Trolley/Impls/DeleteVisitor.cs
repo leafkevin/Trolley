@@ -193,7 +193,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         this.IsWhere = false;
         this.VisitOrSql(whereSql, operationType);
     }
-    public override SqlFieldSegment VisitMemberAccess(SqlFieldSegment sqlSegment)
+    public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
         var memberExpr = sqlSegment.Expression as MemberExpression;
         MemberAccessSqlFormatter formatter = null;
@@ -207,8 +207,8 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             {
                 if (memberExpr.Member.Name == nameof(Nullable<bool>.HasValue))
                 {
-                    sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlFieldSegment.Null });
-                    sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Not });
+                    sqlSegment.Push(DeferredOperation.IsNull);
+                    sqlSegment.Push(DeferredOperation.Not);
                     return this.Visit(sqlSegment.Next(memberExpr.Expression));
                 }
                 else if (memberExpr.Member.Name == nameof(Nullable<bool>.Value))
@@ -227,7 +227,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                 return sqlSegment;
             }
 
-            if (memberExpr.HasParameter(out _))
+            if (memberExpr.HasParameter())
             {
                 //Where(f => f.Amount > 5)
                 //Select(f => new { f.OrderId, f.Disputes ...})
