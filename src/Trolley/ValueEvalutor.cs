@@ -7,64 +7,43 @@ using System.Reflection;
 
 namespace Trolley;
 
-public class ValueVisitor
+public static class ValueEvalutor
 {
-    private readonly ConcurrentDictionary<int, Func<object, object, object>> binaryFuncCache = new();
-    public SqlType SqlType { get; private set; }
+    private static readonly ConcurrentDictionary<int, Func<object, object, object>> binaryFuncCache = new();
 
-    public static SqlSegment Evaluate(Expression expression, object target = null)
+    public static T Evaluate<T>(this Expression expression)
     {
-        var visitor = new ValueVisitor();
-        var objValue = visitor.Visit(expression, target);
-        if (objValue == null) return SqlSegment.Null;
-        return new SqlSegment { SqlType = visitor.SqlType, Value = objValue };
-    }
-    public static SqlSegment Evaluate(Expression expression, SqlType sqlType)
-    {
-        var visitor = new ValueVisitor();
-        var objValue = visitor.Visit(expression);
-        if (objValue == null) return SqlSegment.Null;
-        return new SqlSegment { SqlType = sqlType, Value = objValue };
-    }
-    public static T Evaluate<T>(Expression expression)
-    {
-        var visitor = new ValueVisitor();
-        var objValue = visitor.Visit(expression);
+        var objValue = Evaluate(expression);
         if (objValue == null) return default;
         return (T)objValue;
     }
-    public static object EvaluateValue(Expression expression)
-    {
-        var visitor = new ValueVisitor();
-        return visitor.Visit(expression);
-    }
-    public object Visit(Expression expression, object target = null)
+    public static object Evaluate(this Expression expression, object target = null)
     {
         return expression switch
         {
-            BinaryExpression binaryExpression => this.Visit(binaryExpression),
+            BinaryExpression binaryExpression => Evaluate(binaryExpression),
             ConstantExpression constantExpression => constantExpression.Value,
-            UnaryExpression unaryExpression => this.Visit(unaryExpression),
-            MethodCallExpression methodCallExpression => this.Visit(methodCallExpression, target),
-            MemberExpression memberExpression => this.Visit(memberExpression),
-            IndexExpression indexExpression => this.Visit(indexExpression),
-            NewArrayExpression newArrayExpression => this.Visit(newArrayExpression),
-            ListInitExpression listInitExpression => this.Visit(listInitExpression),
-            NewExpression newExpression => this.Visit(newExpression),
-            MemberInitExpression memberInitExpression => this.Visit(memberInitExpression),
-            ConditionalExpression conditionalExpression => this.Visit(conditionalExpression),
-            ParameterExpression parameterExpression => this.Visit(parameterExpression, target),
-            DefaultExpression defaultExpression => this.Visit(defaultExpression),
+            UnaryExpression unaryExpression => Evaluate(unaryExpression),
+            MethodCallExpression methodCallExpression => Evaluate(methodCallExpression, target),
+            MemberExpression memberExpression => Evaluate(memberExpression),
+            IndexExpression indexExpression => Evaluate(indexExpression),
+            NewArrayExpression newArrayExpression => Evaluate(newArrayExpression),
+            ListInitExpression listInitExpression => Evaluate(listInitExpression),
+            NewExpression newExpression => Evaluate(newExpression),
+            MemberInitExpression memberInitExpression => Evaluate(memberInitExpression),
+            ConditionalExpression conditionalExpression => Evaluate(conditionalExpression),
+            ParameterExpression parameterExpression => Evaluate(parameterExpression, target),
+            DefaultExpression defaultExpression => Evaluate(defaultExpression),
             _ => Expression.Lambda(expression).Compile().DynamicInvoke()
         };
     }
-    public object Visit(BinaryExpression expression)
+    public static object Evaluate(BinaryExpression expression)
     {
-        var left = this.Visit(expression.Left);
-        var right = this.Visit(expression.Right);
-        return this.Visit(expression, left, right);
+        var left = Evaluate(expression.Left);
+        var right = Evaluate(expression.Right);
+        return Evaluate(expression, left, right);
     }
-    public object Visit(BinaryExpression expression, object left, object right)
+    public static object Evaluate(BinaryExpression expression, object left, object right)
     {
         switch (expression.NodeType)
         {
@@ -100,9 +79,9 @@ public class ValueVisitor
                 return func(left, right);
         }
     }
-    public object Visit(UnaryExpression expression)
+    public static object Evaluate(UnaryExpression expression)
     {
-        var operand = this.Visit(expression.Operand);
+        var operand = Evaluate(expression.Operand);
         return expression.NodeType switch
         {
             ExpressionType.Not => Not(operand),
@@ -115,106 +94,103 @@ public class ValueVisitor
             _ => Expression.Lambda(expression).Compile().DynamicInvoke()
         };
     }
-    public object Visit(MethodCallExpression expression, object target)
+    public static object Evaluate(MethodCallExpression expression, object target)
     {
         var myTarget = target;
         if (expression.Object != null)
-            myTarget = this.Visit(expression.Object);
-        var parameters = expression.Arguments.Select(arg => this.Visit(arg)).ToArray();
+            myTarget = Evaluate(expression.Object);
+        var parameters = expression.Arguments.Select(arg => Evaluate(arg)).ToArray();
         return expression.Method.Invoke(myTarget, parameters);
     }
-    public object Visit(MemberExpression expression)
+    public static object Evaluate(MemberExpression expression)
+        => Evaluate(expression.Member, Evaluate(expression.Expression));
+    public static object Evaluate(IndexExpression expression)
     {
-        this.SqlType = SqlType.Variable;
-        return this.Visit(expression.Member, this.Visit(expression.Expression));
+        var target = Evaluate(expression.Object);
+        var arguments = expression.Arguments.Select(arg => Evaluate(arg)).ToArray();
+        return Evaluate(expression.Indexer, target, arguments);
     }
-    public object Visit(IndexExpression expression)
-    {
-        var target = this.Visit(expression.Object);
-        var arguments = expression.Arguments.Select(arg => this.Visit(arg)).ToArray();
-        return this.Visit(expression.Indexer, target, arguments);
-    }
-    public object Visit(NewArrayExpression expression)
+    public static object Evaluate(NewArrayExpression expression)
     {
         var arrayType = expression.Type.HasElementType ? expression.Type.GetElementType() : expression.Type;
         var array = Array.CreateInstance(arrayType, expression.Expressions.Count);
         for (var i = 0; i < expression.Expressions.Count; i++)
-            array.SetValue(this.Visit(expression.Expressions[i]), i);
+            array.SetValue(Evaluate(expression.Expressions[i]), i);
         return array;
     }
-    public object Visit(ListInitExpression expression)
+    public static object Evaluate(ListInitExpression expression)
     {
         var list = RepositoryHelper.CreateInstance(expression.Type);
         foreach (var item in expression.Initializers)
-            item.AddMethod.Invoke(list, [this.Visit(item.Arguments.FirstOrDefault())]);
+            item.AddMethod.Invoke(list, [Evaluate(item.Arguments.FirstOrDefault())]);
         return list;
     }
-    public object Visit(NewExpression expression)
+    public static object Evaluate(NewExpression expression)
     {
         if (expression.Arguments.Count > 0)
             return RepositoryHelper.CreateInstance(expression.Type, expression.Arguments.Select(f => f.Type).ToArray(),
-                expression.Arguments.Select(arg => this.Visit(arg)).ToArray());
+                expression.Arguments.Select(arg => Evaluate(arg)).ToArray());
         else return RepositoryHelper.CreateInstance(expression.Type);
     }
-    public object Visit(MemberInitExpression expression)
+    public static object Evaluate(MemberInitExpression expression)
     {
-        var instance = this.Visit(expression.NewExpression);
+        var instance = Evaluate(expression.NewExpression);
         foreach (var binding in expression.Bindings)
-            this.SetValue(binding.Member, instance, this.Visit(binding));
+            SetValue(binding.Member, instance, Evaluate(binding));
         return instance;
     }
-    public object Visit(ConditionalExpression expression)
+    public static object Evaluate(ConditionalExpression expression)
     {
-        var test = (bool)this.Visit(expression.Test);
-        var trueValue = this.Visit(expression.IfTrue);
-        var falseValue = this.Visit(expression.IfFalse);
+        var test = (bool)Evaluate(expression.Test);
+        var trueValue = Evaluate(expression.IfTrue);
+        var falseValue = Evaluate(expression.IfFalse);
         return test ? trueValue : falseValue;
     }
-    public object Visit(ParameterExpression expression, object target)
+    public static object Evaluate(ParameterExpression expression, object target)
     {
         if (expression.Type.GetConstructors().Any(e => e.GetParameters().Length == 0))
             return RepositoryHelper.CreateInstance(expression.Type);
         return target;
     }
-    public object Visit(DefaultExpression expression) => expression.Type.IsValueType ? Activator.CreateInstance(expression.Type) : null;
-    public object Visit(MemberInfo member, object obj, object[] parameters = null, bool isCache = true)
+    public static object Evaluate(DefaultExpression expression) => expression.Type.IsValueType ? Activator.CreateInstance(expression.Type) : null;
+    public static object Evaluate(MemberInfo member, object obj, object[] parameters = null, bool isCache = true)
     {
         return member switch
         {
-            FieldInfo fieldInfo => VisitAndCache(obj, fieldInfo),
-            PropertyInfo propertyInfo => VisitAndCache(obj, propertyInfo, parameters),
+            FieldInfo fieldInfo => EvaluateAndCache(obj, fieldInfo),
+            PropertyInfo propertyInfo => EvaluateAndCache(obj, propertyInfo, parameters),
             MethodInfo methodInfo => methodInfo.Invoke(obj, parameters),
             _ => throw new NotSupportedException($"不支持的成员访问，只支持字段、属性、方法访问，obj:{obj}")
         };
     }
-    public object Visit(MemberBinding member)
+    public static object Evaluate(MemberBinding member)
     {
         if (member is MemberAssignment memberAssignment)
-            return this.Visit(memberAssignment.Expression);
+            return Evaluate(memberAssignment.Expression);
         return null;
     }
-    public void SetValue(MemberInfo member, object obj, object value)
+    public static void SetValue(MemberInfo member, object obj, object value)
     {
         if (member is not FieldInfo && member is not PropertyInfo)
             throw new NotSupportedException($"不支持的成员访问，只支持字段、属性访问，obj:{obj}");
         SetValueAndCache(obj, member, value);
     }
-    public object VisitAndCache(object entity, MemberInfo memberInfo, object[] parameters = null)
+    public static object EvaluateAndCache(object entity, MemberInfo memberInfo, object[] parameters = null)
     {
         var memberGetter = RepositoryHelper.GetMemberValueGetter(memberInfo);
         return memberGetter.Invoke(entity, parameters);
     }
-    public void SetValueAndCache(object entity, MemberInfo memberInfo, object value)
+    public static void SetValueAndCache(object entity, MemberInfo memberInfo, object value)
     {
         var memberSetter = RepositoryHelper.GetMemberValueSetter(memberInfo);
         memberSetter.Invoke(entity, value);
     }
-    private int Compare(object left, object right)
+    public static int Compare(object left, object right)
     {
         if (left is IComparable comparable) return comparable.CompareTo(right);
         return Comparer.Default.Compare(left, right);
     }
-    private object Negate(object operand)
+    public static object Negate(object operand)
     {
         if (operand == null) return null;
         else if (operand is int i) return -i;
@@ -228,7 +204,7 @@ public class ValueVisitor
         else if (operand is uint ui) return -ui;
         return -(dynamic)operand;
     }
-    public object Not(object operand)
+    public static object Not(object operand)
     {
         if (operand == null) return null;
         switch (operand)

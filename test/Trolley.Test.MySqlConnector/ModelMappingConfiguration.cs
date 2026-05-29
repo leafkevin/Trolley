@@ -8,7 +8,7 @@ public class ModelMappingConfiguration : DefaultModelMappingConfiguration
             .Entity<Brand>(f =>
             {
                 f.ToTable("sys_brand");
-                f.HasMany(t => t.Products).HasForeignKey(t => t.BrandId);
+                f.HasMany(t => t.Products).HasForeignKey(t => t.BrandId).MapTo<Product>();
                 f.HasOne(t => t.Company).HasForeignKey(t => t.CompanyId).MapTo<Company>();
             })
             .Entity<Company>(f =>

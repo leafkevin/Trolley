@@ -22,7 +22,8 @@ public enum SqlType : byte
     OnlyField,
     Expression,
     MethodCall,
-    ReaderField
+    ReaderField,
+    ReaderFields
 }
 public struct SqlSegment
 {
@@ -30,7 +31,6 @@ public struct SqlSegment
     public static readonly SqlSegment Null = new SqlSegment { IsNull = true, SqlType = SqlType.FixedValue, Value = "NULL" };
 
     public Expression Expression { get; set; }
-    public Expression OrigExpression { get; set; }
     public SqlType SqlType { get; set; }
     public object Value { get; set; }
     public bool IsDeferredFields { get; set; }
@@ -45,7 +45,10 @@ public struct SqlSegment
     public string ParameterName { get; set; }
     public TableSegment TableSegment { get; set; }
     public Type TargetType { get; set; }
-    public MemberMap MemberMapper { get; set; }
+    public Type MappedTargetType { get; set; }
+    public string FieldName { get; set; }
+    public ITypeHandler TypeHandler { get; set; }
+    public MemberInfo TargetMember { get; set; }
     public List<ReaderField> Fields { get; set; }
     public bool IsRawSqlFields { get; set; }
     public bool IsValue => this.SqlType > SqlType.FixedValue && this.SqlType < SqlType.OnlyField;
@@ -104,24 +107,42 @@ public class ReaderField
 {
     public SqlFieldType FieldType { get; set; }
     public TableSegment TableSegment { get; set; }
-    public string Body { get; set; }
+    public object Value { get; set; }
+    /// <summary>
+    /// FieldType类型为RawSql才有效，默认值是1
+    /// </summary>
     public int FieldsCount { get; set; }
     public bool IsTargetType { get; set; }
     public Expression Expression { get; set; }
     public Type ReaderType { get; set; }
-    public MemberInfo TargetMember { get; set; }
+    public Type MappedTargetType { get; set; }
+    public string FieldName { get; set; }
     public ITypeHandler TypeHandler { get; set; }
+    public MemberInfo TargetMember { get; set; }
     public bool IsDeferredFields { get; set; }
+    public bool IsGroupingField { get; set; }
+    //public bool IsRefFields { get; set; }
     public List<ReaderField> Fields { get; set; }
     public string Path { get; set; }
     public bool HasNextInclude { get; set; }
     public ReaderField Parent { get; set; }
+
+    public ReaderField Clone()
+    {
+        var result = (ReaderField)this.MemberwiseClone();
+        if (this.Fields != null && this.Fields.Count > 0)
+        {
+            result.Fields = new List<ReaderField>();
+            this.Fields.ForEach(f => result.Fields.Add(f.Clone()));
+        }
+        return result;
+    }
 }
 
 public enum SqlFieldType : byte
 {
     /// <summary>
-    /// 字段
+    /// 字段，原始字段
     /// </summary>
     Field,
     /// <summary>
@@ -129,13 +150,21 @@ public enum SqlFieldType : byte
     /// </summary>
     Entity,
     /// <summary>
-    /// Include子表引用，场景: .Select(x => new { Order = x, CompanyInfo = x.Buyer.Company })
+    /// 1:1导航Include子表引用，场景: .Select(x => new { Order = x, CompanyInfo = x.Buyer.Company })
     /// </summary>
     IncludeRef,
     /// <summary>
+    /// 1:N导航Include子表引用，场景: .Select(x => new { Orders = x.Orders})
+    /// </summary>
+    DeferredIncludeRef,
+    /// <summary>
     /// 原始SQL
     /// </summary>
-    RawSql
+    RawSql,
+    /// <summary>
+    /// 常量、变量、参数、表达式计算、方法调用，非原始字段
+    /// </summary>
+    Expression
 }
 [DebuggerDisplay("FieldType: {FieldType,nq} Body: {Body,nq} Value: {Value,nq} Expression: {Expression,nq}")]
 public class SqlFieldSegment : ICloneable

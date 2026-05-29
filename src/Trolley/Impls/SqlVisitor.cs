@@ -428,7 +428,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 }
                 resultSegment = this.Visit(sqlSegment.Next(unaryExpr.Operand));
                 if (resultSegment.SqlType < SqlType.OnlyField)
-                    return resultSegment.Change(ValueVisitor.Not(resultSegment.Value));
+                    return resultSegment.Change(ValueEvalutor.Not(resultSegment.Value));
                 return resultSegment.Change($"~{resultSegment.Value}", SqlType.Expression);
             case ExpressionType.Convert:
                 //以下3种情况会走到此处
@@ -730,7 +730,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     {
                         readerField = tableSegment.Fields.Count == 1 ? tableSegment.Fields.First()
                           : tableSegment.Fields.Find(f => f.TargetMember.Name == memberInfo.Name);
-                        fieldName = readerField.Body;
+                        fieldName = readerField.Value;
                     }
                     sqlSegment.Value = fieldName;
                 }
@@ -869,9 +869,10 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             IsTargetType = true
         };
         //include表的ReaderField字段，紧跟在主表ReaderField后面
-        sqlSegment.Fields ??= new();
-        sqlSegment.Fields.Add(readerField);
-        this.AddIncludeTableReaderFields(readerField, sqlSegment.Fields);
+        List<ReaderField> readerFields = [readerField];
+        this.AddIncludeTableReaderFields(readerField, readerFields);
+        sqlSegment.SqlType = SqlType.ReaderFields;
+        sqlSegment.Value = readerFields;
         return sqlSegment;
     }
     protected void AddIncludeTableReaderFields(ReaderField parent, List<ReaderField> readerFields)
@@ -978,13 +979,13 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         throw new NotSupportedException($"不支持的表达式操作，{sqlSegment.Expression}");
     }
     public virtual SqlSegment Evaluate(SqlSegment sqlSegment)
-        => ValueVisitor.Evaluate(sqlSegment.Expression);
+        => ValueEvalutor.Evaluate(sqlSegment.Expression);
     public virtual SqlSegment Evaluate(SqlSegment sqlSegment, SqlType sqlType)
-        => ValueVisitor.Evaluate(sqlSegment.Expression, sqlType);
+        => ValueEvalutor.Evaluate(sqlSegment.Expression, sqlType);
     public virtual T Evaluate<T>(Expression expr)
-        => ValueVisitor.Evaluate<T>(expr);
+        => ValueEvalutor.Evaluate<T>(expr);
     public virtual object Evaluate(Expression expr)
-        => ValueVisitor.EvaluateValue(expr);
+        => ValueEvalutor.EvaluateValue(expr);
     public virtual SqlSegment VisitSqlMethodCall(SqlSegment sqlSegment)
     {
         var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
@@ -1003,7 +1004,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     {
                         FieldType = SqlFieldType.RawSql,
                         ReaderType = targetType,
-                        Body = sqlSegment.Value.ToString(),
+                        Value = sqlSegment.Value.ToString(),
                         FieldsCount = this.Evaluate<int>(methodCallExpr.Arguments[1])
                     };
                 }
@@ -1277,7 +1278,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                         {
                             var readerField = this.ReaderFields[i];
                             if (i > 0) builder.Append(',');
-                            var fieldName = readerField.Body;
+                            var fieldName = readerField.Value;
                             //CTE表字段是常量/变量/字段名称，都有可能和声明的字段不一致，所以需要获取CTE表的声明字段
                             //body里面的值，是原始的值或是字段名
                             if (readerField.TableSegment != null && readerField.TableSegment.TableType == TableType.CteSelfRef)
@@ -1303,7 +1304,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                         {
                             var readerField = this.ReaderFields[i];
                             if (i > 0) builder.Append(',');
-                            var fieldName = readerField.Body;
+                            var fieldName = readerField.Value;
                             //CTE表字段是常量/变量/字段名称，都有可能和声明的字段不一致，所以需要获取CTE表的声明字段
                             //body里面的值，是原始的值或是字段名
                             if (readerField.TableSegment != null && readerField.TableSegment.TableType == TableType.CteSelfRef)
@@ -2179,7 +2180,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             strExpression = $"CASE WHEN {strExpression} THEN {ifTrueValue} ELSE {ifFalseValue} END";
         return sqlSegment.Change(strExpression);
     }
-    public List<ReaderField> FlattenTableFields(TableSegment tableSegment)
+    public List<ReaderField> FlattenTableFields(TableSegment tableSegment, bool isNeedAlias = true)
     {
         var targetFields = new List<ReaderField>();
         if (tableSegment.Mapper != null)
@@ -2189,14 +2190,17 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             {
                 if (memberMapper.IsIgnore || memberMapper.IsNavigation)
                     continue;
+                var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
+                if (isNeedAlias) fieldName = tableSegment.AliasName + "." + fieldName;
                 targetFields.Add(new ReaderField
                 {
                     FieldType = SqlFieldType.Field,
                     TableSegment = tableSegment,
                     ReaderType = memberMapper.MemberType,
-                    TargetMember = memberMapper.Member,
+                    FieldName = memberMapper.FieldName,
                     TypeHandler = memberMapper.TypeHandler,
-                    Body = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(memberMapper.FieldName)
+                    TargetMember = memberMapper.Member,
+                    Value = fieldName
                 });
             }
         }
@@ -2679,7 +2683,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     var fieldName = argumentSegment.Value.ToString();
                     readerFields.Add(new ReaderField
                     {
-                        Body = fieldName,
+                        Value = fieldName,
                         ReaderType = argsExpr.Type,
                         TypeHandler = argumentSegment.MemberMapper.TypeHandler
                     });
@@ -2694,7 +2698,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         sqlSegment.SqlType = SqlType.ReaderField;
         sqlSegment.Value = new ReaderField
         {
-            Body = sql,
+            Value = sql,
             IsDeferredFields = true,
             Expression = sqlSegment.Expression,
             Fields = readerFields
@@ -2775,8 +2779,10 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 readerField.TargetMember = readerField.TargetMember;
                 //重新设置body内容，表别名变更，字段名也可能变更
                 if (readerField.TargetMember != null)
-                    readerField.Body = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
-
+                {
+                    readerField.FieldName = readerField.TargetMember.Name;
+                    readerField.Value = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
+                }
                 //更改原SQL中原始字段解析属性，防止在GetQuotedValue中使用原始字段名,导致SQL解析错误
                 //readerField.IsNeedAlias = false;
                 //readerField.IsConstant = false;

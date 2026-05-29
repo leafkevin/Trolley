@@ -134,6 +134,7 @@ public class TableSegment
     /// 当前模式下分表信息
     /// </summary>
     public TableShardingInfo TableShardingInfo { get; set; }
+    public bool IsUsed { get; set; }
 
     /// <summary>
     /// 生成一个自身引用的副本，主要用在cte表的自身引用

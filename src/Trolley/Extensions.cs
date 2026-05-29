@@ -68,12 +68,12 @@ public static class Extensions
                 throw new Exception($"实体类型{entityType.FullName}没有配置映射，请在IModelConfiguration.OnModelCreating方法中配置映射");
             return mapper;
         }
-        public EntityMap GetEntityMap(Type entityType, Type mapToType)
+        public EntityMap GetEntityMap(Type targetType, Type mapToType)
         {
             if (!entityMapProvider.TryGetEntityMap(mapToType, out var mapper))
-                throw new Exception($"实体类型{mapToType.FullName}没有配置映射，请在IModelConfiguration.OnModelCreating方法中配置映射");
-            var entityMapper = mapper.CreateDefaultMap(entityType);
-            entityMapProvider.UseEntityMap(entityType, entityMapper);
+                throw new Exception($"实体类型{mapToType.FullName}没有配置映射，请在IModelConfiguration.Configure方法中配置映射");
+            var entityMapper = mapper.CreateDefaultMap(targetType);
+            entityMapProvider.UseEntityMap(targetType, entityMapper);
             return entityMapper;
         }
     }
@@ -196,12 +196,12 @@ public static class Extensions
     }
     extension(Expression expr)
     {
-        public bool HasParameter()
-        {
-            var visitor = new HasParameterVisitor();
-            visitor.Visit(expr);
-            return visitor.HasParameter;
-        }
+        //public bool HasParameter()
+        //{
+        //    var visitor = new HasParameterVisitor();
+        //    visitor.Visit(expr);
+        //    return visitor.HasParameter;
+        //}
         public bool TryGetParameters(out List<ParameterExpression> parameters)
         {
             var visitor = new HasParameterVisitor();
@@ -286,7 +286,7 @@ public static class Extensions
                 return deserializer;
             }
         }
-        public Func<ITheaDataReader, object> GetReaderDeserializer(Type targetType, DbContext dbContext, List<SqlFieldSegment> readerFields)
+        public Func<ITheaDataReader, object> GetReaderDeserializer(Type targetType, DbContext dbContext, List<ReaderField> readerFields)
         {
             if (readerFields == null)
                 return GetReaderDeserializer(reader, targetType, dbContext);
@@ -308,7 +308,7 @@ public static class Extensions
                 {
                     var typeHandler = readerFields[0].TypeHandler;
                     if (typeHandler != null)
-                        return reader => typeHandler.Parse(readerFields[0].SegmentType, reader.GetValue(0));
+                        return reader => typeHandler.Parse(readerFields[0].ReaderType, reader.GetValue(0));
                     else
                     {
                         var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext.Options);
@@ -491,7 +491,7 @@ public static class Extensions
         memberInfo = null;
         return false;
     }
-    private static int GetTypeReaderKey(Type entityType, OrmProviderType ormProviderType, ITheaDataReader reader, List<SqlFieldSegment> readerFields)
+    private static int GetTypeReaderKey(Type entityType, OrmProviderType ormProviderType, ITheaDataReader reader, List<ReaderField> readerFields)
     {
         var hashCode = new HashCode();
         hashCode.Add(ormProviderType);
@@ -509,11 +509,11 @@ public static class Extensions
             if (readerField.FieldType == SqlFieldType.Entity && readerField.IsTargetType)
                 hashCode.Add("TargetEntity");
             else if (readerField.FieldType == SqlFieldType.RawSql)
-                hashCode.Add($"RawSql:{readerField.Body}");
+                hashCode.Add($"RawSql:{readerField.Value}");
             else if (readerField.IsDeferredFields)
             {
                 string fieldName = readerField.TargetMember?.Name ?? $"DeferredField{index++}";
-                hashCode.Add($"{fieldName}:{readerField.OriginalExpression.ToString()}");
+                hashCode.Add($"{fieldName}:{readerField.Expression.ToString()}");
             }
             else hashCode.Add(readerField.TargetMember.Name);
         }

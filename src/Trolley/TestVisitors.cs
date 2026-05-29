@@ -5,7 +5,7 @@ namespace Trolley;
 
 public class MemberVisitor : ExpressionVisitor
 {
-    public List<Expression> Members { get; private set; } = new();
+    public List<MemberExpression> Members { get; private set; } = new();
 
     protected override Expression VisitMember(MemberExpression node)
     {

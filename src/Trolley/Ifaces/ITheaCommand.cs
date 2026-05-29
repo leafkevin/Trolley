@@ -5,11 +5,25 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
+public enum CommandSqlType
+{
+    Select,
+    RawExecute,
+    Insert,
+    BulkInsert,
+    BulkCopyInsert,
+    Update,
+    BulkUpdate,
+    BulkCopyUpdate,
+    Delete,
+    MultiQuery
+}
 public interface ITheaCommand : IDisposable, IAsyncDisposable
 {
     string DbKey { get; }
     string CommandId { get; }
     IDbCommand BaseCommand { get; }
+    CommandSqlType CommandSqlType { get; }
 
     string CommandText { get; set; }
     int CommandTimeout { get; set; }
@@ -18,8 +32,8 @@ public interface ITheaCommand : IDisposable, IAsyncDisposable
     IDataParameterCollection Parameters { get; }
     ITheaTransaction Transaction { get; set; }
 
-    Action<CommandEventArgs> OnExecuting { get; set; }
-    Action<CommandCompletedEventArgs> OnExecuted { get; set; }
+    //Action<CommandEventArgs> OnExecuting { get; set; }
+    //Action<CommandCompletedEventArgs> OnExecuted { get; set; }
 
     int ExecuteNonQuery(CommandSqlType sqlType);
     Task<int> ExecuteNonQueryAsync(CommandSqlType sqlType, CancellationToken cancellationToken = default);
@@ -27,4 +41,5 @@ public interface ITheaCommand : IDisposable, IAsyncDisposable
     Task<ITheaDataReader> ExecuteReaderAsync(CommandSqlType sqlType, CommandBehavior behavior = default, CancellationToken cancellationToken = default);
     object ExecuteScalar(CommandSqlType sqlType);
     Task<object> ExecuteScalarAsync(CommandSqlType sqlType, CancellationToken cancellationToken = default);
+    void Cancel();
 }

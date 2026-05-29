@@ -1,7 +1,33 @@
 ﻿using System;
 using System.Data;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Trolley;
+
+
+
+public interface IDbInterceptor
+{
+}
+public interface IDbCommandInterceptor
+{
+    ITheaCommand CommandCreating(ITheaCommand command);
+    void CommandCreated(ITheaCommand command);
+    ITheaCommand CommandInitialized(ITheaCommand command);
+    void CommandCanceled(ITheaCommand command);
+    Task CommandCanceledAsync(ITheaCommand command, CancellationToken cancellationToken = default);
+    void CommandFailed(ITheaCommand command);
+    ValueTask CommandFailedAsync(ITheaCommand command, CancellationToken cancellationToken = default);
+    void DataReaderClosing(ITheaCommand command);
+    ValueTask DataReaderClosingAsync(ITheaCommand command, CancellationToken cancellationToken = default);
+    void NonQueryExecuting(ITheaCommand command);
+    ValueTask NonQueryExecutingAsync(ITheaCommand command, CancellationToken cancellationToken = default);
+    int NonQueryExecuted(ITheaCommand command, int result);
+    ValueTask<int> NonQueryExecutedAsync(ITheaCommand command, int result, CancellationToken cancellationToken = default);
+    int NonQueryExecuted(ITheaCommand command, int result);
+}
+
 
 public class DbInterceptors
 {
@@ -14,19 +40,6 @@ public class DbInterceptors
     public Action<CommandCompletedEventArgs> OnCommandExecuted { get; set; }
     public Action<TransactionEventArgs> OnTransactionCreated { get; set; }
     public Action<TransactionCompletedEventArgs> OnTransactionCompleted { get; set; }
-}
-public enum CommandSqlType
-{
-    Select,
-    RawExecute,
-    Insert,
-    BulkInsert,
-    BulkCopyInsert,
-    Update,
-    BulkUpdate,
-    BulkCopyUpdate,
-    Delete,
-    MultiQuery
 }
 public class ConectionEventArgs : EventArgs
 {

@@ -2372,7 +2372,6 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     });
                     result = true;
                 }
-
                 //IEnumerable<T>,List<T>
                 //public bool Contains(T item);
                 if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType.GenericTypeArguments.Length > 0

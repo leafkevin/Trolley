@@ -1145,21 +1145,23 @@ public static class RepositoryHelper
         });
         return creator.Invoke(parameters);
     }
-    public static object ReadList(Type entityType, ITheaDataReader reader, DbContext dbContext)
+    public static object ReadList(Type targetType, Type entityType, ITheaDataReader reader, DbContext dbContext)
     {
-        var cacheKey = HashCode.Combine(entityType, dbContext.OrmProvider.OrmProviderType);
+        var cacheKey = HashCode.Combine(targetType, entityType, dbContext.OrmProvider.OrmProviderType);
         var typedReaderDeserializer = readerDeserializerGetters.GetOrAdd(cacheKey, f =>
         {
+            //TODO: 根据映射获取ReaderFields列表，两个场景，1. targetType=entityType，2. targetType!=entityType            
             var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
             var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
+            var readerFieldsExpr = Expression.Parameter(typeof(List<ReaderField>), "readerFields");
             var blockBodies = new List<Expression>();
             var methodInfo = typeof(RepositoryHelper).GetMethod(nameof(ReadTypedList));
-            methodInfo = methodInfo.MakeGenericMethod(entityType);
-            var targetType = typeof(List<>).MakeGenericType(entityType);
-            var resultLabelExpr = Expression.Label(targetType);
-            blockBodies.Add(Expression.Return(resultLabelExpr, Expression.Call(methodInfo, readerExpr, dbContextExpr)));
-            blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(targetType)));
-            var delegateType = typeof(Func<,,>).MakeGenericType(typeof(ITheaDataReader), typeof(DbContext), targetType);
+            methodInfo = methodInfo.MakeGenericMethod(targetType);
+            var resultType = typeof(List<>).MakeGenericType(targetType);
+            var resultLabelExpr = Expression.Label(resultType);
+            blockBodies.Add(Expression.Return(resultLabelExpr, Expression.Call(methodInfo, readerExpr, dbContextExpr, readerFieldsExpr)));
+            blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(resultType)));
+            var delegateType = typeof(Func<,,>).MakeGenericType(typeof(ITheaDataReader), typeof(DbContext), resultType);
             return Expression.Lambda(delegateType, Expression.Block(blockBodies), readerExpr, dbContextExpr).Compile();
         });
         return typedReaderDeserializer.DynamicInvoke(reader, dbContext);
@@ -1185,20 +1187,20 @@ public static class RepositoryHelper
         });
         return (Task<object>)typedReaderDeserializer.DynamicInvoke(reader, cancellationToken);
     }
-    public static List<TEntity> ReadTypedList<TEntity>(this ITheaDataReader reader, DbContext dbContext)
+    public static List<TTarget> ReadTypedList<TTarget>(ITheaDataReader reader, DbContext dbContext, List<ReaderField> readerFields)
     {
-        var result = new List<TEntity>();
-        var entityType = typeof(TEntity);
-        var deserializer = reader.GetReaderDeserializer(entityType, dbContext);
+        var result = new List<TTarget>();
+        var entityType = typeof(TTarget);
+        var deserializer = reader.GetReaderDeserializer(entityType, dbContext, readerFields);
         while (reader.Read())
-            result.Add((TEntity)deserializer.Invoke(reader));
+            result.Add((TTarget)deserializer.Invoke(reader));
         return result;
     }
-    public static async Task<List<TEntity>> ReadTypedListAsync<TEntity>(this ITheaDataReader reader, DbContext dbContext, CancellationToken cancellationToken)
+    public static async Task<List<TEntity>> ReadTypedListAsync<TEntity>(ITheaDataReader reader, DbContext dbContext, List<ReaderField> readerFields, CancellationToken cancellationToken)
     {
         var result = new List<TEntity>();
         var entityType = typeof(TEntity);
-        var deserializer = reader.GetReaderDeserializer(entityType, dbContext);
+        var deserializer = reader.GetReaderDeserializer(entityType, dbContext, readerFields);
         while (await reader.ReadAsync(cancellationToken))
             result.Add((TEntity)deserializer.Invoke(reader));
         return result;
@@ -1383,7 +1385,7 @@ public static class RepositoryHelper
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(object))));
         return Expression.Lambda<Func<ITheaDataReader, object>>(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
     }
-    public static Func<ITheaDataReader, object> CreateReaderDeferredValueDeserializer(Type valueType, DbContext dbContext, ITheaDataReader reader, List<SqlFieldSegment> readerFields)
+    public static Func<ITheaDataReader, object> CreateReaderDeferredValueDeserializer(Type valueType, DbContext dbContext, ITheaDataReader reader, List<ReaderField> readerFields)
     {
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
@@ -1392,13 +1394,13 @@ public static class RepositoryHelper
 
         var readerField = readerFields[0];
         var visitor = new ReplaceMemberVisitor();
-        var bodyExpr = visitor.Visit(readerField.OriginalExpression);
+        var bodyExpr = visitor.Visit(readerField.Expression);
 
         var fieldType = reader.GetFieldType(0);
         //延迟的方法调用，有字段值作为方法参数就读取，没有什么也不做
         var childReaderField = readerField.Fields[0];
         var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(0),
-            childReaderField.SegmentType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
+            childReaderField.ReaderType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
         var executeExpr = Expression.Invoke(Expression.Lambda(bodyExpr, visitor.NewParameters), readerValueExpr);
 
         var resultLabelExpr = Expression.Label(typeof(object));
@@ -1407,7 +1409,7 @@ public static class RepositoryHelper
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(object))));
         return Expression.Lambda<Func<ITheaDataReader, object>>(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
     }
-    public static Func<ITheaDataReader, object> CreateReaderEntityDeserializer(Type targetType, DbContext dbContext, ITheaDataReader reader, List<SqlFieldSegment> readerFields)
+    public static Func<ITheaDataReader, object> CreateReaderEntityDeserializer(Type targetType, DbContext dbContext, ITheaDataReader reader, List<ReaderField> readerFields)
     {
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
@@ -1419,7 +1421,7 @@ public static class RepositoryHelper
         var root = NewBuildInfo(targetType);
         var current = root;
         var parent = root;
-        var readerBuilders = new Dictionary<SqlFieldSegment, EntityBuildInfo>();
+        var readerBuilders = new Dictionary<ReaderField, EntityBuildInfo>();
         var deferredBuilds = new Stack<EntityBuildInfo>();
         var entityMapProvider = dbContext.EntityMapProvider;
         if (readerFields.Count == 1 && readerFields[0].FieldType == SqlFieldType.RawSql)
@@ -1470,13 +1472,13 @@ public static class RepositoryHelper
                         {
                             //支持延迟方法调用、属性访问，一切均可延迟，但必须最后调用Deferred()方法
                             ExpressionType[] entityNodeTypes = [ExpressionType.New, ExpressionType.MemberInit];
-                            if (readerField.SegmentType.IsEntityType(out _)
+                            if (readerField.ReaderType.IsEntityType(out _)
                                 && entityNodeTypes.Contains(readerField.Expression.NodeType))
                             {
-                                current = NewBuildInfo(readerField.SegmentType, readerField.TargetMember, parent);
+                                current = NewBuildInfo(readerField.ReaderType, readerField.TargetMember, parent);
                                 readerBuilders.Add(readerField, current);
                             }
-                            Expression bodyExpr = readerField.OriginalExpression;
+                            Expression bodyExpr = readerField.Expression;
                             //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
                             //f.TotalAmount.ToString("C")
                             //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
@@ -1486,7 +1488,7 @@ public static class RepositoryHelper
                             if (readerField.Fields != null && readerField.Fields.Count > 0)
                             {
                                 var visitor = new ReplaceMemberVisitor();
-                                bodyExpr = visitor.Visit(readerField.OriginalExpression);
+                                bodyExpr = visitor.Visit(readerField.Expression);
                                 var argsExprs = new List<Expression>();
 
                                 for (int i = 0; i < readerField.Fields.Count; i++)
@@ -1495,7 +1497,7 @@ public static class RepositoryHelper
                                     //延迟的方法调用，有字段值作为方法参数就读取，没有什么也不做
                                     var myReaderField = readerField.Fields[i];
                                     var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                                        myReaderField.SegmentType, fieldType, myReaderField.TypeHandler, blockParameters, blockBodies);
+                                        myReaderField.ReaderType, fieldType, myReaderField.TypeHandler, blockParameters, blockBodies);
                                     argsExprs.Add(readerValueExpr);
                                     index++;
                                 }
@@ -1511,7 +1513,7 @@ public static class RepositoryHelper
                             //单个字段和RawSql单个字段场景
                             var fieldType = reader.GetFieldType(index);
                             var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                                readerField.SegmentType, fieldType, readerField.TypeHandler, blockParameters, blockBodies);
+                                readerField.ReaderType, fieldType, readerField.TypeHandler, blockParameters, blockBodies);
                             if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
                             else if (readerField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
                             index++;
@@ -1521,9 +1523,9 @@ public static class RepositoryHelper
                         var myTargetType = targetType;
                         if (readerField.FieldsCount > 1)
                         {
-                            current = NewBuildInfo(readerField.SegmentType, readerField.TargetMember, parent);
+                            current = NewBuildInfo(readerField.ReaderType, readerField.TargetMember, parent);
                             readerBuilders.Add(readerField, current);
-                            myTargetType = readerField.SegmentType;
+                            myTargetType = readerField.ReaderType;
                         }
                         var memberInfos = myTargetType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                             .Where(f => f.CanWrite).ToList();
@@ -1532,7 +1534,7 @@ public static class RepositoryHelper
                             var fieldName = reader.GetName(index);
                             //手写sql，有时没有写AS，或是写错了，导致字段名与成员名不一致，所以需要尝试映射一下
                             //支持忽略大小写、去除多余下划线的映射，增加映射成功率
-                            var memberType = readerField.SegmentType;
+                            var memberType = readerField.ReaderType;
                             var memberInfo = readerField.TargetMember;
                             if (readerField.FieldsCount > 1)
                             {
@@ -1568,7 +1570,7 @@ public static class RepositoryHelper
                         {
                             //Include导航属性引用不能单独Select，前面一定有Parameter访问
                             //Include导航属性引用单独处理，先设置默认值，在整个实体初始化完后，再设置具体值，初始化Action在成员访问的时候，已经构建好了
-                            var refReaderField = readerField.Value as SqlFieldSegment;
+                            var refReaderField = readerField.Value as ReaderField;
                             var instanceExpr = readerBuilders[refReaderField].InstanceExpr;
                             //此处生成的副本，从新new的一个对象
                             if (!parent.IsDefault) parent.Arguments.Add(instanceExpr);
@@ -1659,6 +1661,65 @@ public static class RepositoryHelper
         }
         blockBodies.Add(Expression.Assign(readerValueExpr, targetValueExpr));
         return Expression.Convert(readerValueExpr, targetType);
+    }
+    public static List<ReaderField> GetReaderFields(Type targetType, Type entityType, DbContext dbContext)
+    {
+        var entityMapper = dbContext.EntityMapProvider.GetEntityMap(entityType, targetType);
+        foreach (var memberMapper in entityMapper.MemberMaps)
+        {
+            if (memberMapper.IsIgnore) continue;
+
+            if (memberMapper.IsNavigation)
+            {
+                path ??= fromSegment.Path.Replace(fromSegment.AliasName, parameterName);
+                path += "." + memberExpr.Member.Name;
+                var refReaderField = this.ReaderFields.Find(f => f.Path == path);
+                if (refReaderField == null)
+                    throw new NotSupportedException("Select访问Include成员，要先Select访问Include成员的主表实体，如：.Select((x, y) =&gt; new { Order = x, x.Seller, x.Buyer, ... })");
+
+                //引用实体类型导航属性，当前导航属性可能还会有Include导航属性，所以构造时只给默认值
+                //在初始化完最外层实体后，再做赋值
+                if (!memberMapper.IsToOne) throw new NotSupportedException("暂时不支持引用1:N关系Include导航属性成员访问");
+                var readerField = this.ReaderFields.Find(f => f.Path == path);
+                //只有select场景才会Include对象
+                sqlSegment.HasField = true;
+                sqlSegment.FieldType = SqlFieldType.IncludeRef;
+                sqlSegment.FromMember = memberMapper.Member;
+                sqlSegment.Value = refReaderField;
+                return sqlSegment;
+            }
+            else
+            {
+                //引用Json实体类型字段
+                if (memberMapper.TypeHandler == null)
+                    throw new NotSupportedException($"类{fromSegment.EntityType.FullName}的成员{memberExpr.Member.Name}是实体类型，未配置导航属性也没有配置TypeHandler");
+
+                var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
+                if (this.IsNeedTableAlias) fieldName = fromSegment.AliasName + "." + fieldName;
+                sqlSegment.FieldType = SqlFieldType.Field;
+                sqlSegment.HasField = true;
+                sqlSegment.FromMember = memberMapper.Member;
+                sqlSegment.TargetMember = memberInfo;
+                sqlSegment.SegmentType = memberMapper.MemberType;
+                if (memberMapper.UnderlyingType.IsEnum)
+                    sqlSegment.ExpectType = memberMapper.UnderlyingType;
+                sqlSegment.NativeDbType = memberMapper.NativeDbType;
+                sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
+                sqlSegment.TypeHandler = memberMapper.TypeHandler;
+                sqlSegment.Body = fieldName;
+            }
+
+
+
+            var readerField = new ReaderField
+            {
+                FieldType = SqlFieldType.Field,
+                TargetMember = memberMap.Member,
+                ReaderType = memberMap.Member.GetMemberType(),
+                TypeHandler = memberMap.TypeHandler
+            };
+            yield return readerField;
+        }
     }
     private static EntityBuildInfo NewBuildInfo(Type targetType, MemberInfo fromMember = null, EntityBuildInfo parent = null)
     {

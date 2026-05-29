@@ -158,33 +158,34 @@ public class EntityMap
         this.memberMappers.Sort((x, y) => x.Position.CompareTo(y.Position));
         this.isBuild = true;
     }
-    public EntityMap CreateDefaultMap(Type entityType)
+    public EntityMap CreateDefaultMap(Type targetType)
     {
-        if (entityType == this.EntityType)
+        if (targetType == this.EntityType)
             return this;
 
-        var mapper = new EntityMap(entityType)
+        var mapper = new EntityMap(targetType)
         {
             TableName = this.TableName,
             IsAutoIncrementKey = this.IsAutoIncrementKey,
             KeyMembers = this.KeyMembers
         };
 
-        if (entityType.IsValueType)
+        if (targetType.IsValueType)
         {
-            mapper.UnderlyingType = Nullable.GetUnderlyingType(entityType);
+            mapper.UnderlyingType = Nullable.GetUnderlyingType(targetType);
             mapper.IsNullable = mapper.UnderlyingType != null;
             if (!mapper.IsNullable)
-                mapper.UnderlyingType = entityType;
+                mapper.UnderlyingType = targetType;
         }
-        var memberInfos = RepositoryHelper.GetMembers(entityType);
+        var memberInfos = RepositoryHelper.GetMembers(targetType);
         if (memberInfos != null && memberInfos.Count > 0)
         {
             foreach (var memberInfo in memberInfos)
             {
-                var mapToMemberMapper = this.GetMemberMap(memberInfo.Name);
-                var memberMapper = mapToMemberMapper.Clone(mapper, memberInfo);
+                //瘦身版模型映射，直接引用模型映射的原成员映射，这样原映射更改，瘦身版模型映射也会随之更改
+                var memberMapper = this.GetMemberMap(memberInfo.Name);
                 mapper.AddMemberMap(memberMapper.MemberName, memberMapper);
+                mapper.AddFieldMap(memberMapper.FieldName, memberMapper);
             }
         }
         return mapper;

@@ -317,7 +317,6 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         this.TableAliases?.Clear();
         this.ReaderFields?.Clear();
         this.WhereBuilder = null;
-        //this.IsFromQuery = false;
         this.TableAsStart = 'a';
         this.IsNeedTableAlias = false;
     }

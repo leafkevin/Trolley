@@ -153,7 +153,7 @@ public class Brand
     public int UpdatedBy { get; set; }
     public DateTime UpdatedAt { get; set; }
 
-    public List<Product> Products { get; set; }
+    public List<MyProductInfo> Products { get; set; }
     public CompanyInfo Company { get; set; }
 }
 public class BrandInfo
@@ -279,12 +279,7 @@ public class MyProductInfo
     public int ProductId { get; set; }
     public string ProductNo { get; set; }
     public string ProductName { get; set; }
-    public double Price { get; set; }
     public int BrandId { get; set; }
-    public string BrandName { get; set; }
-    public int CategoryId { get; set; }
-    public int CompanyId { get; }
-    public DateTime CreatedAt { get; set; }
 
     public BrandInfo Brand { get; set; }
 }
