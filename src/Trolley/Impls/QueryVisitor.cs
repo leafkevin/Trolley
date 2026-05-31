@@ -127,11 +127,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
                 foreach (var groupByField in this.GroupByFields)
                 {
-                    var memberInfo = groupByField.TargetMember;
-                    if (this.ReaderFields.Exists(f => f.IsGroupingField && f.TargetMember.Name == memberInfo.Name))
+                    if (this.ReaderFields.Exists(f => f.IsGroupingField && f.TargetMember.Name == groupByField.TargetMember.Name))
                         continue;
                     //这里不需要克隆，只用于生成SQL
-                    this.ReaderFields.Add(groupByField );
+                    this.ReaderFields.Add(groupByField);
                 }
             }
             if (!string.IsNullOrEmpty(this.OrderBySql))
@@ -140,9 +139,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 var hasGrouping = this.ReaderFields.Exists(f => f.IsGroupingField);
                 foreach (var orderByField in this.OrderByFields)
                 {
-                    if (this.ReaderFields.Exists(f => f.TargetMember.Name == orderByField.MemberName))
+                    if (this.ReaderFields.Exists(f => f.TargetMember.Name == orderByField.Field.TargetMember.Name))
                         continue;
-                    if (hasGrouping && this.GroupByFields.Exists(f => f.TargetMember.Name == orderByField.MemberName))
+                    if (hasGrouping && this.GroupByFields.Exists(f => f.TargetMember.Name == orderByField.Field.TargetMember.Name))
                         continue;
                     //这里不需要克隆，只用于生成SQL
                     this.ReaderFields.Add(orderByField.Field);
@@ -323,9 +322,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
                 foreach (var groupByField in this.GroupByFields)
                 {
-                    var memberInfo = groupByField.TargetMember ?? groupByField.FromMember;
-                    if (this.ReaderFields.Exists(f => f.IsGroupByField && f.TargetMember.Name == memberInfo.Name || f.IsGroupingField))
+                    if (this.ReaderFields.Exists(f => f.IsGroupingField && f.TargetMember.Name == groupByField.TargetMember.Name))
                         continue;
+                    //这里不需要克隆，只用于生成SQL
                     this.ReaderFields.Add(groupByField);
                 }
             }
@@ -335,11 +334,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 var hasGrouping = this.ReaderFields.Exists(f => f.IsGroupingField);
                 foreach (var orderByField in this.OrderByFields)
                 {
-                    var memberInfo = orderByField.Field.TargetMember ?? orderByField.Field.FromMember;
-                    if (this.ReaderFields.Exists(f => f.TargetMember.Name == memberInfo.Name || f.FromMember == memberInfo))
+                    if (this.ReaderFields.Exists(f => f.TargetMember.Name == orderByField.Field.TargetMember.Name))
                         continue;
-                    if (hasGrouping && this.GroupByFields.Exists(f => f.TargetMember.Name == memberInfo.Name || f.FromMember == memberInfo))
+                    if (hasGrouping && this.GroupByFields.Exists(f => f.TargetMember.Name == orderByField.Field.TargetMember.Name))
                         continue;
+                    //这里不需要克隆，只用于生成SQL
                     this.ReaderFields.Add(orderByField.Field);
                 }
             }
@@ -421,20 +420,18 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         string orderBy = null;
         string selectSql = "*";
         var builder = new StringBuilder();
-        Func<SqlSegment, string> FieldNameFetcher = readerField =>
+        Func<ReaderField, string> FieldNameFetcher = readerField =>
         {
             string fieldName = null;
-            if (readerField.IsNeedAlias || readerField.IsConstant || readerField.IsVariable
-                || readerField.HasParameter || readerField.IsExpression || readerField.IsMethodCall
-                || (readerField.TargetMember != null && readerField.FromMember != null
-                && readerField.TargetMember.Name != readerField.FromMember.Name))
+            if (readerField.FieldType == SqlFieldType.Expression
+                || readerField.FieldName != readerField.TargetMember.Name)
             {
                 fieldName = readerField.TargetMember.Name;
                 fieldName = this.OrmProvider.GetFieldName(fieldName);
             }
             else
             {
-                fieldName = readerField.Body;
+                fieldName = readerField.Value.ToString();
                 var startIndex = fieldName.IndexOf('.');
                 if (startIndex > 0)
                     fieldName = fieldName.Substring(startIndex + 1);
@@ -468,7 +465,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 }
                 fieldName = FieldNameFetcher(readerField);
                 if (readerField.IsAggField)
-                    fieldName = $"{readerField.ShardingAggFunc}({fieldName}) AS {fieldName}";
+                    fieldName = $"{readerField.AggFunc}({fieldName}) AS {fieldName}";
                 if (i > 0) builder.Append(',');
                 builder.Append(fieldName);
             }
@@ -533,7 +530,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 if (readerField.IsAggField)
                 {
                     fieldName = FieldNameFetcher(readerField);
-                    fieldName = $"{readerField.ShardingAggFunc}({fieldName}) AS {fieldName}";
+                    fieldName = $"{readerField.AggFunc}({fieldName}) AS {fieldName}";
                 }
                 else fieldName = readerField.Value;
                 if (i > 0) builder.Append(',');
@@ -547,7 +544,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         builder.Clear();
         return sql;
     }
-    public virtual string BuildCteTableSql(string tableName, out List<SqlSegment> readerFields)
+    public virtual string BuildCteTableSql(string tableName, out List<ReaderField> readerFields)
     {
         tableName = this.OrmProvider.GetTableName(tableName);
         var rawSql = this.BuildSql(false, out readerFields);
@@ -1615,7 +1612,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
                 var targetSegment = sqlSegment.Next(memberExpr.Expression);
                 sqlSegment = formatter.Invoke(this, targetSegment);
-                sqlSegment.TargetMember = memberInfo;
+                //sqlSegment.TargetMember = memberInfo;
                 return sqlSegment;
             }
 
@@ -1758,7 +1755,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     {
                         //简单字段访问
                         var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
-                        sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
+                        if (this.IsWhere)
+                        {
+                            sqlSegment.NativeDbType = memberMapper.NativeDbType;
+                            sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
+                        }
                         sqlSegment.FieldName = memberMapper.FieldName;
                         sqlSegment.TypeHandler = memberMapper.TypeHandler;
                         sqlSegment.Value = fromSegment.AliasName + "." + fieldName;
@@ -1766,27 +1767,27 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 }
                 return sqlSegment;
             }
+        }
 
-            //各种静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
-            if (memberExpr.Member.DeclaringType == typeof(DBNull))
-                return SqlSegment.Null;
+        //各种静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
+        if (memberExpr.Member.DeclaringType == typeof(DBNull))
+            return SqlSegment.Null;
 
-            if (this.OrmProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
-            {
-                sqlSegment = formatter.Invoke(this, sqlSegment);
-                sqlSegment.TargetMember = memberExpr.Member;
-                return sqlSegment;
-            }
-
-            //访问局部变量或是成员变量，当作常量处理，直接计算，后面统一做参数化处理
-            //var orderIds=new List<int>{1,2,3}; Where(f=>orderIds.Contains(f.OrderId));
-            //private Order order; Where(f=>f.OrderId==this.Order.Id); this.Order.Id
-            //var orderId=10; Select(f=>new {OrderId=orderId,...}
-            //Select(f=>new {OrderId=this.Order.Id, ...}
-            sqlSegment.Value = ValueEvalutor.Evaluate(memberExpr);
-            sqlSegment.SqlType = SqlType.Variable;
+        if (this.OrmProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
+        {
+            sqlSegment = formatter.Invoke(this, sqlSegment);
+            sqlSegment.TargetMember = memberExpr.Member;
             return sqlSegment;
         }
+
+        //访问局部变量或是成员变量，当作常量处理，直接计算，后面统一做参数化处理
+        //var orderIds=new List<int>{1,2,3}; Where(f=>orderIds.Contains(f.OrderId));
+        //private Order order; Where(f=>f.OrderId==this.Order.Id); this.Order.Id
+        //var orderId=10; Select(f=>new {OrderId=orderId,...}
+        //Select(f=>new {OrderId=this.Order.Id, ...}
+        sqlSegment.Value = ValueEvalutor.Evaluate(memberExpr);
+        sqlSegment.SqlType = SqlType.Variable;
+        return sqlSegment;
     }
     public override SqlSegment VisitNew(SqlSegment sqlSegment)
     {
@@ -2083,7 +2084,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //TODO:
         //在子查询中，readerField.FieldName和readerField.TargetMember.Name不同，就需要别名
         //在最外层的查询中，只要满足IsCanMapTo条件，不需要别名
-        return !this.DbContext.EntityMapProvider.IsCanMapTo(readerField.FieldName, readerField.TargetMember.Name);
+        return readerField.FieldName != readerField.TargetMember.Name;
     }
     public virtual void Clear(bool isClearReaderFields = false)
     {
@@ -2271,8 +2272,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 }
 public class OrderByField
 {
-    public Type FieldType { get; set; }
-    public string Body { get; set; }
-    public string MemberName { get; set; }
+    public ReaderField Field { get; set; }
     public string Suffix { get; set; }
 }

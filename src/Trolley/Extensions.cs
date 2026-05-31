@@ -79,6 +79,9 @@ public static class Extensions
     }
     extension(Type type)
     {
+#if NETSTANDARD2_0
+        public bool IsEnum => type.GetTypeInfo().IsEnum;
+#endif
         public bool IsNullableType(out Type underlyingType)
         {
             if (!type.IsValueType)

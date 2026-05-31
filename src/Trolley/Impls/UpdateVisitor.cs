@@ -525,21 +525,21 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             Value = whereExpr
         });
     }
-    public override SqlFieldSegment VisitNew(SqlFieldSegment sqlSegment)
+    public override SqlSegment VisitNew(SqlSegment sqlSegment)
     {
         if (sqlSegment.Expression.HasParameter(out _))
             throw new NotSupportedException($"不支持的表达式访问,{sqlSegment.Expression}");
         //当作常量处理
         return sqlSegment.ChangeValue(sqlSegment.Expression.Evaluate(), true);
     }
-    public override SqlFieldSegment VisitMemberInit(SqlFieldSegment sqlSegment)
+    public override SqlSegment VisitMemberInit(SqlSegment sqlSegment)
     {
         if (sqlSegment.Expression.HasParameter(out _))
             throw new NotSupportedException($"不支持的表达式访问,{sqlSegment.Expression}");
         //当作常量处理
         return sqlSegment.ChangeValue(sqlSegment.Expression.Evaluate(), true);
     }
-    public override SqlFieldSegment VisitMethodCall(SqlFieldSegment sqlSegment)
+    public override SqlSegment VisitMethodCall(SqlSegment sqlSegment)
     {
         //把方法返回值当作常量处理
         sqlSegment = base.VisitMethodCall(sqlSegment);

@@ -346,21 +346,6 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             case ExpressionType.Constant:
                 result = this.VisitConstant(sqlSegment);
                 break;
-
-            case ExpressionType.AndAlso:
-            case ExpressionType.OrElse:
-                result = this.VisitBoolBinary(sqlSegment);
-                break;
-            case ExpressionType.Equal:
-            case ExpressionType.NotEqual:
-                result = this.VisitEqualBinary(sqlSegment);
-                break;
-            case ExpressionType.Coalesce:
-                result = this.VisitCoalesceBinary(sqlSegment);
-                break;
-            case ExpressionType.ArrayIndex:
-                result = this.VisitArrayIndexBinary(sqlSegment);
-                break;
             case ExpressionType.Add:
             case ExpressionType.AddChecked:
             case ExpressionType.Subtract:
@@ -369,16 +354,21 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             case ExpressionType.MultiplyChecked:
             case ExpressionType.Divide:
             case ExpressionType.Modulo:
-            case ExpressionType.And:
-            case ExpressionType.Or:
             case ExpressionType.LessThan:
             case ExpressionType.LessThanOrEqual:
             case ExpressionType.GreaterThan:
             case ExpressionType.GreaterThanOrEqual:
-
+            case ExpressionType.Equal:
+            case ExpressionType.NotEqual:
+            case ExpressionType.Coalesce:
+            case ExpressionType.ArrayIndex:
+            case ExpressionType.And:
+            case ExpressionType.Or:
+            case ExpressionType.ExclusiveOr:
             case ExpressionType.RightShift:
             case ExpressionType.LeftShift:
-            case ExpressionType.ExclusiveOr:
+            case ExpressionType.AndAlso:
+            case ExpressionType.OrElse:
                 result = this.VisitBinary(sqlSegment);
                 break;
             case ExpressionType.Parameter:
@@ -455,213 +445,86 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     public virtual SqlSegment VisitBinary(SqlSegment sqlSegment)
     {
         var binaryExpr = sqlSegment.Expression as BinaryExpression;
-        switch (binaryExpr.NodeType)
+        if (binaryExpr.NodeType == ExpressionType.Add || binaryExpr.NodeType == ExpressionType.AddChecked
+            || binaryExpr.NodeType == ExpressionType.Subtract || binaryExpr.NodeType == ExpressionType.SubtractChecked)
         {
-            //And/Or，已经在Where/Having中单独处理了
-            case ExpressionType.Add:
-            case ExpressionType.AddChecked:
-            case ExpressionType.Subtract:
-            case ExpressionType.SubtractChecked:
-            case ExpressionType.Multiply:
-            case ExpressionType.MultiplyChecked:
-            case ExpressionType.Divide:
-            case ExpressionType.Modulo:
-            case ExpressionType.LessThan:
-            case ExpressionType.LessThanOrEqual:
-            case ExpressionType.GreaterThan:
-            case ExpressionType.GreaterThanOrEqual:
-            case ExpressionType.And:
-            case ExpressionType.Or:
-            case ExpressionType.ExclusiveOr:
-            case ExpressionType.RightShift:
-            case ExpressionType.LeftShift:
-                if (this.IsStringConcatOperator(sqlSegment, binaryExpr, out var operatorSegment))
-                    return operatorSegment;
-                //TODO:DateOnly,TimeOnly两个类型要做处理
-                if (this.IsDateTimeOperator(sqlSegment, binaryExpr, out operatorSegment))
-                    return operatorSegment;
-                if (this.IsTimeSpanOperator(sqlSegment, binaryExpr, out operatorSegment))
-                    return operatorSegment;
-
-                var leftSegment = this.Visit(sqlSegment.Next(binaryExpr.Left));
-                if (leftSegment.IsDeferredFields) return sqlSegment;
-                var rightSegment = this.Visit(new SqlSegment { Expression = binaryExpr.Right });
-                if (rightSegment.IsDeferredFields) return sqlSegment;
-
-                if (leftSegment.IsValue && rightSegment.IsValue)
-                {
-                    var sqlType = rightSegment.SqlType > leftSegment.SqlType ? rightSegment.SqlType : leftSegment.SqlType;
-                    var value = binaryExpr.Evaluate(leftSegment.Value, rightSegment.Value);
-                    return sqlSegment.Change(value, sqlType);
-                }
-
-                //下面都是带有参数的情况，带有参数表达式计算(常量、变量)、函数调用等共2种情况
-                //bool类型的表达式，这里不做解析只做defer操作解析，到最外层select、where、having、joinOn子句中去解析合并
-                //if (binaryExpr.NodeType == ExpressionType.Equal || binaryExpr.NodeType == ExpressionType.NotEqual)
-                //{
-                //    //处理null != a.UserName和"kevin" == a.UserName情况
-                //    if (!leftSegment.HasField && rightSegment.HasField)
-                //        this.Swap(ref leftSegment, ref rightSegment);
-                //    //if (leftSegment == SqlSegment.Null && rightSegment != SqlSegment.Null)
-                //    //    this.Swap(ref leftSegment, ref rightSegment);
-
-                //    //处理!(a.IsEnabled==true)情况，bool类型，最外层再做defer处理
-                //    if (leftSegment.HasField && rightSegment.IsFixedValue)
-                //    {
-                //        if (binaryExpr.Left.Type == typeof(bool))
-                //        {
-                //            leftSegment.Push(DeferredOperation.IsTrue);
-                //            if (!(bool)rightSegment.Value)
-                //                leftSegment.Push(DeferredOperation.Not);
-                //        }
-                //        else leftSegment.Push(DeferredOperation.IsNull);
-
-                //        if (binaryExpr.NodeType == ExpressionType.NotEqual)
-                //            leftSegment.Push(DeferredOperation.Not);
-                //        return leftSegment;
-                //    }
-                //}
-                //带有参数成员访问+常量/变量+带参数的函数调用的表达式
-                var operators = this.OrmProvider.GetBinaryOperator(binaryExpr.NodeType);
-
-                //??操作类型没有变更，可以当作Field使用
-                //if (binaryExpr.NodeType == ExpressionType.Coalesce)
-                //    leftSegment.IsFieldType = true;
-
-                //如果是IsParameter,HasField,IsExpression,IsMethodCall直接返回,是SQL
-                //如果是变量或是要求变成参数的常量，变成@p返回
-                //如果是常量获取当前类型值，再转成QuotedValue值
-                //就是枚举类型有问题，单独处理
-                //... WHERE (int)(a.Price * a.Quartity)>500
-                //SELECT TotalAmount = (int)(amount + (a.Price + increasedPrice) * (a.Quartity + increasedCount)) ...FROM ...
-                //SELECT OrderNo = $"OrderNo-{f.CreatedAt.ToString("yyyyMMdd")}-{f.Id}"...FROM ...
-
-                //单个字段访问，才会设置nativeDbType和typeHandler
-                if (leftSegment.SqlType == SqlType.OnlyField && rightSegment.IsValue)
-                    rightSegment.MemberMapper = leftSegment.MemberMapper;
-                //rightSegment.ExpectType = leftSegment.ExpectType;
-                //rightSegment.NativeDbType = leftSegment.NativeDbType;
-                //rightSegment.MappedTargetType = leftSegment.MappedTargetType;
-                //rightSegment.TypeHandler = leftSegment.TypeHandler;
-
-                string leftValue = this.GetQuotedValue(leftSegment);
-                string rightValue = this.GetQuotedValue(rightSegment);
-                if (binaryExpr.NodeType == ExpressionType.Coalesce)
-                    return sqlSegment.Change($"{operators}({leftValue},{rightValue})", SqlType.Expression);
-                return sqlSegment.Change($"{leftValue}{operators}{rightValue}", SqlType.Expression);
+            //处理字符串连接的场景，EFCore中字符串连接会翻译成string.Concat方法调用，但也有可能是+操作，所以两种情况都要处理
+            if (this.IsStringConcatOperator(sqlSegment, binaryExpr, out var operatorSegment))
+                return operatorSegment;
+            //TODO:DateOnly,TimeOnly两个类型要做处理
+            if (this.IsDateTimeOperator(sqlSegment, binaryExpr, out operatorSegment))
+                return operatorSegment;
+            if (this.IsTimeSpanOperator(sqlSegment, binaryExpr, out operatorSegment))
+                return operatorSegment;
         }
-        return sqlSegment;
-    }
-    public virtual SqlSegment VisitBoolBinary(SqlSegment sqlSegment)
-    {
-        var binaryExpr = sqlSegment.Expression as BinaryExpression;
-        var leftSegment = this.Visit(sqlSegment.Next(binaryExpr.Left));
-        if (leftSegment.IsDeferredFields) return sqlSegment.Next(binaryExpr);
+        var leftSegment = this.Visit(new SqlSegment { Expression = binaryExpr.Left });
+        if (leftSegment.IsDeferredFields) return sqlSegment;
         var rightSegment = this.Visit(new SqlSegment { Expression = binaryExpr.Right });
-        if (rightSegment.IsDeferredFields) return sqlSegment.Next(binaryExpr);
+        if (rightSegment.IsDeferredFields) return sqlSegment;
 
+        //常量或变量的场景
         if (leftSegment.IsValue && rightSegment.IsValue)
         {
             var sqlType = rightSegment.SqlType > leftSegment.SqlType ? rightSegment.SqlType : leftSegment.SqlType;
-            var value = binaryExpr.Evaluate(leftSegment.Value, rightSegment.Value);
-            return sqlSegment.Change(value, sqlType);
-        }
-        var leftValue = this.GetQuotedValue(leftSegment, true);
-        if (leftSegment.SqlType == SqlType.OnlyField)
-        {
-            var trueExpr = this.OrmProvider.GetQuotedValue(typeof(bool), true);
-            leftValue = $"{leftSegment.Value}={trueExpr}";
-        }
-        var rightValue = this.GetQuotedValue(rightSegment, true);
-        if (rightSegment.SqlType == SqlType.OnlyField)
-        {
-            var trueExpr = this.OrmProvider.GetQuotedValue(typeof(bool), true);
-            rightValue = $"{rightValue}={trueExpr}";
-        }
-        var operators = this.OrmProvider.GetBinaryOperator(binaryExpr.NodeType);
-        return sqlSegment.Change($"{leftValue} {operators} {rightValue}", SqlType.Expression);
-    }
-    public virtual SqlSegment VisitEqualBinary(SqlSegment sqlSegment)
-    {
-        var binaryExpr = sqlSegment.Expression as BinaryExpression;
-        var leftSegment = this.Visit(sqlSegment.Next(binaryExpr.Left));
-        if (leftSegment.IsDeferredFields) return sqlSegment.Next(binaryExpr);
-        var rightSegment = this.Visit(new SqlSegment { Expression = binaryExpr.Right });
-        if (rightSegment.IsDeferredFields) return sqlSegment.Next(binaryExpr);
-
-        if (leftSegment.IsValue && rightSegment.IsValue)
-        {
-            var sqlType = rightSegment.SqlType > leftSegment.SqlType ? rightSegment.SqlType : leftSegment.SqlType;
-            var value = binaryExpr.Evaluate(leftSegment.Value, rightSegment.Value);
+            var value = ValueEvalutor.Evaluate(binaryExpr, leftSegment.Value, rightSegment.Value);
             return sqlSegment.Change(value, sqlType);
         }
 
-        //处理null != a.UserName和"kevin" == a.UserName情况
-        if (!leftSegment.HasField && rightSegment.HasField)
-            this.Swap(ref leftSegment, ref rightSegment);
-
-        //处理!(a.IsEnabled==true)情况，bool类型，最外层再做defer处理
-        if (leftSegment.HasField && rightSegment.IsFixedValue)
+        //下面都是带有参数的情况，带有参数表达式计算(常量、变量)、函数调用等共2种情况
+        //bool类型的表达式，这里不做解析只做defer操作解析，到最外层select、where、having、joinOn子句中去解析合并
+        if (binaryExpr.NodeType == ExpressionType.Equal || binaryExpr.NodeType == ExpressionType.NotEqual)
         {
-            if (binaryExpr.Left.Type == typeof(bool))
+            //处理null != a.UserName和"kevin" == a.UserName情况
+            if (leftSegment.IsValue && rightSegment.HasField)
+                this.Swap(ref leftSegment, ref rightSegment);
+            if (leftSegment.IsNull && !rightSegment.IsNull)
+                this.Swap(ref leftSegment, ref rightSegment);
+
+            //处理!(a.IsEnabled==true)情况，bool类型，最外层再做defer处理
+            if (leftSegment.HasField && rightSegment.IsFixedValue)
             {
-                leftSegment.Push(DeferredOperation.IsTrue);
-                if (!(bool)rightSegment.Value)
-                    leftSegment.Push(DeferredOperation.Not);
-            }
-            else leftSegment.Push(DeferredOperation.IsNull);
+                if (binaryExpr.Left.Type == typeof(bool))
+                {
+                    leftSegment.Push(DeferredOperation.IsTrue);
+                    if (!(bool)rightSegment.Value)
+                        leftSegment.Push(DeferredOperation.Not);
+                }
+                else leftSegment.Push(DeferredOperation.IsNull);
 
-            if (binaryExpr.NodeType == ExpressionType.NotEqual)
-                leftSegment.Push(DeferredOperation.Not);
-            return leftSegment;
+                if (binaryExpr.NodeType == ExpressionType.NotEqual)
+                    leftSegment.Push(DeferredOperation.Not);
+                return leftSegment;
+            }
+        }
+        //带有参数成员访问+常量/变量+带参数的函数调用的表达式
+        var operators = this.OrmProvider.GetBinaryOperator(binaryExpr.NodeType);
+
+        //??操作类型没有变更，可以当作Field使用
+        //if (binaryExpr.NodeType == ExpressionType.Coalesce)
+        //    leftSegment.IsFieldType = true;
+
+        //如果是IsParameter,HasField,IsExpression,IsMethodCall直接返回,是SQL
+        //如果是变量或是要求变成参数的常量，变成@p返回
+        //如果是常量获取当前类型值，再转成QuotedValue值
+        //就是枚举类型有问题，单独处理
+        //... WHERE (int)(a.Price * a.Quartity)>500
+        //SELECT TotalAmount = (int)(amount + (a.Price + increasedPrice) * (a.Quartity + increasedCount)) ...FROM ...
+        //SELECT OrderNo = $"OrderNo-{f.CreatedAt.ToString("yyyyMMdd")}-{f.Id}"...FROM ...
+
+        //单个字段访问，才会设置nativeDbType和typeHandler
+        //如果是枚举类型，右边是值，左边是字段访问，且字段访问的表达式类型是枚举类型，则把右边的值当作枚举值处理
+        if (leftSegment.SqlType == SqlType.OnlyField && rightSegment.IsValue && leftSegment.Expression.Type.IsEnum)
+        {
+            rightSegment.IsEnum = true;
+            rightSegment.TargetType = leftSegment.Expression.Type;
         }
 
-        var operators = this.OrmProvider.GetBinaryOperator(binaryExpr.NodeType);
-        if (leftSegment.SqlType == SqlType.OnlyField && rightSegment.IsValue)
-            rightSegment.MemberMapper = leftSegment.MemberMapper;
         string leftValue = this.GetQuotedValue(leftSegment);
         string rightValue = this.GetQuotedValue(rightSegment);
+        if (binaryExpr.NodeType == ExpressionType.Coalesce)
+            return sqlSegment.Change($"{operators}({leftValue},{rightValue})", SqlType.Expression);
         return sqlSegment.Change($"{leftValue}{operators}{rightValue}", SqlType.Expression);
     }
-    public virtual SqlSegment VisitCoalesceBinary(SqlSegment sqlSegment)
-    {
-        var binaryExpr = sqlSegment.Expression as BinaryExpression;
-        var leftSegment = this.Visit(sqlSegment.Next(binaryExpr.Left));
-        if (leftSegment.IsDeferredFields) return sqlSegment.Next(binaryExpr);
-        var rightSegment = this.Visit(new SqlSegment { Expression = binaryExpr.Right });
-        if (rightSegment.IsDeferredFields) return sqlSegment.Next(binaryExpr);
-
-        if (leftSegment.IsValue && rightSegment.IsValue)
-        {
-            var sqlType = rightSegment.SqlType > leftSegment.SqlType ? rightSegment.SqlType : leftSegment.SqlType;
-            var value = binaryExpr.Evaluate(leftSegment.Value, rightSegment.Value);
-            return sqlSegment.Change(value, sqlType);
-        }
-        var operators = this.OrmProvider.GetBinaryOperator(binaryExpr.NodeType);
-        if (leftSegment.SqlType == SqlType.OnlyField && rightSegment.IsValue)
-            rightSegment.MemberMapper = leftSegment.MemberMapper;
-
-        string leftValue = this.GetQuotedValue(leftSegment);
-        string rightValue = this.GetQuotedValue(rightSegment);
-        return sqlSegment.Change($"{operators}({leftValue},{rightValue})", SqlType.Expression);
-    }
-    public virtual SqlSegment VisitArrayIndexBinary(SqlSegment sqlSegment)
-    {
-        var binaryExpr = sqlSegment.Expression as BinaryExpression;
-        var leftSegment = this.Visit(sqlSegment.Next(binaryExpr.Left));
-        if (leftSegment.IsDeferredFields) return sqlSegment.Next(binaryExpr);
-        var rightSegment = this.Visit(new SqlSegment { Expression = binaryExpr.Right });
-        if (rightSegment.IsDeferredFields) return sqlSegment.Next(binaryExpr);
-
-        if (leftSegment.IsValue && rightSegment.IsValue)
-        {
-            var sqlType = rightSegment.SqlType > leftSegment.SqlType ? rightSegment.SqlType : leftSegment.SqlType;
-            var value = binaryExpr.Evaluate(leftSegment.Value, rightSegment.Value);
-            return sqlSegment.Change(value, sqlType);
-        }
-        throw new NotSupportedException("不支持的表达式");
-    }
-
     public virtual SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
         var memberExpr = sqlSegment.Expression as MemberExpression;
@@ -1151,8 +1014,14 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     sqlSegment.Change($"COUNT({sqlSegment.Value})", SqlType.MethodCall);
                 }
                 else sqlSegment.Change("COUNT(1)", SqlType.MethodCall);
-                sqlSegment.IsAggField = true;
-                sqlSegment.ShardingAggFunc = "SUM";
+                sqlSegment.Change(new ReaderField
+                {
+                    FieldType = SqlFieldType.Field,
+                    ReaderType = methodCallExpr.Type,
+                    Value = sqlSegment.Value,
+                    IsAggField = true,
+                    AggFunc = "SUM"
+                }, SqlType.ReaderField);
                 this.HasAggFields = true;
                 break;
             case "CountDistinct":
@@ -1162,18 +1031,29 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"COUNT(DISTINCT {sqlSegment.Value})", SqlType.MethodCall);
                 }
-                sqlSegment.IsAggField = true;
                 //TODO:已知bug，分表后，count(distinct)，这个聚合结果是不准确的
-                sqlSegment.ShardingAggFunc = "COUNT";
+                sqlSegment.Change(new ReaderField
+                {
+                    FieldType = SqlFieldType.Field,
+                    ReaderType = methodCallExpr.Type,
+                    Value = sqlSegment.Value,
+                    IsAggField = true,
+                    AggFunc = "COUNT"
+                }, SqlType.ReaderField);
                 this.HasAggFields = true;
                 break;
             case "Sum":
                 if (this.IsWhere || sqlSegment.IsNullFields)
                 {
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    sqlSegment.Change($"SUM({sqlSegment.Value})", SqlType.MethodCall);
-                    sqlSegment.IsAggField = true;
-                    sqlSegment.ShardingAggFunc = "SUM";
+                    sqlSegment.Change(new ReaderField
+                    {
+                        FieldType = SqlFieldType.Field,
+                        ReaderType = methodCallExpr.Type,
+                        Value = $"SUM({sqlSegment.Value})",
+                        IsAggField = true,
+                        AggFunc = "SUM"
+                    }, SqlType.ReaderField);
                     this.HasAggFields = true;
                 }
                 else
@@ -1188,10 +1068,15 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 if (this.IsWhere || sqlSegment.IsNullFields)
                 {
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    sqlSegment.Change($"AVG({sqlSegment.Value})", SqlType.MethodCall);
-                    sqlSegment.IsAggField = true;
                     //TODO:分表后，avg()，这个聚合结果是不准确的
-                    sqlSegment.ShardingAggFunc = "AVG";
+                    sqlSegment.Change(new ReaderField
+                    {
+                        FieldType = SqlFieldType.Field,
+                        ReaderType = methodCallExpr.Type,
+                        Value = $"AVG({sqlSegment.Value})",
+                        IsAggField = true,
+                        AggFunc = "AVG"
+                    }, SqlType.ReaderField);
                     this.HasAggFields = true;
                 }
                 else
@@ -1206,9 +1091,14 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 if (this.IsWhere || sqlSegment.IsNullFields)
                 {
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    sqlSegment.Change($"MAX({sqlSegment.Value})", SqlType.MethodCall);
-                    sqlSegment.IsAggField = true;
-                    sqlSegment.ShardingAggFunc = "MAX";
+                    sqlSegment.Change(new ReaderField
+                    {
+                        FieldType = SqlFieldType.Field,
+                        ReaderType = methodCallExpr.Type,
+                        Value = $"MAX({sqlSegment.Value})",
+                        IsAggField = true,
+                        AggFunc = "MAX"
+                    }, SqlType.ReaderField);
                     this.HasAggFields = true;
                 }
                 else
@@ -1223,9 +1113,14 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 if (this.IsWhere || sqlSegment.IsNullFields)
                 {
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    sqlSegment.Change($"MIN({sqlSegment.Value})", SqlType.MethodCall);
-                    sqlSegment.IsAggField = true;
-                    sqlSegment.ShardingAggFunc = "MIN";
+                    sqlSegment.Change(new ReaderField
+                    {
+                        FieldType = SqlFieldType.Field,
+                        ReaderType = methodCallExpr.Type,
+                        Value = $"MIN({sqlSegment.Value})",
+                        IsAggField = true,
+                        AggFunc = "MIN"
+                    }, SqlType.ReaderField);
                     this.HasAggFields = true;
                 }
                 else
@@ -1339,7 +1234,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     }
                     else builder.Append("COUNT(*)");
                     sqlSegment.IsAggField = true;
-                    sqlSegment.ShardingAggFunc = "COUNT";
+                    sqlSegment.AggFunc = "COUNT";
                     this.HasAggFields = true;
                     break;
                 case "CountDistinct":
@@ -1348,7 +1243,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     builder.Append($"COUNT(DISTINCT {sqlSegment.Value})");
                     sqlSegment.IsAggField = true;
                     //TODO:已知bug，分表后，count(distinct)，这个聚合结果是不准确的
-                    sqlSegment.ShardingAggFunc = "COUNT";
+                    sqlSegment.AggFunc = "COUNT";
                     this.HasAggFields = true;
                     break;
                 case "Sum":
@@ -1357,7 +1252,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                         sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                         builder.Append($"SUM({sqlSegment.Value})");
                         sqlSegment.IsAggField = true;
-                        sqlSegment.ShardingAggFunc = "SUM";
+                        sqlSegment.AggFunc = "SUM";
                         this.HasAggFields = true;
                     }
                     else
@@ -1374,7 +1269,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                         sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                         builder.Append($"AVG({sqlSegment.Value})");
                         sqlSegment.IsAggField = true;
-                        sqlSegment.ShardingAggFunc = "AVG";
+                        sqlSegment.AggFunc = "AVG";
                         this.HasAggFields = true;
                     }
                     else
@@ -1391,7 +1286,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                         sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                         builder.Append($"MAX({sqlSegment.Value})");
                         sqlSegment.IsAggField = true;
-                        sqlSegment.ShardingAggFunc = "MAX";
+                        sqlSegment.AggFunc = "MAX";
                         this.HasAggFields = true;
                     }
                     else
@@ -1408,7 +1303,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                         sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                         builder.Append($"MIN({sqlSegment.Value})");
                         sqlSegment.IsAggField = true;
-                        sqlSegment.ShardingAggFunc = "MIN";
+                        sqlSegment.AggFunc = "MIN";
                         this.HasAggFields = true;
                     }
                     else

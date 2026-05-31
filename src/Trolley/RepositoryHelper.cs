@@ -1586,14 +1586,14 @@ public static class RepositoryHelper
                                 if (readerField.Parent != null)
                                     parent = readerBuilders[readerField.Parent];
                                 else parent = root;
-                                current = NewBuildInfo(readerField.SegmentType, readerField.TargetMember, parent);
+                                current = NewBuildInfo(readerField.ReaderType, readerField.TargetMember, parent);
                             }
                             for (int i = 0; i < readerField.Fields.Count; i++)
                             {
                                 var fieldType = reader.GetFieldType(index);
                                 var myReaderField = readerField.Fields[i];
                                 var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                                    myReaderField.SegmentType, fieldType, myReaderField.TypeHandler, blockParameters, blockBodies);
+                                    myReaderField.ReaderType, fieldType, myReaderField.TypeHandler, blockParameters, blockBodies);
 
                                 if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
                                 else if (myReaderField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(myReaderField.TargetMember, readerValueExpr));
@@ -1661,65 +1661,6 @@ public static class RepositoryHelper
         }
         blockBodies.Add(Expression.Assign(readerValueExpr, targetValueExpr));
         return Expression.Convert(readerValueExpr, targetType);
-    }
-    public static List<ReaderField> GetReaderFields(Type targetType, Type entityType, DbContext dbContext)
-    {
-        var entityMapper = dbContext.EntityMapProvider.GetEntityMap(entityType, targetType);
-        foreach (var memberMapper in entityMapper.MemberMaps)
-        {
-            if (memberMapper.IsIgnore) continue;
-
-            if (memberMapper.IsNavigation)
-            {
-                path ??= fromSegment.Path.Replace(fromSegment.AliasName, parameterName);
-                path += "." + memberExpr.Member.Name;
-                var refReaderField = this.ReaderFields.Find(f => f.Path == path);
-                if (refReaderField == null)
-                    throw new NotSupportedException("Select访问Include成员，要先Select访问Include成员的主表实体，如：.Select((x, y) =&gt; new { Order = x, x.Seller, x.Buyer, ... })");
-
-                //引用实体类型导航属性，当前导航属性可能还会有Include导航属性，所以构造时只给默认值
-                //在初始化完最外层实体后，再做赋值
-                if (!memberMapper.IsToOne) throw new NotSupportedException("暂时不支持引用1:N关系Include导航属性成员访问");
-                var readerField = this.ReaderFields.Find(f => f.Path == path);
-                //只有select场景才会Include对象
-                sqlSegment.HasField = true;
-                sqlSegment.FieldType = SqlFieldType.IncludeRef;
-                sqlSegment.FromMember = memberMapper.Member;
-                sqlSegment.Value = refReaderField;
-                return sqlSegment;
-            }
-            else
-            {
-                //引用Json实体类型字段
-                if (memberMapper.TypeHandler == null)
-                    throw new NotSupportedException($"类{fromSegment.EntityType.FullName}的成员{memberExpr.Member.Name}是实体类型，未配置导航属性也没有配置TypeHandler");
-
-                var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
-                if (this.IsNeedTableAlias) fieldName = fromSegment.AliasName + "." + fieldName;
-                sqlSegment.FieldType = SqlFieldType.Field;
-                sqlSegment.HasField = true;
-                sqlSegment.FromMember = memberMapper.Member;
-                sqlSegment.TargetMember = memberInfo;
-                sqlSegment.SegmentType = memberMapper.MemberType;
-                if (memberMapper.UnderlyingType.IsEnum)
-                    sqlSegment.ExpectType = memberMapper.UnderlyingType;
-                sqlSegment.NativeDbType = memberMapper.NativeDbType;
-                sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
-                sqlSegment.TypeHandler = memberMapper.TypeHandler;
-                sqlSegment.Body = fieldName;
-            }
-
-
-
-            var readerField = new ReaderField
-            {
-                FieldType = SqlFieldType.Field,
-                TargetMember = memberMap.Member,
-                ReaderType = memberMap.Member.GetMemberType(),
-                TypeHandler = memberMap.TypeHandler
-            };
-            yield return readerField;
-        }
     }
     private static EntityBuildInfo NewBuildInfo(Type targetType, MemberInfo fromMember = null, EntityBuildInfo parent = null)
     {

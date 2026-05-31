@@ -277,7 +277,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         sqlSegment.SegmentType = memberExpr.Type;
         return sqlSegment;
     }
-    public override SqlFieldSegment VisitNew(SqlFieldSegment sqlSegment)
+    public override SqlSegment VisitNew(SqlSegment sqlSegment)
     {
         var newExpr = sqlSegment.Expression as NewExpression;
         if (newExpr.Type.Name.StartsWith("<>"))
@@ -295,7 +295,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         }
         return this.Evaluate(sqlSegment);
     }
-    public override SqlFieldSegment VisitMemberInit(SqlFieldSegment sqlSegment)
+    public override SqlSegment VisitMemberInit(SqlSegment sqlSegment)
     {
         var memberInitExpr = sqlSegment.Expression as MemberInitExpression;
         var builder = new StringBuilder();

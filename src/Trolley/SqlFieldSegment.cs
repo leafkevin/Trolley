@@ -44,14 +44,15 @@ public struct SqlSegment
     public bool IsNull { get; set; }
     public string ParameterName { get; set; }
     public TableSegment TableSegment { get; set; }
-    public Type TargetType { get; set; }
     public Type MappedTargetType { get; set; }
     public string FieldName { get; set; }
+    //where条件时候，需要用于添加参数
+    public object NativeDbType { get; set; }
     public ITypeHandler TypeHandler { get; set; }
     public MemberInfo TargetMember { get; set; }
     public List<ReaderField> Fields { get; set; }
     public bool IsRawSqlFields { get; set; }
-    public bool IsValue => this.SqlType > SqlType.FixedValue && this.SqlType < SqlType.OnlyField;
+    public bool IsValue => this.SqlType == SqlType.Constant || this.SqlType == SqlType.Variable;
     public bool HasField => this.SqlType > SqlType.Variable;
     public bool IsFixedValue => this.SqlType == SqlType.FixedValue;
     public bool HasDeferred => this.DeferredOperations != null && this.DeferredOperations.Count > 0;
@@ -114,9 +115,14 @@ public class ReaderField
     public int FieldsCount { get; set; }
     public bool IsTargetType { get; set; }
     public Expression Expression { get; set; }
+    /// <summary>
+    /// 只需要在最外层select时设置
+    /// </summary>
     public Type ReaderType { get; set; }
     public Type MappedTargetType { get; set; }
     public string FieldName { get; set; }
+    //where条件时候，需要用于添加参数
+    public object NativeDbType { get; set; }
     public ITypeHandler TypeHandler { get; set; }
     public MemberInfo TargetMember { get; set; }
     public bool IsDeferredFields { get; set; }
@@ -126,6 +132,8 @@ public class ReaderField
     public string Path { get; set; }
     public bool HasNextInclude { get; set; }
     public ReaderField Parent { get; set; }
+    public bool IsAggField { get; set; }
+    public string AggFunc { get; set; }
 
     public ReaderField Clone()
     {
@@ -305,7 +313,7 @@ public class SqlFieldSegment : ICloneable
     public bool IsGroupByField { get; set; }
     public bool IsOrderByField { get; set; }
     public bool IsAggField { get; set; }
-    public string ShardingAggFunc { get; set; }
+    public string AggFunc { get; set; }
     /// <summary>
     /// 是否调用了IsNull函数，SUM, COUNT,AVG,MAX,MIN等聚合函数需要调用IsNull函数来处理null值
     /// </summary>
