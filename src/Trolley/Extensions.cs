@@ -199,12 +199,18 @@ public static class Extensions
     }
     extension(Expression expr)
     {
-        //public bool HasParameter()
-        //{
-        //    var visitor = new HasParameterVisitor();
-        //    visitor.Visit(expr);
-        //    return visitor.HasParameter;
-        //}
+        public bool HasParameter()
+        {
+            var visitor = new HasParameterVisitor();
+            visitor.Visit(expr);
+            return visitor.HasParameter;
+        }
+        public bool HasVariable()
+        {
+            var visitor = new HasParameterVisitor();
+            visitor.Visit(expr);
+            return visitor.HasVariable;
+        }
         public bool TryGetParameters(out List<ParameterExpression> parameters)
         {
             var visitor = new HasParameterVisitor();

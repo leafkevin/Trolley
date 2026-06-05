@@ -558,19 +558,15 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             //Where(f=>... f.OrderId.Value==10 && ...)
             //Select(f=>... ,f.OrderId.HasValue  ...)
             //Select(f=>... ,f.OrderId.Value==10  ...)
-            if (Nullable.GetUnderlyingType(memberInfo.DeclaringType) != null)
+            if (memberExpr.Type.IsValueType && Nullable.GetUnderlyingType(memberExpr.Type) != null)
             {
-                if (memberInfo.Name == nameof(Nullable<bool>.HasValue))
+                if (memberInfo.Name == "HasValue")
                 {
                     sqlSegment.Push(DeferredOperation.IsNull);
                     sqlSegment.Push(DeferredOperation.Not);
-                    return this.Visit(sqlSegment.Next(memberExpr.Expression));
                 }
-                else if (memberInfo.Name == nameof(Nullable<bool>.Value))
-                    return this.Visit(sqlSegment.Next(memberExpr.Expression));
-                else throw new ArgumentException($"不支持的MemberAccess操作，表达式'{memberExpr}'返回值不是boolean类型");
+                return this.Visit(sqlSegment.Next(memberExpr.Expression));
             }
-
             //各种类型实例成员访问，如：DateTime,TimeSpan,String.Length,List.Count
             if (this.OrmProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
             {
@@ -844,27 +840,24 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     public virtual SqlSegment VisitTypeIs(SqlSegment sqlSegment)
     {
         var binaryExpr = sqlSegment.Expression as TypeBinaryExpression;
-        if (!binaryExpr.Expression.HasParameter(out _))
-            return this.Evaluate(sqlSegment);
         if (binaryExpr.TypeOperand == typeof(DBNull))
         {
-            sqlSegment.Push(new DeferredExpr
-            {
-                OperationType = OperationType.Equal,
-                Value = SqlSegment.Null
-            });
+            sqlSegment.Push(DeferredOperation.IsNull);
             return this.Visit(sqlSegment.Next(binaryExpr.Expression));
+        }
+        var visitor = new HasParameterVisitor();
+        visitor.Visit(binaryExpr.Expression);
+        if (!visitor.HasParameter)
+        {
+            var sqlType = visitor.HasVariable ? SqlType.Variable : SqlType.Constant;
+            return sqlSegment.Change(binaryExpr.Type == binaryExpr.TypeOperand, sqlType);
         }
         throw new NotSupportedException($"不支持的表达式操作，{sqlSegment.Expression}");
     }
-    public virtual SqlSegment Evaluate(SqlSegment sqlSegment)
-        => ValueEvalutor.Evaluate(sqlSegment.Expression);
-    public virtual SqlSegment Evaluate(SqlSegment sqlSegment, SqlType sqlType)
-        => ValueEvalutor.Evaluate(sqlSegment.Expression, sqlType);
     public virtual T Evaluate<T>(Expression expr)
         => ValueEvalutor.Evaluate<T>(expr);
     public virtual object Evaluate(Expression expr)
-        => ValueEvalutor.EvaluateValue(expr);
+        => ValueEvalutor.Evaluate(expr);
     public virtual SqlSegment VisitSqlMethodCall(SqlSegment sqlSegment)
     {
         var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
@@ -2780,6 +2773,34 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             else throw new NotSupportedException($"不支持的表达式解析:{myExpr}->MemberExpression");
         }
         return myExpr.NodeType == ExpressionType.MemberAccess;
+    }
+    public Stack<MemberExpression> GetMemberExprs(MemberExpression memberExpr)
+    {
+        Expression currentExpr = memberExpr;
+        var memberExprs = new Stack<MemberExpression>();
+        while (currentExpr != null)
+        {
+            if (currentExpr is UnaryExpression unaryExpr)
+            {
+                currentExpr = unaryExpr.Operand;
+                continue;
+            }
+            switch (currentExpr.NodeType)
+            {
+                case ExpressionType.Parameter:
+                    currentExpr = null;
+                    break;
+                case ExpressionType.MemberAccess:
+                    var parentExpr = currentExpr as MemberExpression;
+                    if (currentExpr == null) break;
+
+                    memberExprs.Push(parentExpr);
+                    currentExpr = parentExpr.Expression;
+                    break;
+                default: throw new NotSupportedException($"不支持的成员访问表达式，访问路径：{currentExpr.ToString()}");
+            }
+        }
+        return memberExprs;
     }
 
     public Dictionary<string, List<object>> SplitShardingParameters(TableShardingInfo tableShardingInfo, Type paramterType, IEnumerable parameters, object parameterSample, IDictionary<string, object> shardingValues)

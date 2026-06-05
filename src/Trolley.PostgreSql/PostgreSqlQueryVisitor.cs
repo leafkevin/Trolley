@@ -778,7 +778,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                 sqlSegment = readerField.Clone();
                 return sqlSegment;
             }
-            if (memberExpr.HasParameter(out var parameterName))
+            if (memberExpr.HasParameter())
             {
                 string path = null;
                 TableSegment fromSegment = null;
@@ -787,7 +787,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                 if (rootTableSegment.TableType == TableType.Entity)
                 {
                     var builder = new StringBuilder(rootTableSegment.AliasName);
-                    var memberExprs = this.GetMemberExprs(memberExpr, out var parameterExpr);
+                    var memberExprs = this.GetMemberExprs(memberExpr);
                     if (memberExprs.Count > 1)
                     {
                         while (memberExprs.Count > 1)

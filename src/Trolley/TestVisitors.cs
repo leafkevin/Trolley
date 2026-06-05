@@ -35,42 +35,11 @@ public class ReplaceMemberVisitor : ExpressionVisitor
         return base.VisitMember(node);
     }
 }
-public class ReplaceParameterVisitor : ExpressionVisitor
-{
-    private bool isChanged = false;
-    private Expression expression;
-    private Expression parameterExpr;
-    private bool hasParameter;
-
-    public string MemberName { get; set; }
-
-    public bool HasParameter(Expression expression)
-    {
-        this.expression = expression;
-        this.Visit(expression);
-        return this.hasParameter;
-    }
-    public Expression Change(Expression parameterExpr)
-    {
-        this.isChanged = true;
-        this.parameterExpr = parameterExpr;
-        return this.Visit(this.expression);
-    }
-    protected override Expression VisitParameter(ParameterExpression node)
-    {
-        this.hasParameter = true;
-        if (this.isChanged) return this.parameterExpr;
-        return base.VisitParameter(node);
-    }
-    protected override Expression VisitMember(MemberExpression node)
-    {
-        this.MemberName = node.Member.Name;
-        return base.VisitMember(node);
-    }
-}
 public class HasParameterVisitor : ExpressionVisitor
 {
+    private bool hasMemberAccess;
     public bool HasParameter { get; private set; }
+    public bool HasVariable => this.hasMemberAccess && !this.HasParameter;
     public string LastParameterName { get; private set; }
     public List<ParameterExpression> Parameters { get; private set; }
 
@@ -82,5 +51,11 @@ public class HasParameterVisitor : ExpressionVisitor
         if (!this.Parameters.Contains(node))
             this.Parameters.Add(node);
         return node;
+    }
+    protected override Expression VisitMember(MemberExpression node)
+    {
+        if (node.Expression == null)
+            this.hasMemberAccess = true;
+        return base.VisitMember(node);
     }
 }

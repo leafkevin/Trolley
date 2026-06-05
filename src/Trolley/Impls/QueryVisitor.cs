@@ -2195,56 +2195,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         base.Dispose();
     }
-    /// <summary>
-    /// Join/Union方法，使用子查询对象后，必须先调用UseQuery方法才能继续其他查询操作
-    /// </summary>
-    /// <exception cref="NotSupportedException"></exception>
-    public Stack<MemberExpression> GetMemberExprs(MemberExpression memberExpr, out ParameterExpression parameterExpr)
-    {
-        Expression currentExpr = memberExpr;
-        parameterExpr = null;
-        var memberExprs = new Stack<MemberExpression>();
-        while (currentExpr != null)
-        {
-            switch (currentExpr.NodeType)
-            {
-                case ExpressionType.Parameter:
-                    parameterExpr = currentExpr as ParameterExpression;
-                    currentExpr = null;
-                    break;
-                case ExpressionType.Convert:
-                    var unaryExpr = currentExpr as UnaryExpression;
-                    currentExpr = unaryExpr.Operand;
-                    break;
-                //case ExpressionType.Call:
-                //    if(this.IsSelect)
-                //    {
-                //        //Select场景，方法调用表达式，可能是访问了Include导航属性
-                //        this.Visit(new SqlSegment { Expression = currentExpr });
-                //        var methodCallExpr = currentExpr as MethodCallExpression;
-                //        if (methodCallExpr.Method.Name == nameof(IncludeSegment.GetIncludeKey))
-                //        {
-                //            //获取IncludeKey的表达式
-                //            var includeSegment = methodCallExpr.Arguments[2] as TableSegment;
-                //            if (includeSegment != null)
-                //            {
-                //                parameterExpr = methodCallExpr.Arguments[0] as ParameterExpression;
-                //                return this.GetMemberExprs(includeSegment.Expression as MemberExpression, out parameterExpr);
-                //            }
-                //        }
-                //        else throw new NotSupportedException($"不支持的Select方法调用表达式，访问路径：{currentExpr.ToString()}");
-                //    }
-                //break;
-                case ExpressionType.MemberAccess:
-                    var parentExpr = currentExpr as MemberExpression;
-                    memberExprs.Push(parentExpr);
-                    currentExpr = parentExpr.Expression;
-                    break;
-                default: throw new NotSupportedException($"不支持的成员访问表达式，访问路径：{currentExpr.ToString()}");
-            }
-        }
-        return memberExprs;
-    }
     public int GetIncludeKey(Type targetType, MemberInfo firstMember, TableSegment includeSegment)
     {
         int pathLength = includeSegment.ParentMemberVisits.Count;

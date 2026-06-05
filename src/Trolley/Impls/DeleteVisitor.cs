@@ -195,7 +195,11 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     }
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
+        //Select场景，实体成员访问，返回ReaderField实体类型，ReaderFields并且有值，子ReaderFields的Body可无值
+        //Select场景和Where场景，单个字段成员访(包括Json实体类型字段)，返回FromMember，TargetMember，字段类型，Body有值为带有别名的FieldName
         var memberExpr = sqlSegment.Expression as MemberExpression;
+        var memberInfo = memberExpr.Member;
+
         MemberAccessSqlFormatter formatter = null;
         if (memberExpr.Expression != null)
         {
@@ -203,79 +207,83 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             //Where(f=>... f.OrderId.Value==10 && ...)
             //Select(f=>... ,f.OrderId.HasValue  ...)
             //Select(f=>... ,f.OrderId.Value==10  ...)
-            if (Nullable.GetUnderlyingType(memberExpr.Member.DeclaringType) != null)
+            if (memberExpr.Type.IsValueType && Nullable.GetUnderlyingType(memberExpr.Type) != null)
             {
-                if (memberExpr.Member.Name == nameof(Nullable<bool>.HasValue))
+                if (memberInfo.Name == "HasValue")
                 {
                     sqlSegment.Push(DeferredOperation.IsNull);
                     sqlSegment.Push(DeferredOperation.Not);
-                    return this.Visit(sqlSegment.Next(memberExpr.Expression));
                 }
-                else if (memberExpr.Member.Name == nameof(Nullable<bool>.Value))
-                    return this.Visit(sqlSegment.Next(memberExpr.Expression));
-                else throw new ArgumentException($"不支持的MemberAccess操作，表达式'{memberExpr}'返回值不是boolean类型");
+                return this.Visit(sqlSegment.Next(memberExpr.Expression));
             }
 
-            //各种类型实例成员访问，如：DateTime,TimeSpan,String.Length,List.Count
+            //各种OrmProvider提供的类型实例成员访问，如：DateTime,TimeSpan,String.Length
             if (this.OrmProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
             {
                 //Where(f=>... && f.CreatedAt.Month<5 && ...)
                 //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
                 var targetSegment = sqlSegment.Next(memberExpr.Expression);
                 sqlSegment = formatter.Invoke(this, targetSegment);
-                sqlSegment.SegmentType = memberExpr.Type;
+                //sqlSegment.TargetMember = memberInfo;
                 return sqlSegment;
             }
 
-            if (memberExpr.HasParameter())
+            if (memberExpr.TryGetParameters(out var parameterExprs))
             {
-                //Where(f => f.Amount > 5)
-                //Select(f => new { f.OrderId, f.Disputes ...})
-                var tableSegment = this.Tables[0];
-                var memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
-                if (memberMapper.IsIgnore)
-                    throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
-                if (memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
-                    throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
+                if (parameterExprs.Count > 1)
+                    throw new NotSupportedException($"不支持多参数访问，{memberExpr}");
+                if (memberExpr.Expression.NodeType != ExpressionType.Parameter)
+                    throw new NotSupportedException($"不支持多级成员访问，{memberExpr}");
 
-                var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
-                sqlSegment.HasField = true;
-                sqlSegment.TableSegment = tableSegment;
-                sqlSegment.FromMember = memberMapper.Member;
-                sqlSegment.SegmentType = memberMapper.MemberType;
-                if (memberMapper.UnderlyingType.IsEnum)
-                    sqlSegment.ExpectType = memberMapper.UnderlyingType;
-                sqlSegment.NativeDbType = memberMapper.NativeDbType;
-                sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
-                sqlSegment.TypeHandler = memberMapper.TypeHandler;
-                sqlSegment.Body = fieldName;
+                var parameterExpr = parameterExprs[0];
+                var parameterName = parameterExpr.Name;
+                var fromSegment = this.TableAliases[parameterName];
+
+                if (fromSegment.Mapper != null)
+                {
+                    if (!fromSegment.Mapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
+                        throw new NotSupportedException($"类{fromSegment.EntityType.FullName}没有成员{memberInfo.Name}，无法访问");
+                    if (memberMapper.IsIgnore)
+                        throw new NotSupportedException($"类{fromSegment.EntityType.FullName}的成员{memberInfo.Name}是忽略成员无法访问");
+                    if (memberMapper.IsNavigation)
+                        throw new NotSupportedException($"不支持导航属性成员访问，{memberExpr}");
+
+                    sqlSegment.SqlType = SqlType.OnlyField;
+                    sqlSegment.MemberMapper = memberMapper;
+                    sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
+                    sqlSegment.TypeHandler = memberMapper.TypeHandler;
+                    sqlSegment.FieldName = memberMapper.FieldName;
+                    var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
+                    if (this.IsNeedTableAlias) fieldName = fromSegment.AliasName + "." + fieldName;
+                    sqlSegment.Value = fieldName;
+                }
+                //子查询和CTE子查询场景，fromSegment.TableType: TableType.FromQuery || TableType.CteSelfRef
+                else
+                {
+                    var readerField = fromSegment.Fields.Find(f => f.TargetMember.Name == memberInfo.Name);
+                    sqlSegment.SqlType = SqlType.OnlyField;
+                    sqlSegment.MappedTargetType = readerField.MappedTargetType;
+                    sqlSegment.TypeHandler = readerField.TypeHandler;
+                    sqlSegment.FieldName = readerField.FieldName;
+                    sqlSegment.Value = readerField.Value;
+                }
                 return sqlSegment;
             }
         }
-
-        if (memberExpr.Member.DeclaringType == typeof(DBNull))
-            return SqlFieldSegment.Null;
 
         //各种静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
+        if (memberExpr.Member.DeclaringType == typeof(DBNull))
+            return SqlSegment.Null;
+
         if (this.OrmProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
-        {
-            sqlSegment = formatter.Invoke(this, sqlSegment);
-            sqlSegment.SegmentType = memberExpr.Type;
-            return sqlSegment;
-        }
+            return formatter.Invoke(this, sqlSegment);
 
         //访问局部变量或是成员变量，当作常量处理，直接计算，后面统一做参数化处理
-        //var orderIds=new List<int>{1,2,3}; Where(f=>orderIds.Contains(f.OrderId)); orderIds
+        //var orderIds=new List<int>{1,2,3}; Where(f=>orderIds.Contains(f.OrderId));
         //private Order order; Where(f=>f.OrderId==this.Order.Id); this.Order.Id
         //var orderId=10; Select(f=>new {OrderId=orderId,...}
         //Select(f=>new {OrderId=this.Order.Id, ...}
-        this.Evaluate(sqlSegment);
-
-        //这里不做参数化，后面统一走参数化处理
-        sqlSegment.IsConstant = false;
-        sqlSegment.IsVariable = true;
-        sqlSegment.SegmentType = memberExpr.Type;
-        return sqlSegment;
+        return sqlSegment.Change(ValueEvalutor.Evaluate(memberExpr), SqlType.Variable);
     }
     public override SqlSegment VisitNew(SqlSegment sqlSegment)
     {
