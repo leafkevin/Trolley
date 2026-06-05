@@ -92,6 +92,8 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     /// </summary>
     public object RefFrom { get; set; }
     public string UnionSql { get; set; }
+    public string HeadRawSql { get; set; }
+    public string TailRawSql { get; set; }
 
     public void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames)
     {
@@ -125,6 +127,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             if (tableSegment.IsSharding) tableSegment.ShardingType = ShardingTableType.SingleTable;
             tableSegment.Body = tableNames[0];
         }
+        this.IsManyShardingTables = this.ShardingTables[0].ShardingType == ShardingTableType.MultiTable;
     }
     public void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues)
     {
@@ -160,6 +163,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
 
         //范围分表，都当作多分表处理，方便后续表映射
         this.IsNeedFormatShardingTables = true;
+        this.IsManyShardingTables = this.ShardingTables[0].ShardingType == ShardingTableType.MultiTable;
     }
     public void UseTableMap(TableShardingUsageMode usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter)
     {
@@ -228,6 +232,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             tableSegment.ShardingType = ShardingTableType.SingleTable;
             tableSegment.Body = tableName;
         }
+        this.IsManyShardingTables = this.ShardingTables[0].ShardingType == ShardingTableType.MultiTable;
     }
     /// <summary>
     /// 设置批量插入、更新操作时的分表名获取委托
@@ -305,6 +310,18 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             this.WhereBuilder.Append(" OR ");
         this.WhereBuilder.Append(whereSql);
         this.LastWhereOperationType = lastOperationType;
+    }
+    public virtual void WithHeadSql(string rawSql)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+        this.HeadRawSql = rawSql;
+    }
+    public virtual void WithTailSql(string rawSql)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+        this.TailRawSql = rawSql;
     }
 
     public virtual SqlSegment VisitAndDeferred(SqlSegment sqlSegment)
@@ -513,10 +530,11 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
 
         //单个字段访问，才会设置nativeDbType和typeHandler
         //如果是枚举类型，右边是值，左边是字段访问，且字段访问的表达式类型是枚举类型，则把右边的值当作枚举值处理
-        if (leftSegment.SqlType == SqlType.OnlyField && rightSegment.IsValue && leftSegment.Expression.Type.IsEnum)
+        if (leftSegment.SqlType == SqlType.OnlyField && rightSegment.IsValue)
         {
-            rightSegment.IsEnum = true;
-            rightSegment.TargetType = leftSegment.Expression.Type;
+            rightSegment.MemberMapper = leftSegment.MemberMapper;
+            rightSegment.MappedTargetType = leftSegment.MappedTargetType;
+            rightSegment.TypeHandler = leftSegment.TypeHandler;
         }
 
         string leftValue = this.GetQuotedValue(leftSegment);
@@ -734,9 +752,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         //include表的ReaderField字段，紧跟在主表ReaderField后面
         List<ReaderField> readerFields = [readerField];
         this.AddIncludeTableReaderFields(readerField, readerFields);
-        sqlSegment.SqlType = SqlType.ReaderFields;
-        sqlSegment.Value = readerFields;
-        return sqlSegment;
+        return sqlSegment.Change(readerField, SqlType.ReaderFields);
     }
     protected void AddIncludeTableReaderFields(ReaderField parent, List<ReaderField> readerFields)
     {
@@ -857,20 +873,22 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         {
             case "Raw":
                 sqlSegment.IsRawSqlFields = true;
-                sqlSegment.Value = this.Evaluate<string>(methodCallExpr.Arguments[0]);
+                var rawSql = this.Evaluate<string>(methodCallExpr.Arguments[0]);
                 var targetType = methodCallExpr.Method.GetGenericArguments()[0];
-                if (this.IsSelectMember && targetType.IsEntityType(out _))
+                if (targetType.IsEntityType(out _))
                 {
-                    if (methodCallExpr.Arguments.Count == 1)
+                    if (this.IsSelectMember && methodCallExpr.Arguments.Count == 1)
                         throw new NotSupportedException("当返回类型为多字段时，Sql.Raw方法必须指定fieldsCount");
-                    sqlSegment.Value = new ReaderField
+                    sqlSegment.Change(new ReaderField
                     {
                         FieldType = SqlFieldType.RawSql,
                         ReaderType = targetType,
-                        Value = sqlSegment.Value.ToString(),
+                        Value = rawSql,
                         FieldsCount = this.Evaluate<int>(methodCallExpr.Arguments[1])
-                    };
+                    }, SqlType.ReaderField);
                 }
+                //单个字段的原始SQL当作函数处理
+                else sqlSegment.Change(rawSql, SqlType.MethodCall);
                 break;
             case "Deferred":
                 sqlSegment.IsDeferredFields = true;
@@ -1043,93 +1061,76 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 this.HasAggFields = true;
                 break;
             case "Sum":
-                if (this.IsWhere || sqlSegment.IsNullFields)
+                sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                sqlSegment.Change(new ReaderField
                 {
-                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    sqlSegment.Change(new ReaderField
+                    FieldType = SqlFieldType.Field,
+                    ReaderType = methodCallExpr.Type,
+                    Value = $"SUM({sqlSegment.Value})",
+                    IsAggField = true,
+                    AggFunc = "SUM"
+                }, SqlType.ReaderField);
+                this.HasAggFields = true;
+                break;
+            case "Avg":
+                sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                //优先确定是否是多分表情况，多分表时Value值是两个字段，SUM(...),COUNT(...)，
+                //最外层SELECT时，捞取IsAvgField=true的字段，再进行SUM(...)/COUNT(...)得到平均值，不是多分表时，直接Value值是AVG(...)
+                //最外层SELECT时，
+                if (this.IsManyShardingTables)
+                {
+                    List<ReaderField> readerFields = [new ReaderField
                     {
                         FieldType = SqlFieldType.Field,
                         ReaderType = methodCallExpr.Type,
                         Value = $"SUM({sqlSegment.Value})",
                         IsAggField = true,
+                        IsAvgField = true,
                         AggFunc = "SUM"
-                    }, SqlType.ReaderField);
-                    this.HasAggFields = true;
-                }
-                else
-                {
-                    var myMethodInfo = IsNullMethodInfo.MakeGenericMethod(methodCallExpr.Type);
-                    var nullValueExpr = Expression.Constant(Convert.ChangeType(0, methodCallExpr.Type), methodCallExpr.Type);
-                    var isNullCallExpr = Expression.Call(myMethodInfo, methodCallExpr, nullValueExpr);
-                    sqlSegment = this.Visit(sqlSegment.Next(isNullCallExpr));
-                }
-                break;
-            case "Avg":
-                if (this.IsWhere || sqlSegment.IsNullFields)
-                {
-                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    //TODO:分表后，avg()，这个聚合结果是不准确的
-                    sqlSegment.Change(new ReaderField
+                    },new ReaderField
                     {
                         FieldType = SqlFieldType.Field,
                         ReaderType = methodCallExpr.Type,
-                        Value = $"AVG({sqlSegment.Value})",
+                        Value = $"COUNT({sqlSegment.Value})",
                         IsAggField = true,
-                        AggFunc = "AVG"
-                    }, SqlType.ReaderField);
-                    this.HasAggFields = true;
+                        IsAvgField = true,
+                        AggFunc = "COUNT"
+                    }];
+                    sqlSegment.Change(readerFields, SqlType.ReaderFields);
                 }
-                else
+                else sqlSegment.Change(new ReaderField
                 {
-                    var myMethodInfo = IsNullMethodInfo.MakeGenericMethod(methodCallExpr.Type);
-                    var nullValueExpr = Expression.Constant(Convert.ChangeType(0, methodCallExpr.Type), methodCallExpr.Type);
-                    var isNullCallExpr = Expression.Call(myMethodInfo, methodCallExpr, nullValueExpr);
-                    sqlSegment = this.Visit(sqlSegment.Next(isNullCallExpr));
-                }
+                    FieldType = SqlFieldType.Field,
+                    ReaderType = methodCallExpr.Type,
+                    Value = $"AVG({sqlSegment.Value})",
+                    IsAggField = true,
+                    AggFunc = "AVG"
+                }, SqlType.ReaderField);
+                this.HasAggFields = true;
                 break;
             case "Max":
-                if (this.IsWhere || sqlSegment.IsNullFields)
+                sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                sqlSegment.Change(new ReaderField
                 {
-                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    sqlSegment.Change(new ReaderField
-                    {
-                        FieldType = SqlFieldType.Field,
-                        ReaderType = methodCallExpr.Type,
-                        Value = $"MAX({sqlSegment.Value})",
-                        IsAggField = true,
-                        AggFunc = "MAX"
-                    }, SqlType.ReaderField);
-                    this.HasAggFields = true;
-                }
-                else
-                {
-                    var myMethodInfo = IsNullMethodInfo.MakeGenericMethod(methodCallExpr.Type);
-                    var nullValueExpr = Expression.Constant(Convert.ChangeType(0, methodCallExpr.Type), methodCallExpr.Type);
-                    var isNullCallExpr = Expression.Call(myMethodInfo, methodCallExpr, nullValueExpr);
-                    sqlSegment = this.Visit(sqlSegment.Next(isNullCallExpr));
-                }
+                    FieldType = SqlFieldType.Field,
+                    ReaderType = methodCallExpr.Type,
+                    Value = $"MAX({sqlSegment.Value})",
+                    IsAggField = true,
+                    AggFunc = "MAX"
+                }, SqlType.ReaderField);
+                this.HasAggFields = true;
                 break;
             case "Min":
-                if (this.IsWhere || sqlSegment.IsNullFields)
+                sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                sqlSegment.Change(new ReaderField
                 {
-                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    sqlSegment.Change(new ReaderField
-                    {
-                        FieldType = SqlFieldType.Field,
-                        ReaderType = methodCallExpr.Type,
-                        Value = $"MIN({sqlSegment.Value})",
-                        IsAggField = true,
-                        AggFunc = "MIN"
-                    }, SqlType.ReaderField);
-                    this.HasAggFields = true;
-                }
-                else
-                {
-                    var myMethodInfo = IsNullMethodInfo.MakeGenericMethod(methodCallExpr.Type);
-                    var nullValueExpr = Expression.Constant(Convert.ChangeType(0, methodCallExpr.Type), methodCallExpr.Type);
-                    var isNullCallExpr = Expression.Call(myMethodInfo, methodCallExpr, nullValueExpr);
-                    sqlSegment = this.Visit(sqlSegment.Next(isNullCallExpr));
-                }
+                    FieldType = SqlFieldType.Field,
+                    ReaderType = methodCallExpr.Type,
+                    Value = $"MIN({sqlSegment.Value})",
+                    IsAggField = true,
+                    AggFunc = "MIN"
+                }, SqlType.ReaderField);
+                this.HasAggFields = true;
                 break;
         }
         return sqlSegment;

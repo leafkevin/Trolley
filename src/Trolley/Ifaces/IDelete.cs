@@ -185,6 +185,21 @@ public interface IDeleted
     IDeleteVisitor Visitor { get; }
     #endregion
 
+    #region WithRawSql
+    /// <summary>
+    /// 在生成的SQL最前面添加原始SQL语句
+    /// </summary>
+    /// <param name="rawSql">SQL语句</param>
+    /// <returns>返回删除对象</returns>
+    IDeleted WithHeadSql(string rawSql);
+    /// <summary>
+    /// 在生成的SQL最后面添加原始SQL语句
+    /// </summary>
+    /// <param name="rawSql">SQL语句</param>
+    /// <returns>返回删除对象</returns>
+    IDeleted WithTailSql(string rawSql);
+    #endregion
+
     #region Execute
     /// <summary>
     /// 执行删除操作，并返回删除行数

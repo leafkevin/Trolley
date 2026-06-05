@@ -151,6 +151,9 @@ public class Deleted : IDeleted
     }
     #endregion
 
+    void WithHeadSql(string rawSql);
+    void WithTailSql(string rawSql);
+
     #region Execute
     public virtual int Execute()
     {

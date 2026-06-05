@@ -101,6 +101,21 @@ public interface ICreated
     ICreateVisitor Visitor { get; }
     #endregion
 
+    #region WithRawSql
+    /// <summary>
+    /// 在生成的SQL最前面添加原始SQL语句
+    /// </summary>
+    /// <param name="rawSql">SQL语句</param>
+    /// <returns>返回插入对象</returns>
+    ICreated WithHeadSql(string rawSql);
+    /// <summary>
+    /// 在生成的SQL最后面添加原始SQL语句
+    /// </summary>
+    /// <param name="rawSql">SQL语句</param>
+    /// <returns>返回插入对象</returns>
+    ICreated WithTailSql(string rawSql);
+    #endregion
+
     #region Execute
     /// <summary>
     /// 执行插入操作，并返回插入行数
@@ -129,6 +144,21 @@ public interface ICreated
 /// </summary>
 public interface IIdentitiedCreated : ICreated
 {
+    #region WithRawSql
+    /// <summary>
+    /// 在生成的SQL最前面添加原始SQL语句
+    /// </summary>
+    /// <param name="rawSql">SQL语句</param>
+    /// <returns>返回插入对象</returns>
+    new IIdentitiedCreated WithHeadSql(string rawSql);
+    /// <summary>
+    /// 在生成的SQL最后面添加原始SQL语句
+    /// </summary>
+    /// <param name="rawSql">SQL语句</param>
+    /// <returns>返回插入对象</returns>
+    new IIdentitiedCreated WithTailSql(string rawSql);
+    #endregion
+
     #region ExecuteIdentity
     /// <summary>
     /// 执行插入操作，并返回自增长ID

@@ -105,6 +105,25 @@ public class Created : ICreated
     }
     #endregion
 
+    #region WithRawSql
+    public virtual ICreated WithHeadSql(string rawSql)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+
+        this.Visitor.WithHeadSql(rawSql);
+        return this;
+    }
+    public virtual ICreated WithTailSql(string rawSql)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+
+        this.Visitor.WithTailSql(rawSql);
+        return this;
+    }
+    #endregion
+
     #region Execute
     public virtual int Execute()
     {

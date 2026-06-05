@@ -22,10 +22,10 @@ public class QueryBase : QueryInternal, IQueryBase
     #region Count
     public virtual int Count() => this.QueryScalar<int>("COUNT(*)", "COUNT_VALUE");
     public virtual async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryScalarAsync<int>("COUNT(*)", "COUNT_VALUE", null, cancellationToken);
+        => await this.QueryScalarAsync<int>("COUNT(*)", "COUNT_VALUE", cancellationToken);
     public virtual long LongCount() => this.QueryScalar<long>("COUNT(*)", "COUNT_VALUE");
     public virtual async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryScalarAsync<long>("COUNT(*)", "COUNT_VALUE", null, cancellationToken);
+        => await this.QueryScalarAsync<long>("COUNT(*)", "COUNT_VALUE", cancellationToken);
     #endregion
 
     #region Count/Aggregate Internal
@@ -141,7 +141,7 @@ public class QueryBase : QueryInternal, IQueryBase
 
         return await this.QueryScalarAsync<TField>("MIN({0})", "MIN_VALUE", fieldExpr, cancellationToken);
     }
-    #endregion
+    #endregion   
 
     #region Exists
     public virtual bool Exists()
@@ -169,13 +169,25 @@ public class QueryBase : QueryInternal, IQueryBase
     #endregion
 
     #region QueryScalar
-    protected TTarget QueryScalar<TTarget>(string sqlFormat, string shardingFieldAlias, Expression fieldExpr = null)
+    protected TTarget QueryScalar<TTarget>(string sqlFormat, string shardingFieldAlias)
+    {
+        this.Visitor.AggFieldAlias = shardingFieldAlias;
+        this.Visitor.SelectRaw(typeof(TTarget), sqlFormat);
+        return this.DbContext.QueryScalar<TTarget>(this.Visitor);
+    }
+    protected TTarget QueryScalar<TTarget>(string sqlFormat, string shardingFieldAlias, Expression fieldExpr)
     {
         this.Visitor.AggFieldAlias = shardingFieldAlias;
         this.Visitor.Select(sqlFormat, fieldExpr);
         return this.DbContext.QueryScalar<TTarget>(this.Visitor);
     }
-    protected async Task<TTarget> QueryScalarAsync<TTarget>(string sqlFormat, string shardingFieldAlias, Expression fieldExpr = null, CancellationToken cancellationToken = default)
+    protected async Task<TTarget> QueryScalarAsync<TTarget>(string sqlFormat, string shardingFieldAlias, CancellationToken cancellationToken = default)
+    {
+        this.Visitor.AggFieldAlias = shardingFieldAlias;
+        this.Visitor.SelectRaw(typeof(TTarget), sqlFormat);
+        return await this.DbContext.QueryScalarAsync<TTarget>(this.Visitor, cancellationToken);
+    }
+    protected async Task<TTarget> QueryScalarAsync<TTarget>(string sqlFormat, string shardingFieldAlias, Expression fieldExpr, CancellationToken cancellationToken = default)
     {
         this.Visitor.AggFieldAlias = shardingFieldAlias;
         this.Visitor.Select(sqlFormat, fieldExpr);
@@ -581,7 +593,26 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Distinct();
         return this;
     }
-    #endregion    
+    #endregion
+
+    #region WithRawSql
+    public virtual IQuery<T> WithHeadSql(string rawSql)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+
+        this.Visitor.WithHeadSql(rawSql);
+        return this;
+    }
+    public virtual IQuery<T> WithTailSql(string rawSql)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+
+        this.Visitor.WithTailSql(rawSql);
+        return this;
+    }
+    #endregion
 
     #region Count
     public virtual int Count<TField>(Expression<Func<T, TField>> fieldExpr)
@@ -689,6 +720,27 @@ public class Query<T> : QueryBase, IQuery<T>
         return list.ToDictionary(keySelector, valueSelector);
     }
     #endregion
+
+    #region WithHeadSql
+    public virtual IQuery<T> WithHeadSql(string rawSql)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+
+        return this.ToList().ToDictionary(keySelector, valueSelector);
+    }
+    #endregion
+
+    #region WithTailSql
+    public virtual IQuery<T> WithTailSql(string rawSql)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+
+        return this.ToList().ToDictionary(keySelector, valueSelector);
+    }
+    #endregion
+
 
     #region ToCreate
     public virtual IFromCreated<TEntity> ToCreate<TEntity>()

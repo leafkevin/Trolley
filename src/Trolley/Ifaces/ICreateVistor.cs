@@ -35,6 +35,8 @@ public interface ICreateVisitor : ICommandContext, IDisposable
     void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
     void UseTable(TableShardingUsageMode usageMode, Func<object, string> tableNameGetter);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
+    void WithHeadSql(string rawSql);
+    void WithTailSql(string rawSql);
 
     void WithBy(object insertObj);
     void WithByField(string fieldName, object fieldValue);

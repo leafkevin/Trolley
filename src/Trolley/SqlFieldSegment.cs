@@ -47,7 +47,7 @@ public struct SqlSegment
     public Type MappedTargetType { get; set; }
     public string FieldName { get; set; }
     //where条件时候，需要用于添加参数
-    public object NativeDbType { get; set; }
+    public MemberMap MemberMapper { get; set; }
     public ITypeHandler TypeHandler { get; set; }
     public MemberInfo TargetMember { get; set; }
     public List<ReaderField> Fields { get; set; }
@@ -133,6 +133,7 @@ public class ReaderField
     public bool HasNextInclude { get; set; }
     public ReaderField Parent { get; set; }
     public bool IsAggField { get; set; }
+    public bool IsAvgField { get; set; }
     public string AggFunc { get; set; }
 
     public ReaderField Clone()

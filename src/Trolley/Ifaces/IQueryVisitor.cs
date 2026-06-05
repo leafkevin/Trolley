@@ -109,7 +109,8 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     void SelectGrouping();
     void SelectDefault(Expression defaultExpr);
     void SelectRaw(Type targetType, string rawFields);
-    void Select(string sqlFormat, Expression selectExpr = null);
+    void Select(Expression selectExpr);
+    void Select(string sqlFormat, Expression selectExpr = null); 
     void SelectTo(Type targetType, Expression specialMemberSelector = null);
 
     void Distinct();
@@ -119,6 +120,9 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     void AsCteTable(Type targetType, string tableName);
     void AddSelectElement(Expression elementExpr, MemberInfo memberInfo, SqlFieldSegment sqlSegment);
     void CopyShardingFromQueryVisitor(IQueryVisitor visitor);
+
+    void WithHeadSql(string rawSql);
+    void WithTailSql(string rawSql);
 
     TableSegment InitTableAlias(LambdaExpression lambdaExpr);
     void Clear(bool isClearReaderFields = false);

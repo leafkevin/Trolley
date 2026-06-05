@@ -328,19 +328,12 @@ public class QueryInternal
 
         this.Visitor.SelectRaw(targetType, rawFields);
     }
-    protected void SelectInternal(string fields = "*")
-    {
-        if (string.IsNullOrEmpty(fields))
-            throw new ArgumentNullException(nameof(fields));
-
-        this.Visitor.Select(fields, null);
-    }
     protected void SelectInternal(Expression fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.Visitor.Select(null, fieldsExpr);
+        this.Visitor.Select(fieldsExpr);
     }
     #endregion  
 }
