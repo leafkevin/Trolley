@@ -527,6 +527,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else if (this.HasAggFields)
         {
             builder.Clear();
+            //TODO:
             for (int i = 0; i < this.ReaderFields.Count; i++)
             {
                 var readerField = this.ReaderFields[i];
@@ -536,7 +537,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     fieldName = FieldNameFetcher(readerField);
                     fieldName = $"{readerField.AggFunc}({fieldName}) AS {fieldName}";
                 }
-                else fieldName = readerField.Value;
+                else fieldName = readerField.Value.ToString();
                 if (i > 0) builder.Append(',');
                 builder.Append(fieldName);
             }
@@ -1000,7 +1001,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             this.TableAliases.Clear();
             this.TableAliases.Add(parameterName, includeSegment);
             var sqlSegment = this.Visit(new SqlSegment { Expression = filter });
-            includeSegment.Filter = sqlSegment.Body;
+            includeSegment.Filter = sqlSegment.Value.ToString();
             this.IsIncludeMany = false;
         }
         this.LastIncludeSegment = includeSegment;
@@ -1281,12 +1282,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         {
                             var memberInfo = newExpr.Members[index];
                             var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
-                            this.AddOrderByField(builder, new OrderByField
+                            this.AddOrderByField(builder, new ReaderField
                             {
-                                FieldType = memberInfo.GetMemberType(),
-                                Body = sqlSegment.Value.ToString(),
-                                MemberName = memberInfo.Name,
-                                Suffix = orderType
+                                FieldType = SqlFieldType.Field,
+                                Value = sqlSegment.Value
                             }, orderType);
                         }
                         index++;
@@ -1310,24 +1309,20 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     else
                     {
                         var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberExpr });
-                        this.AddOrderByField(builder, new OrderByField
+                        this.AddOrderByField(builder, new ReaderField
                         {
-                            FieldType = memberExpr.Member.GetMemberType(),
-                            Body = sqlSegment.Value.ToString(),
-                            MemberName = memberExpr.Member.Name,
-                            Suffix = orderType
+                            FieldType = SqlFieldType.Field,
+                            Value = sqlSegment.Value
                         }, orderType);
                     }
                     break;
                 default:
                     {
                         var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = expr });
-                        this.AddOrderByField(builder, new OrderByField
+                        this.AddOrderByField(builder, new ReaderField
                         {
-                            FieldType = expr.Type,
-                            Body = sqlSegment.Value.ToString(),
-                            //TODO:单值表达式没有成员名称，如：.OrderBy(f => f.Age / 10 * 10)
-                            Suffix = orderType
+                            FieldType = SqlFieldType.Field,
+                            Value = sqlSegment.Value
                         }, orderType);
                     }
                     break;
@@ -1337,21 +1332,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     private void AddOrderByField(StringBuilder builder, ReaderField readerField, string orderType)
     {
-        this.AddOrderByField(builder, new OrderByField
-        {
-            FieldType = readerField.TargetMember.GetMemberType(),
-            Body = readerField.Value,
-            MemberName = readerField.TargetMember.Name,
-            Suffix = orderType
-        }, orderType);
-    }
-    private void AddOrderByField(StringBuilder builder, OrderByField orderByField, string orderType)
-    {
-        //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
-        builder.Append(orderByField.Body);
-        this.OrderByFields.Add(orderByField);
+        string suffix = null;
         if (orderType == "DESC")
-            builder.Append(" DESC");
+        {
+            suffix = " DESC";
+            builder.Append(suffix);
+        }
+        this.OrderByFields.Add(new OrderByField { Field = readerField, Suffix = suffix });
     }
     public virtual void Having(Expression havingExpr)
     {
@@ -1550,58 +1537,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
+        if (sqlSegment.IsDeferredFields)
+            return this.VisitDeferredSqlSegment(sqlSegment);
+
         //Select场景，实体成员访问，返回ReaderField实体类型，ReaderFields并且有值，子ReaderFields的Body可无值
         //Select场景和Where场景，单个字段成员访(包括Json实体类型字段)，返回FromMember，TargetMember，字段类型，Body有值为带有别名的FieldName
         var memberExpr = sqlSegment.Expression as MemberExpression;
         var memberInfo = memberExpr.Member;
-
-        if (sqlSegment.IsDeferredFields && this.IsSelect)
-        {
-            //延迟属性访问，两种场景：
-            //主动延迟方法调用：如，把返回的枚举列转成描述，参数就是枚举列，返回值是对应的描述
-            var visitor = new MemberVisitor();
-            visitor.Visit(memberExpr);
-            //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
-            //f.TotalAmount.ToString("C")
-            //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
-            //this.DeferredInvoke(f.Price, f.Quantity)
-            string rawSql = null;
-            List<ReaderField> readerFields = null;
-            if (visitor.Members.Count > 0)
-            {
-                readerFields = new List<ReaderField>();
-                var builder = new StringBuilder();
-                foreach (var argsExpr in visitor.Members)
-                {
-                    var argumentSegment = this.VisitAndDeferred(new SqlSegment { Expression = argsExpr });
-                    var fieldName = argumentSegment.Value.ToString();
-                    readerFields.Add(new ReaderField
-                    {
-                        ReaderType = argsExpr.Type,
-                        MappedTargetType = argumentSegment.MappedTargetType,
-                        FieldName = argumentSegment.FieldName,
-                        TypeHandler = argumentSegment.TypeHandler,
-                        TargetMember = argsExpr.Member
-                    });
-                    if (builder.Length > 0)
-                        builder.Append(',');
-                    builder.Append(fieldName);
-                }
-                if (readerFields.Count > 0)
-                    rawSql = builder.ToString();
-            }
-            else rawSql = "NULL";
-
-            return sqlSegment.Change(new ReaderField
-            {
-                IsDeferredFields = true,
-                FieldType = SqlFieldType.Field,
-                Expression = memberExpr,
-                Fields = readerFields,
-                Value = rawSql
-            }, SqlType.ReaderField);
-        }
-
         MemberAccessSqlFormatter formatter = null;
         if (memberExpr.Expression != null)
         {

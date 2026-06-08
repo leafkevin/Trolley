@@ -543,131 +543,6 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             return sqlSegment.Change($"{operators}({leftValue},{rightValue})", SqlType.Expression);
         return sqlSegment.Change($"{leftValue}{operators}{rightValue}", SqlType.Expression);
     }
-    public virtual SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
-    {
-        var memberExpr = sqlSegment.Expression as MemberExpression;
-        MemberAccessSqlFormatter formatter = null;
-        var memberInfo = memberExpr.Member;
-
-        if (sqlSegment.IsDeferredFields)
-            return this.VisitDeferredSqlSegment(sqlSegment);
-
-        if (memberExpr.Expression != null)
-        {
-            //Where(f=>... && !f.OrderId.HasValue && ...)
-            //Where(f=>... f.OrderId.Value==10 && ...)
-            //Select(f=>... ,f.OrderId.HasValue  ...)
-            //Select(f=>... ,f.OrderId.Value==10  ...)
-            if (memberExpr.Type.IsValueType && Nullable.GetUnderlyingType(memberExpr.Type) != null)
-            {
-                if (memberInfo.Name == "HasValue")
-                {
-                    sqlSegment.Push(DeferredOperation.IsNull);
-                    sqlSegment.Push(DeferredOperation.Not);
-                }
-                return this.Visit(sqlSegment.Next(memberExpr.Expression));
-            }
-            //各种类型实例成员访问，如：DateTime,TimeSpan,String.Length,List.Count
-            if (this.OrmProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
-            {
-                //Where(f=>... && f.CreatedAt.Month<5 && ...)
-                //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
-                var targetSegment = sqlSegment.Next(memberExpr.Expression);
-                sqlSegment = formatter.Invoke(this, targetSegment);
-                return sqlSegment;
-            }
-
-            if (memberExpr.HasParameter(out var parameterName))
-            {
-                //Where(f => f.Amount > 5)
-                //Select(f => new { f.OrderId, f.Disputes ...})
-                var tableSegment = this.TableAliases[parameterName];
-                sqlSegment.TableSegment = tableSegment;
-                string fieldName = null;
-
-                if (tableSegment.TableType == TableType.FromQuery || tableSegment.TableType == TableType.CteSelfRef)
-                {
-                    //访问子查询表的成员，子查询表没有Mapper，也不会有实体类型成员
-                    //Json的实体类型字段
-                    ReaderField readerField = default;
-                    //子查询中，Select了Grouping分组对象，子查询中，只有一个分组对象才是实体类型，目前子查询，只支持一层
-                    //取AS后的字段名，与原字段名不一定一样,AS后的字段名与memberExpr.Member.Name一致
-                    if (memberExpr.Expression.NodeType != ExpressionType.Parameter)
-                    {
-                        var parentMemberExpr = memberExpr.Expression as MemberExpression;
-                        var parenetReaderField = tableSegment.Fields.Count == 1 ? tableSegment.Fields.First()
-                            : tableSegment.Fields.Find(f => f.TargetMember.Name == parentMemberExpr.Member.Name);
-                        var fromReaderFields = parenetReaderField.Fields;
-                        readerField = fromReaderFields.Count == 1 ? fromReaderFields.First()
-                            : fromReaderFields.Find(f => f.TargetMember.Name == memberInfo.Name);
-                        fieldName = this.OrmProvider.GetFieldName(memberInfo.Name);
-                        if (this.IsNeedTableAlias) fieldName = tableSegment.AliasName + "." + fieldName;
-                    }
-                    else
-                    {
-                        readerField = tableSegment.Fields.Count == 1 ? tableSegment.Fields.First()
-                          : tableSegment.Fields.Find(f => f.TargetMember.Name == memberInfo.Name);
-                        fieldName = readerField.Value;
-                    }
-                    sqlSegment.Value = fieldName;
-                }
-                else
-                {
-                    var memberMapper = tableSegment.Mapper.GetMemberMap(memberInfo.Name);
-                    if (memberMapper.IsIgnore)
-                        throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
-                    if (memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
-                        throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberInfo.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
-                    sqlSegment.MemberMapper = memberMapper;
-                    sqlSegment.IsEnum = memberMapper.UnderlyingType.IsEnum;
-                    //查询时，IsNeedAlias始终为true，新增、更新、删除时，引用联表操作时，才会为true
-                    fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
-                    if (this.IsNeedTableAlias) fieldName = tableSegment.AliasName + "." + fieldName;
-                    sqlSegment.Value = fieldName;
-                }
-                //.NET枚举类型总是解析成对应的UnderlyingType数值类型，如：a.Gender ?? Gender.Male == Gender.Male
-                return sqlSegment;
-            }
-        }
-
-        if (memberInfo.DeclaringType == typeof(DBNull))
-            return SqlSegment.Null;
-
-        //各种静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
-        if (this.OrmProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
-        {
-            sqlSegment = formatter.Invoke(this, sqlSegment);
-            //sqlSegment.TargetType = memberExpr.Type;
-            return sqlSegment;
-        }
-
-        //优化本地成员访问
-        if (memberExpr.Expression != null)
-        {
-            var objSegment = this.Visit(new SqlSegment { Expression = memberExpr.Expression });
-            if (objSegment.IsValue)
-            {
-                object memberValue = null;
-                if (memberInfo is PropertyInfo propertyInfo)
-                    memberValue = propertyInfo.GetValue(objSegment.Value);
-                else if (memberInfo is FieldInfo fieldInfo)
-                    memberValue = fieldInfo.GetValue(objSegment.Value);
-                //sqlSegment.SegmentType = memberExpr.Type;
-                return sqlSegment.Change(memberValue);
-            }
-        }
-
-        //访问局部变量或是成员变量，当作常量处理，直接计算，后面统一做参数化处理
-        //var orderIds=new List<int>{1,2,3}; Where(f=>orderIds.Contains(f.OrderId)); orderIds
-        //private Order order; Where(f=>f.OrderId==this.Order.Id); this.Order.Id
-        //var orderId=10; Select(f=>new {OrderId=orderId,...}
-        //Select(f=>new {OrderId=this.Order.Id, ...}
-
-        //sqlSegment.IsConstant = false;
-        //sqlSegment.IsVariable = true;
-        //sqlSegment.SegmentType = memberExpr.Type;
-        return this.Evaluate(sqlSegment, SqlType.Variable);
-    }
     public virtual SqlSegment VisitConstant(SqlSegment sqlSegment)
     {
         var constantExpr = sqlSegment.Expression as ConstantExpression;
@@ -693,17 +568,16 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         if (methodCallExpr.Method.Name == "ToValue")
         {
             if (declaringType.FullName.StartsWith("Trolley.ISqlOver") || declaringType.FullName.StartsWith("Trolley.IPartitionByOver"))
-                sqlSegment = this.VisitOverMethodCall(sqlSegment);
-            else if (methodCallExpr.Method.Name == "ToValue" && declaringType == typeof(IGroupConcat))
-                sqlSegment = this.VisitGroupConcatMethodCall(sqlSegment);
-            else if (methodCallExpr.Method.Name == "ToValue" && declaringType == typeof(IStringAgg))
-                sqlSegment = this.VisitStringAggMethodCall(sqlSegment);
-            return sqlSegment;
+                return this.VisitOverMethodCall(sqlSegment);
+            else if (declaringType == typeof(IGroupConcat))
+                return this.VisitGroupConcatMethodCall(sqlSegment);
+            else if (declaringType == typeof(IStringAgg))
+                return this.VisitStringAggMethodCall(sqlSegment);
         }
         if (sqlSegment.IsDeferredFields)
             return this.VisitDeferredSqlSegment(sqlSegment);
 
-        if (!sqlSegment.IsDeferredFields && this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formatter))
+        if (this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formatter))
         {
             sqlSegment = formatter.Invoke(this, methodCallExpr, methodCallExpr.Object, sqlSegment.DeferredOperations, methodCallExpr.Arguments.ToArray());
             //sqlSegment.TargetType = methodCallExpr.Type;
@@ -722,11 +596,13 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             //this.DeferredInvoke(f.Price, f.Quantity)
             return this.VisitDeferredSqlSegment(sqlSegment);
         }
-        return this.Evaluate(sqlSegment);
-        //sqlSegment.SegmentType = methodCallExpr.Type;
-        //如果未指定常量和变量，当作变量处理，通常是常量或是变量经过一系列Linq操作得到的结果值
-        //if (!sqlSegment.IsConstant && !sqlSegment.IsVariable)
-        //    sqlSegment.IsVariable = true;
+
+        var testVisitor = new HasParameterVisitor();
+        testVisitor.Visit(methodCallExpr);
+        var value = this.Evaluate(methodCallExpr);
+        if (testVisitor.HasVariable)
+            return sqlSegment.Change(value, SqlType.Variable);
+        return sqlSegment.Change(value, SqlType.Constant);
     }
     public virtual SqlSegment VisitParameter(SqlSegment sqlSegment)
     {
@@ -788,6 +664,10 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 }
             }
         }
+    }
+    public virtual SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
+    {
+        throw new NotImplementedException();
     }
     public virtual SqlSegment VisitNew(SqlSegment sqlSegment)
     {
@@ -2545,54 +2425,49 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         if (!this.IsSelect)
             throw new NotSupportedException($"只有在Select子句中，才支持延迟方法访问，表达式：{sqlSegment.Expression}");
 
-        ICollection<Expression> fieldExprs = null;
-        switch (sqlSegment.Expression.NodeType)
-        {
-            case ExpressionType.MemberAccess:
-                var visitor = new MemberVisitor();
-                visitor.Visit(sqlSegment.Expression);
-                fieldExprs = visitor.Members;
-                break;
-            case ExpressionType.Call:
-                var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
-                fieldExprs = methodCallExpr.Arguments;
-                break;
-        }
-        string sql = "NULL";
+        //延迟属性访问，两种场景：
+        //主动延迟方法调用：如，把返回的枚举列转成描述，参数就是枚举列，返回值是对应的描述
+        var visitor = new MemberVisitor();
+        visitor.Visit(sqlSegment.Expression);
+        //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
+        //f.TotalAmount.ToString("C")
+        //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
+        //this.DeferredInvoke(f.Price, f.Quantity)
+        string rawSql = null;
         List<ReaderField> readerFields = null;
-        if (fieldExprs != null && fieldExprs.Count > 0)
+        if (visitor.Members.Count > 0)
         {
             readerFields = new List<ReaderField>();
             var builder = new StringBuilder();
-            foreach (var argsExpr in fieldExprs)
+            foreach (var argsExpr in visitor.Members)
             {
                 var argumentSegment = this.VisitAndDeferred(new SqlSegment { Expression = argsExpr });
-                if (argumentSegment.SqlType == SqlType.OnlyField)
+                var fieldName = argumentSegment.Value.ToString();
+                readerFields.Add(new ReaderField
                 {
-                    var fieldName = argumentSegment.Value.ToString();
-                    readerFields.Add(new ReaderField
-                    {
-                        Value = fieldName,
-                        ReaderType = argsExpr.Type,
-                        TypeHandler = argumentSegment.MemberMapper.TypeHandler
-                    });
-                    if (builder.Length > 0)
-                        builder.Append(',');
-                    builder.Append(fieldName);
-                }
+                    ReaderType = argsExpr.Type,
+                    MappedTargetType = argumentSegment.MappedTargetType,
+                    FieldName = argumentSegment.FieldName,
+                    TypeHandler = argumentSegment.TypeHandler,
+                    TargetMember = argsExpr.Member
+                });
+                if (builder.Length > 0)
+                    builder.Append(',');
+                builder.Append(fieldName);
             }
             if (readerFields.Count > 0)
-                sql = builder.ToString();
+                rawSql = builder.ToString();
         }
-        sqlSegment.SqlType = SqlType.ReaderField;
-        sqlSegment.Value = new ReaderField
+        else rawSql = "NULL";
+
+        return sqlSegment.Change(new ReaderField
         {
-            Value = sql,
             IsDeferredFields = true,
+            FieldType = SqlFieldType.Field,
             Expression = sqlSegment.Expression,
-            Fields = readerFields
-        };
-        return sqlSegment;
+            Fields = readerFields,
+            Value = rawSql
+        }, SqlType.ReaderField);
     }
     public TableSegment UseQuery(Type targetType, IQuery subQueryObj, bool isCopyRefParameters)
     {
@@ -2774,10 +2649,11 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         }
         return myExpr.NodeType == ExpressionType.MemberAccess;
     }
-    public Stack<MemberExpression> GetMemberExprs(MemberExpression memberExpr)
+    public Stack<MemberExpression> GetMemberExprs(MemberExpression memberExpr, out ParameterExpression parameterExpr)
     {
         Expression currentExpr = memberExpr;
         var memberExprs = new Stack<MemberExpression>();
+        parameterExpr = null;
         while (currentExpr != null)
         {
             if (currentExpr is UnaryExpression unaryExpr)
@@ -2788,7 +2664,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             switch (currentExpr.NodeType)
             {
                 case ExpressionType.Parameter:
-                    currentExpr = null;
+                    parameterExpr = currentExpr as ParameterExpression;
                     break;
                 case ExpressionType.MemberAccess:
                     var parentExpr = currentExpr as MemberExpression;
