@@ -54,6 +54,15 @@ public interface IUpdate
     IUpdate UseTableSchema(string tableSchema);
     #endregion
 
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回更新对象</returns>
+    IUpdate WithTableAliasTrailing(string rawSql);
+    #endregion
+
     #region Set
     /// <summary>
     /// 部分字段更新，updateObj对象中除主键、OnlyFields、IgnoreFields方法筛选后的剩下所有字段都将参与更新，匿名、命名对象都可以，需要配合where条件使用，如：
@@ -113,6 +122,21 @@ public interface IUpdated
     #region Properties
     DbContext DbContext { get; }
     IUpdateVisitor Visitor { get; }
+    #endregion
+
+    #region WithRawSql
+    /// <summary>
+    /// 在最前面添加原始SQL片段，rawSql可以是任意SQL片段，如：polardb-x数据库，.WithLeadingSql("/*+TDDL:CMD_EXTRA(TTL_FORBID_DROP_TTL_TBL_WITH_ARC_CCI=false)*/")
+    /// </summary>
+    /// <param name="rawSql">原始SQL片</param>
+    /// <returns>返回删除对象</returns>
+    IUpdated WithLeadingSql(string rawSql);
+    /// <summary>
+    /// 在最后面添加原始SQL片段，rawSql可以是任意SQL片段
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回删除对象</returns>
+    IUpdated WithTrailingSql(string rawSql);
     #endregion
 
     #region Execute

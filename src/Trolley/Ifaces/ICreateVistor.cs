@@ -35,13 +35,15 @@ public interface ICreateVisitor : ICommandContext, IDisposable
     void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
     void UseTable(TableShardingUsageMode usageMode, Func<object, string> tableNameGetter);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
-    void WithHeadSql(string rawSql);
-    void WithTailSql(string rawSql);
 
     void WithBy(object insertObj);
     void WithByField(string fieldName, object fieldValue);
     void WithByFieldExpr(Expression fieldSelector, object fieldValue);
     void WithBulk(IEnumerable insertObjs, int bulkCount);
+
+    void WithLeadingSql(string rawSql);
+    void WithTrailingSql(string rawSql);
+
     DataTable ToDataTable(string tableName, IEnumerable entities, List<MemberMap> memberMappers, List<Func<object, object>> valueGetters);
     (List<MemberMap>, List<Func<object, object>>) GetRefMemberMappers(Type parameterType, EntityMap entityMapper, object parameterSample, bool isUpdate = false);
     Dictionary<string, List<object>> SplitShardingParameters(TableShardingInfo tableShardingInfo, Type paramterType, IEnumerable parameters, object parameterSample, IDictionary<string, object> shardingValues);

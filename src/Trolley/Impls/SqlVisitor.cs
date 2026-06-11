@@ -311,13 +311,13 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         this.WhereBuilder.Append(whereSql);
         this.LastWhereOperationType = lastOperationType;
     }
-    public virtual void WithHeadSql(string rawSql)
+    public virtual void WithLeadingSql(string rawSql)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
         this.HeadRawSql = rawSql;
     }
-    public virtual void WithTailSql(string rawSql)
+    public virtual void WithTrailingSql(string rawSql)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));

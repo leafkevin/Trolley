@@ -43,6 +43,15 @@ public interface IDelete : IDeleted
     IDelete UseTableSchema(string tableSchema);
     #endregion
 
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回删除对象</returns>
+    IDelete WithTableAliasTrailing(string rawSql);
+    #endregion
+
     #region Where
     /// <summary>
     /// 条件删除，如：.WhereBy(new { IsEnabled = true})，whereObj不能为null
@@ -187,17 +196,17 @@ public interface IDeleted
 
     #region WithRawSql
     /// <summary>
-    /// 在生成的SQL最前面添加原始SQL语句
+    /// 在最前面添加原始SQL片段，rawSql可以是任意SQL片段，如：polardb-x数据库，.WithLeadingSql("/*+TDDL:CMD_EXTRA(TTL_FORBID_DROP_TTL_TBL_WITH_ARC_CCI=false)*/")
     /// </summary>
-    /// <param name="rawSql">SQL语句</param>
+    /// <param name="rawSql">原始SQL片</param>
     /// <returns>返回删除对象</returns>
-    IDeleted WithHeadSql(string rawSql);
+    IDelete WithLeadingSql(string rawSql);
     /// <summary>
-    /// 在生成的SQL最后面添加原始SQL语句
+    /// 在最后面添加原始SQL片段，rawSql可以是任意SQL片段
     /// </summary>
-    /// <param name="rawSql">SQL语句</param>
+    /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回删除对象</returns>
-    IDeleted WithTailSql(string rawSql);
+    IDelete WithTrailingSql(string rawSql);
     #endregion
 
     #region Execute

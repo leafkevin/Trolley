@@ -111,9 +111,9 @@ public static class MySqlExtensions
             return dialectVisitor.OrmProvider.NewBulkResultCreated<TResult>(instance.DbContext, instance.Visitor);
         }
     }
-    extension(IFromCreated instance)
+    extension(IFromCreate instance)
     {
-        public IFromCreated IgnoreInto()
+        public IFromCreate IgnoreInto()
         {
             var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
             dialectVisitor.IsUseIgnoreInto = true;
@@ -128,9 +128,9 @@ public static class MySqlExtensions
             return dialectVisitor.OrmProvider.NewBulkResultCreated<TResult>(instance.DbContext, instance.Visitor);
         }
     }
-    extension<TEntity>(IFromCreated<TEntity> instance)
+    extension<TEntity>(IFromCreate<TEntity> instance)
     {
-        public IFromCreated<TEntity> IgnoreInto()
+        public IFromCreate<TEntity> IgnoreInto()
         {
             var dialectVisitor = instance.Visitor as MySqlCreateVisitor;
             dialectVisitor.IsUseIgnoreInto = true;

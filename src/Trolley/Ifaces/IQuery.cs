@@ -46,7 +46,7 @@ public interface ICteQuery : IQuery
     /// <summary>
     /// CTE表字段定义
     /// </summary>
-    List<ReaderField> ReaderFields { get; set; }
+    List<SqlFieldSegment> ReaderFields { get; set; }
     /// <summary>
     /// CTE表主体SQL
     /// </summary>
@@ -141,6 +141,15 @@ public interface IQuery<T> : IQueryBase
     IQuery<T> UseTableSchema(string tableSchema);
     #endregion
 
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> WithTableAliasTrailing(string rawSql);
+    #endregion
+
     #region Union/UnionAll
     /// <summary>
     /// Union操作，去掉重复记录，如：
@@ -225,7 +234,7 @@ public interface IQuery<T> : IQueryBase
     /// <param name="subQueryExpr">子查询表达式，需要有Select语句，如：<code>f.From&lt;Menu&gt;().Where(x =&gt; ... ).Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> UnionRecursive(Expression<Func<IFromQuery, ICteQuery<T>, IQuery<T>>> subQueryExpr);
+    IQuery<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
     /// <summary>
     /// 递归CTE子查询中的UnionAll操作，表达式subQueryExpr中的第二参数是CTE自身引用，如：
     /// <code>
@@ -244,7 +253,7 @@ public interface IQuery<T> : IQueryBase
     /// <param name="subQueryExpr">子查询表达式，需要有Select语句，如：<code>f.From&lt;Menu&gt;() .Where(x =&gt; ... ) .Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> UnionAllRecursive(Expression<Func<IFromQuery, ICteQuery<T>, IQuery<T>>> subQueryExpr);
+    IQuery<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
     #endregion
 
     #region WithTable
@@ -254,6 +263,9 @@ public interface IQuery<T> : IQueryBase
     /// <typeparam name="TOther">实体表类型</typeparam>
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithTable
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
@@ -748,6 +760,21 @@ public interface IQuery<T> : IQueryBase
     IQuery<T> Distinct();
     #endregion
 
+    #region WithRawSql
+    /// <summary>
+    /// 在最前面添加原始SQL片段，rawSql可以是任意SQL片段，如：polardb-x数据库，.WithLeadingSql("/*+TDDL:CMD_EXTRA(TTL_FORBID_DROP_TTL_TBL_WITH_ARC_CCI=false)*/")
+    /// </summary>
+    /// <param name="rawSql">原始SQL片</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> WithLeadingSql(string rawSql);
+    /// <summary>
+    /// 在最后面添加原始SQL片段，rawSql可以是任意SQL片段
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> WithTrailingSql(string rawSql);
+    #endregion
+
     #region Count
     /// <summary>
     /// 返回某个字段的int类型数据条数，如：
@@ -934,14 +961,14 @@ public interface IQuery<T> : IQueryBase
     /// </summary>
     /// <typeparam name="TEntity">插入表实体类型</typeparam>
     /// <returns>返回插入对象</returns>
-    IFromCreated<TEntity> ToCreate<TEntity>();
+    IFromCreate<TEntity> ToCreate<TEntity>();
     /// <summary>
     /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
     /// </summary>
     /// <typeparam name="TEntity">插入表实体类型</typeparam>
     /// <param name="fieldsSelector">字段值选择器</param>
     /// <returns>返回插入对象</returns>
-    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T, object>> fieldsSelector);
+    IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<T, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -1008,6 +1035,15 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -1543,7 +1579,7 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <typeparam name="TEntity">插入表实体类型</typeparam>
     /// <param name="fieldsSelector">字段值选择器</param>
     /// <returns>返回插入对象</returns>
-    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, object>> fieldsSelector);
+    IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -1606,6 +1642,15 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -2141,7 +2186,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <typeparam name="TEntity">插入表实体类型</typeparam>
     /// <param name="fieldsSelector">字段值选择器</param>
     /// <returns>返回插入对象</returns>
-    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, object>> fieldsSelector);
+    IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -2205,6 +2250,15 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -2740,7 +2794,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <typeparam name="TEntity">插入表实体类型</typeparam>
     /// <param name="fieldsSelector">字段值选择器</param>
     /// <returns>返回插入对象</returns>
-    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, object>> fieldsSelector);
+    IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -2805,6 +2859,15 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -3340,7 +3403,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <typeparam name="TEntity">插入表实体类型</typeparam>
     /// <param name="fieldsSelector">字段值选择器</param>
     /// <returns>返回插入对象</returns>
-    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, object>> fieldsSelector);
+    IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -3406,6 +3469,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -3941,7 +4013,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <typeparam name="TEntity">插入表实体类型</typeparam>
     /// <param name="fieldsSelector">字段值选择器</param>
     /// <returns>返回插入对象</returns>
-    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, object>> fieldsSelector);
+    IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -4008,6 +4080,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -4543,7 +4624,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <typeparam name="TEntity">插入表实体类型</typeparam>
     /// <param name="fieldsSelector">字段值选择器</param>
     /// <returns>返回插入对象</returns>
-    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, object>> fieldsSelector);
+    IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -4611,6 +4692,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -5146,7 +5236,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <typeparam name="TEntity">插入表实体类型</typeparam>
     /// <param name="fieldsSelector">字段值选择器</param>
     /// <returns>返回插入对象</returns>
-    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, object>> fieldsSelector);
+    IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -5215,6 +5305,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -5750,7 +5849,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <typeparam name="TEntity">插入表实体类型</typeparam>
     /// <param name="fieldsSelector">字段值选择器</param>
     /// <returns>返回插入对象</returns>
-    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, object>> fieldsSelector);
+    IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -5820,6 +5919,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -6355,7 +6463,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <typeparam name="TEntity">插入表实体类型</typeparam>
     /// <param name="fieldsSelector">字段值选择器</param>
     /// <returns>返回插入对象</returns>
-    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, object>> fieldsSelector);
+    IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -6426,6 +6534,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -6961,7 +7078,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <typeparam name="TEntity">插入表实体类型</typeparam>
     /// <param name="fieldsSelector">字段值选择器</param>
     /// <returns>返回插入对象</returns>
-    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, object>> fieldsSelector);
+    IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -7033,6 +7150,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -7568,7 +7694,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <typeparam name="TEntity">插入表实体类型</typeparam>
     /// <param name="fieldsSelector">字段值选择器</param>
     /// <returns>返回插入对象</returns>
-    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, object>> fieldsSelector);
+    IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -7641,6 +7767,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -8176,7 +8311,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <typeparam name="TEntity">插入表实体类型</typeparam>
     /// <param name="fieldsSelector">字段值选择器</param>
     /// <returns>返回插入对象</returns>
-    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, object>> fieldsSelector);
+    IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -8250,6 +8385,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -8785,7 +8929,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <typeparam name="TEntity">插入表实体类型</typeparam>
     /// <param name="fieldsSelector">字段值选择器</param>
     /// <returns>返回插入对象</returns>
-    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, object>> fieldsSelector);
+    IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -8860,6 +9004,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -9395,7 +9548,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <typeparam name="TEntity">插入表实体类型</typeparam>
     /// <param name="fieldsSelector">字段值选择器</param>
     /// <returns>返回插入对象</returns>
-    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, object>> fieldsSelector);
+    IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
@@ -9471,6 +9624,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region Include
@@ -9861,6 +10023,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <typeparam name="TEntity">插入表实体类型</typeparam>
     /// <param name="fieldsSelector">字段值选择器</param>
     /// <returns>返回插入对象</returns>
-    IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, object>> fieldsSelector);
+    IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, object>> fieldsSelector);
     #endregion
 }

@@ -257,6 +257,17 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public virtual IQuery<T> WithTableAliasTrailing(string rawSql)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+
+        this.Visitor.WithTableAliasTrailing(rawSql);
+        return this;
+    }
+    #endregion
+
     #region GetShardingTableNames
     public virtual List<string> GetShardingTableNames(Func<string, bool> tableNameSelector) => null;
     public virtual Task<List<string>> GetShardingTableNamesAsync(Func<string, bool> tableNameSelector, CancellationToken cancellationToken = default)
@@ -596,20 +607,20 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region WithRawSql
-    public virtual IQuery<T> WithHeadSql(string rawSql)
+    public virtual IQuery<T> WithLeadingSql(string rawSql)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
-        this.Visitor.WithHeadSql(rawSql);
+        this.Visitor.WithLeadingSql(rawSql);
         return this;
     }
-    public virtual IQuery<T> WithTailSql(string rawSql)
+    public virtual IQuery<T> WithTrailingSql(string rawSql)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
-        this.Visitor.WithTailSql(rawSql);
+        this.Visitor.WithTrailingSql(rawSql);
         return this;
     }
     #endregion
@@ -720,30 +731,9 @@ public class Query<T> : QueryBase, IQuery<T>
         return list.ToDictionary(keySelector, valueSelector);
     }
     #endregion
-
-    #region WithHeadSql
-    public virtual IQuery<T> WithHeadSql(string rawSql)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        return this.ToList().ToDictionary(keySelector, valueSelector);
-    }
-    #endregion
-
-    #region WithTailSql
-    public virtual IQuery<T> WithTailSql(string rawSql)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        return this.ToList().ToDictionary(keySelector, valueSelector);
-    }
-    #endregion
-
-
+       
     #region ToCreate
-    public virtual IFromCreated<TEntity> ToCreate<TEntity>()
+    public virtual IFromCreate<TEntity> ToCreate<TEntity>()
     {
         Expression<Func<T, T>> defaultExpr = f => f;
         this.Visitor.SelectDefault(defaultExpr);
@@ -757,7 +747,7 @@ public class Query<T> : QueryBase, IQuery<T>
     /// <param name="fieldsSelector"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentNullException"></exception>
-    public virtual IFromCreated<TEntity> ToCreate<TEntity>(Expression<Func<T, object>> fieldsSelector)
+    public virtual IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<T, object>> fieldsSelector)
     {
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
@@ -767,7 +757,6 @@ public class Query<T> : QueryBase, IQuery<T>
         return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
     }
     #endregion
-
 
     #region AsCteTable
     public virtual ICteQuery<T> AsCteTable(string tableName)

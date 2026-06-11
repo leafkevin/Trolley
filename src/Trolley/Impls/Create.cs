@@ -106,20 +106,20 @@ public class Created : ICreated
     #endregion
 
     #region WithRawSql
-    public virtual ICreated WithHeadSql(string rawSql)
+    public virtual ICreated WithLeadingSql(string rawSql)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
-        this.Visitor.WithHeadSql(rawSql);
+        this.Visitor.WithLeadingSql(rawSql);
         return this;
     }
-    public virtual ICreated WithTailSql(string rawSql)
+    public virtual ICreated WithTrailingSql(string rawSql)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
-        this.Visitor.WithTailSql(rawSql);
+        this.Visitor.WithTrailingSql(rawSql);
         return this;
     }
     #endregion
@@ -280,6 +280,25 @@ public class IdentitiedCreated : Created, IIdentitiedCreated
 {
     public IdentitiedCreated(DbContext dbContext, ICreateVisitor visitor)
         : base(dbContext, visitor) { }
+
+    #region WithRawSql
+    public new IIdentitiedCreated WithLeadingSql(string rawSql)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+
+        this.Visitor.WithLeadingSql(rawSql);
+        return this;
+    }
+    public new IIdentitiedCreated WithTrailingSql(string rawSql)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+
+        this.Visitor.WithTrailingSql(rawSql);
+        return this;
+    }
+    #endregion
 
     #region ExecuteIdentity
     public virtual int ExecuteIdentity()
@@ -586,7 +605,7 @@ public class BulkContinuedCreate<TEntity> : BulkContinuedCreate, IBulkContinuedC
     }
     #endregion
 }
-public class FromCreated : Created, IFromCreated
+public class FromCreated : Created, IFromCreate
 {
     #region Constructor
     public FromCreated(DbContext dbContext, ICreateVisitor visitor)
@@ -594,17 +613,17 @@ public class FromCreated : Created, IFromCreated
     #endregion
 
     #region Sharding
-    public virtual IFromCreated UseTable(string tableName)
+    public virtual IFromCreate UseTable(string tableName)
     {
         this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, false, tableName);
         return this;
     }
-    public virtual IFromCreated UseTableBy(params object[] fieldValues)
+    public virtual IFromCreate UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
-    public virtual IFromCreated UseTable(Func<object, string> tableNameGetter)
+    public virtual IFromCreate UseTable(Func<object, string> tableNameGetter)
     {
         this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, tableNameGetter);
         return this;
@@ -612,14 +631,14 @@ public class FromCreated : Created, IFromCreated
     #endregion
 
     #region UseTableSchema
-    public virtual IFromCreated UseTableSchema(string tableSchema)
+    public virtual IFromCreate UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion
 }
-public class FromCreated<TEntity> : FromCreated, IFromCreated<TEntity>
+public class FromCreated<TEntity> : FromCreated, IFromCreate<TEntity>
 {
     #region Constructor
     public FromCreated(DbContext dbContext, ICreateVisitor visitor)
@@ -627,17 +646,17 @@ public class FromCreated<TEntity> : FromCreated, IFromCreated<TEntity>
     #endregion
 
     #region Sharding
-    public new IFromCreated<TEntity> UseTable(string tableName)
+    public new IFromCreate<TEntity> UseTable(string tableName)
     {
         base.UseTable(tableName);
         return this;
     }
-    public new IFromCreated<TEntity> UseTableBy(params object[] fieldValues)
+    public new IFromCreate<TEntity> UseTableBy(params object[] fieldValues)
     {
         base.UseTableBy(fieldValues);
         return this;
     }
-    public new IFromCreated<TEntity> UseTable(Func<object, string> tableNameGetter)
+    public new IFromCreate<TEntity> UseTable(Func<object, string> tableNameGetter)
     {
         base.UseTable(tableNameGetter);
         return this;
@@ -645,7 +664,7 @@ public class FromCreated<TEntity> : FromCreated, IFromCreated<TEntity>
     #endregion
 
     #region UseTableSchema
-    public new IFromCreated<TEntity> UseTableSchema(string tableSchema)
+    public new IFromCreate<TEntity> UseTableSchema(string tableSchema)
     {
         base.UseTableSchema(tableSchema);
         return this;

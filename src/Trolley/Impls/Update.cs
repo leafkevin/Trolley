@@ -125,6 +125,28 @@ public class Updated : IUpdated
     }
     #endregion
 
+    #region WithRawSql
+    public IUpdated WithLeadingSql(string rawSql)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+        this.Visitor.WithLeadingSql(rawSql);
+        return this;
+    }
+    /// <summary>
+    /// 在最后面添加原始SQL片段，rawSql可以是任意SQL片段
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回删除对象</returns>
+    public IUpdated WithTrailingSql(string rawSql)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+        this.Visitor.WithTrailingSql(rawSql);
+        return this;
+    }
+    #endregion
+
     #region Execute
     public virtual int Execute()
     {

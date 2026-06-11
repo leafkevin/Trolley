@@ -148,6 +148,15 @@ public interface IQuery<T> : IQueryBase
     IQuery<T> UseTableSchema(string tableSchema);
     #endregion
 
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> WithTableAliasTrailing(string rawSql);
+    #endregion
+
     #region Union/UnionAll
     /// <summary>
     /// Union操作，去掉重复记录，如：
@@ -758,6 +767,21 @@ public interface IQuery<T> : IQueryBase
     IQuery<T> Distinct();
     #endregion
 
+    #region WithRawSql
+    /// <summary>
+    /// 在最前面添加原始SQL片段，rawSql可以是任意SQL片段，如：polardb-x数据库，.WithLeadingSql("/*+TDDL:CMD_EXTRA(TTL_FORBID_DROP_TTL_TBL_WITH_ARC_CCI=false)*/")
+    /// </summary>
+    /// <param name="rawSql">原始SQL片</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> WithLeadingSql(string rawSql);
+    /// <summary>
+    /// 在最后面添加原始SQL片段，rawSql可以是任意SQL片段
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> WithTrailingSql(string rawSql);
+    #endregion
+
     #region Count
     /// <summary>
     /// 返回某个字段的int类型数据条数，如：
@@ -1036,6 +1060,15 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<<#=tables#>> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<<#=tables#>> WithTableAliasTrailing(string rawSql);
     #endregion
 
 <#

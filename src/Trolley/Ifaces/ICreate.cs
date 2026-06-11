@@ -54,6 +54,15 @@ public interface ICreate
     ICreate UseTableSchema(string tableSchema);
     #endregion
 
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回插入对象</returns>
+    ICreate WithTableAliasTrailing(string rawSql);
+    #endregion
+
     #region WithBy
     /// <summary>
     /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出属性不插入
@@ -103,17 +112,17 @@ public interface ICreated
 
     #region WithRawSql
     /// <summary>
-    /// 在生成的SQL最前面添加原始SQL语句
+    /// 在最前面添加原始SQL片段，rawSql可以是任意SQL片段，如：polardb-x数据库，.WithLeadingSql("/*+TDDL:CMD_EXTRA(TTL_FORBID_DROP_TTL_TBL_WITH_ARC_CCI=false)*/")
     /// </summary>
-    /// <param name="rawSql">SQL语句</param>
-    /// <returns>返回插入对象</returns>
-    ICreated WithHeadSql(string rawSql);
+    /// <param name="rawSql">原始SQL片</param>
+    /// <returns>返回删除对象</returns>
+    ICreated WithLeadingSql(string rawSql);
     /// <summary>
-    /// 在生成的SQL最后面添加原始SQL语句
+    /// 在最后面添加原始SQL片段，rawSql可以是任意SQL片段
     /// </summary>
-    /// <param name="rawSql">SQL语句</param>
-    /// <returns>返回插入对象</returns>
-    ICreated WithTailSql(string rawSql);
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回删除对象</returns>
+    ICreated WithTrailingSql(string rawSql);
     #endregion
 
     #region Execute
@@ -146,17 +155,17 @@ public interface IIdentitiedCreated : ICreated
 {
     #region WithRawSql
     /// <summary>
-    /// 在生成的SQL最前面添加原始SQL语句
+    /// 在最前面添加原始SQL片段，rawSql可以是任意SQL片段，如：polardb-x数据库，.WithLeadingSql("/*+TDDL:CMD_EXTRA(TTL_FORBID_DROP_TTL_TBL_WITH_ARC_CCI=false)*/")
     /// </summary>
-    /// <param name="rawSql">SQL语句</param>
-    /// <returns>返回插入对象</returns>
-    new IIdentitiedCreated WithHeadSql(string rawSql);
+    /// <param name="rawSql">原始SQL片</param>
+    /// <returns>返回删除对象</returns>
+    new IIdentitiedCreated WithLeadingSql(string rawSql);
     /// <summary>
-    /// 在生成的SQL最后面添加原始SQL语句
+    /// 在最后面添加原始SQL片段，rawSql可以是任意SQL片段
     /// </summary>
-    /// <param name="rawSql">SQL语句</param>
-    /// <returns>返回插入对象</returns>
-    new IIdentitiedCreated WithTailSql(string rawSql);
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回删除对象</returns>
+    new IIdentitiedCreated WithTrailingSql(string rawSql);
     #endregion
 
     #region ExecuteIdentity
@@ -184,7 +193,7 @@ public interface IIdentitiedCreated : ICreated
     Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default);
     #endregion 
 }
-public interface IFromCreated : ICreated
+public interface IFromCreate : ICreated
 {
     #region Sharding
     /// <summary>
@@ -192,19 +201,19 @@ public interface IFromCreated : ICreated
     /// </summary>
     /// <param name="tableName">完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回插入对象</returns>
-    IFromCreated UseTable(string tableName);
+    IFromCreate UseTable(string tableName);
     /// <summary>
     /// 手动指定分表规则参数值，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回插入对象</returns>
-    IFromCreated UseTableBy(params object[] fieldValues);
+    IFromCreate UseTableBy(params object[] fieldValues);
     /// <summary>
     /// 手动指定分表名获取委托，执行委托获取分表名，插入对象的值自动插入对应分表中。参数是插入对象的值，返回值是分表名，如：.UseTable(insertObj =&gt; $"sys_user_{((User)insertObj).CreatedAt:yyyyMM}")
     /// </summary>
     /// <param name="tableNameGetter">分表名获取委托</param>
     /// <returns>返回插入对象</returns>
-    IFromCreated UseTable(Func<object, string> tableNameGetter);
+    IFromCreate UseTable(Func<object, string> tableNameGetter);
     #endregion
 
     #region UseTableSchema
@@ -213,10 +222,10 @@ public interface IFromCreated : ICreated
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回插入对象</returns>
-    IFromCreated UseTableSchema(string tableSchema);
+    IFromCreate UseTableSchema(string tableSchema);
     #endregion
 }
-public interface IFromCreated<TEntity> : IFromCreated
+public interface IFromCreate<TEntity> : IFromCreate
 {
     #region Sharding
     /// <summary>
@@ -224,19 +233,19 @@ public interface IFromCreated<TEntity> : IFromCreated
     /// </summary>
     /// <param name="tableName">完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回插入对象</returns>
-    new IFromCreated<TEntity> UseTable(string tableName);
+    new IFromCreate<TEntity> UseTable(string tableName);
     /// <summary>
     /// 手动指定分表规则参数值，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回插入对象</returns>
-    new IFromCreated<TEntity> UseTableBy(params object[] fieldValues);
+    new IFromCreate<TEntity> UseTableBy(params object[] fieldValues);
     /// <summary>
     /// 手动指定分表名获取委托，执行委托获取分表名，插入对象的值自动插入对应分表中。参数是插入对象的值，返回值是分表名，如：.UseTable(insertObj =&gt; $"sys_user_{((User)insertObj).CreatedAt:yyyyMM}")
     /// </summary>
     /// <param name="tableNameGetter">分表名获取委托</param>
     /// <returns>返回插入对象</returns>
-    new IFromCreated<TEntity> UseTable(Func<object, string> tableNameGetter);
+    new IFromCreate<TEntity> UseTable(Func<object, string> tableNameGetter);
     #endregion
 
     #region UseTableSchema
@@ -245,7 +254,7 @@ public interface IFromCreated<TEntity> : IFromCreated
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回插入对象</returns>
-    new IFromCreated<TEntity> UseTableSchema(string tableSchema);
+    new IFromCreate<TEntity> UseTableSchema(string tableSchema);
     #endregion
 }
 /// <summary>

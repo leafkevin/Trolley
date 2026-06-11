@@ -69,6 +69,7 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
     void UseUnionShardingTable();
     void UseTableSchema(bool isIncludeMany, string tableSchema);
+    void WithTableAliasTrailing(string rawSql);
 
     void From(char tableAsStart = 'a', params Type[] entityTypes);
     void AddTable(params Type[] entityTypes);
@@ -121,8 +122,8 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     void AddSelectElement(Expression elementExpr, MemberInfo memberInfo, SqlFieldSegment sqlSegment);
     void CopyShardingFromQueryVisitor(IQueryVisitor visitor);
 
-    void WithHeadSql(string rawSql);
-    void WithTailSql(string rawSql);
+    void WithLeadingSql(string rawSql);
+    void WithTrailingSql(string rawSql);
 
     TableSegment InitTableAlias(LambdaExpression lambdaExpr);
     void Clear(bool isClearReaderFields = false);

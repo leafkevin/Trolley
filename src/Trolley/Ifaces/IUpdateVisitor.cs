@@ -51,6 +51,9 @@ public interface IUpdateVisitor : ICommandContext, IDisposable
     void OrById(object whereKey);
     void OrByIds(IEnumerable whereKeys);
     void Or(Expression whereExpr);
+ 
+    void WithLeadingSql(string rawSql);
+    void WithTrailingSql(string rawSql); 
 
     DataTable ToDataTable(string tableName, IEnumerable entities, List<MemberMap> memberMappers, List<Func<object, object>> valueGetters);
     (List<MemberMap>, List<Func<object, object>>) GetRefMemberMappers(Type parameterType, EntityMap entityMapper, object parameterSample, bool isUpdate = false);

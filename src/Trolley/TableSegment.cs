@@ -134,7 +134,10 @@ public class TableSegment
     /// 当前模式下分表信息
     /// </summary>
     public TableShardingInfo TableShardingInfo { get; set; }
-    public bool IsUsed { get; set; }
+    /// <summary>
+    /// 表别名后的原始SQL，比如：在polardbx数据库中，使用列存储索引FORCE INDEX(cc_i_seller),SQL SERVER数据库中，使用WITH (NOLOCK)
+    /// </summary>
+    public string TableAliasTrailing { get; set; }
 
     /// <summary>
     /// 生成一个自身引用的副本，主要用在cte表的自身引用

@@ -31,4 +31,7 @@ public interface IDeleteVisitor : ICommandContext, IDisposable
     void OrById(object whereKey);
     void OrByIds(IEnumerable whereKeys);
     void Or(Expression whereExpr);
+
+    void WithLeadingSql(string rawSql);
+    void WithTrailingSql(string rawSql);
 }
