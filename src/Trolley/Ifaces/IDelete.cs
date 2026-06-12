@@ -49,7 +49,7 @@ public interface IDelete : IDeleted
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回删除对象</returns>
-    IDelete WithTableAliasTrailing(string rawSql);
+    IDelete WithTableAliasTrailing(bool isIncludeMany, string rawSql);
     #endregion
 
     #region Where
@@ -266,6 +266,15 @@ public interface IDelete<TEntity> : IDelete
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回删除对象</returns>
     new IDelete<TEntity> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回插入对象</returns>
+    new IDelete<TEntity> WithTableAliasTrailing(bool isIncludeMany, string rawSql);
     #endregion
 
     #region Where

@@ -67,6 +67,14 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public virtual IQuery<<#=tables#>> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        return this;
+    }
+    #endregion
+
 <#
         if(i < count)
         {
@@ -77,9 +85,6 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         this.Visitor.AddTable(typeof(TOther));
         return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
-    #endregion
-
-    #region WithTable
     public virtual IQuery<<#=tables#>, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
     {
         base.WithTableInternal(subQuery);
@@ -351,8 +356,8 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
 
-        this.SelectInternal(fieldsSelector);
-        var createVisitor = this.NewCreateVisitor();
+        this.SelectInternal(fieldsSelector);        
+        var createVisitor = this.NewCreateVisitor(typeof(TEntity));
         return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     #endregion

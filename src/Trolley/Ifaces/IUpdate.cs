@@ -60,7 +60,7 @@ public interface IUpdate
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回更新对象</returns>
-    IUpdate WithTableAliasTrailing(string rawSql);
+    IUpdate WithTableAliasTrailing(bool isIncludeMany, string rawSql);
     #endregion
 
     #region Set

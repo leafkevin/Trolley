@@ -260,10 +260,7 @@ public class Query<T> : QueryBase, IQuery<T>
     #region WithTableAliasTrailing
     public virtual IQuery<T> WithTableAliasTrailing(string rawSql)
     {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        this.Visitor.WithTableAliasTrailing(rawSql);
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
         return this;
     }
     #endregion
@@ -731,14 +728,14 @@ public class Query<T> : QueryBase, IQuery<T>
         return list.ToDictionary(keySelector, valueSelector);
     }
     #endregion
-       
+
     #region ToCreate
     public virtual IFromCreate<TEntity> ToCreate<TEntity>()
     {
         Expression<Func<T, T>> defaultExpr = f => f;
         this.Visitor.SelectDefault(defaultExpr);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
+        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     /// <summary>
     /// 生成插入数据的查询构造器，fieldsSelector参数指定要插入的字段，未指定的字段将使用默认值，fieldsSelector表达式支持匿名对象和实体对象两种形式，例如：
@@ -754,7 +751,7 @@ public class Query<T> : QueryBase, IQuery<T>
 
         this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
+        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     #endregion
 

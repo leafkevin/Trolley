@@ -54,7 +54,7 @@ public interface IIncludableQuery<T, TMember> : IIncludableQueryBase, IQuery<T>
     /// </summary>
     /// <param name="tableNameGetter">当前<typeparamref name="TMember"/>表分表名获取委托</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    new IIncludableQuery<T, TMember> UseTableMap(Func<string, string, string, string> tableNameGetter);
+    IIncludableQuery<T, TMember> UseTableMap(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 手动指定分表规则参数值，执行分表规则确定<typeparamref name="TMember"/>表分表名，可多次调用实现多个分表，参数值的顺序与配置的分表规则参数值顺序保持一致，不能为null，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
@@ -80,6 +80,15 @@ public interface IIncludableQuery<T, TMember> : IIncludableQueryBase, IQuery<T>
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T, TMember> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    new IIncludableQuery<T, TMember> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -187,6 +196,15 @@ public interface IIncludableQuery<<#=tables#>, TMember> : IIncludableQueryBase, 
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<<#=tables#>, TMember> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    new IIncludableQuery<<#=tables#>, TMember> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region ThenInclude/ThenIncludeMany

@@ -49,15 +49,20 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public virtual IQuery<T1, T2> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        return this;
+    }
+    #endregion
+
     #region WithTable
     public virtual IQuery<T1, T2, TOther> WithTable<TOther>()
     {
         this.Visitor.AddTable(typeof(TOther));
         return this.OrmProvider.NewQuery<T1, T2, TOther>(this.DbContext, this.Visitor);
     }
-    #endregion
-
-    #region WithTable
     public virtual IQuery<T1, T2, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
     {
         base.WithTableInternal(subQuery);
@@ -315,7 +320,7 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
 
         this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
+        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     #endregion
 }
@@ -362,15 +367,20 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public virtual IQuery<T1, T2, T3> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        return this;
+    }
+    #endregion
+
     #region WithTable
     public virtual IQuery<T1, T2, T3, TOther> WithTable<TOther>()
     {
         this.Visitor.AddTable(typeof(TOther));
         return this.OrmProvider.NewQuery<T1, T2, T3, TOther>(this.DbContext, this.Visitor);
     }
-    #endregion
-
-    #region WithTable
     public virtual IQuery<T1, T2, T3, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
     {
         base.WithTableInternal(subQuery);
@@ -628,7 +638,7 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
 
         this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
+        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     #endregion
 }
@@ -675,15 +685,20 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public virtual IQuery<T1, T2, T3, T4> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        return this;
+    }
+    #endregion
+
     #region WithTable
     public virtual IQuery<T1, T2, T3, T4, TOther> WithTable<TOther>()
     {
         this.Visitor.AddTable(typeof(TOther));
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, TOther>(this.DbContext, this.Visitor);
     }
-    #endregion
-
-    #region WithTable
     public virtual IQuery<T1, T2, T3, T4, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
     {
         base.WithTableInternal(subQuery);
@@ -941,7 +956,7 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
 
         this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
+        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     #endregion
 }
@@ -988,15 +1003,20 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        return this;
+    }
+    #endregion
+
     #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, TOther> WithTable<TOther>()
     {
         this.Visitor.AddTable(typeof(TOther));
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, TOther>(this.DbContext, this.Visitor);
     }
-    #endregion
-
-    #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
     {
         base.WithTableInternal(subQuery);
@@ -1254,7 +1274,7 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
 
         this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
+        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     #endregion
 }
@@ -1301,15 +1321,20 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        return this;
+    }
+    #endregion
+
     #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, T6, TOther> WithTable<TOther>()
     {
         this.Visitor.AddTable(typeof(TOther));
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, TOther>(this.DbContext, this.Visitor);
     }
-    #endregion
-
-    #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, T6, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
     {
         base.WithTableInternal(subQuery);
@@ -1567,7 +1592,7 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
 
         this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
+        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     #endregion
 }
@@ -1614,15 +1639,20 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        return this;
+    }
+    #endregion
+
     #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithTable<TOther>()
     {
         this.Visitor.AddTable(typeof(TOther));
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.DbContext, this.Visitor);
     }
-    #endregion
-
-    #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
     {
         base.WithTableInternal(subQuery);
@@ -1880,7 +1910,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
 
         this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
+        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     #endregion
 }
@@ -1927,15 +1957,20 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        return this;
+    }
+    #endregion
+
     #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>()
     {
         this.Visitor.AddTable(typeof(TOther));
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.DbContext, this.Visitor);
     }
-    #endregion
-
-    #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
     {
         base.WithTableInternal(subQuery);
@@ -2193,7 +2228,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
 
         this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
+        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     #endregion
 }
@@ -2240,15 +2275,20 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        return this;
+    }
+    #endregion
+
     #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithTable<TOther>()
     {
         this.Visitor.AddTable(typeof(TOther));
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.DbContext, this.Visitor);
     }
-    #endregion
-
-    #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
     {
         base.WithTableInternal(subQuery);
@@ -2506,7 +2546,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
 
         this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
+        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     #endregion
 }
@@ -2553,15 +2593,20 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        return this;
+    }
+    #endregion
+
     #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithTable<TOther>()
     {
         this.Visitor.AddTable(typeof(TOther));
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.DbContext, this.Visitor);
     }
-    #endregion
-
-    #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
     {
         base.WithTableInternal(subQuery);
@@ -2819,7 +2864,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
 
         this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
+        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     #endregion
 }
@@ -2866,15 +2911,20 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        return this;
+    }
+    #endregion
+
     #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithTable<TOther>()
     {
         this.Visitor.AddTable(typeof(TOther));
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.DbContext, this.Visitor);
     }
-    #endregion
-
-    #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
     {
         base.WithTableInternal(subQuery);
@@ -3132,7 +3182,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
 
         this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
+        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     #endregion
 }
@@ -3179,15 +3229,20 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        return this;
+    }
+    #endregion
+
     #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithTable<TOther>()
     {
         this.Visitor.AddTable(typeof(TOther));
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.DbContext, this.Visitor);
     }
-    #endregion
-
-    #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
     {
         base.WithTableInternal(subQuery);
@@ -3445,7 +3500,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
 
         this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
+        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     #endregion
 }
@@ -3492,15 +3547,20 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        return this;
+    }
+    #endregion
+
     #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithTable<TOther>()
     {
         this.Visitor.AddTable(typeof(TOther));
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.DbContext, this.Visitor);
     }
-    #endregion
-
-    #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
     {
         base.WithTableInternal(subQuery);
@@ -3758,7 +3818,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
 
         this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
+        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     #endregion
 }
@@ -3805,15 +3865,20 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        return this;
+    }
+    #endregion
+
     #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithTable<TOther>()
     {
         this.Visitor.AddTable(typeof(TOther));
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.DbContext, this.Visitor);
     }
-    #endregion
-
-    #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
     {
         base.WithTableInternal(subQuery);
@@ -4071,7 +4136,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
 
         this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
+        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     #endregion
 }
@@ -4118,15 +4183,20 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        return this;
+    }
+    #endregion
+
     #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithTable<TOther>()
     {
         this.Visitor.AddTable(typeof(TOther));
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.DbContext, this.Visitor);
     }
-    #endregion
-
-    #region WithTable
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
     {
         base.WithTableInternal(subQuery);
@@ -4384,7 +4454,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
 
         this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
+        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     #endregion
 }
@@ -4427,6 +4497,14 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
         return this;
     }
     #endregion
@@ -4631,7 +4709,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
 
         this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.OrmProvider.NewFromCreated<TEntity>(this.DbContext, createVisitor);
+        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     #endregion
 }

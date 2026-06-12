@@ -158,8 +158,8 @@ public interface IOrmProvider
 
     IIdentitiedCreated NewIdentitiedCreated(DbContext dbContext, ICreateVisitor visitor);
     ICreated NewCreated(DbContext dbContext, ICreateVisitor visitor);
-    IFromCreate NewFromCreated(DbContext dbContext, ICreateVisitor visitor);
-    IFromCreate<TEntity> NewFromCreated<TEntity>(DbContext dbContext, ICreateVisitor visitor);
+    IFromCreate NewFromCreate(DbContext dbContext, ICreateVisitor visitor);
+    IFromCreate<TEntity> NewFromCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor);
 
     IResultCommand<TResult> NewResultCreated<TResult>(DbContext dbContext, ICreateVisitor visitor);
     IBulkResultCommand<TResult> NewBulkResultCreated<TResult>(DbContext dbContext, ICreateVisitor visitor);

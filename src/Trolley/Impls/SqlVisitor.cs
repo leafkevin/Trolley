@@ -283,6 +283,13 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         tableSegment.TableSchema = tableSchema;
     }
+    public virtual void WithTableAliasTrailing(bool isIncludeMany, string rawSql)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+        var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
+        tableSegment.TableAliasTrailing = rawSql;
+    }
 
     public virtual void VisitAndSql(string whereSql, OperationType operationType = OperationType.None)
     {

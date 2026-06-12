@@ -22,6 +22,7 @@ public interface IDeleteVisitor : ICommandContext, IDisposable
     void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
     void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
+    void WithTableAliasTrailing(bool isIncludeMany, string rawSql);
 
     void AndBy(object whereObj);
     void AndById(object whereKey);

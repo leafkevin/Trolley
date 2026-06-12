@@ -52,6 +52,14 @@ public class Create : ICreate
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public virtual ICreate WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        return this;
+    }
+    #endregion
+
     #region WithBy
     public virtual IContinuedCreate WithBy(object insertObj)
     {

@@ -75,6 +75,15 @@ public interface IIncludableQuery<T, TMember> : IIncludableQueryBase, IQuery<T>
     new IIncludableQuery<T, TMember> UseTableSchema(string tableSchema);
     #endregion
 
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    new IIncludableQuery<T, TMember> WithTableAliasTrailing(string rawSql);
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 继续加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
@@ -162,6 +171,15 @@ public interface IIncludableQuery<T1, T2, TMember> : IIncludableQueryBase, IQuer
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, TMember> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    new IIncludableQuery<T1, T2, TMember> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -252,6 +270,15 @@ public interface IIncludableQuery<T1, T2, T3, TMember> : IIncludableQueryBase, I
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, TMember> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    new IIncludableQuery<T1, T2, T3, TMember> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -345,6 +372,15 @@ public interface IIncludableQuery<T1, T2, T3, T4, TMember> : IIncludableQueryBas
     new IIncludableQuery<T1, T2, T3, T4, TMember> UseTableSchema(string tableSchema);
     #endregion
 
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    new IIncludableQuery<T1, T2, T3, T4, TMember> WithTableAliasTrailing(string rawSql);
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 继续加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
@@ -435,6 +471,15 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, TMember> : IIncludableQuer
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    new IIncludableQuery<T1, T2, T3, T4, T5, TMember> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -530,6 +575,15 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IIncludable
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableSchema(string tableSchema);
     #endregion
 
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> WithTableAliasTrailing(string rawSql);
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 继续加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
@@ -622,6 +676,15 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : IInclud
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -719,6 +782,15 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : IIn
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableSchema(string tableSchema);
     #endregion
 
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> WithTableAliasTrailing(string rawSql);
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 继续加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
@@ -813,6 +885,15 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> :
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -912,6 +993,15 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMemb
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableSchema(string tableSchema);
     #endregion
 
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> WithTableAliasTrailing(string rawSql);
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 继续加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
@@ -1008,6 +1098,15 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -1109,6 +1208,15 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableSchema(string tableSchema);
     #endregion
 
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> WithTableAliasTrailing(string rawSql);
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 继续加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
@@ -1207,6 +1315,15 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -1310,6 +1427,15 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableSchema(string tableSchema);
     #endregion
 
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> WithTableAliasTrailing(string rawSql);
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 继续加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
@@ -1410,6 +1536,15 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象，带有导航属性</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回查询对象，带有导航属性</returns>
+    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region ThenInclude/ThenIncludeMany

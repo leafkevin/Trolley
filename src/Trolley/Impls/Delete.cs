@@ -44,6 +44,14 @@ public class Delete : Deleted, IDelete
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public virtual IDelete WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        return this;
+    }
+    #endregion
+
     #region Where
     public virtual IDelete WhereBy(object whereObj)
         => this.AndBy(whereObj);

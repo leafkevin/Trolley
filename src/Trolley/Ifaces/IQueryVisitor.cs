@@ -69,7 +69,7 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
     void UseUnionShardingTable();
     void UseTableSchema(bool isIncludeMany, string tableSchema);
-    void WithTableAliasTrailing(string rawSql);
+    void WithTableAliasTrailing(bool isIncludeMany, string rawSql);
 
     void From(char tableAsStart = 'a', params Type[] entityTypes);
     void AddTable(params Type[] entityTypes);
@@ -111,7 +111,7 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     void SelectDefault(Expression defaultExpr);
     void SelectRaw(Type targetType, string rawFields);
     void Select(Expression selectExpr);
-    void Select(string sqlFormat, Expression selectExpr = null); 
+    void Select(string sqlFormat, Expression selectExpr = null);
     void SelectTo(Type targetType, Expression specialMemberSelector = null);
 
     void Distinct();
