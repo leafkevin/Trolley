@@ -12,7 +12,7 @@ public static class Sql
     /// <param name="fields"></param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    public static T As<T>(this object fields) => throw new NotImplementedException();
+    //public static T As<T>(this object fields) => throw new NotImplementedException();
     /// <summary>
     /// 原始SQL，可以做任何代码片段，只能单个字段，不支持实体类型，如：
     /// Sql.Raw&lt;int&gt;("ROW_NUMBER() OVER(ORDER BY e.CREATE_TIME DESC) AS RowNumber")})
@@ -81,34 +81,7 @@ public static class Sql
     public static bool In<TElement>(TElement value, params TElement[] list) => throw new NotImplementedException();
     public static bool In<TElement>(TElement value, IEnumerable<TElement> list) => throw new NotImplementedException();
     public static bool In<TElement>(TElement value, IQuery<TElement> subQuery) => throw new NotImplementedException();
-    public static bool In<TElement>(TElement value, Func<IFromQuery, IQuery<TElement>> subQuery) => throw new NotImplementedException();
 
-    /// <summary>
-    /// 判断数据是否存在现有的子查询中，这个子查询对象必须是直接引用，不能做任何的引用外部变量的操作，如：
-    /// <code>
-    /// var myOrders = repository.From&lt;Order&gt;() ...
-    /// .Where(x =&gt; Sql.Exists&lt;Order&gt;(myOrders))
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TTarget"></typeparam>
-    /// <param name="subQuery">直接引用的子查询对象</param>
-    /// <param name="predicate">关联条件表达式</param>
-    /// <returns></returns>
-    /// <exception cref="NotImplementedException"></exception>
-    public static bool Exists<TTarget>(IQuery<TTarget> subQuery, Func<TTarget, bool> predicate) => throw new NotImplementedException();
-    /// <summary>
-    /// 判断数据是否存在子查询中，这个子查询对象可以是现有的子查询对象，也可以是新构造的子查询对象，如果引用现有子查询对象，请使用f =&gt; f.UseQuery()方法，如：
-    /// <code>
-    /// var myOrders = repository.From&lt;Order&gt;() ...
-    /// .Where(x =&gt; Sql.Exists&lt;Order&gt;(f =&lt; f.UseQuery(myOrders)))
-    /// .Where(x =&gt; Sql.Exists&lt;Order&gt;(f =&lt; f.UseQuery(myOrders).Where(t =&lt; t.Id == x.OrderId)))
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TTarget"></typeparam>
-    /// <param name="subQuery"></param>
-    /// <returns></returns>
-    /// <exception cref="NotImplementedException"></exception>
-    public static bool Exists<TTarget>(Func<IFromQuery, IQuery<TTarget>> subQuery) => throw new NotImplementedException();
     public static bool Exists<T>(Func<T, bool> predicate) => throw new NotImplementedException();
     public static bool Exists<T1, T2>(Func<T1, T2, bool> predicate) => throw new NotImplementedException();
     public static bool Exists<T1, T2, T3>(Func<T1, T2, T3, bool> predicate) => throw new NotImplementedException();
@@ -116,22 +89,22 @@ public static class Sql
     public static bool Exists<T1, T2, T3, T4, T5>(Func<T1, T2, T3, T4, T5, bool> predicate) => throw new NotImplementedException();
     public static bool Exists<T1, T2, T3, T4, T5, T6>(Func<T1, T2, T3, T4, T5, T6, bool> predicate) => throw new NotImplementedException();
 
-    public static PredicateBuilder<T> Where<T>() => new PredicateBuilder<T>();
-    public static PredicateBuilder<T1, T2> Where<T1, T2>() => new PredicateBuilder<T1, T2>();
-    public static PredicateBuilder<T1, T2, T3> Where<T1, T2, T3>() => new PredicateBuilder<T1, T2, T3>();
-    public static PredicateBuilder<T1, T2, T3, T4> Where<T1, T2, T3, T4>() => new PredicateBuilder<T1, T2, T3, T4>();
-    public static PredicateBuilder<T1, T2, T3, T4, T5> Where<T1, T2, T3, T4, T5>() => new PredicateBuilder<T1, T2, T3, T4, T5>();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6> Where<T1, T2, T3, T4, T5, T6>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6>();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7> Where<T1, T2, T3, T4, T5, T6, T7>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7>();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8> Where<T1, T2, T3, T4, T5, T6, T7, T8>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8>();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9> Where<T1, T2, T3, T4, T5, T6, T7, T8, T9>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9>();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Where<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Where<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Where<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Where<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Where<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Where<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Where<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>();
+    public static IQuery<T> From<T>() => throw new NotImplementedException();
+    public static IQuery<T1, T2> From<T1, T2>() => throw new NotImplementedException();
+    public static IQuery<T1, T2, T3> From<T1, T2, T3>() => throw new NotImplementedException();
+    public static IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>() => throw new NotImplementedException();
+    public static IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>() => throw new NotImplementedException();
+    public static IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>() => throw new NotImplementedException();
+    public static IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>() => throw new NotImplementedException();
+    public static IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>() => throw new NotImplementedException();
+    public static IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>() => throw new NotImplementedException();
+    public static IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>() => throw new NotImplementedException();
+    public static IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>() => throw new NotImplementedException();
+    public static IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>() => throw new NotImplementedException();
+    public static IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>() => throw new NotImplementedException();
+    public static IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>() => throw new NotImplementedException();
+    public static IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>() => throw new NotImplementedException();
+    public static IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>() => throw new NotImplementedException();
 
 
     public static IWindowFunction<int> Rank() => throw new NotImplementedException();

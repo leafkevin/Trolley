@@ -1501,13 +1501,15 @@ public sealed class DbContext
     #endregion
 
     #region Sharding
-    public (string, List<SqlFieldSegment>) BuildSql(IQueryVisitor visitor)
+    public (string, List<ReaderField>) BuildSql(IQueryVisitor visitor)
     {
         var sql = visitor.BuildSql(true, out var readerFields);
-        if (visitor.IsNeedFormatShardingTables)
+        if (visitor.IsManyShardingTables)
+        {
             sql = this.BuildShardingTablesSqlByFormat(visitor as SqlVisitor, sql, visitor.ShardingTableJointMark);
-        if (visitor.IsNeedUnionShardingTables)
-            sql = visitor.BuildShardingSql(sql);
+            if (visitor.IsNeedUnionShardingTables)
+                sql = visitor.BuildShardingSql(sql);
+        }
         return (sql, readerFields);
     }
     public string BuildScalarShardingSql(IQueryVisitor visitor, string rawSql)

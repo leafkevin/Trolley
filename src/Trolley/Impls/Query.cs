@@ -158,6 +158,14 @@ public class QueryBase : QueryInternal, IQueryBase
     }
     #endregion
 
+    #region ToExistsSql
+    public bool ToExistsSql() => true;
+    #endregion
+
+    #region ToInSql
+    public bool ToInSql<TField>(TField fieldExpr) => true;
+    #endregion
+
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {

@@ -56,11 +56,11 @@ public interface IUpdate
 
     #region WithTableAliasTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回更新对象</returns>
-    IUpdate WithTableAliasTrailing(bool isIncludeMany, string rawSql);
+    IUpdate WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region Set
@@ -126,7 +126,7 @@ public interface IUpdated
 
     #region WithRawSql
     /// <summary>
-    /// 在最前面添加原始SQL片段，rawSql可以是任意SQL片段，如：polardb-x数据库，.WithLeadingSql("/*+TDDL:CMD_EXTRA(TTL_FORBID_DROP_TTL_TBL_WITH_ARC_CCI=false)*/")
+    /// 在最前面添加原始SQL片段，rawSql可以是任意SQL片段
     /// </summary>
     /// <param name="rawSql">原始SQL片</param>
     /// <returns>返回删除对象</returns>

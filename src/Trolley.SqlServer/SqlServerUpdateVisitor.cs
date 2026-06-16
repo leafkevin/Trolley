@@ -475,7 +475,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                 {
                     var memberInfo = newExpr.Members[i];
                     var fieldSqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = newExpr.Arguments[i] });
-                    this.GetQuotedValue(fieldSqlSegment, true);
+                    this.WrapSql(fieldSqlSegment, true);
                     if (fieldSqlSegment.IsConstant || fieldSqlSegment.IsVariable || fieldSqlSegment.HasParameter || fieldSqlSegment.IsExpression
                         || fieldSqlSegment.IsMethodCall || fieldSqlSegment.FromMember != null && fieldSqlSegment.FromMember.Name != memberInfo.Name)
                         fieldSqlSegment.IsNeedAlias = true;
@@ -503,7 +503,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                 var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
                 var memberInfo = memberAssignment.Member;
                 var fieldSqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberAssignment.Expression });
-                this.GetQuotedValue(fieldSqlSegment, true);
+                this.WrapSql(fieldSqlSegment, true);
                 if (fieldSqlSegment.IsConstant || fieldSqlSegment.IsVariable || fieldSqlSegment.HasParameter || fieldSqlSegment.IsExpression
                     || fieldSqlSegment.IsMethodCall || fieldSqlSegment.FromMember != null && fieldSqlSegment.FromMember.Name != memberInfo.Name)
                     fieldSqlSegment.IsNeedAlias = true;
@@ -595,7 +595,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                 {
                     var memberExpr = fieldsSelector.Body as MemberExpression;
                     var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberExpr });
-                    this.GetQuotedValue(sqlSegment, true);
+                    this.WrapSql(sqlSegment, true);
                     sqlSegment.TargetMember = memberExpr.Member;
                     sqlSegment.SegmentType = memberExpr.Type;
                     builder.Append(sqlSegment.Body);
@@ -611,7 +611,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                 {
                     var memberInfo = newExpr.Members[i];
                     var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = newExpr.Arguments[i] });
-                    this.GetQuotedValue(sqlSegment, true);
+                    this.WrapSql(sqlSegment, true);
                     sqlSegment.TargetMember = memberInfo;
                     sqlSegment.SegmentType = memberInfo.GetMemberType();
                     if (i > 0) builder.Append(',');
@@ -630,7 +630,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
 
                     var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
                     var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberAssignment.Expression });
-                    this.GetQuotedValue(sqlSegment, true);
+                    this.WrapSql(sqlSegment, true);
                     sqlSegment.TargetMember = memberAssignment.Member;
                     sqlSegment.SegmentType = memberAssignment.Member.GetMemberType();
                     if (i > 0) builder.Append(',');

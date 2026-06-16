@@ -65,7 +65,7 @@ public class MySqlDeleteVisitor : DeleteVisitor
                 {
                     var memberExpr = fieldsSelector.Body as MemberExpression;
                     var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberExpr });
-                    this.GetQuotedValue(sqlSegment, true);
+                    this.WrapSql(sqlSegment, true);
                     sqlSegment.TargetMember = memberExpr.Member;
                     sqlSegment.SegmentType = memberExpr.Type;
                     builder.Append(sqlSegment.Body);
@@ -81,7 +81,7 @@ public class MySqlDeleteVisitor : DeleteVisitor
                 {
                     var memberInfo = newExpr.Members[i];
                     var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = newExpr.Arguments[i] });
-                    this.GetQuotedValue(sqlSegment, true);
+                    this.WrapSql(sqlSegment, true);
                     sqlSegment.TargetMember = memberInfo;
                     sqlSegment.SegmentType = memberInfo.GetMemberType();
                     if (i > 0) builder.Append(',');
@@ -100,7 +100,7 @@ public class MySqlDeleteVisitor : DeleteVisitor
 
                     var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
                     var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberAssignment.Expression });
-                    this.GetQuotedValue(sqlSegment, true);
+                    this.WrapSql(sqlSegment, true);
                     sqlSegment.TargetMember = memberAssignment.Member;
                     sqlSegment.SegmentType = memberAssignment.Member.GetMemberType();
                     if (i > 0) builder.Append(',');

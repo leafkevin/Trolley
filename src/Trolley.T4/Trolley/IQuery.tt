@@ -782,6 +782,28 @@ public interface IQuery<T> : IQueryBase
     IQuery<T> WithTrailingSql(string rawSql);
     #endregion
 
+    #region ToExistsSql
+    /// <summary>
+    /// 将查询对象转换为EXISTS SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
+    /// .Where(f =&gt; Sql.From&lt;User&gt;().Where(x =&gt; x.Id == f.UserId).ToExistsSql())，
+    /// 生成SQL: a WHERE EXISTS (SELECT 1 FROM `sys_user` b WHERE b.`UserId`=b.`UserId`)
+    /// </summary>
+    /// <returns>返回Predicate表达式</returns>
+    bool ToExistsSql();
+    #endregion
+
+    #region ToInSql
+    /// <summary>
+    /// 将查询对象转换为IN SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
+    /// .Where(f =&gt; Sql.From&lt;User&gt;().Select(x =&gt; x.Id).ToInSql(f.UserId))，
+    /// 生成SQL: a WHERE a.`UserId` IN (SELECT x.`Id` FROM `sys_user` x)
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <returns>返回Predicate表达式</returns>
+    bool ToInSql<TField>(TField fieldExpr);
+    #endregion
+
     #region Count
     /// <summary>
     /// 返回某个字段的int类型数据条数，如：
@@ -1473,6 +1495,16 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectTo<TTarget>(Expression<Func<<#=tables#>, TTarget>> specialMemberSelector = null);
+    #endregion
+
+    #region ToExistsSql
+    /// <summary>
+    /// 将查询对象转换为EXISTS SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
+    /// .Where(f =&gt; Sql.From&lt;User&gt;().Where(x =&gt; x.Id == f.UserId).ToExistsSql())，
+    /// 生成SQL: a WHERE EXISTS (SELECT 1 FROM `sys_user` b WHERE b.`UserId`=b.`UserId`)
+    /// </summary>
+    /// <returns>返回Predicate表达式</returns>
+    bool ToExistsSql();
     #endregion
 
     #region Count

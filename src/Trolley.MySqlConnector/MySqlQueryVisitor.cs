@@ -226,7 +226,7 @@ public class MySqlQueryVisitor : QueryVisitor
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         tableSegment.TableSchema = tableSchema;
     }
-    public override SqlFieldSegment VisitGroupConcatMethodCall(SqlFieldSegment sqlSegment)
+    public override SqlSegment VisitGroupConcatMethodCall(SqlSegment sqlSegment)
     {
         var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
         var currentExpr = methodCallExpr.Object;
@@ -241,13 +241,13 @@ public class MySqlQueryVisitor : QueryVisitor
         var builder = new StringBuilder();
         bool hasOrder = false, hasDistinct = false;
         string fieldsSql = null, separator = null, orderBySql = null;
-        SqlFieldSegment fieldsSegment = null;
+        SqlSegment fieldsSegment = default;
         while (callStack.TryPop(out methodCallExpr))
         {
             switch (methodCallExpr.Method.Name)
             {
                 case "GroupConcat":
-                    fieldsSegment = this.Visit(new SqlFieldSegment { Expression = methodCallExpr.Arguments[0] });
+                    fieldsSegment = this.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                     this.AddVisitedFieldsSqlWithoutAlias(builder, fieldsSegment);
                     fieldsSql = builder.ToString();
                     builder.Clear();
@@ -255,14 +255,14 @@ public class MySqlQueryVisitor : QueryVisitor
                         separator = this.Evaluate<string>(methodCallExpr.Arguments[1]);
                     break;
                 case "OrderBy":
-                    fieldsSegment = this.Visit(new SqlFieldSegment { Expression = methodCallExpr.Arguments[0] });
+                    fieldsSegment = this.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                     if (hasOrder) builder.Append(',');
                     else builder.Append("ORDER BY ");
                     this.AddVisitedFieldsSqlWithoutAlias(builder, fieldsSegment);
                     hasOrder = true;
                     break;
                 case "OrderByDescending":
-                    fieldsSegment = this.Visit(new SqlFieldSegment { Expression = methodCallExpr.Arguments[0] });
+                    fieldsSegment = this.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                     if (hasOrder) builder.Append(',');
                     else builder.Append("ORDER BY ");
                     this.AddVisitedFieldsSqlWithoutAlias(builder, fieldsSegment, " DESC");
@@ -286,6 +286,6 @@ public class MySqlQueryVisitor : QueryVisitor
         builder.Clear();
         return sqlSegment.Change(fieldsSql, false, true);
     }
-    public override SqlFieldSegment VisitStringAggMethodCall(SqlFieldSegment sqlSegment)
+    public override SqlSegment VisitStringAggMethodCall(SqlSegment sqlSegment)
         => throw new NotSupportedException("不支持的方法调用，请考虑使用Sql.GroupConcat方法");
 }

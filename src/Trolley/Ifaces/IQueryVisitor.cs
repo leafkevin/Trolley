@@ -21,7 +21,7 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     /// IncludeMany表，第二次执行时的参数列表，通常是Filter中使用的参数
     /// </summary>
     IDataParameterCollection NextDbParameters { get; set; }
-    List<SqlFieldSegment> ReaderFields { get; set; }
+    List<ReaderField> ReaderFields { get; set; }
 
     StringBuilder WhereBuilder { get; }
     List<TableSegment> IncludeTables { get; set; }
@@ -49,19 +49,22 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     int PageNumber { get; }
     int PageSize { get; }
     bool IsNeedCommandTableAlias { get; set; }
-    bool IsNeedFormatShardingTables { get; }
-    bool IsNeedUnionShardingTables { get; }
     bool IsManyShardingTables { get; }
+    /// <summary>
+    /// 当有多个分表时，当有GROUP BY/ORDER BY/LIMIT/SUM/AVG/MAX/MIN等操作时，就需要UNION多个分表查询结果，
+    /// 在最外层再进行一次GROUP BY/ORDER BY/LIMIT、SUM/AVG/MAX/MIN等操作
+    /// </summary>
+    bool IsNeedUnionShardingTables { get; }
     string AggFieldAlias { get; set; }
     List<TableSegment> ShardingTables { get; set; }
     string ShardingTableJointMark { get; set; }
     bool IsNeedPaging { get; set; }
     bool HasAggFields { get; set; }
 
-    string BuildSql(bool isBuildCteSql, out List<SqlFieldSegment> readerFields);
+    string BuildSql(bool isBuildCteSql, out List<ReaderField> readerFields);
     string BuildCommandSql(Type entityType, out IDataParameterCollection dbParameters);
     string BuildShardingSql(string formatSql);
-    string BuildCteTableSql(string tableName, out List<SqlFieldSegment> readerFields);
+    string BuildCteTableSql(string tableName, out List<ReaderField> readerFields);
 
     void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
     void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
@@ -74,7 +77,6 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     void From(char tableAsStart = 'a', params Type[] entityTypes);
     void AddTable(params Type[] entityTypes);
     TableSegment AddTable(TableSegment tableSegment);
-    TableSegment AddJoinTable(Type entityType, string joinType = null, TableType tableType = TableType.Entity, string body = null, List<SqlFieldSegment> readerFields = null);
     TableSegment UseQuery(Type targetType, IQuery subQuery, bool isCopyRefParameters);
     TableSegment UseNewQuery(Type targetType, Expression subQueryExpr, bool isFirstTable);
 
@@ -119,7 +121,6 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     void Skip(int skip);
     void Take(int limit);
     void AsCteTable(Type targetType, string tableName);
-    void AddSelectElement(Expression elementExpr, MemberInfo memberInfo, SqlFieldSegment sqlSegment);
     void CopyShardingFromQueryVisitor(IQueryVisitor visitor);
 
     void WithLeadingSql(string rawSql);

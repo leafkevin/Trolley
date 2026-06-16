@@ -146,7 +146,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         this.AddSelectFieldsSql(builder, this.ReaderFields);
         //TODO:需要重新审视一下逻辑
-        if (this.IsManyShardingTables && this.IsNeedFormatShardingTables && this.AggFieldAlias != null)
+        if (this.IsManyShardingTables && this.IsManyShardingTables && this.AggFieldAlias != null)
             builder.Append($" AS {this.AggFieldAlias},COUNT(*) AS AVG_COUNT");
 
         string selectSql = null;
@@ -340,7 +340,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
 
         this.AddSelectFieldsSql(builder, this.ReaderFields);
-        if (this.IsManyShardingTables && this.IsNeedFormatShardingTables && this.AggFieldAlias != null)
+        if (this.IsManyShardingTables && this.IsManyShardingTables && this.AggFieldAlias != null)
             builder.Append($" AS {this.AggFieldAlias},COUNT(*) AS AVG_COUNT");
 
         string selectSql = null;
@@ -1198,10 +1198,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 foreach (var argumentExpr in newExpr.Arguments)
                 {
                     var memberInfo = newExpr.Members[index];
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
-                    if (builder.Length > 0)
-                        builder.Append(',');
-                    var fieldName = sqlSegment.Value.ToString();
+                    var sqlSegment = this.Visit(new SqlSegment { Expression = argumentExpr });
+                    var fieldName = this.WrapSql(sqlSegment);
+                    if (builder.Length > 0) builder.Append(',');
                     builder.Append(fieldName);
                     this.GroupByFields.Add(new ReaderField
                     {
@@ -1221,8 +1220,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             case ExpressionType.MemberAccess:
                 {
                     var memberExpr = lambdaExpr.Body as MemberExpression;
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberExpr });
-                    var fieldName = sqlSegment.Value.ToString();
+                    var sqlSegment = this.Visit(new SqlSegment { Expression = memberExpr });
+                    var fieldName = this.WrapSql(sqlSegment);
                     this.GroupByFields.Add(new ReaderField
                     {
                         FieldType = SqlFieldType.Field,
@@ -1281,11 +1280,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         else
                         {
                             var memberInfo = newExpr.Members[index];
-                            var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
+                            var sqlSegment = this.Visit(new SqlSegment { Expression = argumentExpr });
                             this.AddOrderByField(builder, new ReaderField
                             {
                                 FieldType = SqlFieldType.Field,
-                                Value = sqlSegment.Value
+                                Value = this.WrapSql(sqlSegment)
                             }, orderType);
                         }
                         index++;
@@ -1308,21 +1307,21 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     }
                     else
                     {
-                        var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberExpr });
+                        var sqlSegment = this.Visit(new SqlSegment { Expression = memberExpr });
                         this.AddOrderByField(builder, new ReaderField
                         {
                             FieldType = SqlFieldType.Field,
-                            Value = sqlSegment.Value
+                            Value = this.WrapSql(sqlSegment)
                         }, orderType);
                     }
                     break;
                 default:
                     {
-                        var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = expr });
+                        var sqlSegment = this.Visit(new SqlSegment { Expression = expr });
                         this.AddOrderByField(builder, new ReaderField
                         {
                             FieldType = SqlFieldType.Field,
-                            Value = sqlSegment.Value
+                            Value = this.WrapSql(sqlSegment)
                         }, orderType);
                     }
                     break;
@@ -1378,7 +1377,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //会有延迟成员访问，静态成员访问，还有方法调用等访问，所以需要VisitAndDeferred
         //延迟方法调用，参数可能有多个，返回的ReaderField只有一个
         //不一定有成员名称，无需设置TargetMember，如：.Select(f => f.Age / 10 * 10)
-        var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = toTargetExpr.Body });
+        var sqlSegment = this.Visit(new SqlSegment { Expression = toTargetExpr.Body });
         switch (sqlSegment.SqlType)
         {
             //成员访问
@@ -1405,7 +1404,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             default:
                 //常量、变量、表达式、方法调用、静态成员访问、原始SQL、延迟属性、延迟方法调用等场景
                 //原始SQL，当个字段当作方法调用处理
-                var wrapSql = this.GetQuotedValue(sqlSegment, true);
+                var wrapSql = this.WrapSql(sqlSegment, true);
                 this.ReaderFields = [new ReaderField
                 {
                     FieldType = SqlFieldType.Expression,
@@ -1422,7 +1421,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         //单值操作，SELECT COUNT(DISTINCT b.Id),MAX(b.Amount),COUNT(1)等
         var readerField = this.ReaderFields[0];
-        if (this.IsNeedFormatShardingTables && this.AggFieldAlias == "AVG_VALUE")
+        if (this.IsManyShardingTables && this.AggFieldAlias == "AVG_VALUE")
             readerField.Value = $"SUM({readerField.Value})";
         //当有多分表并且是AVG场景时，UNION之后，再做AVG操作
         else readerField.Value = string.Format(sqlFormat, readerField.Value);
@@ -1437,7 +1436,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             this.InitTableAlias(lambdaExpr);
             if (lambdaExpr.Body.NodeType == ExpressionType.MemberInit)
             {
-                var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = lambdaExpr.Body });
+                var sqlSegment = this.Visit(new SqlSegment { Expression = lambdaExpr.Body });
                 //特殊的已经确定的列
                 this.ReaderFields = sqlSegment.Fields;
             }
@@ -1469,7 +1468,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         this.IsSelect = false;
     }
-    public virtual bool TryFindReaderField(MemberInfo memberInfo, out SqlSegment readerField)
+    public virtual bool TryFindReaderField(MemberInfo memberInfo, out ReaderField readerField)
     {
         foreach (var tableSegment in this.Tables)
         {
@@ -1479,12 +1478,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         readerField = null;
         return false;
     }
-    public virtual bool TryFindReaderField(TableSegment tableSegment, MemberInfo memberInfo, out SqlSegment readerField)
+    public virtual bool TryFindReaderField(TableSegment tableSegment, MemberInfo memberInfo, out ReaderField readerField)
     {
         readerField = null;
         if (tableSegment.Fields != null)
         {
-            readerField = tableSegment.Fields.Find(f => f.FromMember.Name == memberInfo.Name);
+            readerField = tableSegment.Fields.Find(f => f.TargetMember.Name == memberInfo.Name);
             if (readerField == null) return false;
             readerField.TargetMember = memberInfo;
         }
@@ -1496,18 +1495,15 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             Type expectType = null;
             if (segmentType.IsEnumType(out var underlyingType, out _))
                 expectType = underlyingType;
-            readerField = new SqlSegment
+            readerField = new ReaderField
             {
                 FieldType = SqlFieldType.Field,
-                HasField = true,
-                FromMember = memberMapper.Member,
                 TargetMember = memberInfo,
-                SegmentType = segmentType,
-                ExpectType = expectType,
+                ReaderType = segmentType,
                 NativeDbType = memberMapper.NativeDbType,
                 MappedTargetType = memberMapper.MappedTargetType,
                 TypeHandler = memberMapper.TypeHandler,
-                Body = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(memberMapper.FieldName)
+                Value = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(memberMapper.FieldName)
             };
         }
         return true;
@@ -1724,7 +1720,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //private Order order; Where(f=>f.OrderId==this.Order.Id); this.Order.Id
         //var orderId=10; Select(f=>new {OrderId=orderId,...}
         //Select(f=>new {OrderId=this.Order.Id, ...}
-        return sqlSegment.Change(ValueEvalutor.Evaluate(memberExpr), SqlType.Variable);
+        var value = ValueEvalutor.Evaluate(memberExpr);
+        if (value == null) return SqlSegment.Null;
+        return sqlSegment.Change(value, SqlType.Variable);
     }
     public override SqlSegment VisitNew(SqlSegment sqlSegment)
     {
@@ -1742,7 +1740,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             this.IsSelectMember = false;
             return sqlSegment.Change(readerFields, SqlType.ReaderFields);
         }
-        return this.Evaluate(sqlSegment);
+        var sqlType = newExpr.HasVariable() ? SqlType.Variable : SqlType.Constant;
+        return sqlSegment.Change(ValueEvalutor.Evaluate(newExpr), sqlType);
     }
     public override SqlSegment VisitMemberInit(SqlSegment sqlSegment)
     {
@@ -1763,7 +1762,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             this.IsSelectMember = false;
             return sqlSegment.Change(readerFields, SqlType.ReaderFields);
         }
-        return this.Evaluate(sqlSegment);
+        var sqlType = memberInitExpr.HasVariable() ? SqlType.Variable : SqlType.Constant;
+        return sqlSegment.Change(ValueEvalutor.Evaluate(memberInitExpr), sqlType);
     }
     public virtual void AsCteTable(Type targetType, string tableName)
     {
@@ -1808,16 +1808,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             case ExpressionType.AndAlso:
             case ExpressionType.OrElse:
                 {
-                    var trueExpr = this.OrmProvider.GetQuotedValue(typeof(bool), true);
-                    var falseExpr = this.OrmProvider.GetQuotedValue(typeof(bool), false);
-                    var newFieldSegment = this.VisitAndDeferred(new SqlSegment { Expression = elementExpr });
-                    var boolExpr = this.GetQuotedValue(newFieldSegment, false);
+                    sqlSegment = this.Visit(new SqlSegment { Expression = elementExpr });
                     readerFields = [new ReaderField
                     {
                         //当作非字段处理
                         FieldType = SqlFieldType.Expression,
                         ReaderType = memberInfo.GetMemberType(),
-                        Value = $"(CASE WHEN {boolExpr} THEN {trueExpr} ELSE {falseExpr} END)",
+                        Value = this.WrapSql(sqlSegment, true),
                         TargetMember = memberInfo
                     }];
                 }
@@ -1827,7 +1824,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //.Select((x, y) => new { MaxValue = int.MaxValue, x.Seller, x.Buyer, Now = DateTime.UtcNow })
                 //.SelectTo((a, b...) => new DTO{ ActivityTypeEnum = this.GetEmnuName(f.ActivityType) })
                 //会有延迟成员访问，静态成员访问，还有方法调用等访问，所以需要VisitAndDeferred
-                sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = elementExpr });
+                sqlSegment = this.Visit(new SqlSegment { Expression = elementExpr });
+                var wrapSql = this.WrapSql(sqlSegment, true);
                 switch (sqlSegment.SqlType)
                 {
                     //成员访问
@@ -1839,7 +1837,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             MappedTargetType = sqlSegment.MappedTargetType,
                             TypeHandler = sqlSegment.TypeHandler,
                             FieldName = sqlSegment.FieldName,
-                            Value = sqlSegment.Value,
+                            Value = wrapSql,
                             TargetMember = memberInfo
                         }];
                         break;
@@ -1853,7 +1851,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     default:
                         //常量、变量、表达式、方法调用、静态成员访问、原始SQL、延迟属性、延迟方法调用等场景
                         //原始SQL，当个字段当作方法调用处理
-                        var wrapSql = this.GetQuotedValue(sqlSegment, true);
                         readerFields = [new ReaderField
                         {
                             FieldType = SqlFieldType.Expression,
@@ -1956,14 +1953,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         {
                             if (index > 0) builder.Append(',');
                             //TODO: 只有参数字段，不做数据库查询，否则，才使用参数
-                            var body = this.GetQuotedValue(readerField);
+                            var body = readerField.ToString();
                             //在前面select时，有可能是多分表并且是AVG操作时，没有包裹AVG函数，现在确认不是多分表，需要加上AVG函数包裹
-                            if (this.IsNeedFormatShardingTables && this.AggFieldAlias == "AVG_VALUE" && !this.IsManyShardingTables)
+                            if (this.IsManyShardingTables && this.AggFieldAlias == "AVG_VALUE" && !this.IsManyShardingTables)
                                 body = $"AVG({body})";
                             builder.Append(body);
                             //生成SQL的时候，才加上AS别名
-                            //if (this.IsNeedAlias(readerField))
-                            //    builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
+                            if (this.IsNeedAlias(readerField))
+                                builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
                         }
                         break;
                 }
@@ -1977,21 +1974,26 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             {
                 case SqlFieldType.Field:
                     //不引用任何字段，没必要访问数据库
-                    var body = readerField.Body;
-                    if (readerField.IsDeferredFields && readerField.Fields == null)
-                        break;
+                    var body = readerField.Value.ToString();
+                    if (readerField.IsDeferredFields)
+                    {
+                        if (readerField.Fields == null)
+                            break;
+                        this.AddSelectFieldsSql(builder, readerField.Fields);
+                    }
                     else
                     {
                         //TODO: 只有参数字段，不做数据库查询，否则，才使用参数
-                        body = this.GetQuotedValue(readerField);
+                        //TODO: 需要处理多分表时，AVG函数场景
+                        body = readerField.Value.ToString();
                         //在前面select时，有可能是多分表并且是AVG操作时，没有包裹AVG函数，现在确认不是多分表，需要加上AVG函数包裹
-                        if (this.IsNeedFormatShardingTables && this.AggFieldAlias == "AVG_VALUE" && !this.IsManyShardingTables)
+                        if (this.IsManyShardingTables && this.AggFieldAlias == "AVG_VALUE" && !this.IsManyShardingTables)
                             body = $"AVG({body})";
                     }
                     builder.Append(body);
                     break;
                 case SqlFieldType.RawSql:
-                    builder.Append(readerField.Body);
+                    builder.Append(readerField.Value.ToString());
                     break;
                 case SqlFieldType.Entity:
                     this.AddSelectFieldsSql(builder, readerField.Fields);
@@ -2000,12 +2002,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             }
         }
     }
-    public virtual void AddVisitedFieldsSqlWithoutAlias(StringBuilder builder, SqlSegment readerField, string suffix = null)
+    public virtual void AddVisitedFieldsSqlWithoutAlias(StringBuilder builder, ReaderField readerField, string suffix = null)
     {
         switch (readerField.FieldType)
         {
             case SqlFieldType.Entity:
-                var readerFields = readerField.Value as List<SqlSegment>;
+                var readerFields = readerField.Fields;
                 for (int i = 0; i < readerFields.Count; i++)
                 {
                     if (i > 0) builder.Append(',');
@@ -2013,7 +2015,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 }
                 break;
             default:
-                var body = this.GetQuotedValue(readerField);
+                var body = readerField.Value.ToString();
                 //CTE表字段是常量/变量/字段名称，都有可能和声明的字段不一致，所以需要获取CTE表的声明字段
                 //body里面的值，是原始的值或是字段名
                 if (readerField.TableSegment != null && readerField.TableSegment.TableType == TableType.CteSelfRef)
@@ -2072,7 +2074,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         queryVisitor.IncludeTables = this.IncludeTables;
         queryVisitor.RefQueries = this.RefQueries;
         queryVisitor.IsNeedUnionShardingTables = this.IsNeedUnionShardingTables;
-        queryVisitor.IsNeedFormatShardingTables = this.IsNeedFormatShardingTables;
+        queryVisitor.IsManyShardingTables = this.IsManyShardingTables;
         queryVisitor.IsManyShardingTables = this.IsManyShardingTables;
         queryVisitor.AggFieldAlias = this.AggFieldAlias;
         queryVisitor.HasAggFields = this.HasAggFields;

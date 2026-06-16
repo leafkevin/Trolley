@@ -2,8 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlTypes;
-using System.Drawing;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -74,7 +72,6 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
 
     public string ShardingTableJointMark { get; set; } = " UNION ALL ";
     public bool IsNeedUnionShardingTables { get; set; }
-    public bool IsNeedFormatShardingTables { get; set; }
     public bool IsManyShardingTables { get; set; }
 
     public string AggFieldAlias { get; set; }
@@ -119,7 +116,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 tableSegment.ShardingId = Guid.NewGuid().ToString("N");
                 this.ShardingTables.Add(tableSegment);
             }
-            this.IsNeedFormatShardingTables = true;
+            this.IsManyShardingTables = true;
         }
         //一个分表的，当作不分表处理
         else
@@ -127,7 +124,6 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             if (tableSegment.IsSharding) tableSegment.ShardingType = ShardingTableType.SingleTable;
             tableSegment.Body = tableNames[0];
         }
-        this.IsManyShardingTables = this.ShardingTables[0].ShardingType == ShardingTableType.MultiTable;
     }
     public void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues)
     {
@@ -162,8 +158,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             tableSegment.TableNames.AddRange(tableNames);
 
         //范围分表，都当作多分表处理，方便后续表映射
-        this.IsNeedFormatShardingTables = true;
-        this.IsManyShardingTables = this.ShardingTables[0].ShardingType == ShardingTableType.MultiTable;
+        this.IsManyShardingTables = true;
     }
     public void UseTableMap(TableShardingUsageMode usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter)
     {
@@ -185,7 +180,6 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             tableSegment.ShardingId = Guid.NewGuid().ToString("N");
             this.ShardingTables.Add(tableSegment);
         }
-        this.IsNeedFormatShardingTables = true;
     }
     public void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues)
     {
@@ -225,14 +219,13 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             }
             if (!tableSegment.TableNames.Contains(tableName))
                 tableSegment.TableNames.Add(tableName);
-            this.IsNeedFormatShardingTables = true;
+            this.IsManyShardingTables = true;
         }
         else
         {
             tableSegment.ShardingType = ShardingTableType.SingleTable;
             tableSegment.Body = tableName;
         }
-        this.IsManyShardingTables = this.ShardingTables[0].ShardingType == ShardingTableType.MultiTable;
     }
     /// <summary>
     /// 设置批量插入、更新操作时的分表名获取委托
@@ -331,15 +324,15 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         this.TailRawSql = rawSql;
     }
 
-    public virtual SqlSegment VisitAndDeferred(SqlSegment sqlSegment)
-    {
-        sqlSegment = this.Visit(sqlSegment);
-        if (!sqlSegment.HasDeferred)
-            return sqlSegment;
+    //public virtual SqlSegment VisitAndDeferred(SqlSegment sqlSegment)
+    //{
+    //    sqlSegment = this.Visit(sqlSegment);
+    //    if (!sqlSegment.HasDeferred)
+    //        return sqlSegment;
 
-        //处理HasValue !逻辑取反操作，这种情况下是一元操作
-        return this.VisitDeferredBoolConditional(sqlSegment, true, this.OrmProvider.GetQuotedValue(true), this.OrmProvider.GetQuotedValue(false));
-    }
+    //    //处理HasValue !逻辑取反操作，这种情况下是一元操作
+    //    return this.VisitDeferredBoolConditional(sqlSegment, true, this.OrmProvider.GetQuotedValue(true), this.OrmProvider.GetQuotedValue(false));
+    //}
     public virtual SqlSegment Visit(SqlSegment sqlSegment)
     {
         var result = sqlSegment;
@@ -426,6 +419,134 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             default: throw new NotSupportedException($"不支持的表达式操作，{sqlSegment.Expression}");
         }
         return result;
+    }
+    public virtual string WrapSql(SqlSegment sqlSegment, bool isNeedWrapExpr = false)
+    {
+        string wrapSql = null;
+        if (sqlSegment.SqlType > SqlType.Variable)
+            wrapSql = sqlSegment.Value.ToString();
+        else if (sqlSegment.IsFixedValue)
+        {
+            if (sqlSegment.IsTrue)
+                wrapSql = this.OrmProvider.GetQuotedValue(typeof(bool), sqlSegment.Value);
+            wrapSql = sqlSegment.Value.ToString();
+        }
+        else
+        {
+            //包装变量为参数，默认只要是变量就设置为参数，常量是否设置为参数由IsConstantParameterized、IsParameterized属性值决定
+            if (sqlSegment.SqlType == SqlType.Constant && sqlSegment.IsParameterized || sqlSegment.SqlType == SqlType.Variable)
+            {
+                //下面是处理参数
+                var dbParameters = this.DbParameters;
+                if (this.IsIncludeMany)
+                {
+                    this.NextDbParameters ??= new TheaDbParameterCollection();
+                    dbParameters = this.NextDbParameters;
+                }
+                var parameterName = sqlSegment.ParameterName ?? this.OrmProvider.ParameterPrefix + this.UserParameterPrefix + dbParameters.Count.ToString();
+                var dbFieldValue = sqlSegment.Value;
+                if (sqlSegment.MemberMapper != null)
+                {
+                    var memberMapper = sqlSegment.MemberMapper;
+                    if (memberMapper.TypeHandler != null)
+                    {
+                        //枚举类型或是有强制转换时，要取sqlSegment.ExpectType值
+                        //常量、方法调用、计算表达式时，sqlSegment.FromMember没有值，只能取Expression.Type值
+                        dbFieldValue = memberMapper.TypeHandler.ToFieldValue(dbFieldValue);
+                        dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
+                    }
+                    else
+                    {
+                        if (memberMapper.UnderlyingType.IsEnum)
+                            dbFieldValue = Enum.ToObject(memberMapper.UnderlyingType, dbFieldValue);
+                        var targetType = memberMapper.MappedTargetType;
+                        var segmentType = dbFieldValue.GetType();
+                        if (segmentType != targetType)
+                        {
+                            var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext.Options);
+                            dbFieldValue = valueGetter.Invoke(dbFieldValue);
+                        }
+                        dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
+                    }
+                }
+                else dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, dbFieldValue));
+                wrapSql = parameterName;
+            }
+            else wrapSql = this.OrmProvider.GetQuotedValue(sqlSegment.Value.GetType(), sqlSegment.Value);
+        }
+        //先处理延迟表达式操作
+        if (sqlSegment.HasDeferred)
+        {
+            var hasNot = sqlSegment.HasNotOperation(out var lastOperation);
+            if (lastOperation == DeferredOperation.IsNull)
+            {
+                if (hasNot) return $"{wrapSql} IS NOT NULL";
+                else return $"{wrapSql} IS NULL";
+            }
+            var rightSql = this.OrmProvider.GetQuotedValue(typeof(bool), !hasNot);
+            return $"{wrapSql}={rightSql}";
+        }
+        if (sqlSegment.SqlType == SqlType.Expression && isNeedWrapExpr)
+            return $"({wrapSql})";
+        return wrapSql;
+    }
+    public virtual string WrapParameterSql(SqlSegment sqlSegment)
+    {
+        string wrapSql = null;
+        //包装变量为参数，默认只要是变量就设置为参数，常量是否设置为参数由IsConstantParameterized、IsParameterized属性值决定
+        if (sqlSegment.IsNull) wrapSql = sqlSegment.Value.ToString();
+        else if (sqlSegment.SqlType == SqlType.Constant && sqlSegment.IsParameterized || sqlSegment.SqlType == SqlType.Variable)
+        {
+            //下面是处理参数
+            var dbParameters = this.DbParameters;
+            if (this.IsIncludeMany)
+            {
+                this.NextDbParameters ??= new TheaDbParameterCollection();
+                dbParameters = this.NextDbParameters;
+            }
+            var parameterName = sqlSegment.ParameterName ?? this.OrmProvider.ParameterPrefix + this.UserParameterPrefix + dbParameters.Count.ToString();
+            var dbFieldValue = sqlSegment.Value;
+            if (sqlSegment.MemberMapper != null)
+            {
+                var memberMapper = sqlSegment.MemberMapper;
+                if (memberMapper.TypeHandler != null)
+                {
+                    //枚举类型或是有强制转换时，要取sqlSegment.ExpectType值
+                    //常量、方法调用、计算表达式时，sqlSegment.FromMember没有值，只能取Expression.Type值
+                    dbFieldValue = memberMapper.TypeHandler.ToFieldValue(dbFieldValue);
+                    dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
+                }
+                else
+                {
+                    if (memberMapper.UnderlyingType.IsEnum)
+                        dbFieldValue = Enum.ToObject(memberMapper.UnderlyingType, dbFieldValue);
+                    var targetType = memberMapper.MappedTargetType;
+                    var segmentType = dbFieldValue.GetType();
+                    if (segmentType != targetType)
+                    {
+                        var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext.Options);
+                        dbFieldValue = valueGetter.Invoke(dbFieldValue);
+                    }
+                    dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
+                }
+            }
+            else dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, dbFieldValue));
+            wrapSql = parameterName;
+        }
+        else wrapSql = this.OrmProvider.GetQuotedValue(sqlSegment.Value.GetType(), sqlSegment.Value);
+        return wrapSql;
+    }
+    public virtual string WrapParameterSql(object value)
+    {
+        var dbParameters = this.DbParameters;
+        if (this.IsIncludeMany)
+        {
+            this.NextDbParameters ??= new TheaDbParameterCollection();
+            dbParameters = this.NextDbParameters;
+        }
+        var parameterName = this.OrmProvider.ParameterPrefix + this.UserParameterPrefix + dbParameters.Count.ToString();
+        dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, value));
+        return parameterName;
     }
     public virtual SqlSegment VisitUnary(SqlSegment sqlSegment)
     {
@@ -544,8 +665,8 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             rightSegment.TypeHandler = leftSegment.TypeHandler;
         }
 
-        string leftValue = this.GetQuotedValue(leftSegment);
-        string rightValue = this.GetQuotedValue(rightSegment);
+        string leftValue = this.WrapSql(leftSegment);
+        string rightValue = this.WrapSql(rightSegment);
         if (binaryExpr.NodeType == ExpressionType.Coalesce)
             return sqlSegment.Change($"{operators}({leftValue},{rightValue})", SqlType.Expression);
         return sqlSegment.Change($"{leftValue}{operators}{rightValue}", SqlType.Expression);
@@ -688,20 +809,30 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     {
         var newArrayExpr = sqlSegment.Expression as NewArrayExpression;
         var result = new List<object>();
+        var sqlType = SqlType.Constant;
         foreach (var elementExpr in newArrayExpr.Expressions)
         {
-            var elementSegment = new SqlSegment { Expression = elementExpr };
-            elementSegment = this.VisitAndDeferred(elementSegment);
+            var elementSegment = this.Visit(new SqlSegment { Expression = elementExpr });
+            if (elementSegment.IsNull) continue;
+
             result.Add(elementSegment.Value);
+            if (elementSegment.SqlType == SqlType.Variable)
+                sqlType = SqlType.Variable;
         }
+        if (result.Count == 0) return SqlSegment.Null;
         //走到这里肯定是常量，变量会走到成员访问
-        return sqlSegment.Change(result);
+        return sqlSegment.Change(result, sqlType);
     }
     public virtual SqlSegment VisitIndexExpression(SqlSegment sqlSegment)
     {
-        if (sqlSegment.Expression.HasParameter())
+        var indexExpr = sqlSegment.Expression as IndexExpression;
+        var visitor = new HasParameterVisitor();
+        visitor.Visit(indexExpr);
+        if (visitor.HasParameter)
             throw new NotSupportedException("索引表达式不支持Parameter访问操作");
-        return this.Evaluate(sqlSegment);
+        var sqlType = visitor.HasVariable ? SqlType.Variable : SqlType.Constant;
+        var result = ValueEvalutor.Evaluate(indexExpr);
+        return sqlSegment.Change(result, sqlType);
     }
     public virtual SqlSegment VisitConditional(SqlSegment sqlSegment)
     {
@@ -716,14 +847,24 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
 
         var ifTrueSegment = this.Visit(new SqlSegment { Expression = conditionalExpr.IfTrue });
         var ifFalseSegment = this.Visit(new SqlSegment { Expression = conditionalExpr.IfFalse });
-        string testValue = this.GetQuotedValue(sqlSegment);
-        string leftValue = this.GetQuotedValue(ifTrueSegment);
-        string rightValue = this.GetQuotedValue(ifFalseSegment);
+        string testValue = this.WrapSql(sqlSegment);
+        string leftValue = this.WrapSql(ifTrueSegment);
+        string rightValue = this.WrapSql(ifFalseSegment);
         var strExpression = $"CASE WHEN {testValue} THEN {leftValue} ELSE {rightValue} END";
         return sqlSegment.Change(strExpression, SqlType.Expression);
     }
     public virtual SqlSegment VisitListInit(SqlSegment sqlSegment)
-        => this.Evaluate(sqlSegment);
+    {
+        var listInitExpr = sqlSegment.Expression as ListInitExpression;
+        var visitor = new HasParameterVisitor();
+        visitor.Visit(listInitExpr);
+        if (visitor.HasParameter)
+            throw new NotSupportedException("集合初始化表达式不支持Parameter访问操作");
+
+        var sqlType = visitor.HasVariable ? SqlType.Variable : SqlType.Constant;
+        var result = ValueEvalutor.Evaluate(listInitExpr);
+        return sqlSegment.Change(result, sqlType);
+    }
     public virtual SqlSegment VisitTypeIs(SqlSegment sqlSegment)
     {
         var binaryExpr = sqlSegment.Expression as TypeBinaryExpression;
@@ -784,7 +925,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 else
                 {
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    sqlSegment.Change($"{this.GetQuotedValue(sqlSegment)} IS NULL", SqlType.Expression);
+                    sqlSegment.Change($"{this.WrapSql(sqlSegment)} IS NULL", SqlType.Expression);
                 }
                 break;
             case "ToParameter":
@@ -793,6 +934,10 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                 sqlSegment.IsParameterized = false;
                 break;
+            case "ToExistsSql":
+                break;
+            case "ToInSql":
+                break;
             case "In":
                 var elementType = methodCallExpr.Method.GetGenericArguments()[0];
                 var type = methodCallExpr.Arguments[1].Type;
@@ -800,16 +945,16 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 string inSql = null;
                 if (type.IsArray || typeof(IEnumerable<>).MakeGenericType(elementType).IsAssignableFrom(type))
                 {
-                    var rightSegment = this.VisitAndDeferred(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
+                    var rightSegment = this.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
                     if (rightSegment.IsNull)
-                        return sqlSegment.Change("1=0");
+                        return sqlSegment.Change("1=0", SqlType.Expression);
 
                     var enumerable = rightSegment.Value as IEnumerable;
                     var builder = new StringBuilder();
                     foreach (var item in enumerable)
                     {
                         if (builder.Length > 0) builder.Append(',');
-                        builder.Append(this.OrmProvider.GetQuotedValue(item));
+                        builder.Append(this.WrapParameterSql(item));
                     }
                     inSql = builder.ToString();
                 }
@@ -824,8 +969,8 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     }
                     (inSql, _, _) = this.VisitFromQuery(predicateExpr);
                 }
-                var fieldArgument = this.GetQuotedValue(fieldSegment);
-                if (sqlSegment.HasDeferredNot(out _))
+                var fieldArgument = this.WrapSql(fieldSegment);
+                if (sqlSegment.HasNotOperation(out _))
                     sqlSegment.Change($"{fieldArgument} NOT IN ({inSql})", SqlType.Expression);
                 else sqlSegment.Change($"{fieldArgument} IN ({inSql})", SqlType.Expression);
                 break;
@@ -899,8 +1044,8 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 }
                 else throw new NotSupportedException("不支持的repository.Exists/ExistsAsync表达式访问");
 
-                if (sqlSegment.HasDeferredNot(out _))
-                    sqlSegment.Change($"NOT EXISTS({existsSql})", SqlType.Expression);
+                if (sqlSegment.HasNotOperation(out _))
+                    sqlSegment.Change($"NOT EXISTS({existsSql})", SqlType.MethodCall);
                 else sqlSegment.Change($"EXISTS({existsSql})", SqlType.MethodCall);
                 break;
             case "Count":
@@ -1031,6 +1176,8 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         bool hasOrder = false;
         bool hasOver = false;
         var builder = new StringBuilder();
+        bool isAggField = false;
+        string aggFunc = null;
         while (callStack.TryPop(out methodCallExpr))
         {
             switch (methodCallExpr.Method.Name)
@@ -1114,86 +1261,52 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                         builder.Append($"COUNT({sqlSegment.Value})");
                     }
                     else builder.Append("COUNT(*)");
-                    sqlSegment.IsAggField = true;
-                    sqlSegment.AggFunc = "COUNT";
+                    isAggField = true;
+                    aggFunc = "COUNT";
                     this.HasAggFields = true;
                     break;
                 case "CountDistinct":
                 case "LongCountDistinct":
+                    //TODO:已知bug，分表后，count(distinct)，这个聚合结果是不准确的
+                    if (this.IsManyShardingTables)
+                        throw new NotSupportedException("在多分表场景下，Over方法不支持CountDistinct/LongCountDistinct方法，返回的结果可能不准确");
+
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     builder.Append($"COUNT(DISTINCT {sqlSegment.Value})");
-                    sqlSegment.IsAggField = true;
-                    //TODO:已知bug，分表后，count(distinct)，这个聚合结果是不准确的
-                    sqlSegment.AggFunc = "COUNT";
+                    isAggField = true;
+                    aggFunc = "COUNT";
                     this.HasAggFields = true;
                     break;
                 case "Sum":
-                    if (this.IsWhere || sqlSegment.IsNullFields)
-                    {
-                        sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                        builder.Append($"SUM({sqlSegment.Value})");
-                        sqlSegment.IsAggField = true;
-                        sqlSegment.AggFunc = "SUM";
-                        this.HasAggFields = true;
-                    }
-                    else
-                    {
-                        var myMethodInfo = IsNullMethodInfo.MakeGenericMethod(methodCallExpr.Type);
-                        var nullValueExpr = Expression.Constant(Convert.ChangeType(0, methodCallExpr.Type), methodCallExpr.Type);
-                        var isNullCallExpr = Expression.Call(myMethodInfo, methodCallExpr, nullValueExpr);
-                        sqlSegment = this.Visit(sqlSegment.Next(isNullCallExpr));
-                    }
+                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                    builder.Append($"SUM({sqlSegment.Value})");
+                    isAggField = true;
+                    aggFunc = "SUM";
+                    this.HasAggFields = true;
                     break;
                 case "Avg":
-                    if (this.IsWhere || sqlSegment.IsNullFields)
-                    {
-                        sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                        builder.Append($"AVG({sqlSegment.Value})");
-                        sqlSegment.IsAggField = true;
-                        sqlSegment.AggFunc = "AVG";
-                        this.HasAggFields = true;
-                    }
-                    else
-                    {
-                        var myMethodInfo = IsNullMethodInfo.MakeGenericMethod(methodCallExpr.Type);
-                        var nullValueExpr = Expression.Constant(Convert.ChangeType(0, methodCallExpr.Type), methodCallExpr.Type);
-                        var isNullCallExpr = Expression.Call(myMethodInfo, methodCallExpr, nullValueExpr);
-                        sqlSegment = this.Visit(sqlSegment.Next(isNullCallExpr));
-                    }
+                    if (this.IsManyShardingTables)
+                        throw new NotSupportedException("在多分表场景下，Over方法不支持Avg方法，返回的结果可能不准确");
+
+                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                    builder.Append($"AVG({sqlSegment.Value})");
+                    isAggField = true;
+                    aggFunc = "AVG";
+                    this.HasAggFields = true;
                     break;
                 case "Max":
-                    if (this.IsWhere || sqlSegment.IsNullFields)
-                    {
-                        sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                        builder.Append($"MAX({sqlSegment.Value})");
-                        sqlSegment.IsAggField = true;
-                        sqlSegment.AggFunc = "MAX";
-                        this.HasAggFields = true;
-                    }
-                    else
-                    {
-                        var myMethodInfo = IsNullMethodInfo.MakeGenericMethod(methodCallExpr.Type);
-                        var nullValueExpr = Expression.Constant(Convert.ChangeType(0, methodCallExpr.Type), methodCallExpr.Type);
-                        var isNullCallExpr = Expression.Call(myMethodInfo, methodCallExpr, nullValueExpr);
-                        sqlSegment = this.Visit(sqlSegment.Next(isNullCallExpr));
-                    }
+                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                    builder.Append($"MAX({sqlSegment.Value})");
+                    isAggField = true;
+                    aggFunc = "MAX";
+                    this.HasAggFields = true;
                     break;
                 case "Min":
-                    if (this.IsWhere || sqlSegment.IsNullFields)
-                    {
-                        sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                        builder.Append($"MIN({sqlSegment.Value})");
-                        sqlSegment.IsAggField = true;
-                        sqlSegment.AggFunc = "MIN";
-                        this.HasAggFields = true;
-                    }
-                    else
-                    {
-                        var myMethodInfo = IsNullMethodInfo.MakeGenericMethod(methodCallExpr.Type);
-                        var nullValueExpr = Expression.Constant(Convert.ChangeType(0, methodCallExpr.Type), methodCallExpr.Type);
-                        var isNullCallExpr = Expression.Call(myMethodInfo, methodCallExpr, nullValueExpr);
-                        sqlSegment = this.Visit(sqlSegment.Next(isNullCallExpr));
-                    }
+                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                    builder.Append($"MIN({sqlSegment.Value})");
+                    isAggField = true;
+                    aggFunc = "MIN";
+                    this.HasAggFields = true;
                     break;
             }
         }
@@ -1217,7 +1330,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         var sqlSegment = this.VisitAndDeferred(this.CreateConditionSegment(conditionExpr));
         return sqlSegment.Value.ToString();
     }
-    public virtual (string, TableSegment, List<SqlSegment>) VisitFromQuery(Expression lambdaExpr, ICteQuery selfQueryObj = null)
+    public virtual (string, TableSegment, List<ReaderField>) VisitFromQuery(Expression lambdaExpr, ICteQuery selfQueryObj = null)
     {
         var myLambdaExpr = this.EnsureLambda(lambdaExpr);
         var currentExpr = myLambdaExpr.Body;
@@ -1238,7 +1351,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         string sql = null;
         Type entityType = null;
         TableSegment tableSegment = null;
-        List<SqlSegment> readyReaderFields = null;
+        List<ReaderField> readyReaderFields = null;
 
         //引用现有子查询对象
         if (currentExpr.NodeType == ExpressionType.MemberAccess
@@ -1599,58 +1712,6 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         sql = queryVisitor.BuildSql(false, out var readerFields);
         return (sql, tableSegment, readerFields);
     }
-    public virtual string GetQuotedValue(SqlSegment sqlSegment, bool isNeedExprWrap = false)
-    {
-        if (isNeedExprWrap && sqlSegment.SqlType == SqlType.Expression)
-            return $"({sqlSegment.Value})";
-        if (sqlSegment.SqlType > SqlType.Variable)
-            return sqlSegment.Value.ToString();
-
-        if (sqlSegment.SqlType == SqlType.Constant && !sqlSegment.IsParameterized)
-            return sqlSegment.Value.ToString();
-
-        if (sqlSegment.IsFixedValue)
-        {
-            if (sqlSegment.IsTrue)
-                return this.OrmProvider.GetQuotedValue(typeof(bool), sqlSegment.Value);
-            return sqlSegment.Value.ToString();
-        }
-        //下面是处理参数
-        var dbParameters = this.DbParameters;
-        if (this.IsIncludeMany)
-        {
-            this.NextDbParameters ??= new TheaDbParameterCollection();
-            dbParameters = this.NextDbParameters;
-        }
-        var parameterName = sqlSegment.ParameterName ?? this.OrmProvider.ParameterPrefix + this.UserParameterPrefix + dbParameters.Count.ToString();
-        var dbFieldValue = sqlSegment.Value;
-        if (sqlSegment.MemberMapper != null)
-        {
-            var memberMapper = sqlSegment.MemberMapper;
-            if (memberMapper.TypeHandler != null)
-            {
-                //枚举类型或是有强制转换时，要取sqlSegment.ExpectType值
-                //常量、方法调用、计算表达式时，sqlSegment.FromMember没有值，只能取Expression.Type值
-                dbFieldValue = memberMapper.TypeHandler.ToFieldValue(dbFieldValue);
-                dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
-            }
-            else
-            {
-                if (memberMapper.UnderlyingType.IsEnum)
-                    dbFieldValue = Enum.ToObject(memberMapper.UnderlyingType, dbFieldValue);
-                var targetType = memberMapper.MappedTargetType;
-                var segmentType = dbFieldValue.GetType();
-                if (segmentType != targetType)
-                {
-                    var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext.Options);
-                    dbFieldValue = valueGetter.Invoke(dbFieldValue);
-                }
-                dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
-            }
-        }
-        else dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, dbFieldValue));
-        return parameterName;
-    }
     //public virtual string GetQuotedValue(SqlSegment sqlSegment, bool isNeedExprWrap = false)
     //{
     //    //默认只要是变量就设置为参数
@@ -1918,10 +1979,33 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     public SqlSegment VisitDeferredBoolConditional(SqlSegment sqlSegment, bool isExpectBooleanType, string ifTrueValue, string ifFalseValue)
     {
         //处理HasValue !逻辑取反操作，这种情况下是一元操作
+
+        if (sqlSegment.HasNotOperation(out var lastOperation))
+        {
+            if (lastOperation == DeferredOperation.IsNull)
+            {
+                this.WrapValueSql(sqlSegment
+
+
+                  sqlSegment = sqlSegment.RemoveLastNotOperation();
+                isExpectBooleanType = true;
+            }
+            else if (lastOperation.OperationType == OperationType.Equal && lastOperation.Value == SqlSegment.Null)
+            {
+                sqlSegment = sqlSegment.RemoveLastEqualOperation();
+                isExpectBooleanType = true;
+            }
+            else if (lastOperation.OperationType == OperationType.NotEqual && lastOperation.Value == SqlSegment.Null)
+            {
+                sqlSegment = sqlSegment.RemoveLastNotEqualOperation();
+                isExpectBooleanType = true;
+            }
+        }
+
         int notIndex = 0;
         SqlSegment deferredSegment = null;
         //复杂bool条件判断，有IS NOT NULL, <> != 两种情况，只能在
-        while (sqlSegment.TryPop(out var deferredExpr))
+        while (sqlSegment.(out var deferredExpr))
         {
             switch (deferredExpr.OperationType)
             {
@@ -1946,7 +2030,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         {
             string leftArgument = sqlSegment.Body;
             if (sqlSegment.IsConstant || sqlSegment.IsVariable)
-                leftArgument = this.GetQuotedValue(sqlSegment);
+                leftArgument = this.WrapSql(sqlSegment);
             if (deferredSegment == SqlSegment.Null)
                 strExpression = $"{leftArgument} {strOperator} {deferredSegment.Body}";
             else strExpression = $"{leftArgument}{strOperator}{this.OrmProvider.GetQuotedValue(typeof(bool), deferredSegment.Value)}";
@@ -2448,8 +2532,8 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             var builder = new StringBuilder();
             foreach (var argsExpr in visitor.Members)
             {
-                var argumentSegment = this.VisitAndDeferred(new SqlSegment { Expression = argsExpr });
-                var fieldName = argumentSegment.Value.ToString();
+                var argumentSegment = this.Visit(new SqlSegment { Expression = argsExpr });
+                var fieldName = this.WrapSql(argumentSegment);
                 readerFields.Add(new ReaderField
                 {
                     ReaderType = argsExpr.Type,
@@ -2571,8 +2655,8 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         if (this.Equals(visitor)) return;
         if (visitor.IsNeedUnionShardingTables)
             this.IsNeedUnionShardingTables = true;
-        if (visitor.IsNeedFormatShardingTables)
-            this.IsNeedFormatShardingTables = true;
+        if (visitor.IsManyShardingTables)
+            this.IsManyShardingTables = true;
         if (visitor.IsManyShardingTables)
             this.IsManyShardingTables = true;
     }
@@ -2740,7 +2824,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         else
         {
             var sqlSegment = this.VisitAndDeferred(this.CreateConditionSegment(expr));
-            builder.Append(this.GetQuotedValue(sqlSegment));
+            builder.Append(this.WrapSql(sqlSegment));
         }
     }
     private SqlSegment CreateConditionSegment(Expression conditionExpr)

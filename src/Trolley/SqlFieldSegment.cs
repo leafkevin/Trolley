@@ -79,35 +79,34 @@ public struct SqlSegment
         this.DeferredOperations ??= new();
         this.DeferredOperations.Push(deferredOperation);
     }
-    public bool HasDeferredNot(out DeferredOperation lastOperation)
+    public bool HasNotOperation(out DeferredOperation lastOperation)
     {
         lastOperation = DeferredOperation.None;
-        if (this.HasDeferred)
+        int notIndex = 0;
+        while (this.DeferredOperations.Count > 0)
         {
-            int notIndex = 0;
-            while (this.DeferredOperations.Count > 0)
+            var operationType = this.DeferredOperations.Pop();
+            switch (operationType)
             {
-                var operationType = this.DeferredOperations.Pop();
-                switch (operationType)
-                {
-                    case DeferredOperation.IsNull:
-                    case DeferredOperation.IsTrue:
-                        lastOperation = operationType;
-                        break;
-                    case DeferredOperation.Not:
-                        notIndex++;
-                        break;
-                }
+                case DeferredOperation.IsNull:
+                case DeferredOperation.IsTrue:
+                    lastOperation = operationType;
+                    break;
+                case DeferredOperation.Not:
+                    notIndex++;
+                    break;
             }
-            return notIndex % 2 > 0;
         }
-        return false;
+        return notIndex % 2 > 0;
     }
 }
 public class ReaderField
 {
     public SqlFieldType FieldType { get; set; }
     public TableSegment TableSegment { get; set; }
+    /// <summary>
+    /// 包装后的SQL片段，字段名称、方法调用或是表达式SQL片段，只有是字段值的时候，值不做处理，只有到最后一步才处理
+    /// </summary>
     public object Value { get; set; }
     /// <summary>
     /// FieldType类型为RawSql才有效，默认值是1
@@ -171,7 +170,7 @@ public enum SqlFieldType : byte
     /// </summary>
     RawSql,
     /// <summary>
-    /// 常量、变量、参数、表达式计算、方法调用，非原始字段
+    /// 常量、变量、参数、表达式计算、方法调用，非原始字段，需要AS别名
     /// </summary>
     Expression
 }

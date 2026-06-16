@@ -125,6 +125,14 @@ public class IncludableQuery<T1, T2, TMember> : Query<T1, T2>, IIncludableQuery<
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public new IIncludableQuery<T1, T2, TMember> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.IsIncludeMany, rawSql);
+        return this;
+    }
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     public virtual IIncludableQuery<T1, T2, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
@@ -184,6 +192,14 @@ public class IncludableQuery<T1, T2, T3, TMember> : Query<T1, T2, T3>, IIncludab
     public new IIncludableQuery<T1, T2, T3, TMember> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(this.IsIncludeMany, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public new IIncludableQuery<T1, T2, T3, TMember> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.IsIncludeMany, rawSql);
         return this;
     }
     #endregion
@@ -251,6 +267,14 @@ public class IncludableQuery<T1, T2, T3, T4, TMember> : Query<T1, T2, T3, T4>, I
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, TMember> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.IsIncludeMany, rawSql);
+        return this;
+    }
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     public virtual IIncludableQuery<T1, T2, T3, T4, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
@@ -310,6 +334,14 @@ public class IncludableQuery<T1, T2, T3, T4, T5, TMember> : Query<T1, T2, T3, T4
     public new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(this.IsIncludeMany, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, TMember> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.IsIncludeMany, rawSql);
         return this;
     }
     #endregion
@@ -377,6 +409,14 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : Query<T1, T2, T3
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.IsIncludeMany, rawSql);
+        return this;
+    }
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     public virtual IIncludableQuery<T1, T2, T3, T4, T5, T6, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
@@ -436,6 +476,14 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : Query<T1, T2
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(this.IsIncludeMany, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.IsIncludeMany, rawSql);
         return this;
     }
     #endregion
@@ -503,6 +551,14 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : Query<T1
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.IsIncludeMany, rawSql);
+        return this;
+    }
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     public virtual IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
@@ -562,6 +618,14 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> : Quer
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(this.IsIncludeMany, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.IsIncludeMany, rawSql);
         return this;
     }
     #endregion
@@ -629,6 +693,14 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> :
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.IsIncludeMany, rawSql);
+        return this;
+    }
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     public virtual IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
@@ -688,6 +760,14 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMemb
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(this.IsIncludeMany, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.IsIncludeMany, rawSql);
         return this;
     }
     #endregion
@@ -755,6 +835,14 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.IsIncludeMany, rawSql);
+        return this;
+    }
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     public virtual IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
@@ -814,6 +902,14 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(this.IsIncludeMany, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.IsIncludeMany, rawSql);
         return this;
     }
     #endregion
@@ -881,6 +977,14 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.IsIncludeMany, rawSql);
+        return this;
+    }
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     public virtual IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
@@ -940,6 +1044,14 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(this.IsIncludeMany, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.IsIncludeMany, rawSql);
         return this;
     }
     #endregion
