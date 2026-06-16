@@ -45,7 +45,7 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     object RefFrom { get; set; }
 
     bool IsSecondUnion { get; set; }
-    char TableAsStart { get; set; }
+    char TableAliasStart { get; set; }
     int PageNumber { get; }
     int PageSize { get; }
     bool IsNeedCommandTableAlias { get; set; }

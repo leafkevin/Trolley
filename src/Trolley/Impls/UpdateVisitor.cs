@@ -28,7 +28,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public UpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
     {
         this.DbContext = dbContext;
-        this.TableAsStart = tableAsStart;
+        this.TableAliasStart = tableAsStart;
         this.Command = command ?? dbContext.OrmProvider.CreateCommand();
         this.DbParameters = this.Command.Parameters;
         this.Tables = new()
@@ -359,7 +359,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.IsNeedTableAlias = true;
         this.IsJoin = true;
         var lambdaExpr = joinOn as LambdaExpression;
-        var aliasName = $"{(char)(this.TableAsStart + this.Tables.Count)}";
+        var aliasName = $"{(char)(this.TableAliasStart + this.Tables.Count)}";
         var joinTable = new TableSegment
         {
             TableType = TableType.Entity,
@@ -647,7 +647,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.ReaderFields?.Clear();
         this.WhereBuilder = null;
         //this.IsFromQuery = false;
-        this.TableAsStart = 'a';
+        this.TableAliasStart = 'a';
         this.IsNeedTableAlias = false;
 
         this.IsFrom = false;

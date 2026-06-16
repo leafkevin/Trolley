@@ -775,16 +775,6 @@ public interface IQuery<T> : IQueryBase
     IQuery<T> WithTrailingSql(string rawSql);
     #endregion
 
-    #region ToExistsSql
-    /// <summary>
-    /// 将查询对象转换为EXISTS SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
-    /// .Where(f =&gt; Sql.From&lt;User&gt;().Where(x =&gt; x.Id == f.UserId).ToExistsSql())，
-    /// 生成SQL: a WHERE EXISTS (SELECT 1 FROM `sys_user` b WHERE b.`UserId`=b.`UserId`)
-    /// </summary>
-    /// <returns>返回Predicate表达式</returns>
-    bool ToExistsSql();
-    #endregion
-
     #region ToInSql
     /// <summary>
     /// 将查询对象转换为IN SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
@@ -1452,16 +1442,6 @@ public interface IQuery<T1, T2> : IQueryBase
     IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, TTarget>> specialMemberSelector = null);
     #endregion
 
-    #region ToExistsSql
-    /// <summary>
-    /// 将查询对象转换为EXISTS SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
-    /// .Where(f =&gt; Sql.From&lt;User&gt;().Where(x =&gt; x.Id == f.UserId).ToExistsSql())，
-    /// 生成SQL: a WHERE EXISTS (SELECT 1 FROM `sys_user` b WHERE b.`UserId`=b.`UserId`)
-    /// </summary>
-    /// <returns>返回Predicate表达式</returns>
-    bool ToExistsSql();
-    #endregion
-
     #region Count
     /// <summary>
     /// 返回某个字段的int类型数据条数，如：
@@ -2067,16 +2047,6 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, TTarget>> specialMemberSelector = null);
-    #endregion
-
-    #region ToExistsSql
-    /// <summary>
-    /// 将查询对象转换为EXISTS SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
-    /// .Where(f =&gt; Sql.From&lt;User&gt;().Where(x =&gt; x.Id == f.UserId).ToExistsSql())，
-    /// 生成SQL: a WHERE EXISTS (SELECT 1 FROM `sys_user` b WHERE b.`UserId`=b.`UserId`)
-    /// </summary>
-    /// <returns>返回Predicate表达式</returns>
-    bool ToExistsSql();
     #endregion
 
     #region Count
@@ -2685,16 +2655,6 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> specialMemberSelector = null);
-    #endregion
-
-    #region ToExistsSql
-    /// <summary>
-    /// 将查询对象转换为EXISTS SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
-    /// .Where(f =&gt; Sql.From&lt;User&gt;().Where(x =&gt; x.Id == f.UserId).ToExistsSql())，
-    /// 生成SQL: a WHERE EXISTS (SELECT 1 FROM `sys_user` b WHERE b.`UserId`=b.`UserId`)
-    /// </summary>
-    /// <returns>返回Predicate表达式</returns>
-    bool ToExistsSql();
     #endregion
 
     #region Count
@@ -3306,16 +3266,6 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> specialMemberSelector = null);
     #endregion
 
-    #region ToExistsSql
-    /// <summary>
-    /// 将查询对象转换为EXISTS SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
-    /// .Where(f =&gt; Sql.From&lt;User&gt;().Where(x =&gt; x.Id == f.UserId).ToExistsSql())，
-    /// 生成SQL: a WHERE EXISTS (SELECT 1 FROM `sys_user` b WHERE b.`UserId`=b.`UserId`)
-    /// </summary>
-    /// <returns>返回Predicate表达式</returns>
-    bool ToExistsSql();
-    #endregion
-
     #region Count
     /// <summary>
     /// 返回某个字段的int类型数据条数，如：
@@ -3924,16 +3874,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> specialMemberSelector = null);
-    #endregion
-
-    #region ToExistsSql
-    /// <summary>
-    /// 将查询对象转换为EXISTS SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
-    /// .Where(f =&gt; Sql.From&lt;User&gt;().Where(x =&gt; x.Id == f.UserId).ToExistsSql())，
-    /// 生成SQL: a WHERE EXISTS (SELECT 1 FROM `sys_user` b WHERE b.`UserId`=b.`UserId`)
-    /// </summary>
-    /// <returns>返回Predicate表达式</returns>
-    bool ToExistsSql();
     #endregion
 
     #region Count
@@ -4547,16 +4487,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TTarget>> specialMemberSelector = null);
     #endregion
 
-    #region ToExistsSql
-    /// <summary>
-    /// 将查询对象转换为EXISTS SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
-    /// .Where(f =&gt; Sql.From&lt;User&gt;().Where(x =&gt; x.Id == f.UserId).ToExistsSql())，
-    /// 生成SQL: a WHERE EXISTS (SELECT 1 FROM `sys_user` b WHERE b.`UserId`=b.`UserId`)
-    /// </summary>
-    /// <returns>返回Predicate表达式</returns>
-    bool ToExistsSql();
-    #endregion
-
     #region Count
     /// <summary>
     /// 返回某个字段的int类型数据条数，如：
@@ -5167,16 +5097,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> specialMemberSelector = null);
-    #endregion
-
-    #region ToExistsSql
-    /// <summary>
-    /// 将查询对象转换为EXISTS SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
-    /// .Where(f =&gt; Sql.From&lt;User&gt;().Where(x =&gt; x.Id == f.UserId).ToExistsSql())，
-    /// 生成SQL: a WHERE EXISTS (SELECT 1 FROM `sys_user` b WHERE b.`UserId`=b.`UserId`)
-    /// </summary>
-    /// <returns>返回Predicate表达式</returns>
-    bool ToExistsSql();
     #endregion
 
     #region Count
@@ -5792,16 +5712,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> specialMemberSelector = null);
     #endregion
 
-    #region ToExistsSql
-    /// <summary>
-    /// 将查询对象转换为EXISTS SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
-    /// .Where(f =&gt; Sql.From&lt;User&gt;().Where(x =&gt; x.Id == f.UserId).ToExistsSql())，
-    /// 生成SQL: a WHERE EXISTS (SELECT 1 FROM `sys_user` b WHERE b.`UserId`=b.`UserId`)
-    /// </summary>
-    /// <returns>返回Predicate表达式</returns>
-    bool ToExistsSql();
-    #endregion
-
     #region Count
     /// <summary>
     /// 返回某个字段的int类型数据条数，如：
@@ -6414,16 +6324,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> specialMemberSelector = null);
-    #endregion
-
-    #region ToExistsSql
-    /// <summary>
-    /// 将查询对象转换为EXISTS SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
-    /// .Where(f =&gt; Sql.From&lt;User&gt;().Where(x =&gt; x.Id == f.UserId).ToExistsSql())，
-    /// 生成SQL: a WHERE EXISTS (SELECT 1 FROM `sys_user` b WHERE b.`UserId`=b.`UserId`)
-    /// </summary>
-    /// <returns>返回Predicate表达式</returns>
-    bool ToExistsSql();
     #endregion
 
     #region Count
@@ -7041,16 +6941,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> specialMemberSelector = null);
     #endregion
 
-    #region ToExistsSql
-    /// <summary>
-    /// 将查询对象转换为EXISTS SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
-    /// .Where(f =&gt; Sql.From&lt;User&gt;().Where(x =&gt; x.Id == f.UserId).ToExistsSql())，
-    /// 生成SQL: a WHERE EXISTS (SELECT 1 FROM `sys_user` b WHERE b.`UserId`=b.`UserId`)
-    /// </summary>
-    /// <returns>返回Predicate表达式</returns>
-    bool ToExistsSql();
-    #endregion
-
     #region Count
     /// <summary>
     /// 返回某个字段的int类型数据条数，如：
@@ -7665,16 +7555,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> specialMemberSelector = null);
-    #endregion
-
-    #region ToExistsSql
-    /// <summary>
-    /// 将查询对象转换为EXISTS SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
-    /// .Where(f =&gt; Sql.From&lt;User&gt;().Where(x =&gt; x.Id == f.UserId).ToExistsSql())，
-    /// 生成SQL: a WHERE EXISTS (SELECT 1 FROM `sys_user` b WHERE b.`UserId`=b.`UserId`)
-    /// </summary>
-    /// <returns>返回Predicate表达式</returns>
-    bool ToExistsSql();
     #endregion
 
     #region Count
@@ -8294,16 +8174,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> specialMemberSelector = null);
     #endregion
 
-    #region ToExistsSql
-    /// <summary>
-    /// 将查询对象转换为EXISTS SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
-    /// .Where(f =&gt; Sql.From&lt;User&gt;().Where(x =&gt; x.Id == f.UserId).ToExistsSql())，
-    /// 生成SQL: a WHERE EXISTS (SELECT 1 FROM `sys_user` b WHERE b.`UserId`=b.`UserId`)
-    /// </summary>
-    /// <returns>返回Predicate表达式</returns>
-    bool ToExistsSql();
-    #endregion
-
     #region Count
     /// <summary>
     /// 返回某个字段的int类型数据条数，如：
@@ -8920,16 +8790,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> specialMemberSelector = null);
-    #endregion
-
-    #region ToExistsSql
-    /// <summary>
-    /// 将查询对象转换为EXISTS SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
-    /// .Where(f =&gt; Sql.From&lt;User&gt;().Where(x =&gt; x.Id == f.UserId).ToExistsSql())，
-    /// 生成SQL: a WHERE EXISTS (SELECT 1 FROM `sys_user` b WHERE b.`UserId`=b.`UserId`)
-    /// </summary>
-    /// <returns>返回Predicate表达式</returns>
-    bool ToExistsSql();
     #endregion
 
     #region Count
@@ -9551,16 +9411,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> specialMemberSelector = null);
     #endregion
 
-    #region ToExistsSql
-    /// <summary>
-    /// 将查询对象转换为EXISTS SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
-    /// .Where(f =&gt; Sql.From&lt;User&gt;().Where(x =&gt; x.Id == f.UserId).ToExistsSql())，
-    /// 生成SQL: a WHERE EXISTS (SELECT 1 FROM `sys_user` b WHERE b.`UserId`=b.`UserId`)
-    /// </summary>
-    /// <returns>返回Predicate表达式</returns>
-    bool ToExistsSql();
-    #endregion
-
     #region Count
     /// <summary>
     /// 返回某个字段的int类型数据条数，如：
@@ -10034,16 +9884,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TTarget>> specialMemberSelector = null);
-    #endregion
-
-    #region ToExistsSql
-    /// <summary>
-    /// 将查询对象转换为EXISTS SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
-    /// .Where(f =&gt; Sql.From&lt;User&gt;().Where(x =&gt; x.Id == f.UserId).ToExistsSql())，
-    /// 生成SQL: a WHERE EXISTS (SELECT 1 FROM `sys_user` b WHERE b.`UserId`=b.`UserId`)
-    /// </summary>
-    /// <returns>返回Predicate表达式</returns>
-    bool ToExistsSql();
     #endregion
 
     #region Count

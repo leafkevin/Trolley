@@ -27,7 +27,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     public CreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
     {
         this.DbContext = dbContext;
-        this.TableAsStart = tableAsStart;
+        this.TableAliasStart = tableAsStart;
         this.Command = command ?? dbContext.OrmProvider.CreateCommand();
         this.DbParameters = this.Command.Parameters;
         this.Tables = new()
@@ -780,7 +780,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public override IQueryVisitor CreateQueryVisitor(char? tableAsStart = null)
     {
-        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAsStart, this.Command);
+        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAliasStart, this.Command);
         queryVisitor.RefQueries = this.RefQueries;
         queryVisitor.ShardingTables = this.ShardingTables;
         queryVisitor.RefTableAliases = this.RefTableAliases;

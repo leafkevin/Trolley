@@ -158,14 +158,6 @@ public class QueryBase : QueryInternal, IQueryBase
     }
     #endregion
 
-    #region ToExistsSql
-    public bool ToExistsSql() => true;
-    #endregion
-
-    #region ToInSql
-    public bool ToInSql<TField>(TField fieldExpr) => true;
-    #endregion
-
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
@@ -207,7 +199,7 @@ public class QueryBase : QueryInternal, IQueryBase
     public virtual ICreateVisitor NewCreateVisitor(Type entityType)
     {
         var createVisiter = this.OrmProvider.NewCreateVisitor(entityType,
-            this.DbContext, this.Visitor.TableAsStart, this.Visitor.Command);
+            this.DbContext, this.Visitor.TableAliasStart, this.Visitor.Command);
         createVisiter.Tables = this.Visitor.Tables;
         createVisiter.RefQueries = this.Visitor.RefQueries;
         createVisiter.ShardingTables = this.Visitor.ShardingTables;
@@ -628,6 +620,10 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.WithTrailingSql(rawSql);
         return this;
     }
+    #endregion
+
+    #region ToInSql
+    public bool ToInSql<TField>(TField fieldExpr) => true;
     #endregion
 
     #region Count

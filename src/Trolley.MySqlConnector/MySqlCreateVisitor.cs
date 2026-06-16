@@ -526,7 +526,7 @@ public class MySqlCreateVisitor : CreateVisitor
     }
     public override IQueryVisitor CreateQueryVisitor(char? tableAsStart = null)
     {
-        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAsStart, this.Command) as MySqlQueryVisitor;
+        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAliasStart, this.Command) as MySqlQueryVisitor;
         queryVisitor.RefQueries = this.RefQueries;
         queryVisitor.ShardingTables = this.ShardingTables;
         queryVisitor.RefTableAliases = this.RefTableAliases;

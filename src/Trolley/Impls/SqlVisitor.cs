@@ -26,7 +26,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     public ITheaCommand Command { get; set; }
     public IDataParameterCollection DbParameters { get; set; }
     public IDataParameterCollection NextDbParameters { get; set; }
-    public char TableAsStart { get; set; }
+    public char TableAliasStart { get; set; }
 
     /// <summary>
     /// 所有表都是扁平化的，主表、1:1关系Include子表，也在这里
@@ -934,8 +934,6 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                 sqlSegment.IsParameterized = false;
                 break;
-            case "ToExistsSql":
-                break;
             case "ToInSql":
                 break;
             case "In":
@@ -977,73 +975,57 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             case "Exists":
             case "ExistsAsync":
                 string existsSql = null;
-                if (methodCallExpr.Method.DeclaringType == typeof(Sql))
+                //Sql.Exists<T1, T2>((x, y) => ...)
+                //repository.Exists<User>(f => ...)
+                if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count > 0)
                 {
-                    var argsType = methodCallExpr.Arguments[0].Type;
-                    var lastReturnType = argsType.GenericTypeArguments.Last();
-                    if (lastReturnType == typeof(bool))
+                    //保存现场，临时添加这几个新表及别名，解析之后再删除
+                    var removeTables = new List<TableSegment>();
+                    var builder = new StringBuilder("SELECT * FROM ");
+                    int index = 0;
+                    lambdaExpr = this.EnsureLambda(methodCallExpr.Arguments[0]);
+                    var genericArguments = methodCallExpr.Method.GetGenericArguments();
+                    foreach (var tableType in genericArguments)
                     {
-                        //Sql.Exists<T1, T2>(Expression<Func<T1, T2, bool>> predicate)                      
-                        //保存现场，临时添加这几个新表及别名，解析之后再删除
-                        var removeTables = new List<TableSegment>();
-                        var builder = new StringBuilder("SELECT * FROM ");
-                        int index = 0;
-                        lambdaExpr = this.EnsureLambda(methodCallExpr.Arguments[0]);
-                        var genericArguments = methodCallExpr.Method.GetGenericArguments();
-                        foreach (var tableType in genericArguments)
-                        {
-                            var aliasName = lambdaExpr.Parameters[index].Name;
-                            if (this.TableAliases.ContainsKey(aliasName))
-                                continue;
+                        var aliasName = lambdaExpr.Parameters[index].Name;
+                        if (this.TableAliases.ContainsKey(aliasName))
+                            continue;
 
-                            var tableMapper = this.EntityMapProvider.GetEntityMap(tableType);
-                            var tableSegment = new TableSegment
-                            {
-                                EntityType = tableType,
-                                AliasName = aliasName,
-                                Mapper = tableMapper
-                            };
-                            this.Tables.Add(tableSegment);
-                            this.TableAliases.Add(aliasName, tableSegment);
-                            removeTables.Add(tableSegment);
-                            if (index > 0) builder.Append(',');
-                            builder.Append(this.OrmProvider.GetTableName(tableMapper.TableName));
-                            builder.Append($" {tableSegment.AliasName}");
-                            index++;
-                        }
-                        builder.Append(" WHERE ");
-                        builder.Append(this.VisitConditionExpr(lambdaExpr.Body, out _));
-                        //恢复现场
-                        removeTables.ForEach(f =>
+                        var tableMapper = this.EntityMapProvider.GetEntityMap(tableType);
+                        var tableSegment = new TableSegment
                         {
-                            this.Tables.Remove(f);
-                            this.TableAliases.Remove(f.AliasName);
-                        });
-                        existsSql = builder.ToString();
+                            EntityType = tableType,
+                            AliasName = aliasName,
+                            Mapper = tableMapper
+                        };
+                        this.Tables.Add(tableSegment);
+                        this.TableAliases.Add(aliasName, tableSegment);
+                        removeTables.Add(tableSegment);
+                        if (index > 0) builder.Append(',');
+                        builder.Append(this.OrmProvider.GetTableName(tableMapper.TableName));
+                        builder.Append($" {tableSegment.AliasName}");
+                        index++;
                     }
-                    else
+                    builder.Append(" WHERE ");
+                    builder.Append(this.VisitConditionExpr(lambdaExpr.Body, out _));
+                    //恢复现场
+                    removeTables.ForEach(f =>
                     {
-                        var predicateExpr = methodCallExpr.Arguments[0];
-                        if (typeof(IQuery).IsAssignableFrom(argsType))
-                        {
-                            //Exists<TTarget>(IQuery<TTarget> subQuery)
-                            var funcType = typeof(Func<,>).MakeGenericType(typeof(IFromQuery), argsType);
-                            var parameterExpr = Expression.Parameter(typeof(IFromQuery), "f");
-                            predicateExpr = Expression.Lambda(funcType, methodCallExpr.Arguments[0], parameterExpr);
-                        }
-                        //Exists<TTarget>(Func<IFromQuery, IQuery<TTarget>> subQuery)
-                        (existsSql, _, _) = this.VisitFromQuery(predicateExpr);
+                        this.Tables.Remove(f);
+                        this.TableAliases.Remove(f.AliasName);
+                    });
+                    existsSql = builder.ToString();
+                }
+                else
+                {
+                    //Sql.From<User>().Where(f => ...).Exists()
+                    //repository.From<User>().Where(f => ...).Exists()
+                    if (methodCallExpr.TryGetParameters(out var parameters))
+                    {
+                        lambdaExpr = Expression.Lambda(methodCallExpr, parameters);
+                        (existsSql, _, _) = this.VisitFromQuery(lambdaExpr);
                     }
                 }
-                else if (methodCallExpr.TryGetParameters(out var parameters))
-                {
-                    //repository.Exists<TEntity>
-                    //repository.ExistsAsync<TEntity>
-                    lambdaExpr = Expression.Lambda(methodCallExpr, parameters);
-                    (existsSql, _, _) = this.VisitFromQuery(lambdaExpr);
-                }
-                else throw new NotSupportedException("不支持的repository.Exists/ExistsAsync表达式访问");
-
                 if (sqlSegment.HasNotOperation(out _))
                     sqlSegment.Change($"NOT EXISTS({existsSql})", SqlType.MethodCall);
                 else sqlSegment.Change($"EXISTS({existsSql})", SqlType.MethodCall);
@@ -1330,16 +1312,22 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         var sqlSegment = this.VisitAndDeferred(this.CreateConditionSegment(conditionExpr));
         return sqlSegment.Value.ToString();
     }
-    public virtual (string, TableSegment, List<ReaderField>) VisitFromQuery(Expression lambdaExpr, ICteQuery selfQueryObj = null)
+    /// <summary>
+    /// 访问FromQuery表达式，生成子查询SQL，通常是Where方法中的Exists、In方法调用，或者Union中的第二个查询对象，引用子查询表
+    /// </summary>
+    /// <param name="lambdaExpr"></param>
+    /// <param name="isSecondUnion"></param>
+    /// <param name="selfQueryObj"></param>
+    /// <returns></returns>
+    /// <exception cref="NotSupportedException"></exception>
+    public virtual (string, TableSegment, List<ReaderField>) VisitFromQuery(Expression lambdaExpr, bool isSecondUnion = false, ICteQuery selfQueryObj = null)
     {
         var myLambdaExpr = this.EnsureLambda(lambdaExpr);
         var currentExpr = myLambdaExpr.Body;
         var callStack = new Stack<MethodCallExpression>();
 
-        IQuery subQueryObj = null;
         var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, 'a', this.Command);
-        if (this.IsWhere)
-            queryVisitor.TableAsStart = (char)(this.TableAsStart + this.Tables.Count);
+        if (this.IsWhere) queryVisitor.TableAliasStart = (char)(this.TableAliasStart + this.Tables.Count);
         while (true)
         {
             if (currentExpr is not MethodCallExpression callExpr
@@ -1352,12 +1340,13 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         Type entityType = null;
         TableSegment tableSegment = null;
         List<ReaderField> readyReaderFields = null;
+        IQuery subQueryObj = null;
 
         //引用现有子查询对象
         if (currentExpr.NodeType == ExpressionType.MemberAccess
             && typeof(IQuery).IsAssignableFrom(currentExpr.Type))
         {
-            subQueryObj = this.Evaluate(currentExpr) as IQuery;
+            subQueryObj = ValueEvalutor.Evaluate(currentExpr) as IQuery;
             if (callStack.Count == 0)
             {
                 if (this.IsWhere)
@@ -1683,7 +1672,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     if (callExpr.Arguments.Count > 0)
                     {
                         lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-                        queryVisitor.From(queryVisitor.TableAsStart, genericArguments);
+                        queryVisitor.From(queryVisitor.TableAliasStart, genericArguments);
                         queryVisitor.RefTableAliases = this.TableAliases;
                         queryVisitor.And(lambdaArgsExpr);
                         queryVisitor.RefTableAliases = null;
@@ -1957,7 +1946,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     {
         //Union的时候，tableAsStart会传入'a'，表示从'a'开始
         //Join的时候，tableAsStart不传值，使用当前Visitor中的
-        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAsStart, this.Command);
+        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAliasStart, this.Command);
         queryVisitor.RefQueries = this.RefQueries;
         queryVisitor.ShardingTables = this.ShardingTables;
         queryVisitor.RefTableAliases = this.RefTableAliases;
@@ -2589,7 +2578,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     }
     public TableSegment AddJoinTable(Type entityType, string joinType = null, TableType tableType = TableType.Entity, string body = null, List<SqlSegment> readerFields = null)
     {
-        int tableIndex = this.TableAsStart + this.Tables.Count;
+        int tableIndex = this.TableAliasStart + this.Tables.Count;
         return this.AddTable(new TableSegment
         {
             JoinType = joinType,

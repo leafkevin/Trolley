@@ -17,7 +17,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     public DeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
     {
         this.DbContext = dbContext;
-        this.TableAsStart = tableAsStart;
+        this.TableAliasStart = tableAsStart;
         this.Command = command ?? dbContext.OrmProvider.CreateCommand();
         this.DbParameters = this.Command.Parameters;
         this.Tables = new()
@@ -325,7 +325,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         this.TableAliases?.Clear();
         this.ReaderFields?.Clear();
         this.WhereBuilder = null;
-        this.TableAsStart = 'a';
+        this.TableAliasStart = 'a';
         this.IsNeedTableAlias = false;
     }
     public override void Dispose()

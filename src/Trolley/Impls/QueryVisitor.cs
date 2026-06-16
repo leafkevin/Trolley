@@ -37,10 +37,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public int PageSize => this.limit ?? 0;
     public bool IsNeedPaging { get; set; }
 
-    public QueryVisitor(DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
+    public QueryVisitor(DbContext dbContext, char tableAliasStart = 'a', ITheaCommand command = null)
     {
         this.DbContext = dbContext;
-        this.TableAsStart = tableAsStart;
+        this.TableAliasStart = tableAliasStart;
         this.Command = command;
         this.DbParameters = this.Command?.Parameters;
         this.IsNeedTableAlias = true;
@@ -585,7 +585,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual void From(char tableAsStart = 'a', params Type[] entityTypes)
     {
-        this.TableAsStart = tableAsStart;
+        this.TableAliasStart = tableAsStart;
         foreach (var entityType in entityTypes)
         {
             int tableIndex = tableAsStart + this.Tables.Count;
@@ -605,7 +605,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual void AddTable(params Type[] entityTypes)
     {
-        int tableIndex = this.TableAsStart + this.Tables.Count;
+        int tableIndex = this.TableAliasStart + this.Tables.Count;
         foreach (var entityType in entityTypes)
         {
             if (entityType == null) continue;
@@ -717,7 +717,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void Join(string joinType, Expression joinOn)
        => this.Join(joinType, joinOn, f => this.InitTableAlias(f));
     public virtual void Join(string joinType, Type newEntityType, Expression joinOn)
-        => this.Join(joinType, joinOn, f => { this.From(this.TableAsStart, newEntityType); return this.InitTableAlias(f); });
+        => this.Join(joinType, joinOn, f => { this.From(this.TableAliasStart, newEntityType); return this.InitTableAlias(f); });
     public virtual void Join(string joinType, Type newEntityType, IQuery subQuery, Expression joinOn)
         => this.Join(joinType, joinOn, f => { this.UseQuery(newEntityType, subQuery, true); return this.InitTableAlias(f); });
     public virtual void Join(string joinType, Type newEntityType, Expression subQueryExpr, Expression joinOn)
@@ -1040,7 +1040,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 throw new NotSupportedException($"导航属性表，暂时不支持多个主键字段，实体：{memberMapper.MapType.FullName}");
 
             memberVisits.Add(currentExpr.Member);
-            var tableAlias = $"{(char)(this.TableAsStart + this.Tables.Count)}";
+            var tableAlias = $"{(char)(this.TableAliasStart + this.Tables.Count)}";
             //path是从顶级级到子级的完整链路，用户查找TableSegment，如：a.Order.Seller.Company
             builder.Append("." + currentExpr.Member.Name);
             //在映射实体时，根据ParentIndex+FromMember值，设置到主表实体的属性中
@@ -2043,7 +2043,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (isClearReaderFields)
             this.ReaderFields = null;
         this.WhereBuilder = null;
-        this.TableAsStart = 'a';
+        this.TableAliasStart = 'a';
 
         this.offset = null;
         this.limit = null;
