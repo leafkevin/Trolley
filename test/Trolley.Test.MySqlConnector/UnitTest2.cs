@@ -2826,8 +2826,8 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .Select((a, b) => new
             {
-                Rank = Sql.Rank().Over().PartitionBy(a.SellerId).OrderByDescending(a.CreatedAt)
-                    .OrderBy(new { a.BuyerId, a.OrderNo }).ToValue(),
+                Rank = Sql.Over().PartitionBy(a.SellerId).OrderByDescending(a.CreatedAt)
+                    .OrderBy(new { a.BuyerId, a.OrderNo }).Rank(),
                 a.Id,
                 a.OrderNo,
                 a.SellerId,
@@ -2841,8 +2841,8 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .Select((a, b) => new
             {
-                Rank = Sql.Rank().Over().PartitionBy(a.SellerId).OrderBy(new { a.BuyerId, a.OrderNo })
-                    .OrderByDescending(a.CreatedAt).ToValue(),
+                Rank = Sql.Over().PartitionBy(a.SellerId).OrderBy(new { a.BuyerId, a.OrderNo })
+                    .OrderByDescending(a.CreatedAt).Rank(),
                 a.Id,
                 a.OrderNo,
                 a.SellerId,
@@ -2857,8 +2857,8 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .Select((a, b) => new
             {
-                Count = Sql.Count(a.TenantId).Over().PartitionBy(a.SellerId)
-                    .OrderBy(new { a.BuyerId, a.OrderNo }).OrderByDescending(a.CreatedAt).ToValue(),
+                Count = Sql.Over().PartitionBy(a.SellerId)
+                    .OrderBy(new { a.BuyerId, a.OrderNo }).OrderByDescending(a.CreatedAt).Count(a.TenantId),
                 a.Id,
                 a.OrderNo,
                 a.SellerId,
@@ -2872,8 +2872,8 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .Select((a, b) => new
             {
-                Count = Sql.Count(a.TenantId).Over().PartitionBy(a.SellerId)
-                    .OrderBy(new { a.BuyerId, a.OrderNo }).OrderByDescending(a.CreatedAt).ToValue(),
+                Count = Sql.Over().PartitionBy(a.SellerId).OrderBy(new { a.BuyerId, a.OrderNo })
+                    .OrderByDescending(a.CreatedAt).Count(a.TenantId),
                 a.Id,
                 a.OrderNo,
                 a.SellerId,

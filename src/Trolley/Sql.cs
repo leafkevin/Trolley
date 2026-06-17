@@ -106,22 +106,8 @@ public static class Sql
     public static IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>() => throw new NotImplementedException();
 
 
-    public static IWindowFunction<int> Rank() => throw new NotImplementedException();
-    public static IWindowFunction<long> LongRank() => throw new NotImplementedException();
-    public static IWindowFunction<int> DenseRank() => throw new NotImplementedException();
-    public static IWindowFunction<long> LongDenseRank() => throw new NotImplementedException();
-    public static IWindowFunction<int> RowNumber() => throw new NotImplementedException();
-    public static IWindowFunction<int> LongRowNumber() => throw new NotImplementedException();
-    public static IWindowFunction<int> Count() => throw new NotImplementedException();
-    public static IWindowFunction<long> LongCount() => throw new NotImplementedException();
-    public static IWindowFunction<int> Count<TField>(TField field) => throw new NotImplementedException();
-    public static IWindowFunction<long> CountDistinct<TField>(TField field) => throw new NotImplementedException();
-    public static IWindowFunction<long> LongCount<TField>(TField field) => throw new NotImplementedException();
-    public static IWindowFunction<long> LongCountDistinct<TField>(TField field) => throw new NotImplementedException();
-    public static IWindowFunction<TField> Sum<TField>(TField field) => throw new NotImplementedException();
-    public static IWindowFunction<TField> Avg<TField>(TField field) => throw new NotImplementedException();
-    public static IWindowFunction<TField> Max<TField>(TField field) => throw new NotImplementedException();
-    public static IWindowFunction<TField> Min<TField>(TField field) => throw new NotImplementedException();
+
+    public static ISqlWindowFunction Over() => throw new NotImplementedException();
 
     /// <summary>
     /// 数据分组后，把字段field的多行数据，用,字符分割拼接在一起，行转列操作，仅支持MySql,Mariadb数据库
@@ -151,22 +137,29 @@ public static class Sql
     public static IStringAgg StringAgg<TFields>(TFields fields, string separator) => throw new NotImplementedException();
 
 }
-public interface IPartitionByOver<TValue>
+
+public interface ISqlWindowFunction
 {
-    IPartitionByOver<TValue> OrderBy<TFields>(TFields fields);
-    IPartitionByOver<TValue> OrderByDescending<TFields>(TFields fields);
-    TValue ToValue();
-}
-public interface IWindowFunction<TValue>
-{
-    ISqlOver<TValue> Over();
-}
-public interface ISqlOver<TValue>
-{
-    ISqlOver<TValue> OrderBy<TFields>(TFields fields);
-    ISqlOver<TValue> OrderByDescending<TFields>(TFields fields);
-    IPartitionByOver<TValue> PartitionBy<TFields>(TFields fields);
-    TValue ToValue();
+    int Rank();
+    long LongRank();
+    int DenseRank();
+    long LongDenseRank();
+    int RowNumber();
+    int LongRowNumber();
+    int Count();
+    long LongCount();
+    int Count<TField>(TField field);
+    long CountDistinct<TField>(TField field);
+    long LongCount<TField>(TField field);
+    long LongCountDistinct<TField>(TField field);
+    TField Sum<TField>(TField field);
+    TField Avg<TField>(TField field);
+    TField Max<TField>(TField field);
+    TField Min<TField>(TField field);
+
+    ISqlWindowFunction PartitionBy<TFields>(TFields fields);
+    ISqlWindowFunction OrderBy<TFields>(TFields fields);
+    ISqlWindowFunction OrderByDescending<TFields>(TFields fields);
 }
 public interface IGroupConcat
 {
