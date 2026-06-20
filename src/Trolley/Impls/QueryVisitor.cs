@@ -418,7 +418,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         Func<ReaderField, string> FieldNameFetcher = readerField =>
         {
             string fieldName = null;
-            if (readerField.FieldType == SqlFieldType.Expression
+            if (readerField.FieldType == ReaderFieldType.Expression
                 || readerField.FieldName != readerField.TargetMember.Name)
             {
                 fieldName = readerField.TargetMember.Name;
@@ -450,7 +450,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 string fieldName = null;
                 if (readerField.IsGroupingField)
                 {
-                    if (readerField.FieldType == SqlFieldType.Entity)
+                    if (readerField.FieldType == ReaderFieldType.Entity)
                     {
                         for (int j = 0; j < readerField.Fields.Count; j++)
                         {
@@ -557,7 +557,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         int index = 0;
         foreach (var readerField in readerFields)
         {
-            if (readerField.FieldType == SqlFieldType.Field)
+            if (readerField.FieldType == ReaderFieldType.Field)
             {
                 if (index > 0) builder.Append(',');
                 builder.Append(this.OrmProvider.GetFieldName(readerField.TargetMember.Name));
@@ -1204,7 +1204,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     builder.Append(fieldName);
                     this.GroupByFields.Add(new ReaderField
                     {
-                        FieldType = SqlFieldType.Field,
+                        FieldType = ReaderFieldType.Field,
                         ReaderType = memberInfo.GetMemberType(),
                         MappedTargetType = sqlSegment.MappedTargetType,
                         FieldName = sqlSegment.FieldName,
@@ -1224,7 +1224,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     var fieldName = this.WrapSql(sqlSegment);
                     this.GroupByFields.Add(new ReaderField
                     {
-                        FieldType = SqlFieldType.Field,
+                        FieldType = ReaderFieldType.Field,
                         ReaderType = memberExpr.Type,
                         MappedTargetType = sqlSegment.MappedTargetType,
                         FieldName = sqlSegment.FieldName,
@@ -1283,7 +1283,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             var sqlSegment = this.Visit(new SqlSegment { Expression = argumentExpr });
                             this.AddOrderByField(builder, new ReaderField
                             {
-                                FieldType = SqlFieldType.Field,
+                                FieldType = ReaderFieldType.Field,
                                 Value = this.WrapSql(sqlSegment)
                             }, orderType);
                         }
@@ -1310,7 +1310,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         var sqlSegment = this.Visit(new SqlSegment { Expression = memberExpr });
                         this.AddOrderByField(builder, new ReaderField
                         {
-                            FieldType = SqlFieldType.Field,
+                            FieldType = ReaderFieldType.Field,
                             Value = this.WrapSql(sqlSegment)
                         }, orderType);
                     }
@@ -1320,7 +1320,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         var sqlSegment = this.Visit(new SqlSegment { Expression = expr });
                         this.AddOrderByField(builder, new ReaderField
                         {
-                            FieldType = SqlFieldType.Field,
+                            FieldType = ReaderFieldType.Field,
                             Value = this.WrapSql(sqlSegment)
                         }, orderType);
                     }
@@ -1360,7 +1360,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //原始SQL，SELECT COUNT(*)，SELECT * 等
         this.ReaderFields = [new ReaderField
         {
-            FieldType = SqlFieldType.RawSql,
+            FieldType = ReaderFieldType.RawSql,
             ReaderType = targetType,
             Value = rawFields
         }];
@@ -1384,7 +1384,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             case SqlType.OnlyField:
                 this.ReaderFields = [new ReaderField
                 {
-                    FieldType = SqlFieldType.Field,
+                    FieldType = ReaderFieldType.Field,
                     ReaderType = toTargetExpr.Body.Type,
                     MappedTargetType = sqlSegment.MappedTargetType,
                     TypeHandler = sqlSegment.TypeHandler,
@@ -1407,7 +1407,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 var wrapSql = this.WrapSql(sqlSegment, true);
                 this.ReaderFields = [new ReaderField
                 {
-                    FieldType = SqlFieldType.Expression,
+                    FieldType = ReaderFieldType.Expression,
                     ReaderType = toTargetExpr.Body.Type,
                     Value = wrapSql
                 }];
@@ -1497,7 +1497,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 expectType = underlyingType;
             readerField = new ReaderField
             {
-                FieldType = SqlFieldType.Field,
+                FieldType = ReaderFieldType.Field,
                 TargetMember = memberInfo,
                 ReaderType = segmentType,
                 NativeDbType = memberMapper.NativeDbType,
@@ -1578,7 +1578,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 {
                     readerField = new ReaderField
                     {
-                        FieldType = SqlFieldType.Entity,
+                        FieldType = ReaderFieldType.Entity,
                         ReaderType = memberInfo.GetMemberType(),
                         Fields = new List<ReaderField>()
                     };
@@ -1672,7 +1672,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                                 //没参数访问过，找不到readerField，直接引用实体中的导航属性，需要构造一个readerField
                                 refReaderField = new ReaderField
                                 {
-                                    FieldType = SqlFieldType.IncludeRef,
+                                    FieldType = ReaderFieldType.IncludeRef,
                                     Fields = this.FlattenTableFields(fromSegment),
                                     Expression = memberExpr,
                                     Path = path
@@ -1684,7 +1684,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             //直接引用 Select(f => new { f.Orders, f.Products })
                             refReaderField = new ReaderField
                             {
-                                FieldType = SqlFieldType.DeferredIncludeRef,
+                                FieldType = ReaderFieldType.DeferredIncludeRef,
                                 Fields = this.FlattenTableFields(fromSegment),
                                 Expression = memberExpr,
                                 Path = path
@@ -1702,6 +1702,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         sqlSegment.TypeHandler = memberMapper.TypeHandler;
                         sqlSegment.FieldName = memberMapper.FieldName;
                         sqlSegment.Value = fromSegment.AliasName + "." + fieldName;
+                        sqlSegment.IsEnum = memberMapper.UnderlyingType.IsEnum;
                     }
                 }
                 return sqlSegment;
@@ -1812,7 +1813,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     readerFields = [new ReaderField
                     {
                         //当作非字段处理
-                        FieldType = SqlFieldType.Expression,
+                        FieldType = ReaderFieldType.Expression,
                         ReaderType = memberInfo.GetMemberType(),
                         Value = this.WrapSql(sqlSegment, true),
                         TargetMember = memberInfo
@@ -1832,7 +1833,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     case SqlType.OnlyField:
                         readerFields = [new ReaderField
                         {
-                            FieldType = SqlFieldType.Field,
+                            FieldType = ReaderFieldType.Field,
                             ReaderType = memberInfo.GetMemberType(),
                             MappedTargetType = sqlSegment.MappedTargetType,
                             TypeHandler = sqlSegment.TypeHandler,
@@ -1853,7 +1854,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         //原始SQL，当个字段当作方法调用处理
                         readerFields = [new ReaderField
                         {
-                            FieldType = SqlFieldType.Expression,
+                            FieldType = ReaderFieldType.Expression,
                             ReaderType = memberInfo.GetMemberType(),
                             Value = wrapSql,
                             TargetMember = memberInfo
@@ -1925,15 +1926,15 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             int index = 0;
             foreach (var readerField in readerFields)
             {
-                if (readerField.FieldType == SqlFieldType.IncludeRef)
+                if (readerField.FieldType == ReaderFieldType.IncludeRef)
                     continue;
                 switch (readerField.FieldType)
                 {
-                    case SqlFieldType.Entity:
+                    case ReaderFieldType.Entity:
                         if (index > 0) builder.Append(',');
                         this.AddSelectFieldsSql(builder, readerField.Fields);
                         break;
-                    case SqlFieldType.RawSql:
+                    case ReaderFieldType.RawSql:
                         if (index > 0) builder.Append(',');
                         builder.Append(readerField.Value.ToString());
                         if (readerField.FieldsCount == 1)
@@ -1972,7 +1973,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var readerField = readerFields[0];
             switch (readerField.FieldType)
             {
-                case SqlFieldType.Field:
+                case ReaderFieldType.Field:
                     //不引用任何字段，没必要访问数据库
                     var body = readerField.Value.ToString();
                     if (readerField.IsDeferredFields)
@@ -1992,10 +1993,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     }
                     builder.Append(body);
                     break;
-                case SqlFieldType.RawSql:
+                case ReaderFieldType.RawSql:
                     builder.Append(readerField.Value.ToString());
                     break;
-                case SqlFieldType.Entity:
+                case ReaderFieldType.Entity:
                     this.AddSelectFieldsSql(builder, readerField.Fields);
                     break;
                 default: throw new NotSupportedException($"不支持的字段类型{readerField.FieldType}");
@@ -2006,7 +2007,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         switch (readerField.FieldType)
         {
-            case SqlFieldType.Entity:
+            case ReaderFieldType.Entity:
                 var readerFields = readerField.Fields;
                 for (int i = 0; i < readerFields.Count; i++)
                 {
@@ -2029,10 +2030,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         if (this.IsSecondUnion || this.IsCteTable) return false;
         //单个字段RawSql场景，需要加别名，多个字段RawSql不需要加别名
-        if (readerField.FieldType == SqlFieldType.RawSql) return false;
+        if (readerField.FieldType == ReaderFieldType.RawSql) return false;
         //GroupFields中的ReaderField只设置了必须加as别名的情况，没有设置TargetMember.Name !=FromMember.Name的情况，这里把这种情况补上
         //PostgreSql时，DistinctOnFields中的ReaderField也是这个场景
-        if (readerField.FieldType == SqlFieldType.Expression) return true;
+        if (readerField.FieldType == ReaderFieldType.Expression) return true;
         //TODO:
         //在子查询中，readerField.FieldName和readerField.TargetMember.Name不同，就需要别名
         //在最外层的查询中，只要满足IsCanMapTo条件，不需要别名

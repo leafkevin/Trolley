@@ -13,7 +13,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
     public SqlServerQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
         : base(dbContext, tableAsStart, dbParameters) { }
 
-    public override string BuildSql(out List<SqlFieldSegment> readerFields)
+    public override string BuildSql(out List<SqlSegment> readerFields)
     {
         var builder = new StringBuilder();
         if (this.IsUseCteTable && this.RefQueries != null && this.RefQueries.Count > 0)
@@ -398,7 +398,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             builder.Append(')');
         return builder.ToString();
     }
-    public override SqlFieldSegment ToEnumString(SqlFieldSegment sqlSegment)
+    public override SqlSegment ToEnumString(SqlSegment sqlSegment)
     {
         if (sqlSegment.HasField)
         {
@@ -424,9 +424,9 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         sqlSegment.SegmentType = typeof(string);
         return sqlSegment;
     }
-    public override SqlFieldSegment VisitGroupConcatMethodCall(SqlFieldSegment sqlSegment)
+    public override SqlSegment VisitGroupConcatMethodCall(SqlSegment sqlSegment)
         => throw new NotSupportedException("不支持的方法调用，请考虑使用Sql.StringAgg方法");
-    public override SqlFieldSegment VisitStringAggMethodCall(SqlFieldSegment sqlSegment)
+    public override SqlSegment VisitStringAggMethodCall(SqlSegment sqlSegment)
     {
         var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
         var currentExpr = methodCallExpr.Object;
@@ -440,7 +440,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         }
         var builder = new StringBuilder("STRING_AGG(");
         bool hasOrder = false;
-        SqlFieldSegment fieldsSegment = null;
+        SqlSegment fieldsSegment = null;
         while (callStack.TryPop(out methodCallExpr))
         {
             switch (methodCallExpr.Method.Name)
@@ -449,20 +449,20 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
                     var fieldsExpr = methodCallExpr.Arguments[0];
                     if (fieldsExpr.NodeType == ExpressionType.New || fieldsExpr.NodeType == ExpressionType.MemberInit)
                         throw new NotSupportedException("不支持的字段类型，Sql.StringAgg方法，只支持单个字段，不支持多个字段");
-                    fieldsSegment = this.Visit(new SqlFieldSegment { Expression = fieldsExpr });
+                    fieldsSegment = this.Visit(new SqlSegment { Expression = fieldsExpr });
                     this.AddVisitedFieldsSqlWithoutAlias(builder, fieldsSegment);
                     var separator = this.Evaluate<string>(methodCallExpr.Arguments[1]);
                     builder.Append($",{this.OrmProvider.GetQuotedValue(typeof(string), separator)})");
                     break;
                 case "OrderBy":
-                    fieldsSegment = this.Visit(new SqlFieldSegment { Expression = methodCallExpr.Arguments[0] });
+                    fieldsSegment = this.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                     if (hasOrder) builder.Append(',');
                     else builder.Append(" WITHIN GROUP(ORDER BY ");
                     this.AddVisitedFieldsSqlWithoutAlias(builder, fieldsSegment);
                     hasOrder = true;
                     break;
                 case "OrderByDescending":
-                    fieldsSegment = this.Visit(new SqlFieldSegment { Expression = methodCallExpr.Arguments[0] });
+                    fieldsSegment = this.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                     if (hasOrder) builder.Append(',');
                     else builder.Append(" WITHIN GROUP(ORDER BY ");
                     this.AddVisitedFieldsSqlWithoutAlias(builder, fieldsSegment, " DESC");
@@ -475,20 +475,20 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         builder.Clear();
         return sqlSegment.Change(sql, false, true);
     }
-    public virtual void AddSelectFieldsSql(StringBuilder builder, List<SqlFieldSegment> readerFields, bool isSecondUnionWrap)
+    public virtual void AddSelectFieldsSql(StringBuilder builder, List<SqlSegment> readerFields, bool isSecondUnionWrap)
     {
         int index = 0;
         string body = null;
-        bool isOnlyField = readerFields.Count == 1 && readerFields[0].FieldType == SqlFieldType.Field;
+        bool isOnlyField = readerFields.Count == 1 && readerFields[0].FieldType == ReaderFieldType.Field;
         foreach (var readerField in readerFields)
         {
             if (index > 0) builder.Append(',');
             switch (readerField.FieldType)
             {
-                case SqlFieldType.Entity:
+                case ReaderFieldType.Entity:
                     this.AddSelectFieldsSql(builder, readerField.Fields, isSecondUnionWrap);
                     break;
-                case SqlFieldType.DeferredFields:
+                case ReaderFieldType.DeferredFields:
                     if (readerField.Fields == null)
                         continue;
                     body = this.GetQuotedValue(readerField);
@@ -515,7 +515,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         }
     }
 
-    public virtual bool IsNeedAlias(SqlFieldSegment readerField, bool isOnlyField, bool isSecondUnionWrap)
+    public virtual bool IsNeedAlias(SqlSegment readerField, bool isOnlyField, bool isSecondUnionWrap)
     {
         if (!isSecondUnionWrap && (this.IsSecondUnion || this.IsSecondUnion || this.IsCteTable)) return false;
         if (readerField.IsNeedAlias) return true;

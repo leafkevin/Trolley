@@ -470,7 +470,7 @@ public class SqlServerUpdated<TEntity, TResult> : Updated<TEntity>, ISqlServerUp
         var result = new List<TResult>();
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
 
-        Action<CommandSqlType, string, List<SqlFieldSegment>> readerExecuter = (sqlType, sql, readerFields) =>
+        Action<CommandSqlType, string, List<SqlSegment>> readerExecuter = (sqlType, sql, readerFields) =>
         {
             command.CommandText = sql;
             using var reader = command.ExecuteReader(sqlType, CommandBehavior.SequentialAccess);
@@ -557,7 +557,7 @@ public class SqlServerUpdated<TEntity, TResult> : Updated<TEntity>, ISqlServerUp
         var result = new List<TResult>();
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
 
-        Func<CommandSqlType, string, List<SqlFieldSegment>, Task> readerExecuter = async (sqlType, sql, readerFields) =>
+        Func<CommandSqlType, string, List<SqlSegment>, Task> readerExecuter = async (sqlType, sql, readerFields) =>
         {
             command.CommandText = sql;
             using var reader = await command.ExecuteReaderAsync(sqlType, CommandBehavior.SequentialAccess, cancellationToken);

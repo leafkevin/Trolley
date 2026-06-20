@@ -518,7 +518,7 @@ public sealed class DbContext
     #endregion
 
     #region QueryVisitor
-    public TResult QueryFrom<TEntity, TResult>(IQueryVisitor visitor, bool isBulk, Func<Type, ITheaDataReader, List<SqlFieldSegment>, TResult> readerInitializer)
+    public TResult QueryFrom<TEntity, TResult>(IQueryVisitor visitor, bool isBulk, Func<Type, ITheaDataReader, List<SqlSegment>, TResult> readerInitializer)
     {
         var entityType = typeof(TEntity);
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor);
@@ -547,7 +547,7 @@ public sealed class DbContext
         visitor.Dispose();
         return result;
     }
-    public async Task<TResult> QueryFromAsync<TEntity, TResult>(IQueryVisitor visitor, bool isBulk, Func<Type, ITheaDataReader, List<SqlFieldSegment>, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
+    public async Task<TResult> QueryFromAsync<TEntity, TResult>(IQueryVisitor visitor, bool isBulk, Func<Type, ITheaDataReader, List<SqlSegment>, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
     {
         var entityType = typeof(TEntity);
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor);

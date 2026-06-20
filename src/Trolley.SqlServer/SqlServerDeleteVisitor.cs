@@ -20,7 +20,7 @@ public class SqlServerDeleteVisitor : DeleteVisitor
     public SqlServerDeleteVisitor(DbContext dbContext, char tableAsStart = 'a')
         : base(dbContext, tableAsStart) { }
 
-    public override string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
+    public override string BuildSql(ITheaCommand command, out List<SqlSegment> readerFields)
     {
         string sql = null;
         this.DbParameters ??= command.Parameters;
@@ -178,7 +178,7 @@ public class SqlServerDeleteVisitor : DeleteVisitor
             builder.Append(')');
         return builder.ToString();
     }
-    public override SqlFieldSegment VisitMemberAccess(SqlFieldSegment sqlSegment)
+    public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
         var memberExpr = sqlSegment.Expression as MemberExpression;
         MemberAccessSqlFormatter formatter = null;
@@ -192,7 +192,7 @@ public class SqlServerDeleteVisitor : DeleteVisitor
             {
                 if (memberExpr.Member.Name == nameof(Nullable<bool>.HasValue))
                 {
-                    sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlFieldSegment.Null });
+                    sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.Null });
                     sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Not });
                     return this.Visit(sqlSegment.Next(memberExpr.Expression));
                 }
@@ -241,7 +241,7 @@ public class SqlServerDeleteVisitor : DeleteVisitor
         }
 
         if (memberExpr.Member.DeclaringType == typeof(DBNull))
-            return SqlFieldSegment.Null;
+            return SqlSegment.Null;
 
         //各种静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
         if (this.OrmProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
@@ -264,7 +264,7 @@ public class SqlServerDeleteVisitor : DeleteVisitor
         sqlSegment.SegmentType = memberExpr.Type;
         return sqlSegment;
     }
-    public override SqlFieldSegment VisitNew(SqlFieldSegment sqlSegment)
+    public override SqlSegment VisitNew(SqlSegment sqlSegment)
     {
         if (this.IsOutput)
         {
@@ -273,12 +273,12 @@ public class SqlServerDeleteVisitor : DeleteVisitor
             if (newExpr.Type.Name.StartsWith("<>"))
             {
                 this.InitTableAlias(sqlSegment.Expression as LambdaExpression);
-                var readerFields = new List<SqlFieldSegment>();
+                var readerFields = new List<SqlSegment>();
                 this.ReaderFields = readerFields;
                 for (int i = 0; i < newExpr.Arguments.Count; i++)
                 {
                     var memberInfo = newExpr.Members[i];
-                    var fieldSqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = newExpr.Arguments[i] });
+                    var fieldSqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = newExpr.Arguments[i] });
                     this.WrapSql(fieldSqlSegment, true);
                     if (fieldSqlSegment.IsConstant || fieldSqlSegment.IsVariable || fieldSqlSegment.HasParameter || fieldSqlSegment.IsExpression
                         || fieldSqlSegment.IsMethodCall || fieldSqlSegment.FromMember != null && fieldSqlSegment.FromMember.Name != memberInfo.Name)
@@ -292,13 +292,13 @@ public class SqlServerDeleteVisitor : DeleteVisitor
         }
         return sqlSegment.ChangeValue(sqlSegment.Expression.Evaluate(), true);
     }
-    public override SqlFieldSegment VisitMemberInit(SqlFieldSegment sqlSegment)
+    public override SqlSegment VisitMemberInit(SqlSegment sqlSegment)
     {
         if (this.IsOutput)
         {
             var lambdaExpr = sqlSegment.Expression as LambdaExpression;
             var memberInitExpr = lambdaExpr.Body as MemberInitExpression;
-            var readerFields = new List<SqlFieldSegment>();
+            var readerFields = new List<SqlSegment>();
             this.ReaderFields = readerFields;
             for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
             {
@@ -306,7 +306,7 @@ public class SqlServerDeleteVisitor : DeleteVisitor
                     throw new NotSupportedException("暂时不支持除MemberBindingType.Assignment类型外的成员绑定表达式");
                 var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
                 var memberInfo = memberAssignment.Member;
-                var fieldSqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberAssignment.Expression });
+                var fieldSqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberAssignment.Expression });
                 this.WrapSql(fieldSqlSegment, true);
                 if (fieldSqlSegment.IsConstant || fieldSqlSegment.IsVariable || fieldSqlSegment.HasParameter || fieldSqlSegment.IsExpression
                     || fieldSqlSegment.IsMethodCall || fieldSqlSegment.FromMember != null && fieldSqlSegment.FromMember.Name != memberInfo.Name)
@@ -354,9 +354,9 @@ public class SqlServerDeleteVisitor : DeleteVisitor
             {
                 if (memberMapper.IsIgnore || memberMapper.IsNavigation)
                     continue;
-                this.ReaderFields.Add(new SqlFieldSegment
+                this.ReaderFields.Add(new SqlSegment
                 {
-                    FieldType = SqlFieldType.Field,
+                    FieldType = ReaderFieldType.Field,
                     FromMember = memberMapper.Member,
                     TargetMember = memberMapper.Member,
                     SegmentType = memberMapper.MemberType,
@@ -369,9 +369,9 @@ public class SqlServerDeleteVisitor : DeleteVisitor
         }
         else
         {
-            this.ReaderFields.Add(new SqlFieldSegment
+            this.ReaderFields.Add(new SqlSegment
             {
-                FieldType = SqlFieldType.RawSql,
+                FieldType = ReaderFieldType.RawSql,
                 Body = fieldNames
             });
         }
@@ -388,7 +388,7 @@ public class SqlServerDeleteVisitor : DeleteVisitor
             case ExpressionType.MemberAccess:
                 {
                     var memberExpr = fieldsSelector.Body as MemberExpression;
-                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberExpr });
+                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberExpr });
                     this.WrapSql(sqlSegment, true);
                     sqlSegment.TargetMember = memberExpr.Member;
                     sqlSegment.SegmentType = memberExpr.Type;
@@ -404,7 +404,7 @@ public class SqlServerDeleteVisitor : DeleteVisitor
                 for (int i = 0; i < newExpr.Arguments.Count; i++)
                 {
                     var memberInfo = newExpr.Members[i];
-                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = newExpr.Arguments[i] });
+                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = newExpr.Arguments[i] });
                     this.WrapSql(sqlSegment, true);
                     sqlSegment.TargetMember = memberInfo;
                     sqlSegment.SegmentType = memberInfo.GetMemberType();
@@ -423,7 +423,7 @@ public class SqlServerDeleteVisitor : DeleteVisitor
                         throw new NotSupportedException("暂时不支持除MemberBindingType.Assignment类型外的成员绑定表达式");
 
                     var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberAssignment.Expression });
+                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberAssignment.Expression });
                     this.WrapSql(sqlSegment, true);
                     sqlSegment.TargetMember = memberAssignment.Member;
                     sqlSegment.SegmentType = memberAssignment.Member.GetMemberType();
@@ -435,7 +435,7 @@ public class SqlServerDeleteVisitor : DeleteVisitor
                 }
                 break;
             default:
-                this.VisitAndDeferred(new SqlFieldSegment { Expression = fieldsSelector });
+                this.VisitAndDeferred(new SqlSegment { Expression = fieldsSelector });
                 for (int i = 0; i < this.ReaderFields.Count; i++)
                 {
                     var readerField = this.ReaderFields[i];

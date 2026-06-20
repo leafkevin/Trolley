@@ -17,14 +17,14 @@ public static class ValueEvalutor
         if (objValue == null) return default;
         return (T)objValue;
     }
-    public static object Evaluate(this Expression expression, object target = null)
+    public static object Evaluate(this Expression expression)
     {
         return expression switch
         {
             BinaryExpression binaryExpression => Evaluate(binaryExpression),
             ConstantExpression constantExpression => constantExpression.Value,
             UnaryExpression unaryExpression => Evaluate(unaryExpression),
-            MethodCallExpression methodCallExpression => Evaluate(methodCallExpression, target),
+            MethodCallExpression methodCallExpression => Evaluate(methodCallExpression),
             MemberExpression memberExpression => Evaluate(memberExpression),
             IndexExpression indexExpression => Evaluate(indexExpression),
             NewArrayExpression newArrayExpression => Evaluate(newArrayExpression),
@@ -32,7 +32,7 @@ public static class ValueEvalutor
             NewExpression newExpression => Evaluate(newExpression),
             MemberInitExpression memberInitExpression => Evaluate(memberInitExpression),
             ConditionalExpression conditionalExpression => Evaluate(conditionalExpression),
-            ParameterExpression parameterExpression => Evaluate(parameterExpression, target),
+            ParameterExpression parameterExpression => Evaluate(parameterExpression),
             DefaultExpression defaultExpression => Evaluate(defaultExpression),
             _ => Expression.Lambda(expression).Compile().DynamicInvoke()
         };
@@ -94,9 +94,9 @@ public static class ValueEvalutor
             _ => Expression.Lambda(expression).Compile().DynamicInvoke()
         };
     }
-    public static object Evaluate(MethodCallExpression expression, object target)
+    public static object Evaluate(MethodCallExpression expression)
     {
-        var myTarget = target;
+        object myTarget = null;
         if (expression.Object != null)
             myTarget = Evaluate(expression.Object);
         var parameters = expression.Arguments.Select(arg => Evaluate(arg)).ToArray();
@@ -146,11 +146,11 @@ public static class ValueEvalutor
         var falseValue = Evaluate(expression.IfFalse);
         return test ? trueValue : falseValue;
     }
-    public static object Evaluate(ParameterExpression expression, object target)
+    public static object Evaluate(ParameterExpression expression)
     {
         if (expression.Type.GetConstructors().Any(e => e.GetParameters().Length == 0))
             return RepositoryHelper.CreateInstance(expression.Type);
-        return target;
+        throw new NotSupportedException($"不支持的参数访问，参数类型必须有无参构造函数，Type:{expression.Type}");
     }
     public static object Evaluate(DefaultExpression expression) => expression.Type.IsValueType ? Activator.CreateInstance(expression.Type) : null;
     public static object Evaluate(MemberInfo member, object obj, object[] parameters = null, bool isCache = true)

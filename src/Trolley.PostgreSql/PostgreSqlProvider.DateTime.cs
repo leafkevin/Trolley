@@ -58,7 +58,7 @@ partial class PostgreSqlProvider
                 case "Date":
                     formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
                     {
-                        SqlFieldSegment targetSegment = null;
+                        SqlSegment targetSegment = null;
                         if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null
                             && TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out var exprFormatter))
                             targetSegment = exprFormatter.Invoke(visitor, target);
@@ -73,7 +73,7 @@ partial class PostgreSqlProvider
                 case "Day":
                     formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
                     {
-                        SqlFieldSegment targetSegment = null;
+                        SqlSegment targetSegment = null;
                         if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null
                             && TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out var exprFormatter))
                             targetSegment = exprFormatter.Invoke(visitor, target);
@@ -89,7 +89,7 @@ partial class PostgreSqlProvider
                 case "DayOfWeek":
                     formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
                     {
-                        SqlFieldSegment targetSegment = null;
+                        SqlSegment targetSegment = null;
                         if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null
                             && TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out var exprFormatter))
                             targetSegment = exprFormatter.Invoke(visitor, target);
@@ -105,7 +105,7 @@ partial class PostgreSqlProvider
                 case "DayOfYear":
                     formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
                     {
-                        SqlFieldSegment targetSegment = null;
+                        SqlSegment targetSegment = null;
                         if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null
                             && TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out var exprFormatter))
                             targetSegment = exprFormatter.Invoke(visitor, target);
@@ -121,7 +121,7 @@ partial class PostgreSqlProvider
                 case "Hour":
                     formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
                     {
-                        SqlFieldSegment targetSegment = null;
+                        SqlSegment targetSegment = null;
                         if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null
                             && TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out var exprFormatter))
                             targetSegment = exprFormatter.Invoke(visitor, target);
@@ -137,7 +137,7 @@ partial class PostgreSqlProvider
                 case "Kind":
                     formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
                     {
-                        SqlFieldSegment targetSegment = null;
+                        SqlSegment targetSegment = null;
                         if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null
                             && TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out var exprFormatter))
                             targetSegment = exprFormatter.Invoke(visitor, target);
@@ -153,7 +153,7 @@ partial class PostgreSqlProvider
                 case "Millisecond":
                     formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
                     {
-                        SqlFieldSegment targetSegment = null;
+                        SqlSegment targetSegment = null;
                         if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null
                             && TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out var exprFormatter))
                             targetSegment = exprFormatter.Invoke(visitor, target);
@@ -169,7 +169,7 @@ partial class PostgreSqlProvider
                 case "Minute":
                     formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
                     {
-                        SqlFieldSegment targetSegment = null;
+                        SqlSegment targetSegment = null;
                         if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null
                             && TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out var exprFormatter))
                             targetSegment = exprFormatter.Invoke(visitor, target);
@@ -185,7 +185,7 @@ partial class PostgreSqlProvider
                 case "Month":
                     formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
                     {
-                        SqlFieldSegment targetSegment = null;
+                        SqlSegment targetSegment = null;
                         if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null
                             && TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out var exprFormatter))
                             targetSegment = exprFormatter.Invoke(visitor, target);
@@ -201,7 +201,7 @@ partial class PostgreSqlProvider
                 case "Second":
                     formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
                     {
-                        SqlFieldSegment targetSegment = null;
+                        SqlSegment targetSegment = null;
                         if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null
                             && TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out var exprFormatter))
                             targetSegment = exprFormatter.Invoke(visitor, target);
@@ -217,7 +217,7 @@ partial class PostgreSqlProvider
                 case "Ticks":
                     formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
                     {
-                        SqlFieldSegment targetSegment = null;
+                        SqlSegment targetSegment = null;
                         if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null
                             && TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out var exprFormatter))
                             targetSegment = exprFormatter.Invoke(visitor, target);
@@ -233,7 +233,7 @@ partial class PostgreSqlProvider
                 case "TimeOfDay":
                     formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
                     {
-                        SqlFieldSegment targetSegment = null;
+                        SqlSegment targetSegment = null;
                         if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null
                             && TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out var exprFormatter))
                             targetSegment = exprFormatter.Invoke(visitor, target);
@@ -249,7 +249,7 @@ partial class PostgreSqlProvider
                 case "Year":
                     formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
                     {
-                        SqlFieldSegment targetSegment = null;
+                        SqlSegment targetSegment = null;
                         if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null
                             && TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out var exprFormatter))
                             targetSegment = exprFormatter.Invoke(visitor, target);
@@ -280,8 +280,8 @@ partial class PostgreSqlProvider
                 case "DaysInMonth":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var leftSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[1] });
+                        var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
                         if ((leftSegment.IsConstant || leftSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
                             return leftSegment.MergeValue(rightSegment, DateTime.DaysInMonth(Convert.ToInt32(leftSegment.Value), Convert.ToInt32(rightSegment.Value)));
@@ -295,7 +295,7 @@ partial class PostgreSqlProvider
                 case "IsLeapYear":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var valueSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return valueSegment.ChangeValue(DateTime.IsLeapYear(Convert.ToInt32(valueSegment.Value)));
 
@@ -310,9 +310,9 @@ partial class PostgreSqlProvider
                     {
                         formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                         {
-                            var valueSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
-                            var providerSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[1] });
-                            var styleSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[2] });
+                            var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                            var providerSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                            var styleSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[2] });
 
                             if ((valueSegment.IsConstant || valueSegment.IsVariable)
                                 && (providerSegment.IsConstant || providerSegment.IsVariable)
@@ -326,8 +326,8 @@ partial class PostgreSqlProvider
                     {
                         formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                         {
-                            var valueSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
-                            var providerSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[1] });
+                            var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                            var providerSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
 
                             if ((valueSegment.IsConstant || valueSegment.IsVariable)
                                 && (providerSegment.IsConstant || providerSegment.IsVariable))
@@ -340,7 +340,7 @@ partial class PostgreSqlProvider
                     {
                         formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                         {
-                            var valueSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                            var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             if (valueSegment.IsConstant || valueSegment.IsVariable)
                                 return valueSegment.ChangeValue(DateTime.Parse(valueSegment.Value.ToString()));
 
@@ -355,9 +355,9 @@ partial class PostgreSqlProvider
                 case "TryParseExact":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var valueSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
-                        var formatSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[1] });
-                        var providerSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[2] });
+                        var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var formatSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                        var providerSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[2] });
 
                         if ((valueSegment.IsConstant || valueSegment.IsVariable)
                             && (formatSegment.IsConstant || formatSegment.IsVariable)
@@ -452,8 +452,8 @@ partial class PostgreSqlProvider
                 case "Compare":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var leftSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[1] });
+                        var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
 
                         var leftArgument = visitor.GetQuotedValue(leftSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
@@ -470,8 +470,8 @@ partial class PostgreSqlProvider
                 case "Add":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
                             return targetSegment.MergeValue(rightSegment, Convert.ToDateTime(targetSegment.Value).Add((TimeSpan)rightSegment.Value));
@@ -506,8 +506,8 @@ partial class PostgreSqlProvider
                 case "AddDays":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                            && (rightSegment.IsConstant || rightSegment.IsVariable))
                             return targetSegment.MergeValue(rightSegment, Convert.ToDateTime(targetSegment.Value).AddDays(Convert.ToDouble(rightSegment.Value)));
@@ -521,8 +521,8 @@ partial class PostgreSqlProvider
                 case "AddHours":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                            && (rightSegment.IsConstant || rightSegment.IsVariable))
                             return targetSegment.MergeValue(rightSegment, Convert.ToDateTime(targetSegment.Value).AddHours(Convert.ToDouble(rightSegment.Value)));
@@ -536,8 +536,8 @@ partial class PostgreSqlProvider
                 case "AddMilliseconds":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
                             return targetSegment.MergeValue(rightSegment, Convert.ToDateTime(targetSegment.Value).AddMilliseconds(Convert.ToDouble(rightSegment.Value)));
@@ -551,8 +551,8 @@ partial class PostgreSqlProvider
                 case "AddMinutes":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
                             return targetSegment.MergeValue(rightSegment, Convert.ToDateTime(targetSegment.Value).AddMinutes(Convert.ToDouble(rightSegment.Value)));
@@ -566,8 +566,8 @@ partial class PostgreSqlProvider
                 case "AddMonths":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
                             return targetSegment.MergeValue(rightSegment, Convert.ToDateTime(targetSegment.Value).AddMonths(Convert.ToInt32(rightSegment.Value)));
@@ -581,8 +581,8 @@ partial class PostgreSqlProvider
                 case "AddSeconds":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
                             return targetSegment.MergeValue(rightSegment, Convert.ToDateTime(targetSegment.Value).AddSeconds(Convert.ToDouble(rightSegment.Value)));
@@ -596,8 +596,8 @@ partial class PostgreSqlProvider
                 case "AddTicks":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
                             return targetSegment.MergeValue(rightSegment, Convert.ToDateTime(targetSegment.Value).AddTicks(Convert.ToInt64(rightSegment.Value)));
@@ -611,8 +611,8 @@ partial class PostgreSqlProvider
                 case "AddYears":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
                             return targetSegment.MergeValue(rightSegment, Convert.ToDateTime(targetSegment.Value).AddYears(Convert.ToInt32(rightSegment.Value)));
@@ -628,8 +628,8 @@ partial class PostgreSqlProvider
                     {
                         formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                         {
-                            var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                            var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                            var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                            var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
                                 return targetSegment.MergeValue(rightSegment, Convert.ToDateTime(targetSegment.Value).Subtract(Convert.ToDateTime(rightSegment.Value)));
@@ -644,8 +644,8 @@ partial class PostgreSqlProvider
                     {
                         formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                         {
-                            var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                            var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                            var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                            var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
                                 return targetSegment.MergeValue(rightSegment, Convert.ToDateTime(targetSegment.Value).Subtract((TimeSpan)rightSegment.Value));
@@ -660,8 +660,8 @@ partial class PostgreSqlProvider
                 case "Equals":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
@@ -672,8 +672,8 @@ partial class PostgreSqlProvider
                 case "CompareTo":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
@@ -686,7 +686,7 @@ partial class PostgreSqlProvider
                     {
                         formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                         {
-                            var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
+                            var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             if (targetSegment.IsConstant || targetSegment.IsVariable)
                                 return targetSegment.ChangeValue(targetSegment.Value.ToString());
 
@@ -698,8 +698,8 @@ partial class PostgreSqlProvider
                     {
                         formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                         {
-                            var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                            var formatSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                            var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                            var formatSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
 
                             string formatArgument = null;
                             if (formatSegment.IsConstant || formatSegment.IsVariable)

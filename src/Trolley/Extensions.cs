@@ -98,17 +98,17 @@ public static class Extensions
             return true;
         }
         public Type ToUnderlyingType() => Nullable.GetUnderlyingType(type) ?? type;
-        public bool IsEnumType(out Type underlyingType, out Type enumUnderlyingType)
-        {
-            type.IsNullableType(out underlyingType);
-            if (underlyingType.IsEnum)
-            {
-                enumUnderlyingType = underlyingType.GetEnumUnderlyingType();
-                return true;
-            }
-            enumUnderlyingType = null;
-            return false;
-        }
+        //public bool IsEnumType(out Type underlyingType, out Type enumUnderlyingType)
+        //{
+        //    type.IsNullableType(out underlyingType);
+        //    if (underlyingType.IsEnum)
+        //    {
+        //        enumUnderlyingType = underlyingType.GetEnumUnderlyingType();
+        //        return true;
+        //    }
+        //    enumUnderlyingType = null;
+        //    return false;
+        //}
         public bool IsEnumType(out Type enumUnderlyingType)
         {
             if (type.IsEnum)
@@ -515,9 +515,9 @@ public static class Extensions
         foreach (var readerField in readerFields)
         {
             hashCode.Add(readerField.FieldType);
-            if (readerField.FieldType == SqlFieldType.Entity && readerField.IsTargetType)
+            if (readerField.FieldType == ReaderFieldType.Entity && readerField.IsTargetType)
                 hashCode.Add("TargetEntity");
-            else if (readerField.FieldType == SqlFieldType.RawSql)
+            else if (readerField.FieldType == ReaderFieldType.RawSql)
                 hashCode.Add($"RawSql:{readerField.Value}");
             else if (readerField.IsDeferredFields)
             {

@@ -796,7 +796,7 @@ public class CteQuery<T> : Query<T>, ICteQuery<T>
 {
     #region Properties
     public string TableName { get; set; }
-    public List<SqlFieldSegment> ReaderFields { get; set; }
+    public List<SqlSegment> ReaderFields { get; set; }
     public bool IsRecursive { get; set; }
     #endregion
 

@@ -28,7 +28,7 @@ public class MySqlQueryVisitor : QueryVisitor
         foreach (var readerField in this.ReaderFields)
         {
             //Union后，如果没有select语句时，通常实体类型或是select分组对象
-            if (readerField.FieldType != SqlFieldType.Field)
+            if (readerField.FieldType != ReaderFieldType.Field)
                 this.AddVisitedFieldsSqlWithoutAlias(builder, readerField);
             else
             {

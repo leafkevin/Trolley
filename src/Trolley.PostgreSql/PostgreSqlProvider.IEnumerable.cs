@@ -25,8 +25,8 @@ partial class PostgreSqlProvider
                     //数组调用
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var elementSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[1] });
-                        var arraySegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var elementSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                        var arraySegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
 
                         if (arraySegment.IsConstant || arraySegment.IsVariable)
                         {
@@ -66,8 +66,8 @@ partial class PostgreSqlProvider
                 {
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var elementSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
-                        var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
+                        var elementSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
 
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                         {
@@ -106,7 +106,7 @@ partial class PostgreSqlProvider
                 {
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var args0Segment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (args0Segment.IsConstant || args0Segment.IsVariable)
                             return args0Segment.ChangeValue(methodInfo.Invoke(args0Segment.Value, null));
                         return args0Segment.Change($"REVERSE({args0Segment.Body})", false, true);

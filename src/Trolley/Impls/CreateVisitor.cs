@@ -43,7 +43,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (this.TryGetTableShardingInfo(entityType, TableShardingUsageMode.WriteOnly, out var tableShardingInfo))
             this.Tables[0].TableShardingInfo = tableShardingInfo;
     }
-    public virtual string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
+    public virtual string BuildSql(ITheaCommand command, out List<SqlSegment> readerFields)
     {
         string tailSql = null;
         readerFields = this.ReaderFields;
@@ -226,7 +226,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         });
     }
     public virtual (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
-        Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
+        Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlSegment>) BuildWithBulk(ITheaCommand command)
     {
         (var insertObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
 
@@ -559,7 +559,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var assignmentExpr = deferredSegmentValue as LambdaExpression;
         this.InitTableAlias(assignmentExpr);
         if (this.UpdateIndex > 0) this.UpdateBuilder.Append(',');
-        this.VisitAndDeferred(new SqlFieldSegment { Expression = assignmentExpr });
+        this.VisitAndDeferred(new SqlSegment { Expression = assignmentExpr });
         this.UpdateIndex++;
     }
     public virtual void VisitSetField(object deferredSegmentValue)
@@ -625,9 +625,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     {
         (var fieldSelector, var valueGetter) = ((Expression, Expression))deferredSegmentValue;
         this.InitTableAlias(fieldSelector as LambdaExpression);
-        var fieldSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = fieldSelector });
+        var fieldSegment = this.VisitAndDeferred(new SqlSegment { Expression = fieldSelector });
         this.InitTableAlias(valueGetter as LambdaExpression);
-        var valueSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = valueGetter });
+        var valueSegment = this.VisitAndDeferred(new SqlSegment { Expression = valueGetter });
         if (this.UpdateIndex > 0) this.UpdateBuilder.Append(',');
         this.UpdateBuilder.Append($"{fieldSegment.Body}={valueSegment.Body}");
         this.UpdateIndex++;

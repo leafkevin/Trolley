@@ -235,9 +235,9 @@ public partial class SqlServerProvider : BaseOrmProvider
 #if NET6_0_OR_GREATER
             case Type factType when factType == typeof(TimeOnly): return $"'{(TimeOnly)value:hh\\:mm\\:ss\\.ffffff}'";
 #endif
-            case Type factType when factType == typeof(SqlFieldSegment):
+            case Type factType when factType == typeof(SqlSegment):
                 {
-                    var sqlSegment = value as SqlFieldSegment;
+                    var sqlSegment = value as SqlSegment;
                     if (sqlSegment.IsConstant || sqlSegment.IsVariable)
                         return this.GetQuotedValue(sqlSegment.Value);
                     return sqlSegment.Body;
@@ -507,7 +507,7 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
                                 if (!myVisitor.Tables[0].Mapper.TryGetMemberMap(memberExpr.Member.Name, out var memberMapper))
                                     throw new MissingMemberException($"类{myVisitor.Tables[0].EntityType.FullName}未找到成员{memberExpr.Member.Name}");
                                 var fieldName = $"INSERTED.{this.GetFieldName(memberMapper.FieldName)}";
-                                return new SqlFieldSegment
+                                return new SqlSegment
                                 {
                                     HasField = true,
                                     FromMember = memberMapper.Member,
@@ -522,9 +522,9 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
                             switch (lambdaExpr.Body.NodeType)
                             {
                                 case ExpressionType.New:
-                                    return myVisitor.VisitNew(new SqlFieldSegment { Expression = lambdaExpr });
+                                    return myVisitor.VisitNew(new SqlSegment { Expression = lambdaExpr });
                                 case ExpressionType.MemberInit:
-                                    return myVisitor.VisitMemberInit(new SqlFieldSegment { Expression = lambdaExpr });
+                                    return myVisitor.VisitMemberInit(new SqlSegment { Expression = lambdaExpr });
                                 default:
                                     throw new NotSupportedException($"不支持的表达式,{lambdaExpr}");
                             }
@@ -550,7 +550,7 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
                                 if (!myVisitor.Tables[0].Mapper.TryGetMemberMap(memberExpr.Member.Name, out var memberMapper))
                                     throw new MissingMemberException($"类{myVisitor.Tables[0].EntityType.FullName}未找到成员{memberExpr.Member.Name}");
                                 var fieldName = $"DELETED.{this.GetFieldName(memberMapper.FieldName)}";
-                                return new SqlFieldSegment
+                                return new SqlSegment
                                 {
                                     HasField = true,
                                     FromMember = memberMapper.Member,
@@ -565,9 +565,9 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
                             switch (lambdaExpr.Body.NodeType)
                             {
                                 case ExpressionType.New:
-                                    return myVisitor.VisitNew(new SqlFieldSegment { Expression = lambdaExpr });
+                                    return myVisitor.VisitNew(new SqlSegment { Expression = lambdaExpr });
                                 case ExpressionType.MemberInit:
-                                    return myVisitor.VisitMemberInit(new SqlFieldSegment { Expression = lambdaExpr });
+                                    return myVisitor.VisitMemberInit(new SqlSegment { Expression = lambdaExpr });
                                 default:
                                     throw new NotSupportedException($"不支持的表达式,{lambdaExpr}");
                             }
@@ -580,8 +580,8 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
                 cacheKey = RepositoryHelper.GetCacheKey(typeof(Sql), methodInfo.GetGenericMethodDefinition());
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
-                    var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
-                    var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[1] });
+                    var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                    var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
                     var targetArgument = visitor.GetQuotedValue(targetSegment);
                     var rightArgument = visitor.GetQuotedValue(rightSegment);
                     return targetSegment.Merge(rightSegment, $"ISNULL({targetArgument},{rightArgument})", false, true);

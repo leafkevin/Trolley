@@ -175,8 +175,8 @@ partial class MySqlProvider
                 case "Compare":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var leftSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[1] });
+                        var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
 
                         var leftArgument = visitor.GetQuotedValue(leftSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
@@ -187,8 +187,8 @@ partial class MySqlProvider
                 case "Equals":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var leftSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[1] });
+                        var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
 
                         var leftArgument = visitor.GetQuotedValue(leftSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
@@ -199,7 +199,7 @@ partial class MySqlProvider
                 case "FromDays":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var valueSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return valueSegment.ChangeValue(TimeSpan.FromDays(Convert.ToDouble(valueSegment.Value)));
 
@@ -210,7 +210,7 @@ partial class MySqlProvider
                 case "FromHours":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var valueSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return valueSegment.ChangeValue(TimeSpan.FromHours(Convert.ToDouble(valueSegment.Value)));
                         return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({valueSegment.ToExprWrap()}*3600))", false, true);
@@ -220,7 +220,7 @@ partial class MySqlProvider
                 case "FromMilliseconds":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var valueSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return valueSegment.ChangeValue(TimeSpan.FromMilliseconds(Convert.ToDouble(valueSegment.Value)));
                         return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({valueSegment.ToExprWrap()}/1000))", false, true);
@@ -230,7 +230,7 @@ partial class MySqlProvider
                 case "FromMinutes":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var valueSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return valueSegment.ChangeValue(TimeSpan.FromMinutes(Convert.ToDouble(valueSegment.Value)));
                         return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({valueSegment.ToExprWrap()}*60))", false, true);
@@ -240,7 +240,7 @@ partial class MySqlProvider
                 case "FromSeconds":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var valueSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return valueSegment.ChangeValue(TimeSpan.FromSeconds(Convert.ToDouble(valueSegment.Value)));
                         return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({valueSegment.ToExprWrap()}))", false, true);
@@ -250,7 +250,7 @@ partial class MySqlProvider
                 case "FromTicks":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var valueSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return valueSegment.ChangeValue(TimeSpan.FromTicks(Convert.ToInt64(valueSegment.Value)));
                         return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({valueSegment.ToExprWrap()}/{TimeSpan.TicksPerSecond}))", false, true);
@@ -261,7 +261,7 @@ partial class MySqlProvider
                 case "TryParse":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var valueSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return valueSegment.ChangeValue(TimeSpan.Parse(valueSegment.Value.ToString()));
                         return valueSegment.Change($"CAST({valueSegment.Body} AS TIME)", false, true);
@@ -272,8 +272,8 @@ partial class MySqlProvider
                 case "TryParseExact":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var valueSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
-                        var formatSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[1] });
+                        var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var formatSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
                         if ((valueSegment.IsConstant || valueSegment.IsVariable)
                             && (formatSegment.IsConstant || formatSegment.IsVariable))
                             return valueSegment.MergeValue(formatSegment, TimeSpan.ParseExact(valueSegment.Value.ToString(), formatSegment.Value.ToString(), CultureInfo.InvariantCulture));
@@ -291,8 +291,8 @@ partial class MySqlProvider
                 case "CompareTo":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
@@ -303,8 +303,8 @@ partial class MySqlProvider
                 case "Equals":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
@@ -315,8 +315,8 @@ partial class MySqlProvider
                 case "Add":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
 
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
@@ -349,8 +349,8 @@ partial class MySqlProvider
                 case "Subtract":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
                             return targetSegment.MergeValue(rightSegment, ((TimeSpan)targetSegment.Value).Subtract((TimeSpan)rightSegment.Value));
@@ -365,8 +365,8 @@ partial class MySqlProvider
                 case "Multiply":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
                             return targetSegment.MergeValue(rightSegment, ((TimeSpan)targetSegment.Value).Multiply((double)rightSegment.Value));
@@ -382,8 +382,8 @@ partial class MySqlProvider
                     {
                         formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                         {
-                            var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                            var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                            var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                            var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
                                 return targetSegment.MergeValue(rightSegment, ((TimeSpan)targetSegment.Value).Divide((double)rightSegment.Value));
@@ -398,8 +398,8 @@ partial class MySqlProvider
                     {
                         formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                         {
-                            var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
-                            var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                            var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                            var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
                                 return targetSegment.MergeValue(rightSegment, ((TimeSpan)targetSegment.Value).Divide((TimeSpan)rightSegment.Value));

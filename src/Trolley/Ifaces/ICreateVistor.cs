@@ -26,9 +26,9 @@ public interface ICreateVisitor : ICommandContext, IDisposable
     string FromSql { get; set; }
     bool IsRecursive { get; set; }
 
-    string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields);
+    string BuildSql(ITheaCommand command, out List<SqlSegment> readerFields);
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
-        Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command);
+        Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlSegment>) BuildWithBulk(ITheaCommand command);
 
     IQueryVisitor CreateQueryVisitor(char? tableAsStart = null);
     void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);

@@ -454,7 +454,7 @@ public partial class MySqlProvider : BaseOrmProvider
                         //忽略更新别名
                         if (!dialectVisitor.IsUseSetAlias)
                             fieldName = $"VALUES({fieldName})";
-                        return new SqlFieldSegment
+                        return new SqlSegment
                         {
                             HasField = true,
                             FromMember = memberMapper.Member,
@@ -471,8 +471,8 @@ public partial class MySqlProvider : BaseOrmProvider
                 cacheKey = HashCode.Combine(typeof(Sql), methodInfo.GetGenericMethodDefinition());
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
-                    var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0], IsNullFields = true });
-                    var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[1] });
+                    var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0], IsNullFields = true });
+                    var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
                     var targetArgument = visitor.GetQuotedValue(targetSegment);
                     var rightArgument = visitor.GetQuotedValue(rightSegment);
                     return targetSegment.Merge(rightSegment, $"IFNULL({targetArgument},{rightArgument})", false, true);

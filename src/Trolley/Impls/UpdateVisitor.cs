@@ -44,7 +44,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (this.TryGetTableShardingInfo(entityType, TableShardingUsageMode.WriteOnly, out var tableShardingInfo))
             this.Tables[0].TableShardingInfo = tableShardingInfo;
     }
-    public virtual string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
+    public virtual string BuildSql(ITheaCommand command, out List<SqlSegment> readerFields)
     {
         string sql = null;
         readerFields = null;
@@ -208,7 +208,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         return sql;
     }
     public virtual (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>,
-        Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>, List<SqlFieldSegment>) BuildSetBulk(ITheaCommand command)
+        Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>, List<SqlSegment>) BuildSetBulk(ITheaCommand command)
     {
         (var updateObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
 
@@ -771,7 +771,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     }
                     else
                     {
-                        var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = argumentExpr });
+                        var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
                         //只一个成员访问，没有设置语句，什么也不做，忽略
                         if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberInfo.Name)
                             continue;
@@ -798,7 +798,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     }
                     else
                     {
-                        var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = argumentExpr });
+                        var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
                         //只一个成员访问，没有设置语句，什么也不做，忽略
                         if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberAssignment.Member.Name)
                             continue;
@@ -864,7 +864,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     if (!entityMapper.TryGetMemberMap(memberInfo.Name, out memberMapper))
                         continue;
 
-                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment
+                    var sqlSegment = this.VisitAndDeferred(new SqlSegment
                     {
                         Expression = newExpr.Arguments[i],
                         NativeDbType = memberMapper.NativeDbType,
@@ -884,7 +884,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out memberMapper))
                         continue;
 
-                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberAssignment.Expression });
+                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberAssignment.Expression });
                     if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberAssignment.Member.Name)
                         fieldsAction.Invoke(memberMapper);
                 }
@@ -919,10 +919,10 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             this.ShardingValues[memberMapper.MemberName] = fieldValue;
         }
     }
-    public virtual void AddMemberElement(SqlFieldSegment sqlSegment, MemberMap memberMapper)
+    public virtual void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper)
     {
         if (this.FieldsBuilder.Length > 0) this.FieldsBuilder.Append(',');
-        if (sqlSegment == SqlFieldSegment.Null)
+        if (sqlSegment == SqlSegment.Null)
         {
             this.FieldsBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=NULL");
             return;

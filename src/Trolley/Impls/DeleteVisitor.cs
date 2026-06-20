@@ -33,7 +33,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         if (this.TryGetTableShardingInfo(entityType, TableShardingUsageMode.WriteOnly, out var tableShardingInfo))
             this.Tables[0].TableShardingInfo = tableShardingInfo;
     }
-    public virtual string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
+    public virtual string BuildSql(ITheaCommand command, out List<SqlSegment> readerFields)
     {
         readerFields = null;
         this.DbParameters = command.Parameters;
@@ -333,13 +333,13 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         base.Dispose();
         this.deferredSegments = null;
     }
-    public void AddMemberElement(SqlFieldSegment sqlSegment, MemberMap memberMapper, StringBuilder builder)
+    public void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper, StringBuilder builder)
     {
         sqlSegment = this.VisitAndDeferred(sqlSegment);
         if (builder.Length > 0)
             builder.Append(',');
         builder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName) + "=");
-        if (sqlSegment == SqlFieldSegment.Null)
+        if (sqlSegment == SqlSegment.Null)
             builder.Append("NULL");
         else builder.Append(this.GetQuotedValue(sqlSegment));
     }

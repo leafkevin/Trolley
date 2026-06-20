@@ -13,7 +13,6 @@ public enum DeferredOperation : byte
     IsNull,
     IsTrue
 }
-
 public enum SqlType : byte
 {
     FixedValue = 0,
@@ -25,6 +24,7 @@ public enum SqlType : byte
     ReaderField,
     ReaderFields
 }
+[DebuggerDisplay("SqlType: {SqlType,nq} Value: {Value,nq} Expression: {Expression,nq}")]
 public struct SqlSegment
 {
     public static readonly SqlSegment True = new SqlSegment { IsTrue = true, SqlType = SqlType.FixedValue, Value = true };
@@ -99,10 +99,46 @@ public struct SqlSegment
         }
         return notIndex % 2 > 0;
     }
+    public string GetQuotedValue(IOrmProvider ormProvider)
+    {
+        if (this.IsNull || this.Value == null || this.Value is DBNull)
+            return string.Empty;
+        if (this.IsTrue) return ormProvider.GetQuotedValue(this.Value);
+        return this.Value.ToString();
+    }
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private string DebugDisplayText => $"SqlType: {this.SqlType} Value: {this.Value.ToString()} Expression: {this.Expression}";
+}
+public enum ReaderFieldType : byte
+{
+    /// <summary>
+    /// 字段，原始字段
+    /// </summary>
+    Field,
+    /// <summary>
+    /// 实体类型，三种场景：参数访问，直接主表的Include导航属性成员访问，Grouping分组对象成员，返回的类型是ReaderField列表
+    /// </summary>
+    Entity,
+    /// <summary>
+    /// 1:1导航Include子表引用，场景: .Select(x => new { Order = x, CompanyInfo = x.Buyer.Company })
+    /// </summary>
+    IncludeRef,
+    /// <summary>
+    /// 1:N导航Include子表引用，场景: .Select(x => new { Orders = x.Orders})
+    /// </summary>
+    DeferredIncludeRef,
+    /// <summary>
+    /// 原始SQL
+    /// </summary>
+    RawSql,
+    /// <summary>
+    /// 常量、变量、参数、表达式计算、方法调用，非原始字段，需要AS别名
+    /// </summary>
+    Expression
 }
 public class ReaderField
 {
-    public SqlFieldType FieldType { get; set; }
+    public ReaderFieldType FieldType { get; set; }
     public TableSegment TableSegment { get; set; }
     /// <summary>
     /// 包装后的SQL片段，字段名称、方法调用或是表达式SQL片段，只有是字段值的时候，值不做处理，只有到最后一步才处理
@@ -145,363 +181,4 @@ public class ReaderField
         }
         return result;
     }
-}
-
-public enum SqlFieldType : byte
-{
-    /// <summary>
-    /// 字段，原始字段
-    /// </summary>
-    Field,
-    /// <summary>
-    /// 实体类型，三种场景：参数访问，直接主表的Include导航属性成员访问，Grouping分组对象成员，返回的类型是ReaderField列表
-    /// </summary>
-    Entity,
-    /// <summary>
-    /// 1:1导航Include子表引用，场景: .Select(x => new { Order = x, CompanyInfo = x.Buyer.Company })
-    /// </summary>
-    IncludeRef,
-    /// <summary>
-    /// 1:N导航Include子表引用，场景: .Select(x => new { Orders = x.Orders})
-    /// </summary>
-    DeferredIncludeRef,
-    /// <summary>
-    /// 原始SQL
-    /// </summary>
-    RawSql,
-    /// <summary>
-    /// 常量、变量、参数、表达式计算、方法调用，非原始字段，需要AS别名
-    /// </summary>
-    Expression
-}
-[DebuggerDisplay("FieldType: {FieldType,nq} Body: {Body,nq} Value: {Value,nq} Expression: {Expression,nq}")]
-public class SqlFieldSegment : ICloneable
-{
-    public static readonly SqlFieldSegment True = new SqlFieldSegment { IsConstant = true, Value = true, Body = "True" };
-    public static readonly SqlFieldSegment Null = new SqlFieldSegment { Value = "NULL", Body = "NULL" };
-
-    /// <summary>
-    /// 延迟表达式操作，通常是非或是不等于等操作
-    /// </summary>
-    public Stack<DeferredExpr> DeferredExprs { get; set; }
-    /// <summary>
-    /// 字段类型
-    /// </summary>
-    public SqlFieldType FieldType { get; set; }
-    /// <summary>
-    /// 所属的TableSegment，如：User表
-    /// </summary>
-    public TableSegment TableSegment { get; set; }
-    /// <summary>
-    /// 是否有字段
-    /// </summary>
-    public bool HasField { get; set; }
-    /// <summary>
-    /// 是否有SQL参数，如：@p1,@p2
-    /// </summary>
-    public bool HasParameter { get; set; }
-    /// <summary>
-    /// 是否是常量值
-    /// </summary>
-    public bool IsConstant { get; set; }
-    /// <summary>
-    /// 是否是变量
-    /// </summary>
-    public bool IsVariable { get; set; }
-    /// <summary>
-    /// 是否是表达式，二元表达式、字符串拼接等
-    /// </summary>
-    public bool IsExpression { get; set; }
-    /// <summary>
-    /// 是否方法调用
-    /// </summary>
-    public bool IsMethodCall { get; set; }
-    public bool IsEnum { get; set; }
-    /// <summary>
-    /// 是否参数化当前值，本次解析有效
-    /// </summary>
-    public bool IsParameterized { get; set; }
-    /// <summary>
-    /// 去掉Nullable后的枚举类型，此外无值
-    /// </summary>
-    public Type ExpectType { get; set; }
-    /// <summary>
-    /// 每次Visit时，当前表达式的Type，当发生强制转换，或是类型变更时，才会随之变化
-    /// 单个字段访问时，就是这个字段的成员类型
-    /// </summary>
-    public Type SegmentType { get; set; }
-    /// <summary>
-    /// 是否可以做字段类型处理，用在a??b场景
-    /// </summary>
-    public bool IsFieldType { get; set; }
-    /// <summary>
-    /// 是否是最外层目标类型，通常用判断第一个字段是否是参数访问，并且只有一个字段，可以有include操作
-    /// </summary>
-    public bool IsTargetType { get; set; }
-    /// <summary>
-    /// 强制改变参数名称，会使用到
-    /// </summary>
-    public string ParameterName { get; set; }
-    /// <summary>
-    /// 原TableSegment表中的成员，Include子表的场景时，父亲对象中的成员，如：Order.Buyer成员，根据此成员信息设置主表属性值
-    /// 每变更一次子查询，都会更改此成员值，用于最外层与TargetMember比较，是否AS别名
-    /// </summary>
-    public MemberInfo FromMember { get; set; }
-    /// <summary>
-    /// 最外层返回实体要设置的成员
-    /// </summary>
-    public MemberInfo TargetMember { get; set; }
-    /// <summary>
-    /// 单字段访问时，数据库字段的类型
-    /// </summary>
-    public object NativeDbType { get; set; }
-    /// <summary>
-    /// 数据库字段映射的目标类型
-    /// </summary>
-    public Type MappedTargetType { get; set; }
-    /// <summary>
-    /// 单字段访问时，映射的TypeHandler
-    /// </summary>
-    public ITypeHandler TypeHandler { get; set; }
-    /// <summary>
-    /// 字段值、字段名称、方法调用或是表达式SQL片段，只有是字段值的时候，值不做处理，只有到最后一步才处理
-    /// </summary>
-    public object Value { get; set; }
-    /// <summary>
-    /// Value转变成后的SQL
-    /// </summary>
-    public string Body { get; set; }
-    /// <summary>
-    /// 字段个数，当FieldType为RawSql时，Value中是原始SQ，FieldsCount表示原始SQL字符串中包含的字段个数
-    /// </summary>
-    public int FieldsCount { get; set; } = 1;
-    /// <summary>
-    /// Include子表的主表SqlFieldSegment引用
-    /// </summary>
-    public SqlFieldSegment Parent { get; set; }
-    /// <summary>
-    /// 是否有后续的Include表，当前是主表SqlFieldSegment时且有Include表，此值为true
-    /// </summary>
-    public bool HasNextInclude { get; set; }
-    /// <summary>
-    /// 实体表或是子查询表的所有字段，FieldType为Entity、DeferredFields时有值
-    /// </summary>
-    public List<SqlFieldSegment> Fields { get; set; }
-    /// <summary>
-    /// 是否DeferredFields,延迟解析表达式
-    /// </summary>
-    public bool IsDeferredFields { get; set; }
-    /// <summary>
-    /// 是否RawSql字段, Select表达式场景下，引用了Sql.RawSql方法，如：.Select(x => Sql.RawSql&lt;Order&gt;("id,order_no,amount"))， .Select(x => new { Brand = Sql.RawSql&lt;BrandInfo&gt;("id,brand_no,name") })
-    /// </summary>
-    public bool IsRawSqlFields { get; set; }
-    /// <summary>
-    /// 最外层Select时，原参数访问的路径，有参数访问时才有值，如：.Select(x => new { Order = x, x.Seller.Company })中的x, x.Seller.Company
-    /// 当有Include导航属性成员访问时，查找其主表在Select返回的实体中的属性值，构造延迟属性设置方法
-    /// 此处获取Company表字段信息，在Order属性中已经存在了，直接取里面的值，不再查询数据库，只做延迟属性值设置
-    /// </summary>
-    public string Path { get; set; }
-    /// <summary>
-    /// 是否需要alias别名
-    /// </summary>
-    public bool IsNeedAlias { get; set; }
-
-    public Expression Expression { get; set; }
-    public Expression OriginalExpression { get; set; }
-    public bool HasDeferred => this.DeferredExprs != null && this.DeferredExprs.Count > 0;
-    public bool IsGroupingField { get; set; }
-    public bool IsGroupByField { get; set; }
-    public bool IsOrderByField { get; set; }
-    public bool IsAggField { get; set; }
-    public string AggFunc { get; set; }
-    /// <summary>
-    /// 是否调用了IsNull函数，SUM, COUNT,AVG,MAX,MIN等聚合函数需要调用IsNull函数来处理null值
-    /// </summary>
-    public bool IsNullFields { get; set; }
-
-    /// <summary>
-    /// 常量、变量会调用此方法，默认是常量
-    /// </summary>
-    /// <param name="value"></param>
-    /// <returns></returns>
-    public SqlFieldSegment ChangeValue(object value)
-    {
-        this.Value = value;
-        return this;
-    }
-    /// <summary>
-    /// 常量、变量会调用此方法，默认是常量
-    /// </summary>
-    /// <param name="value"></param>
-    /// <param name="isConstant"></param>
-    /// <returns></returns>
-    public SqlFieldSegment ChangeValue(object value, bool isConstant)
-    {
-        this.IsConstant = isConstant;
-        this.IsVariable = !isConstant;
-        this.Value = value;
-        return this;
-    }
-    /// <summary>
-    /// 在解析函数时使用，明确调用后的结果，表达式和方法调用，默认是表达式
-    /// </summary>
-    /// <param name="body"></param>
-    /// <param name="isExpression"></param>
-    /// <param name="isMethodCall"></param>
-    /// <returns></returns>
-    public SqlFieldSegment Change(string body, bool isExpression = true, bool isMethodCall = false)
-    {
-        this.IsConstant = false;
-        this.IsVariable = false;
-        this.IsExpression = isExpression;
-        this.IsMethodCall = isMethodCall;
-        this.Body = body;
-        return this;
-    }
-    /// <summary>
-    /// 在解析函数时使用，明确是常量或是变量，需要Merge一下IsConstant和IsVariable
-    /// </summary>
-    /// <param name="rightSegment"></param>
-    /// <param name="value"></param>
-    /// <returns></returns>
-    public SqlFieldSegment MergeValue(SqlFieldSegment rightSegment, object value)
-    {
-        this.IsConstant = this.IsConstant && rightSegment.IsConstant;
-        this.IsVariable = this.IsVariable || rightSegment.IsVariable;
-        this.Value = value;
-        return this;
-    }
-    /// <summary>
-    /// 在解析函数时使用，明确是常量或是变量，需要Merge一下IsConstant和IsVariable
-    /// </summary>
-    /// <param name="leftSegment"></param>
-    /// <param name="rightSegment"></param>
-    /// <param name="value"></param>
-    /// <returns></returns>
-    public SqlFieldSegment MergeValue(SqlFieldSegment leftSegment, SqlFieldSegment rightSegment, object value)
-    {
-        this.IsConstant = this.IsConstant && leftSegment.IsConstant && rightSegment.IsConstant;
-        this.IsVariable = this.IsVariable || leftSegment.IsVariable || rightSegment.IsVariable;
-        this.Value = value;
-        return this;
-    }
-    /// <summary>
-    /// 在解析函数时使用，明确是常量或是变量，需要Merge一下IsConstant和IsVariable
-    /// </summary>
-    /// <param name="rightSegment"></param> 
-    /// <returns></returns>
-    public SqlFieldSegment Merge(SqlFieldSegment rightSegment)
-    {
-        this.IsConstant = this.IsConstant && rightSegment.IsConstant;
-        this.IsVariable = this.IsVariable || rightSegment.IsVariable;
-        return this;
-    }
-    /// <summary>
-    /// 在解析函数时使用，明确调用后的结果，表达式或是方法调用，需要Merge一下HasField和IsParameter，默认是表达式
-    /// </summary>
-    /// <param name="rightSegment"></param>
-    /// <param name="body"></param>
-    /// <param name="isExpression"></param>
-    /// <param name="isMethodCall"></param>
-    /// <returns></returns>
-    public SqlFieldSegment Merge(SqlFieldSegment rightSegment, string body, bool isExpression = true, bool isMethodCall = false)
-    {
-        this.IsConstant = false;
-        this.IsVariable = false;
-        this.HasField = this.HasField || rightSegment.HasField;
-        this.HasParameter = this.HasParameter || rightSegment.HasParameter;
-        this.IsExpression = isExpression;
-        this.IsMethodCall = isMethodCall;
-        this.Body = body;
-        return this;
-    }
-    /// <summary>
-    /// 在解析函数时使用，明确调用后的结果，表达式或是方法调用，需要Merge一下HasField和IsParameter，默认是表达式
-    /// </summary>
-    /// <param name="leftSegment"></param>
-    /// <param name="rightSegment"></param>
-    /// <param name="body"></param>
-    /// <param name="isExpression"></param>
-    /// <param name="isMethodCall"></param>
-    /// <returns></returns>
-    public SqlFieldSegment Merge(SqlFieldSegment leftSegment, SqlFieldSegment rightSegment, string body, bool isExpression = true, bool isMethodCall = false)
-    {
-        this.IsConstant = false;
-        this.IsVariable = false;
-        this.HasField = this.HasField || leftSegment.HasField || rightSegment.HasField;
-        this.HasParameter = this.HasParameter || leftSegment.HasParameter || rightSegment.HasParameter;
-        this.IsExpression = isExpression;
-        this.IsMethodCall = isMethodCall;
-        this.Body = body;
-        return this;
-    }
-    public string ToExprWrap()
-    {
-        if (this.IsExpression)
-            return $"({this.Body})";
-        return this.Body;
-    }
-    public SqlFieldSegment Next(Expression nextExpr)
-    {
-        this.Expression = nextExpr;
-        return this;
-    }
-    public bool HasDeferrdNot() => this.DeferredExprs.IsDeferredNot();
-    public void Push(DeferredExpr deferredExpr)
-    {
-        this.DeferredExprs ??= new();
-        this.DeferredExprs.Push(deferredExpr);
-    }
-    public bool TryPop(out DeferredExpr deferredExpr)
-    {
-        if (!this.HasDeferred)
-        {
-            deferredExpr = default;
-            return false;
-        }
-        return this.DeferredExprs.TryPop(out deferredExpr);
-    }
-    /// <summary>
-    /// CTE表被引用的时候才会使用克隆字段
-    /// </summary>
-    /// <returns></returns>
-    public SqlFieldSegment Clone()
-    {
-        List<SqlFieldSegment> fields = null;
-        if (this.Fields != null)
-        {
-            fields = new();
-            this.Fields.ForEach(f => fields.Add(f.Clone()));
-        }
-        return new SqlFieldSegment
-        {
-            FieldType = this.FieldType,
-            TableSegment = this.TableSegment,
-            IsFieldType = this.IsFieldType,
-            IsConstant = this.IsConstant,
-            IsVariable = this.IsVariable,
-            HasParameter = this.HasParameter,
-            HasField = this.HasField,
-            IsExpression = this.IsExpression,
-            IsMethodCall = this.IsMethodCall,
-            Fields = fields,
-            Value = this.Value,
-            Body = this.Body,
-            IsDeferredFields = this.IsDeferredFields,
-            OriginalExpression = this.OriginalExpression,
-            SegmentType = this.SegmentType,
-            TargetMember = this.TargetMember,
-            FromMember = this.FromMember,
-            IsTargetType = this.IsTargetType,
-            HasNextInclude = this.HasNextInclude,
-            NativeDbType = this.NativeDbType,
-            TypeHandler = this.TypeHandler,
-            Parent = this.Parent,
-            Path = this.Path
-        };
-    }
-    object ICloneable.Clone() => this.Clone();
-
-    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-    private string DebugDisplayText => $"Body: {this.Body} Value: {this.Value.ToString()} Expression: {this.Expression}";
 }

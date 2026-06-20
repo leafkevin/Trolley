@@ -11,13 +11,13 @@ public class PostgreSqlQueryVisitor : QueryVisitor
     private bool isDisposed;
     private bool isDistinctOn;
 
-    public List<SqlFieldSegment> DistinctOnFields { get; set; }
+    public List<SqlSegment> DistinctOnFields { get; set; }
     public string DistinctOnSql { get; set; }
 
     public PostgreSqlQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
         : base(dbContext, tableAsStart, dbParameters) { }
 
-    public override string BuildSql(bool isBuildCteSql, out List<SqlFieldSegment> readerFields)
+    public override string BuildSql(bool isBuildCteSql, out List<SqlSegment> readerFields)
     {
         var builder = new StringBuilder();
         if (isBuildCteSql && this.RefQueries != null && this.RefQueries.Count > 0)
@@ -415,7 +415,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                 foreach (var argumentExpr in newExpr.Arguments)
                 {
                     var memberInfo = newExpr.Members[index];
-                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = argumentExpr });
+                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
                     if (builder.Length > 0)
                         builder.Append(',');
 
@@ -432,7 +432,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             case ExpressionType.MemberAccess:
                 {
                     var memberExpr = lambdaExpr.Body as MemberExpression;
-                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberExpr });
+                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberExpr });
                     var fieldName = sqlSegment.Body ?? sqlSegment.Value.ToString();
                     var memberInfo = memberExpr.Member;
                     sqlSegment.TargetMember = memberInfo;
@@ -538,7 +538,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                         else
                         {
                             var memberInfo = newExpr.Members[index];
-                            var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = argumentExpr });
+                            var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
                             if (index > 0) builder.Append(',');
                             //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
                             builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
@@ -618,7 +618,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                     }
                     else
                     {
-                        var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberExpr });
+                        var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberExpr });
                         //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
                         builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
                         var orderField = new OrderByField { Field = sqlSegment };
@@ -635,7 +635,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         this.OrderBySql = builder.ToString();
     }
     public virtual void SelectDistinctOn() => this.ReaderFields = this.DistinctOnFields;
-    public override SqlFieldSegment VisitMemberAccess(SqlFieldSegment sqlSegment)
+    public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
         //Select场景，实体成员访问，返回ReaderField实体类型，ReaderFields并且有值，子ReaderFields的Body可无值
         //Select场景和Where场景，单个字段成员访(包括Json实体类型字段)，返回FromMember，TargetMember，字段类型，Body有值为带有别名的FieldName
@@ -647,7 +647,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             //延迟属性访问，两种场景：
             //主动延迟方法调用：如，把返回的枚举列转成描述，参数就是枚举列，返回值是对应的描述
             string fields = null;
-            List<SqlFieldSegment> readerFields = null;
+            List<SqlSegment> readerFields = null;
             var visitor = new MemberVisitor();
             visitor.Visit(memberExpr);
             //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
@@ -656,16 +656,16 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             //this.DeferredInvoke(f.Price, f.Quantity)
             if (visitor.Members.Count > 0)
             {
-                readerFields = new List<SqlFieldSegment>();
+                readerFields = new List<SqlSegment>();
                 var builder = new StringBuilder();
                 foreach (var argsExpr in visitor.Members)
                 {
-                    var argumentSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = argsExpr });
+                    var argumentSegment = this.VisitAndDeferred(new SqlSegment { Expression = argsExpr });
                     if (argumentSegment.HasField)
                     {
                         sqlSegment.HasField = true;
                         var fieldName = argumentSegment.Body;
-                        readerFields.Add(new SqlFieldSegment
+                        readerFields.Add(new SqlSegment
                         {
                             SegmentType = argsExpr.Type,
                             TargetMember = argsExpr.Member,
@@ -684,7 +684,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             if (readerFields == null)
                 fields = "NULL";
             sqlSegment.IsDeferredFields = true;
-            sqlSegment.FieldType = SqlFieldType.DeferredFields;
+            sqlSegment.FieldType = ReaderFieldType.DeferredFields;
             sqlSegment.Body = fields;
             sqlSegment.OriginalExpression = memberExpr;
             sqlSegment.Fields = readerFields;
@@ -703,7 +703,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             {
                 if (memberExpr.Member.Name == nameof(Nullable<bool>.HasValue))
                 {
-                    sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlFieldSegment.Null });
+                    sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.Null });
                     sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Not });
                     return this.Visit(sqlSegment.Next(memberExpr.Expression));
                 }
@@ -727,12 +727,12 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             //Select((x, a, b, ... ) => new { x.Grouping, ... });
             if (this.IsGroupingMember(memberExpr))
             {
-                List<SqlFieldSegment> groupFields = new();
+                List<SqlSegment> groupFields = new();
                 //在子查询中，Select了Group分组对象，为了避免在Clear时，把GroupFields元素清掉，放到一个新列表中
                 if (this.GroupByFields.Count > 1)
                 {
                     this.GroupByFields.ForEach(f => groupFields.Add(f.Clone()));
-                    sqlSegment.FieldType = SqlFieldType.Entity;
+                    sqlSegment.FieldType = ReaderFieldType.Entity;
                     sqlSegment.HasField = true;
                     sqlSegment.FromMember = memberInfo;
                     sqlSegment.TargetMember = memberInfo;
@@ -745,13 +745,13 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             }
             else if (this.IsDistinctOnMember(memberExpr))
             {
-                List<SqlFieldSegment> distinctOnFields = new();
+                List<SqlSegment> distinctOnFields = new();
                 //在子查询中，Select了Group分组对象，为了避免在Clear时，把GroupFields元素清掉，放到一个新列表中
 
                 if (this.DistinctOnFields.Count > 1)
                 {
                     this.DistinctOnFields.ForEach(f => distinctOnFields.Add(f));
-                    sqlSegment.FieldType = SqlFieldType.Entity;
+                    sqlSegment.FieldType = ReaderFieldType.Entity;
                     sqlSegment.HasField = true;
                     sqlSegment.FromMember = memberInfo;
                     sqlSegment.TargetMember = memberInfo;
@@ -837,7 +837,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                             var readerField = this.ReaderFields.Find(f => f.Path == path);
                             //只有select场景才会Include对象
                             sqlSegment.HasField = true;
-                            sqlSegment.FieldType = SqlFieldType.IncludeRef;
+                            sqlSegment.FieldType = ReaderFieldType.IncludeRef;
                             sqlSegment.FromMember = memberMapper.Member;
                             sqlSegment.Value = refReaderField;
                             return sqlSegment;
@@ -850,7 +850,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
 
                             var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
                             if (this.IsNeedTableAlias) fieldName = fromSegment.AliasName + "." + fieldName;
-                            sqlSegment.FieldType = SqlFieldType.Field;
+                            sqlSegment.FieldType = ReaderFieldType.Field;
                             sqlSegment.HasField = true;
                             sqlSegment.FromMember = memberMapper.Member;
                             sqlSegment.TargetMember = memberInfo;
@@ -899,7 +899,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                         if (memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
                             throw new Exception($"类{fromSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
 
-                        sqlSegment.FieldType = SqlFieldType.Field;
+                        sqlSegment.FieldType = ReaderFieldType.Field;
                         sqlSegment.FromMember = memberMapper.Member;
                         sqlSegment.TargetMember = memberMapper.Member;
                         if (memberMapper.UnderlyingType.IsEnum)
@@ -927,7 +927,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                         //Json的实体类型字段                       
                         //子查询，Select了Grouping分组对象或是匿名对象，目前子查询中，只支持一层，匿名对象后续会做支持
                         //取AS后的字段名，与原字段名不一定一样，AS后的字段名与memberExpr.Member.Name一致
-                        SqlFieldSegment readerField = null;
+                        SqlSegment readerField = null;
                         if (memberExpr.Expression.NodeType != ExpressionType.Parameter)
                         {
                             var parentMemberExpr = memberExpr.Expression as MemberExpression;
@@ -937,7 +937,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                         else
                         {
                             var fromReaderFields = fromSegment.Fields;
-                            if (fromReaderFields.Count == 1 && fromReaderFields[0].FieldType != SqlFieldType.Field)
+                            if (fromReaderFields.Count == 1 && fromReaderFields[0].FieldType != ReaderFieldType.Field)
                                 fromReaderFields = fromReaderFields[0].Fields;
                             readerField = fromReaderFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
                         }
@@ -967,7 +967,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         }
 
         if (memberExpr.Member.DeclaringType == typeof(DBNull))
-            return SqlFieldSegment.Null;
+            return SqlSegment.Null;
 
         //各种静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
         if (this.OrmProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
@@ -1047,9 +1047,9 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         }
         return tableSegment;
     }
-    public override SqlFieldSegment VisitGroupConcatMethodCall(SqlFieldSegment sqlSegment)
+    public override SqlSegment VisitGroupConcatMethodCall(SqlSegment sqlSegment)
         => throw new NotSupportedException("不支持的方法调用，请考虑使用Sql.StringAgg方法");
-    public override SqlFieldSegment VisitStringAggMethodCall(SqlFieldSegment sqlSegment)
+    public override SqlSegment VisitStringAggMethodCall(SqlSegment sqlSegment)
     {
         var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
         var currentExpr = methodCallExpr.Object;
@@ -1063,7 +1063,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         }
         var builder = new StringBuilder("STRING_AGG(");
         bool hasOrder = false;
-        SqlFieldSegment fieldsSegment = null;
+        SqlSegment fieldsSegment = null;
         while (callStack.TryPop(out methodCallExpr))
         {
             switch (methodCallExpr.Method.Name)
@@ -1072,20 +1072,20 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                     var fieldsExpr = methodCallExpr.Arguments[0];
                     if (fieldsExpr.NodeType == ExpressionType.New || fieldsExpr.NodeType == ExpressionType.MemberInit)
                         throw new NotSupportedException("不支持的字段类型，Sql.StringAgg方法，只支持单个字段，不支持多个字段");
-                    fieldsSegment = this.Visit(new SqlFieldSegment { Expression = fieldsExpr });
+                    fieldsSegment = this.Visit(new SqlSegment { Expression = fieldsExpr });
                     this.AddVisitedFieldsSqlWithoutAlias(builder, fieldsSegment);
                     var separator = this.Evaluate<string>(methodCallExpr.Arguments[1]);
                     builder.Append($",{this.OrmProvider.GetQuotedValue(typeof(string), separator)}");
                     break;
                 case "OrderBy":
-                    fieldsSegment = this.Visit(new SqlFieldSegment { Expression = methodCallExpr.Arguments[0] });
+                    fieldsSegment = this.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                     if (hasOrder) builder.Append(',');
                     else builder.Append(" ORDER BY ");
                     this.AddVisitedFieldsSqlWithoutAlias(builder, fieldsSegment);
                     hasOrder = true;
                     break;
                 case "OrderByDescending":
-                    fieldsSegment = this.Visit(new SqlFieldSegment { Expression = methodCallExpr.Arguments[0] });
+                    fieldsSegment = this.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                     if (hasOrder) builder.Append(',');
                     else builder.Append(" ORDER BY ");
                     this.AddVisitedFieldsSqlWithoutAlias(builder, fieldsSegment, " DESC");

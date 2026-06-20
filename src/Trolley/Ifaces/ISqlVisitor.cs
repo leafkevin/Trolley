@@ -34,17 +34,12 @@ public interface ISqlVisitor : IDisposable
     SqlSegment VisitConditional(SqlSegment sqlSegment);
     SqlSegment VisitListInit(SqlSegment sqlSegment);
     SqlSegment VisitTypeIs(SqlSegment sqlSegment);
-    object Evaluate(Expression expr);
-    T Evaluate<T>(Expression expr);
-    string WrapSql(SqlSegment sqlSegment, bool isNeedExprWrap = false);
-    TValue GetQuotedValue<TValue>(SqlSegment sqlSegment);
-    string GetQuotedValue(object elementValue, SqlSegment arraySegment, SqlSegment elementSegmente);
     string ChangeParameterValue(SqlSegment sqlSegment, Type targetType);
     SqlSegment VisitSqlMethodCall(SqlSegment sqlSegment);
     string VisitConditionExpr(Expression conditionExpr, out OperationType operationType);
     List<Expression> ConvertFormatToConcatList(Expression[] argsExprs);
     List<Expression> SplitConcatList(Expression[] argsExprs);
-    SqlSegment BuildDeferredSqlSegment(MethodCallExpression methodCallExpr, SqlSegment sqlSegment);
+    SqlSegment VisitDeferredSqlSegment(SqlSegment sqlSegment);
     SqlSegment ToEnumString(SqlSegment sqlSegment);
 
     DataTable ToDataTable(string tableName, IEnumerable entities, List<MemberMap> memberMappers, List<Func<object, object>> valueGetters);

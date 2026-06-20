@@ -22,9 +22,9 @@ public class PostgreSqlDeleteVisitor : DeleteVisitor
             {
                 if (memberMapper.IsIgnore || memberMapper.IsNavigation)
                     continue;
-                this.ReaderFields.Add(new SqlFieldSegment
+                this.ReaderFields.Add(new SqlSegment
                 {
-                    FieldType = SqlFieldType.Field,
+                    FieldType = ReaderFieldType.Field,
                     FromMember = memberMapper.Member,
                     TargetMember = memberMapper.Member,
                     SegmentType = memberMapper.MemberType,
@@ -37,9 +37,9 @@ public class PostgreSqlDeleteVisitor : DeleteVisitor
         }
         else
         {
-            this.ReaderFields.Add(new SqlFieldSegment
+            this.ReaderFields.Add(new SqlSegment
             {
-                FieldType = SqlFieldType.RawSql,
+                FieldType = ReaderFieldType.RawSql,
                 Body = fieldNames
             });
         }
@@ -55,7 +55,7 @@ public class PostgreSqlDeleteVisitor : DeleteVisitor
             case ExpressionType.MemberAccess:
                 {
                     var memberExpr = fieldsSelector.Body as MemberExpression;
-                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberExpr });
+                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberExpr });
                     this.WrapSql(sqlSegment, true);
                     sqlSegment.TargetMember = memberExpr.Member;
                     sqlSegment.SegmentType = memberExpr.Type;
@@ -71,7 +71,7 @@ public class PostgreSqlDeleteVisitor : DeleteVisitor
                 for (int i = 0; i < newExpr.Arguments.Count; i++)
                 {
                     var memberInfo = newExpr.Members[i];
-                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = newExpr.Arguments[i] });
+                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = newExpr.Arguments[i] });
                     this.WrapSql(sqlSegment, true);
                     sqlSegment.TargetMember = memberInfo;
                     sqlSegment.SegmentType = memberInfo.GetMemberType();
@@ -90,7 +90,7 @@ public class PostgreSqlDeleteVisitor : DeleteVisitor
                         throw new NotSupportedException("暂时不支持除MemberBindingType.Assignment类型外的成员绑定表达式");
 
                     var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberAssignment.Expression });
+                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberAssignment.Expression });
                     this.WrapSql(sqlSegment, true);
                     sqlSegment.TargetMember = memberAssignment.Member;
                     sqlSegment.SegmentType = memberAssignment.Member.GetMemberType();

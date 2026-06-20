@@ -19,9 +19,9 @@ public interface IUpdateVisitor : ICommandContext, IDisposable
     ActionMode ActionMode { get; set; }
     List<TableSegment> ShardingTables { get; set; }
 
-    string BuildSql(ITheaCommand command, out List<SqlFieldSegment> readerFields);
+    string BuildSql(ITheaCommand command, out List<SqlSegment> readerFields);
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>, Action<IDataParameterCollection,
-        StringBuilder, DbContext, string, object, string>, List<SqlFieldSegment>) BuildSetBulk(ITheaCommand command);
+        StringBuilder, DbContext, string, object, string>, List<SqlSegment>) BuildSetBulk(ITheaCommand command);
 
     void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
     void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues);

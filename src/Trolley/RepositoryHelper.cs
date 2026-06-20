@@ -1424,7 +1424,7 @@ public static class RepositoryHelper
         var readerBuilders = new Dictionary<ReaderField, EntityBuildInfo>();
         var deferredBuilds = new Stack<EntityBuildInfo>();
         var entityMapProvider = dbContext.EntityMapProvider;
-        if (readerFields.Count == 1 && readerFields[0].FieldType == SqlFieldType.RawSql)
+        if (readerFields.Count == 1 && readerFields[0].FieldType == ReaderFieldType.RawSql)
         {
             var memberInfos = targetType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                 .Where(f => f.CanWrite).ToList();
@@ -1467,7 +1467,7 @@ public static class RepositoryHelper
                 //}
                 switch (readerField.FieldType)
                 {
-                    case SqlFieldType.Field:
+                    case ReaderFieldType.Field:
                         if (readerField.IsDeferredFields)
                         {
                             //支持延迟方法调用、属性访问，一切均可延迟，但必须最后调用Deferred()方法
@@ -1519,7 +1519,7 @@ public static class RepositoryHelper
                             index++;
                         }
                         break;
-                    case SqlFieldType.RawSql:
+                    case ReaderFieldType.RawSql:
                         var myTargetType = targetType;
                         if (readerField.FieldsCount > 1)
                         {
@@ -1566,7 +1566,7 @@ public static class RepositoryHelper
                         break;
                     default:
                         //实体类型、引用实体类型的导航属性场景
-                        if (readerField.FieldType == SqlFieldType.IncludeRef)
+                        if (readerField.FieldType == ReaderFieldType.IncludeRef)
                         {
                             //Include导航属性引用不能单独Select，前面一定有Parameter访问
                             //Include导航属性引用单独处理，先设置默认值，在整个实体初始化完后，再设置具体值，初始化Action在成员访问的时候，已经构建好了

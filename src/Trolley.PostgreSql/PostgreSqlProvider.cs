@@ -391,9 +391,9 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                 }
             case Type factType when selfTypes.Contains(factType):
                 return $"'{value}'";
-            case Type factType when factType == typeof(SqlFieldSegment):
+            case Type factType when factType == typeof(SqlSegment):
                 {
-                    var sqlSegment = value as SqlFieldSegment;
+                    var sqlSegment = value as SqlSegment;
                     if (sqlSegment.IsConstant || sqlSegment.IsVariable)
                         return this.GetQuotedValue(sqlSegment.Value);
                     return sqlSegment.Body;
@@ -2503,7 +2503,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                             throw new MissingMemberException($"类{myVisitor.Tables[0].EntityType.FullName}未找到成员{memberExpr.Member.Name}");
 
                         var fieldName = $"EXCLUDED.{this.GetFieldName(memberMapper.FieldName)}";
-                        return new SqlFieldSegment
+                        return new SqlSegment
                         {
                             HasField = true,
                             FromMember = memberMapper.Member,
@@ -2521,8 +2521,8 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                 cacheKey = HashCode.Combine(typeof(Sql), methodInfo.GetGenericMethodDefinition());
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
-                    var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0], IsNullFields = true });
-                    var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[1] });
+                    var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0], IsNullFields = true });
+                    var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
                     var targetArgument = visitor.GetQuotedValue(targetSegment);
                     var rightArgument = visitor.GetQuotedValue(rightSegment);
                     return targetSegment.Merge(rightSegment, $"COALESCE({targetArgument},{rightArgument})", false, true);

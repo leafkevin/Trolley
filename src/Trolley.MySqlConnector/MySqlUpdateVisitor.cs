@@ -23,7 +23,7 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
         tableSegment.TableSchema = tableSchema;
     }
     public override (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>,
-        Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>, List<SqlFieldSegment>) BuildSetBulk(ITheaCommand command)
+        Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>, List<SqlSegment>) BuildSetBulk(ITheaCommand command)
     {
         (var updateObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
         object firstUpdateObj = null;

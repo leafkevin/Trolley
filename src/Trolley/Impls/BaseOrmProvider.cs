@@ -2004,7 +2004,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                 {
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var targetSegment = visitor.Visit (new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
 
                         var targetArgument = visitor.WrapSql(targetSegment);
@@ -2049,10 +2049,9 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                 {
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
-                        if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return targetSegment.ChangeValue(targetSegment.Value.ToString());
-
+                        var targetSegment = visitor.Visit(new SqlSegment { Expression = target });
+                        if (targetSegment.IsValue) return targetSegment.Change(targetSegment.Value.ToString());
+                        if(targetSegment)
                         if (targetSegment.SegmentType.IsEnum && !targetSegment.IsExpression && !targetSegment.IsMethodCall)
                             visitor.ToEnumString(targetSegment);
                         if (targetSegment.SegmentType != methodInfo.ReturnType)
