@@ -1244,94 +1244,39 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var builder = new StringBuilder();
         if (!string.IsNullOrEmpty(this.OrderBySql))
             builder.Append(this.OrderBySql + ",");
+        else this.OrderByFields = new();
 
-        this.OrderByFields ??= new();
-        //能够访问Grouping属性的场景，通常是在最外层的Select子句或是OrderBy子句
-        //访问Grouping字段，并且Grouping对象是一个字段
-        if (this.IsGroupingMember(lambdaExpr.Body as MemberExpression))
+        this.InitTableAlias(lambdaExpr);
+        this.IsOrderBy = true;
+        var sqlSegment = this.Visit(new SqlSegment { Expression = expr });
+        switch (sqlSegment.SqlType)
         {
-            for (int i = 0; i < this.GroupByFields.Count; i++)
-            {
-                if (i > 0) builder.Append(',');
-                //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
-                this.AddOrderByField(builder, this.GroupByFields[i], orderType);
-            }
-        }
-        else
-        {
-            this.InitTableAlias(lambdaExpr);
-            switch (lambdaExpr.Body.NodeType)
-            {
-                case ExpressionType.New:
-                    int index = 0;
-                    var newExpr = lambdaExpr.Body as NewExpression;
-                    foreach (var argumentExpr in newExpr.Arguments)
-                    {
-                        //OrderBy访问分组
-                        if (this.IsGroupingMember(argumentExpr as MemberExpression))
-                        {
-                            for (int i = 0; i < this.GroupByFields.Count; i++)
-                            {
-                                if (i > 0) builder.Append(',');
-                                //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
-                                this.AddOrderByField(builder, this.GroupByFields[i], orderType);
-                            }
-                        }
-                        else
-                        {
-                            var memberInfo = newExpr.Members[index];
-                            var sqlSegment = this.Visit(new SqlSegment { Expression = argumentExpr });
-                            this.AddOrderByField(builder, new ReaderField
-                            {
-                                FieldType = ReaderFieldType.Field,
-                                Value = this.WrapSql(sqlSegment)
-                            }, orderType);
-                        }
-                        index++;
-                    }
-                    break;
-                case ExpressionType.MemberAccess:
-                    var memberExpr = lambdaExpr.Body as MemberExpression;
-                    if (this.IsGroupingMember(memberExpr))
-                    {
-                        for (int i = 0; i < this.GroupByFields.Count; i++)
-                        {
-                            if (i > 0) builder.Append(',');
-                            this.AddOrderByField(builder, this.GroupByFields[i], orderType);
-                        }
-                    }
-                    else if (this.IsGroupingMember(memberExpr.Expression as MemberExpression))
-                    {
-                        var readerField = this.GroupByFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
-                        this.AddOrderByField(builder, readerField, orderType);
-                    }
-                    else
-                    {
-                        var sqlSegment = this.Visit(new SqlSegment { Expression = memberExpr });
-                        this.AddOrderByField(builder, new ReaderField
-                        {
-                            FieldType = ReaderFieldType.Field,
-                            Value = this.WrapSql(sqlSegment)
-                        }, orderType);
-                    }
-                    break;
-                default:
-                    {
-                        var sqlSegment = this.Visit(new SqlSegment { Expression = expr });
-                        this.AddOrderByField(builder, new ReaderField
-                        {
-                            FieldType = ReaderFieldType.Field,
-                            Value = this.WrapSql(sqlSegment)
-                        }, orderType);
-                    }
-                    break;
-            }
+            case SqlType.ReaderField:
+                var readerField = sqlSegment.Value as ReaderField;
+                if (readerField.FieldType == ReaderFieldType.Entity)
+                    readerField.Fields.ForEach(f => this.AddOrderByField(builder, f, orderType));
+                else this.AddOrderByField(builder, readerField, orderType);
+                break;
+            case SqlType.ReaderFields:
+                var readerFields = sqlSegment.Value as List<ReaderField>;
+                readerFields.ForEach(f => this.AddOrderByField(builder, f, orderType));
+                break;
+            default:
+                //成员访问、表达式、方法调用、原始SQL等场景
+                this.AddOrderByField(builder, new ReaderField
+                {
+                    FieldType = ReaderFieldType.Field,
+                    Value = this.WrapSql(sqlSegment)
+                }, orderType);
+                break;
         }
         this.OrderBySql = builder.ToString();
+        this.IsOrderBy = false;
     }
     private void AddOrderByField(StringBuilder builder, ReaderField readerField, string orderType)
     {
         string suffix = null;
+
         if (orderType == "DESC")
         {
             suffix = " DESC";
@@ -1353,7 +1298,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         if (this.ReaderFields != null && this.ReaderFields.Count > 0)
             return;
-        this.Select(null, defaultExpr);
+        this.Select(defaultExpr);
     }
     public virtual void SelectRaw(Type targetType, string rawFields)
     {
@@ -1653,10 +1598,22 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     //子查询和CTE子查询场景，fromSegment.TableType: TableType.FromQuery || TableType.CteSelfRef
                     else lastReaderField = fromSegment.Fields.Find(f => f.TargetMember.Name == lastMemberExpr.Member.Name);
                 }
-                //子查询临时表字段访问
-                //临时表字段，直接使用readerField
+                //子查询临时表字段访问或是OrderBy使用Select字段访问
                 if (lastReaderField != null)
+                {
+                    if (this.IsOrderBy && fromSegment.TableType == TableType.SelectReaderFields)
+                    {
+                        var fieldName = lastReaderField.Value.ToString();
+                        if (this.IsNeedAlias(lastReaderField))
+                            fieldName = lastReaderField.TargetMember.Name;
+                        lastReaderField = new ReaderField
+                        {
+                            FieldType = ReaderFieldType.Field,
+                            Value = fieldName
+                        };
+                    }
                     sqlSegment.Change(lastReaderField, SqlType.ReaderField);
+                }
                 else
                 {
                     //真实表字段访问
@@ -1873,14 +1830,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (parameterNames == null || parameterNames.Count <= 0)
             return tableSegment;
 
-        //为了实现Select之后，有的表达式计算、函数调用或是普通字段，都有可能改变了名字，为了之后select之后还可以OrderBy操作，
-        //在解析字段的时候，如果ReaderFields有值说明已经select过了(Union除外)，就取ReaderFields中的字段，否则就取原表中的字段
         //有加新表操作或是Join操作就要清空ReaderFields，以免后续的解析字段时找不到字段
+        //OrderBy操作，可以选择Select别名字段，此时优先使用别名
         if (this.ReaderFields != null && this.ReaderFields.Count > 0)
         {
             this.TableAliases.Add(parameterNames[0], tableSegment = new TableSegment
             {
-                TableType = TableType.TempReaderFields,
+                TableType = TableType.SelectReaderFields,
                 Fields = this.ReaderFields,
             });
             return tableSegment;
@@ -2030,7 +1986,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         if (this.IsSecondUnion || this.IsCteTable) return false;
         //单个字段RawSql场景，需要加别名，多个字段RawSql不需要加别名
-        if (readerField.FieldType == ReaderFieldType.RawSql) return false;
+        if (readerField.FieldType == ReaderFieldType.RawSql)
+            return readerField.FieldsCount == 1;
         //GroupFields中的ReaderField只设置了必须加as别名的情况，没有设置TargetMember.Name !=FromMember.Name的情况，这里把这种情况补上
         //PostgreSql时，DistinctOnFields中的ReaderField也是这个场景
         if (readerField.FieldType == ReaderFieldType.Expression) return true;

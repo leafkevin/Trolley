@@ -28,7 +28,7 @@ public enum TableType : byte
     /// <summary>
     /// 临时的ReaderFields包装表，只能取ReaderFields栏位使用
     /// </summary>
-    TempReaderFields
+    SelectReaderFields
 }
 public class TableSegment
 {

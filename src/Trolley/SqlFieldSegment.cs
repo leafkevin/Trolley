@@ -162,7 +162,6 @@ public class ReaderField
     public MemberInfo TargetMember { get; set; }
     public bool IsDeferredFields { get; set; }
     public bool IsGroupingField { get; set; }
-    //public bool IsRefFields { get; set; }
     public List<ReaderField> Fields { get; set; }
     public string Path { get; set; }
     public bool HasNextInclude { get; set; }
@@ -170,13 +169,18 @@ public class ReaderField
     public bool IsAggField { get; set; }
     public bool IsAvgField { get; set; }
     public string AggFunc { get; set; }
+    /// <summary>
+    /// OrderBy子句中引用的GroupBy/Select子句的ReaderField对象，方便在BuildSql时，尽力使用Select子句的ReaderField别名
+    /// </summary>
+    public ReaderField RefField { get; set; }
 
     public ReaderField Clone()
     {
         var result = (ReaderField)this.MemberwiseClone();
+        result.RefField = this.RefField;
         if (this.Fields != null && this.Fields.Count > 0)
         {
-            result.Fields = new List<ReaderField>();
+            result.Fields = new();
             this.Fields.ForEach(f => result.Fields.Add(f.Clone()));
         }
         return result;

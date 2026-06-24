@@ -951,7 +951,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                         sqlSegment.NativeDbType = readerField.NativeDbType;
                         sqlSegment.MappedTargetType = readerField.MappedTargetType;
                         sqlSegment.TypeHandler = readerField.TypeHandler;
-                        if (fromSegment.TableType == TableType.TempReaderFields)
+                        if (fromSegment.TableType == TableType.SelectReaderFields)
                             fieldName = readerField.Body;
                         else
                         {
@@ -1005,7 +1005,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         {
             this.TableAliases.Add(parameterNames[0], tableSegment = new TableSegment
             {
-                TableType = TableType.TempReaderFields,
+                TableType = TableType.SelectReaderFields,
                 Fields = this.ReaderFields,
             });
             return tableSegment;

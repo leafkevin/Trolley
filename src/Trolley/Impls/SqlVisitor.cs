@@ -38,10 +38,11 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     /// </summary> 
     public Dictionary<string, TableSegment> RefTableAliases { get; set; }
 
-    #region Build Sql时使用，临时状态变量
+    #region Build Sql时使用，临时状态变量  
+    public bool IsWhere { get; set; }
     public bool IsSelect { get; set; }
     public bool IsSelectMember { get; set; }
-    public bool IsWhere { get; set; }
+    public bool IsOrderBy { get; set; }
     public bool IsIncludeMany { get; set; }
     #endregion
 
@@ -881,43 +882,6 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         }
         throw new NotSupportedException($"不支持的表达式操作，{sqlSegment.Expression}");
     }
-    //public virtual object Evaluate(SqlSegment sqlSegment)
-    //{
-    //    if (sqlSegment.IsNull || sqlSegment.Value == DBNull.Value)
-    //        return null;
-
-    //    var dbFieldValue = sqlSegment.Value;
-    //    if (sqlSegment.TypeHandler != null)
-    //        dbFieldValue = sqlSegment.TypeHandler.ToFieldValue(dbFieldValue);
-    //    else
-    //    {
-    //        if (sqlSegment.MappedTargetType != null)
-    //        {
-    //            var currentType = dbFieldValue.GetType();
-    //            if (sqlSegment.MappedTargetType != currentType)
-    //            {
-    //                if (currentType.IsEnum && !sqlSegment.MappedTargetType.IsEnum)
-    //                {
-    //                    var underlyingType = Enum.GetUnderlyingType(currentType);
-    //                    dbFieldValue = Convert.ChangeType(dbFieldValue, underlyingType);
-    //                }
-    //                else if (!currentType.IsEnum && sqlSegment.MappedTargetType.IsEnum)
-    //                {
-    //                    var underlyingType = Enum.GetUnderlyingType(sqlSegment.MappedTargetType);
-    //                    dbFieldValue = Convert.ChangeType(dbFieldValue, underlyingType);
-    //                }
-    //                else dbFieldValue = Convert.ChangeType(dbFieldValue, sqlSegment.MappedTargetType);
-    //            }
-    //        }
-    //        dbFieldValue = Enum.ToObject(expectType, dbFieldValue);
-    //    }
-    //    if (!expectType.IsEnum && sqlSegment.SegmentType.IsEnum)
-    //    {
-    //        var underlyingType = Enum.GetUnderlyingType(sqlSegment.SegmentType);
-    //        dbFieldValue = Convert.ChangeType(dbFieldValue, underlyingType);
-    //    }
-    //    return (TValue)Convert.ChangeType(dbFieldValue, expectType);
-    //}
     public virtual SqlSegment VisitSqlMethodCall(SqlSegment sqlSegment)
     {
         var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
