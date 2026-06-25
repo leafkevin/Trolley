@@ -119,6 +119,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         {
             if (!string.IsNullOrEmpty(this.GroupBySql))
             {
+                if (this.ReaderFields.Exists(f => f.IsGroupingField && f.FieldType== ReaderFieldType.Entity))
+                    continue;
+
                 //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
                 foreach (var groupByField in this.GroupByFields)
                 {
@@ -128,7 +131,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     this.ReaderFields.Add(groupByField);
                 }
             }
-            if (!string.IsNullOrEmpty(this.OrderBySql))
+            if (this.OrderByFields != null && this.OrderByFields.Count > 0)
             {
                 //当有多分表时，有排序，Select字段中，没有完全的排序字段，则需要补全所有排序字段
                 var hasGrouping = this.ReaderFields.Exists(f => f.IsGroupingField);
@@ -419,7 +422,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         {
             string fieldName = null;
             if (readerField.FieldType == ReaderFieldType.Expression
-                || readerField.FieldName != readerField.TargetMember.Name)
+                || readerField.MemberName != readerField.TargetMember.Name)
             {
                 fieldName = readerField.TargetMember.Name;
                 fieldName = this.OrmProvider.GetFieldName(fieldName);
@@ -1207,7 +1210,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         FieldType = ReaderFieldType.Field,
                         ReaderType = memberInfo.GetMemberType(),
                         MappedTargetType = sqlSegment.MappedTargetType,
-                        FieldName = sqlSegment.FieldName,
+                        MemberName = sqlSegment.MemberName,
                         Value = fieldName,
                         TargetMember = memberInfo,
                         IsGroupingField = true
@@ -1227,7 +1230,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         FieldType = ReaderFieldType.Field,
                         ReaderType = memberExpr.Type,
                         MappedTargetType = sqlSegment.MappedTargetType,
-                        FieldName = sqlSegment.FieldName,
+                        MemberName = sqlSegment.MemberName,
                         Value = fieldName,
                         TargetMember = memberExpr.Member,
                         IsGroupingField = true
@@ -1241,11 +1244,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         var lambdaExpr = expr as LambdaExpression;
         this.ClearUnionSql();
-        var builder = new StringBuilder();
-        if (!string.IsNullOrEmpty(this.OrderBySql))
-            builder.Append(this.OrderBySql + ",");
-        else this.OrderByFields = new();
-
+        this.OrderByFields ??= new();
         this.InitTableAlias(lambdaExpr);
         this.IsOrderBy = true;
         var sqlSegment = this.Visit(new SqlSegment { Expression = expr });
@@ -1254,34 +1253,29 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             case SqlType.ReaderField:
                 var readerField = sqlSegment.Value as ReaderField;
                 if (readerField.FieldType == ReaderFieldType.Entity)
-                    readerField.Fields.ForEach(f => this.AddOrderByField(builder, f, orderType));
-                else this.AddOrderByField(builder, readerField, orderType);
+                    readerField.Fields.ForEach(f => this.AddOrderByField(f, orderType));
+                else this.AddOrderByField(readerField, orderType);
                 break;
             case SqlType.ReaderFields:
                 var readerFields = sqlSegment.Value as List<ReaderField>;
-                readerFields.ForEach(f => this.AddOrderByField(builder, f, orderType));
+                readerFields.ForEach(f => this.AddOrderByField(f, orderType));
                 break;
             default:
                 //成员访问、表达式、方法调用、原始SQL等场景
-                this.AddOrderByField(builder, new ReaderField
+                this.AddOrderByField(new ReaderField
                 {
                     FieldType = ReaderFieldType.Field,
                     Value = this.WrapSql(sqlSegment)
                 }, orderType);
                 break;
         }
-        this.OrderBySql = builder.ToString();
         this.IsOrderBy = false;
     }
-    private void AddOrderByField(StringBuilder builder, ReaderField readerField, string orderType)
+    private void AddOrderByField(ReaderField readerField, string orderType)
     {
         string suffix = null;
-
         if (orderType == "DESC")
-        {
             suffix = " DESC";
-            builder.Append(suffix);
-        }
         this.OrderByFields.Add(new OrderByField { Field = readerField, Suffix = suffix });
     }
     public virtual void Having(Expression havingExpr)
@@ -1333,7 +1327,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     ReaderType = toTargetExpr.Body.Type,
                     MappedTargetType = sqlSegment.MappedTargetType,
                     TypeHandler = sqlSegment.TypeHandler,
-                    FieldName = sqlSegment.FieldName,
+                    MemberName = sqlSegment.MemberName,
                     Value = sqlSegment.Value
                 }];
                 break;
@@ -1657,7 +1651,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         sqlSegment.MemberMapper = memberMapper;
                         sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
                         sqlSegment.TypeHandler = memberMapper.TypeHandler;
-                        sqlSegment.FieldName = memberMapper.FieldName;
+                        sqlSegment.MemberName = memberMapper.MemberName;
                         sqlSegment.Value = fromSegment.AliasName + "." + fieldName;
                         sqlSegment.IsEnum = memberMapper.UnderlyingType.IsEnum;
                     }
@@ -1794,7 +1788,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             ReaderType = memberInfo.GetMemberType(),
                             MappedTargetType = sqlSegment.MappedTargetType,
                             TypeHandler = sqlSegment.TypeHandler,
-                            FieldName = sqlSegment.FieldName,
+                            MemberName = sqlSegment.MemberName,
                             Value = wrapSql,
                             TargetMember = memberInfo
                         }];
@@ -1994,7 +1988,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //TODO:
         //在子查询中，readerField.FieldName和readerField.TargetMember.Name不同，就需要别名
         //在最外层的查询中，只要满足IsCanMapTo条件，不需要别名
-        return readerField.FieldName != readerField.TargetMember.Name;
+        return readerField.MemberName != readerField.TargetMember.Name;
     }
     public virtual void Clear(bool isClearReaderFields = false)
     {

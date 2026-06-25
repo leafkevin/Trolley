@@ -45,7 +45,7 @@ public struct SqlSegment
     public string ParameterName { get; set; }
     public TableSegment TableSegment { get; set; }
     public Type MappedTargetType { get; set; }
-    public string FieldName { get; set; }
+    public string MemberName { get; set; }
     //where条件时候，需要用于添加参数
     public MemberMap MemberMapper { get; set; }
     public ITypeHandler TypeHandler { get; set; }
@@ -155,7 +155,10 @@ public class ReaderField
     /// </summary>
     public Type ReaderType { get; set; }
     public Type MappedTargetType { get; set; }
-    public string FieldName { get; set; }
+    /// <summary>
+    /// 成员访问时是成员名称，临时表、多分表多次包装时也是成员名称
+    /// </summary>
+    public string MemberName { get; set; }
     //where条件时候，需要用于添加参数
     public object NativeDbType { get; set; }
     public ITypeHandler TypeHandler { get; set; }

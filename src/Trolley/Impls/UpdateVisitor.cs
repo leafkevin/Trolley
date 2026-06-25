@@ -584,7 +584,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     sqlSegment.MemberMapper = memberMapper;
                     sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
                     sqlSegment.TypeHandler = memberMapper.TypeHandler;
-                    sqlSegment.FieldName = memberMapper.FieldName;
+                    sqlSegment.MemberName = memberMapper.FieldName;
                     var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
                     if (this.IsNeedTableAlias) fieldName = fromSegment.AliasName + "." + fieldName;
                     sqlSegment.Value = fieldName;
@@ -596,7 +596,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     sqlSegment.SqlType = SqlType.OnlyField;
                     sqlSegment.MappedTargetType = readerField.MappedTargetType;
                     sqlSegment.TypeHandler = readerField.TypeHandler;
-                    sqlSegment.FieldName = readerField.FieldName;
+                    sqlSegment.MemberName = readerField.MemberName;
                     sqlSegment.Value = readerField.Value;
                 }
                 return sqlSegment;

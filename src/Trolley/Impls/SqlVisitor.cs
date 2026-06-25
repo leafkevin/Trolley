@@ -1905,7 +1905,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     FieldType = ReaderFieldType.Field,
                     TableSegment = tableSegment,
                     ReaderType = memberMapper.MemberType,
-                    FieldName = memberMapper.FieldName,
+                    MemberName = memberMapper.FieldName,
                     TypeHandler = memberMapper.TypeHandler,
                     TargetMember = memberMapper.Member,
                     Value = fieldName
@@ -2387,7 +2387,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 {
                     ReaderType = argsExpr.Type,
                     MappedTargetType = argumentSegment.MappedTargetType,
-                    FieldName = argumentSegment.FieldName,
+                    MemberName = argumentSegment.MemberName,
                     TypeHandler = argumentSegment.TypeHandler,
                     TargetMember = argsExpr.Member
                 });
@@ -2484,7 +2484,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 //重新设置body内容，表别名变更，字段名也可能变更
                 if (readerField.TargetMember != null)
                 {
-                    readerField.FieldName = readerField.TargetMember.Name;
+                    readerField.MemberName = readerField.TargetMember.Name;
                     readerField.Value = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
                 }
                 //更改原SQL中原始字段解析属性，防止在GetQuotedValue中使用原始字段名,导致SQL解析错误
