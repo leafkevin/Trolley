@@ -20,7 +20,7 @@ public class QueryInternal
 
         this.Visitor.Union(" UNION", typeof(T), subQuery);
     }
-    protected void UnionInternal<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
+    protected void UnionInternal<T>(Expression<Func<IQuery<T>>> subQueryExpr)
     {
         if (subQueryExpr == null)
             throw new ArgumentNullException(nameof(subQueryExpr));
@@ -34,14 +34,14 @@ public class QueryInternal
 
         this.Visitor.Union(" UNION ALL", typeof(T), subQuery);
     }
-    protected void UnionAllInternal<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
+    protected void UnionAllInternal<T>(Expression<Func<IQuery<T>>> subQueryExpr)
     {
         if (subQueryExpr == null)
             throw new ArgumentNullException(nameof(subQueryExpr));
 
         this.Visitor.Union(" UNION ALL", typeof(T), subQueryExpr);
     }
-    protected void UnionRecursiveInternal<T>(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> selfSubQueryExpr)
+    protected void UnionRecursiveInternal<T>(Expression<Func<IQuery<T>, IQuery<T>>> selfSubQueryExpr)
     {
         if (selfSubQueryExpr == null)
             throw new ArgumentNullException(nameof(selfSubQueryExpr));
@@ -49,7 +49,7 @@ public class QueryInternal
         var cteQuery = new CteQuery<T>(this.DbContext, this.Visitor);
         this.Visitor.UnionRecursive(" UNION", cteQuery, selfSubQueryExpr);
     }
-    protected void UnionAllRecursiveInternal<T>(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> selfSubQueryExpr)
+    protected void UnionAllRecursiveInternal<T>(Expression<Func<IQuery<T>, IQuery<T>>> selfSubQueryExpr)
     {
         if (selfSubQueryExpr == null)
             throw new ArgumentNullException(nameof(selfSubQueryExpr));

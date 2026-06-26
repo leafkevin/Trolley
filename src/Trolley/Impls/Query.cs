@@ -277,7 +277,7 @@ public class Query<T> : QueryBase, IQuery<T>
         base.UnionInternal(subQuery);
         return this;
     }
-    public virtual IQuery<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
+    public virtual IQuery<T> Union(Expression<Func<IQuery<T>>> subQueryExpr)
     {
         base.UnionInternal(subQueryExpr);
         return this;
@@ -620,11 +620,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.WithTrailingSql(rawSql);
         return this;
     }
-    #endregion
-
-    #region ToInSql
-    public bool ToInSql<TField>(TField fieldExpr) => true;
-    #endregion
+    #endregion     
 
     #region Count
     public virtual int Count<TField>(Expression<Func<T, TField>> fieldExpr)

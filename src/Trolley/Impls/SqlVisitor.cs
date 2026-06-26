@@ -929,9 +929,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 sqlSegment.ParameterName = methodCallExpr.Arguments[1].Evaluate<string>();
                 sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                 sqlSegment.IsParameterized = false;
-                break;
-            case "ToInSql":
-                break;
+                break; 
             case "In":
                 var elementType = methodCallExpr.Method.GetGenericArguments()[0];
                 var type = methodCallExpr.Arguments[1].Type;
@@ -955,19 +953,20 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 else
                 {
                     var predicateExpr = methodCallExpr.Arguments[1];
+                    if (!methodCallExpr.TryGetParameters(out var parameters))
+                        throw new NotSupportedException("不支持的表达式访问，Exists方法至少要有一个Where条件");
+
+                    lambdaExpr = Expression.Lambda(methodCallExpr, parameters);
+                    (existsSql, _, _) = this.VisitFromQuery(lambdaExpr);
+
                     if (typeof(IQuery).IsAssignableFrom(type))
-                    {
-                        var funcType = typeof(Func<,>).MakeGenericType(typeof(IFromQuery), type);
-                        var parameterExpr = Expression.Parameter(typeof(IFromQuery), "f");
-                        predicateExpr = Expression.Lambda(funcType, methodCallExpr.Arguments[1], parameterExpr);
-                    }
-                    (inSql, _, _) = this.VisitFromQuery(predicateExpr);
+                        (inSql, _, _) = this.VisitFromQuery(predicateExpr);
                 }
                 var fieldArgument = this.WrapSql(fieldSegment);
                 if (sqlSegment.HasNotOperation(out _))
                     sqlSegment.Change($"{fieldArgument} NOT IN ({inSql})", SqlType.Expression);
                 else sqlSegment.Change($"{fieldArgument} IN ({inSql})", SqlType.Expression);
-                break;
+                break; 
             case "Exists":
             case "ExistsAsync":
                 string existsSql = null;

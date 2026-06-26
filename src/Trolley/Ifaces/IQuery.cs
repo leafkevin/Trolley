@@ -154,25 +154,8 @@ public interface IQuery<T> : IQueryBase
     /// <summary>
     /// Union操作，去掉重复记录，如：
     /// <code>
-    /// var subQuery = repository.From&lt;Order&gt;()
-    ///     .Where(x =&gt; x.Id &gt; 1)
-    ///     .Select(x =&gt; new { ... });
     /// await repository.From&lt;Order&gt;() ...
-    ///     .Union(subQuery).ToListAsync();
-    /// SQL:
-    /// SELECT ... FROM `sys_order` ... UNION
-    /// SELECT ... FROM `sys_order` WHERE `Id`&gt;1
-    /// </code>
-    /// </summary>
-    /// <param name="subQuery">子查询，需要有Select语句，如：<code>repository.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
-    /// </param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T> Union(IQuery<T> subQuery);
-    /// <summary>
-    /// Union操作，去掉重复记录，如：
-    /// <code>
-    /// await repository.From&lt;Order&gt;() ...
-    ///     .Union(f =&gt; f.From&lt;Order&gt;()
+    ///     .Union(Sql.From&lt;Order&gt;()
     ///         .Where(x =&gt; x.Id &gt; 1)
     ///         .Select(x =&gt; new { ... }))
     ///     .ToListAsync();
@@ -183,28 +166,12 @@ public interface IQuery<T> : IQueryBase
     /// </summary>
     /// <param name="subQueryExpr">子查询表达式，需要有Select语句，如：<code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// <returns>返回查询对象</returns>
-    IQuery<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
-    /// <summary>
-    /// Union All操作，所有记录不去掉重复，如：
-    /// <code>
-    /// var subQuery = repository.From&lt;Order&gt;() ...
-    ///     .Select(x =&gt; new { ... })
-    /// await repository.From&lt;Order&gt;() ...
-    ///     .UnionAll(subQuery).ToListAsync();
-    /// SQL:
-    /// SELECT ... FROM `sys_order` ... UNION ALL
-    /// SELECT ... FROM `sys_order` ...
-    /// </code>
-    /// </summary>
-    /// <param name="subQuery">子查询，需要有Select语句，如：<code>repository.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
-    /// </param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T> UnionAll(IQuery<T> subQuery);
+    IQuery<T> Union(Expression<Func<IQuery<T>>> subQueryExpr);
     /// <summary>
     /// Union All操作，所有记录不去掉重复，如：
     /// <code>
     /// await repository.From&lt;Order&gt;() ...
-    ///     .UnionAll(f =&gt; f.From&lt;Order&gt;() ...
+    ///     .UnionAll(Sql.From&lt;Order&gt;() ...
     ///         .Select(x =&gt; new { ... }))
     ///     .ToListAsync();
     /// SQL:
@@ -214,13 +181,13 @@ public interface IQuery<T> : IQueryBase
     /// </summary>
     /// <param name="subQueryExpr">子查询表达式，需要有Select语句，如：<code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// <returns>返回查询对象</returns>
-    IQuery<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
+    IQuery<T> UnionAll(Expression<Func<IQuery<T>>> subQueryExpr);
     /// <summary>
-    /// 递归CTE子查询中的Union操作，表达式subQueryExpr中的第二参数是CTE自身引用，如：
+    /// 递归CTE子查询中的Union操作，表达式subQueryExpr中的第一参数是CTE自身引用，如：
     /// <code>
     /// ... f.From&lt;Menu&gt;() ...
     ///         .Select(x =&gt; new { ... })
-    ///     .UnionRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///     .UnionRecursive(self =&gt; Sql.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
     ///         .Select((a, b) =&gt; new { ... }))) ...
     /// SQL:
@@ -234,13 +201,13 @@ public interface IQuery<T> : IQueryBase
     /// <param name="subQueryExpr">子查询表达式，需要有Select语句，如：<code>f.From&lt;Menu&gt;().Where(x =&gt; ... ).Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
+    IQuery<T> UnionRecursive(Expression<Func<IQuery<T>, IQuery<T>>> subQueryExpr);
     /// <summary>
-    /// 递归CTE子查询中的UnionAll操作，表达式subQueryExpr中的第二参数是CTE自身引用，如：
+    /// 递归CTE子查询中的UnionAll操作，表达式subQueryExpr中的第一参数是CTE自身引用，如：
     /// <code>
     /// ... f.From&lt;Menu&gt;() ...
     ///         .Select(x =&gt; new { ... })
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///     .UnionAllRecursive(self =&gt; Sql.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
     ///         .Select((a, b) =&gt; new { ... }))) ...
     /// SQL:
@@ -253,7 +220,7 @@ public interface IQuery<T> : IQueryBase
     /// <param name="subQueryExpr">子查询表达式，需要有Select语句，如：<code>f.From&lt;Menu&gt;() .Where(x =&gt; ... ) .Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
+    IQuery<T> UnionAllRecursive(Expression<Func<IQuery<T>, IQuery<T>>> subQueryExpr);
     #endregion
 
     #region WithTable
@@ -773,19 +740,7 @@ public interface IQuery<T> : IQueryBase
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象</returns>
     IQuery<T> WithTrailingSql(string rawSql);
-    #endregion
-
-    #region ToInSql
-    /// <summary>
-    /// 将查询对象转换为IN SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
-    /// .Where(f =&gt; Sql.From&lt;User&gt;().Select(x =&gt; x.Id).ToInSql(f.UserId))，
-    /// 生成SQL: a WHERE a.`UserId` IN (SELECT x.`Id` FROM `sys_user` x)
-    /// </summary>
-    /// <typeparam name="TField">字段类型</typeparam>
-    /// <param name="fieldExpr">字段表达式</param>
-    /// <returns>返回Predicate表达式</returns>
-    bool ToInSql<TField>(TField fieldExpr);
-    #endregion
+    #endregion     
 
     #region Count
     /// <summary>

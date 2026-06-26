@@ -80,6 +80,7 @@ public static class Sql
 
     public static bool In<TElement>(TElement value, params TElement[] list) => throw new NotImplementedException();
     public static bool In<TElement>(TElement value, IEnumerable<TElement> list) => throw new NotImplementedException();
+    public static bool In<TElement>(this TElement value, IQuery subQuery) => throw new NotImplementedException();
 
     public static bool Exists<T>(Func<T, bool> predicate) => throw new NotImplementedException();
     public static bool Exists<T1, T2>(Func<T1, T2, bool> predicate) => throw new NotImplementedException();

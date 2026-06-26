@@ -117,15 +117,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         if (this.IsManyShardingTables)
         {
-            if (!string.IsNullOrEmpty(this.GroupBySql))
+            if (this.GroupByFields != null && this.GroupByFields.Count > 0)
             {
-                if (this.ReaderFields.Exists(f => f.IsGroupingField && f.FieldType== ReaderFieldType.Entity))
-                    continue;
-
                 //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
                 foreach (var groupByField in this.GroupByFields)
                 {
-                    if (this.ReaderFields.Exists(f => f.IsGroupingField && f.TargetMember.Name == groupByField.TargetMember.Name))
+                    if (this.ReaderFields.Exists(f => f.IsGroupingField && f.FieldType == ReaderFieldType.Entity))
+                        break;
+                    if (this.ReaderFields.Exists(f => f.IsGroupingField && f.Value.ToString() == groupByField.Value.ToString()))
                         continue;
                     //这里不需要克隆，只用于生成SQL
                     this.ReaderFields.Add(groupByField);
@@ -134,12 +133,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             if (this.OrderByFields != null && this.OrderByFields.Count > 0)
             {
                 //当有多分表时，有排序，Select字段中，没有完全的排序字段，则需要补全所有排序字段
-                var hasGrouping = this.ReaderFields.Exists(f => f.IsGroupingField);
                 foreach (var orderByField in this.OrderByFields)
                 {
-                    if (this.ReaderFields.Exists(f => f.TargetMember.Name == orderByField.Field.TargetMember.Name))
-                        continue;
-                    if (hasGrouping && this.GroupByFields.Exists(f => f.TargetMember.Name == orderByField.Field.TargetMember.Name))
+                    var fieldName = orderByField.Field.Value.ToString();
+                    if (this.ReaderFields.Exists(f => f.Value.ToString() == fieldName || f.TargetMember.Name == fieldName))
                         continue;
                     //这里不需要克隆，只用于生成SQL
                     this.ReaderFields.Add(orderByField.Field);
@@ -149,7 +146,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         this.AddSelectFieldsSql(builder, this.ReaderFields);
         //TODO:需要重新审视一下逻辑
-        if (this.IsManyShardingTables && this.IsManyShardingTables && this.AggFieldAlias != null)
+        if (this.IsManyShardingTables && this.AggFieldAlias != null)
             builder.Append($" AS {this.AggFieldAlias},COUNT(*) AS AVG_COUNT");
 
         string selectSql = null;
@@ -222,9 +219,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var builder = new StringBuilder("(");
         var entityMapper = this.Tables[0].Mapper;
         int index = 0;
-        //如果ReaderFields没有设置，通常是从Query中来的，ReaderFields是从Query中获取的
-        //if (this.ReaderFields == null && this.IsFromQuery)
-        //    this.ReaderFields = this.Tables[1].Fields;
         foreach (var readerField in this.ReaderFields)
         {
             //Union后，如果没有select语句时，通常实体类型或是select分组对象
@@ -309,33 +303,31 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //各种单值查询，如：SELECT COUNT(*)/MAX(*)..等，都有SELECT操作     
         //如：From(f=>...).InnerJoin/UnionAll(f=>...)
         //生成sql时，include表的字段，一定要紧跟着主表字段后面，方便赋值主表实体的属性中，所以在插入时候就排好序
-        //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
         if (this.ReaderFields == null)
             throw new Exception("缺少Select语句");
 
         if (this.IsManyShardingTables)
         {
-            if (!string.IsNullOrEmpty(this.GroupBySql))
+            if (this.GroupByFields != null && this.GroupByFields.Count > 0)
             {
                 //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
                 foreach (var groupByField in this.GroupByFields)
                 {
-                    if (this.ReaderFields.Exists(f => f.IsGroupingField && f.TargetMember.Name == groupByField.TargetMember.Name))
+                    if (this.ReaderFields.Exists(f => f.IsGroupingField && f.FieldType == ReaderFieldType.Entity))
+                        break;
+                    if (this.ReaderFields.Exists(f => f.IsGroupingField && f.Value.ToString() == groupByField.Value.ToString()))
                         continue;
                     //这里不需要克隆，只用于生成SQL
                     this.ReaderFields.Add(groupByField);
                 }
             }
-            if (!string.IsNullOrEmpty(this.OrderBySql))
+            if (this.OrderByFields != null && this.OrderByFields.Count > 0)
             {
                 //当有多分表时，有排序，Select字段中，没有完全的排序字段，则需要补全所有排序字段
-                var hasGrouping = this.ReaderFields.Exists(f => f.IsGroupingField);
                 foreach (var orderByField in this.OrderByFields)
                 {
                     if (this.ReaderFields.Exists(f => f.TargetMember.Name == orderByField.Field.TargetMember.Name))
-                        continue;
-                    if (hasGrouping && this.GroupByFields.Exists(f => f.TargetMember.Name == orderByField.Field.TargetMember.Name))
-                        continue;
+                        continue; 
                     //这里不需要克隆，只用于生成SQL
                     this.ReaderFields.Add(orderByField.Field);
                 }
@@ -1430,15 +1422,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         {
             if (!tableSegment.Mapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
                 return false;
-            var segmentType = memberInfo.GetMemberType();
-            Type expectType = null;
-            if (segmentType.IsEnumType(out var underlyingType, out _))
-                expectType = underlyingType;
             readerField = new ReaderField
             {
                 FieldType = ReaderFieldType.Field,
                 TargetMember = memberInfo,
-                ReaderType = segmentType,
+                ReaderType = memberInfo.GetMemberType(),
                 NativeDbType = memberMapper.NativeDbType,
                 MappedTargetType = memberMapper.MappedTargetType,
                 TypeHandler = memberMapper.TypeHandler,
@@ -1985,9 +1973,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //GroupFields中的ReaderField只设置了必须加as别名的情况，没有设置TargetMember.Name !=FromMember.Name的情况，这里把这种情况补上
         //PostgreSql时，DistinctOnFields中的ReaderField也是这个场景
         if (readerField.FieldType == ReaderFieldType.Expression) return true;
-        //TODO:
-        //在子查询中，readerField.FieldName和readerField.TargetMember.Name不同，就需要别名
-        //在最外层的查询中，只要满足IsCanMapTo条件，不需要别名
+        //在子查询中，readerField.MemberName和readerField.TargetMember.Name不同，就需要别名
         return readerField.MemberName != readerField.TargetMember.Name;
     }
     public virtual void Clear(bool isClearReaderFields = false)
