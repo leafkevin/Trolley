@@ -198,37 +198,17 @@ public interface IRepository
     /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a');
-    #endregion
-
-    #region FromQuery
     /// <summary>
     /// 从SQL子查询中查询数据，如：
     /// <code>
-    /// var subQuery = repository.From&lt;Page, Menu&gt;('o')
-    ///     .Where((a, b) =&gt; a.Id == b.PageId)
-    ///     .Select((x, y) =&gt; new { y.Id, y.ParentId, x.Url });
-    /// repository.FromQuery(subQuery) ...
-    /// SQL:
-    /// ... FROM (SELECT p.`Id`,p.`ParentId`,o.`Url` FROM `sys_page` o,`sys_menu` p WHERE o.`Id`=p.`PageId`) ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="T">表T实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T> FromQuery<T>(IQuery<T> subQuery);
-    /// <summary>
-    /// 从SQL子查询中查询数据，如：
-    /// <code>
-    /// repository.FromQuery(f =&gt; f.From&lt;Page, Menu&gt;('o').Where(...)...)
-    /// var subQuery = repository.From&lt;Page, Menu&gt;('o').Where(...)...
-    /// repository.FromQuery(f =&gt; f.UseQuery(subQuery)) ...    
+    /// repository.FromQuery(Sql.From&lt;Page, Menu&gt;().Where(...)...)
     /// SQL: ... FROM (SELECT ... FROM `sys_page` o,`sys_menu` p WHERE ...) ...
     /// </code>
     /// </summary>
     /// <typeparam name="T">表T实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
+    IQuery<T> FromQuery<T>(Expression<Func<IQuery<T>>> subQueryExpr);
     #endregion
 
     #region QueryScalar

@@ -236,24 +236,13 @@ public interface IQuery<T> : IQueryBase
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
-    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// .From&lt;Menu&gt;().WithTable(subQuery)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
-    /// <summary>
-    /// 添加子查询表，方便后面做JOIN关联，如：
-    /// <code>
-    /// .From&lt;Menu&gt;().WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
+    /// .From&lt;Menu&gt;().WithTable(Sql.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    IQuery<T, TOther> WithTable<TOther>(Expression<Func<IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
