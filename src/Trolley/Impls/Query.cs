@@ -622,10 +622,6 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     #endregion
 
-    #region ToInSql
-    public bool ToInSql<TField>(TField fieldExpr) => true;
-    #endregion
-
     #region Count
     public virtual int Count<TField>(Expression<Func<T, TField>> fieldExpr)
         => base.CountInternal(fieldExpr);
@@ -796,7 +792,7 @@ public class CteQuery<T> : Query<T>, ICteQuery<T>
 {
     #region Properties
     public string TableName { get; set; }
-    public List<SqlSegment> ReaderFields { get; set; }
+    public List<ReaderField> ReaderFields { get; set; }
     public bool IsRecursive { get; set; }
     #endregion
 

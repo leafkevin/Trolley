@@ -416,16 +416,6 @@ public interface IFromQuery
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(char tableAsStart);
     #endregion
 
-    #region Use
-    /// <summary>
-    /// 引用现有子查询
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="subQuery"></param>
-    /// <returns></returns>
-    IQuery<T> Use<T>(IQuery<T> subQuery);
-    #endregion
-
     #region ToSql
     /// <summary>
     /// 返回当前查询的SQL和参数列表

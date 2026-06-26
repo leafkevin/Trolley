@@ -775,18 +775,6 @@ public interface IQuery<T> : IQueryBase
     IQuery<T> WithTrailingSql(string rawSql);
     #endregion
 
-    #region ToInSql
-    /// <summary>
-    /// 将查询对象转换为IN SQL，通常用于Where/And/Or子方法中，只用于表达式解析，如：
-    /// .Where(f =&gt; Sql.From&lt;User&gt;().Select(x =&gt; x.Id).ToInSql(f.UserId))，
-    /// 生成SQL: a WHERE a.`UserId` IN (SELECT x.`Id` FROM `sys_user` x)
-    /// </summary>
-    /// <typeparam name="TField">字段类型</typeparam>
-    /// <param name="fieldExpr">字段表达式</param>
-    /// <returns>返回Predicate表达式</returns>
-    bool ToInSql<TField>(TField fieldExpr);
-    #endregion
-
     #region Count
     /// <summary>
     /// 返回某个字段的int类型数据条数，如：

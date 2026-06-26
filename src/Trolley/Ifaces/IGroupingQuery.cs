@@ -30,6 +30,11 @@ public interface IGroupingQueryBase<TGrouping>
     /// </summary>
     /// <returns>返回分组后对象</returns>
     IQuery<TGrouping> Select();
+    /// <summary>
+    /// 判断数据是否存在，存在为true，否则为false
+    /// </summary>
+    /// <returns>返回布尔值，存在为true，否则为false</returns>
+    bool Exists();
 }
 /// <summary>
 /// 分组查询对象

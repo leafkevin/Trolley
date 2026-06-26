@@ -20,6 +20,15 @@ public class GroupingQueryBase<TGrouping> : QueryInternal, IGroupingQueryBase<TG
         return this.OrmProvider.NewQuery<TGrouping>(this.DbContext, this.Visitor);
     }
     #endregion
+
+    #region Exists
+    public virtual bool Exists()
+    {
+        this.Visitor.Select("1");
+        this.Visitor.Take(1);
+        return this.DbContext.QueryExists(this.Visitor);
+    }
+    #endregion
 }
 public class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T, TGrouping>
 {
