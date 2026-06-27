@@ -957,6 +957,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 else
                 {
                     var subQueryExpr = methodCallExpr.Arguments[1];
+                    //直接引用现有IQuery子查询对象
                     if (subQueryExpr.NodeType == ExpressionType.MemberAccess)
                     {
                         var subQuery = subQueryExpr.Evaluate() as IQuery;
@@ -970,7 +971,6 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 else sqlSegment.Change($"{fieldArgument} IN ({inSql})", SqlType.Expression);
                 break;
             case "Exists":
-            case "ExistsAsync":
                 string existsSql = null;
                 //Sql.Exists<T1, T2>((x, y) => ...)
                 //repository.Exists<User>(f => ...)
@@ -1019,9 +1019,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     //repository.From<User>().Where(f => ...).Exists()
                     if (!methodCallExpr.TryGetParameters(out var parameters))
                         throw new NotSupportedException("不支持的表达式访问，Exists方法至少要有一个Where条件");
-
-                    lambdaExpr = Expression.Lambda(methodCallExpr, parameters);
-                    (existsSql, _, _) = this.VisitFromQuery(lambdaExpr);
+                    (existsSql, _, _) = this.VisitFromQuery(methodCallExpr);
                 }
                 if (sqlSegment.HasNotOperation(out _))
                     sqlSegment.Change($"NOT EXISTS({existsSql})", SqlType.MethodCall);
