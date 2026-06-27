@@ -120,8 +120,7 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     void Page(int pageNumber, int pageSize);
     void Skip(int skip);
     void Take(int limit);
-    void AsCteTable(Type targetType, string tableName);
-    void CopyShardingFromQueryVisitor(IQueryVisitor visitor);
+    void AsCteTable(Type targetType, string tableName); 
 
     void WithLeadingSql(string rawSql);
     void WithTrailingSql(string rawSql);

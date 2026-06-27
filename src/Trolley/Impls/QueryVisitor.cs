@@ -327,7 +327,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 foreach (var orderByField in this.OrderByFields)
                 {
                     if (this.ReaderFields.Exists(f => f.TargetMember.Name == orderByField.Field.TargetMember.Name))
-                        continue; 
+                        continue;
                     //这里不需要克隆，只用于生成SQL
                     this.ReaderFields.Add(orderByField.Field);
                 }
@@ -665,10 +665,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual void Union(string union, Type targetType, Expression subQueryExpr)
     {
-        var visitor = this.CreateQueryVisitor();
-        var fromQuery = new FromQuery(this.DbContext, visitor);
-        visitor.IsSecondUnion = true;
-        (var sql, _, _) = this.VisitFromQuery(subQueryExpr, fromQuery);
+        (var sql, _, _) = this.VisitFromQuery(subQueryExpr, true);
         this.Union(union, targetType, sql);
     }
     private void Union(string union, Type targetType, string subQuerySql)
@@ -700,10 +697,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.CteQueryObj = selfQueryObj;
         this.IsRecursive = true;
 
-        var visitor = this.CreateQueryVisitor();
-        var fromQuery = new FromQuery(this.DbContext, visitor);
-        visitor.IsSecondUnion = true;
-        (var sql, _, _) = this.VisitFromQuery(subQueryExpr, fromQuery, selfQueryObj);
+        (var sql, _, _) = this.VisitFromQuery(subQueryExpr, true, selfQueryObj);
         rawSql += union + Environment.NewLine + sql;
         //先放到UnionSql中，在AsCteTable方法中，BuildCteTableSql时能得到这个SQL
         this.UnionSql = rawSql;
