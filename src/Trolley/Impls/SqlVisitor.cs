@@ -963,7 +963,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                         var subQuery = subQueryExpr.Evaluate() as IQuery;
                         inSql = subQuery.Visitor.BuildSql(true, out _);
                     }
-                    else (inSql, _, _) = this.VisitFromQuery(subQueryExpr);
+                    else (inSql, _) = this.VisitFromQuery(subQueryExpr);
                 }
                 var fieldArgument = this.WrapSql(fieldSegment);
                 if (sqlSegment.HasNotOperation(out _))
@@ -1046,12 +1046,13 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 break;
             case "CountDistinct":
             case "LongCountDistinct":
+                if (this.IsManyShardingTables)
+                    throw new NotSupportedException($"多分表时不支持CountDistinct/LongCountDistinct聚合操作，因为得到的结果是不正确的");
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
                 {
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"COUNT(DISTINCT {sqlSegment.Value})", SqlType.MethodCall);
                 }
-                //TODO:已知bug，分表后，count(distinct)，这个聚合结果是不准确的
                 sqlSegment.Change(new ReaderField
                 {
                     FieldType = ReaderFieldType.Field,
@@ -1075,32 +1076,10 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 this.HasAggFields = true;
                 break;
             case "Avg":
-                sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                //优先确定是否是多分表情况，多分表时Value值是两个字段，SUM(...),COUNT(...)，
-                //最外层SELECT时，捞取IsAvgField=true的字段，再进行SUM(...)/COUNT(...)得到平均值，不是多分表时，直接Value值是AVG(...)
-                //最外层SELECT时，
                 if (this.IsManyShardingTables)
-                {
-                    List<ReaderField> readerFields = [new ReaderField
-                    {
-                        FieldType = ReaderFieldType.Field,
-                        ReaderType = methodCallExpr.Type,
-                        Value = $"SUM({sqlSegment.Value})",
-                        IsAggField = true,
-                        IsAvgField = true,
-                        AggFunc = "SUM"
-                    },new ReaderField
-                    {
-                        FieldType = ReaderFieldType.Field,
-                        ReaderType = methodCallExpr.Type,
-                        Value = $"COUNT({sqlSegment.Value})",
-                        IsAggField = true,
-                        IsAvgField = true,
-                        AggFunc = "COUNT"
-                    }];
-                    sqlSegment.Change(readerFields, SqlType.ReaderFields);
-                }
-                else sqlSegment.Change(new ReaderField
+                    throw new NotSupportedException($"多分表时不支持Avg聚合操作，因为得到的结果是不正确的，可以考虑拆分成Sum和Count两个聚合操作，再进行Sum/Count操作得到平均值");
+                sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                sqlSegment.Change(new ReaderField
                 {
                     FieldType = ReaderFieldType.Field,
                     ReaderType = methodCallExpr.Type,
@@ -1392,7 +1371,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     /// <param name="selfQueryObj"></param>
     /// <returns></returns>
     /// <exception cref="NotSupportedException"></exception>
-    public virtual (string, TableSegment, List<ReaderField>) VisitFromQuery(Expression lambdaExpr, ICteQuery selfQueryObj = null)
+    public virtual (string, List<ReaderField>) VisitFromQuery(Expression lambdaExpr, ICteQuery selfQueryObj = null)
     {
         var myLambdaExpr = this.EnsureLambda(lambdaExpr);
         var currentExpr = myLambdaExpr.Body;
@@ -1766,6 +1745,33 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             var subQueryObj = memberExpr.Evaluate<IQuery>();
             queryVisitor = subQueryObj.Visitor;
             entityType = currentExpr.Type.GenericTypeArguments[0];
+            if (subQueryObj is ICteQuery cteQueryObj)
+            {
+                callStack
+            }
+
+
+            if (callStack.Count == 0) return (null, null);
+
+            //{
+            //    //TODO:一些引用类型的拷贝是不对的，比如：排序，分组等不能引用，也需要拷贝，否则会更改之前的内容
+            //    //如果子查询有排序、分组、分页，此处再次更改，则需要包装一下子查询，再做排序、分组、分页
+            //    //如果子查询没有排序、分组、分页，则不需要包装子查询，直接继续做排序、分组、分页
+            //    //如果是where条件，也不需要包装子查询，直接继续做where条件
+            //    subQueryObj.Visitor.CloneTo(queryVisitor);
+            //    if (subQueryObj.Visitor.Tables != null && subQueryObj.Visitor.Tables.Count > 0)
+            //    {
+            //        queryVisitor.Tables ??= new();
+            //        subQueryObj.Visitor.Tables.ForEach(f => queryVisitor.Tables.Add(f));
+            //    }
+            //    if (subQueryObj.Visitor.ReaderFields != null && subQueryObj.Visitor.ReaderFields.Count > 0)
+            //    {
+            //        readerFields = new();
+            //        subQueryObj.Visitor.ReaderFields.ForEach(f => readerFields.Add(f.Clone()));
+            //    }
+            //}
+
+
             queryVisitor.UseQuery(entityType, subQueryObj);
         }
         queryVisitor ??= this.OrmProvider.NewQueryVisitor(this.DbContext, 'a', this.Command);
@@ -1820,7 +1826,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                         entityType = genericArguments[0];
                         if (typeof(IQuery).IsAssignableFrom(callExpr.Arguments[0].Type))
                             queryVisitor.UseQuery(entityType, callExpr.Arguments[0].Evaluate<IQuery>());
-                        else queryVisitor.UseNewQuery(entityType, callExpr.Arguments[0], false);
+                        else queryVisitor.UseNewQuery(entityType, callExpr.Arguments[0]);
                     }
                     else queryVisitor.AddTable(genericArguments);
                     break;
@@ -2662,9 +2668,18 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     public TableSegment UseQuery(Type targetType, IQuery subQueryObj)
     {
         //包含该查询对象引用，就说明当前visitor对象已经包含了该子查询引用到的参数，只需要添加表即可
-        var isSameVisitor = ReferenceEquals(this, subQueryObj.Visitor);
-        if (!isSameVisitor && !this.RefQueries.Contains(subQueryObj))
+        var isCurrentVisitor = ReferenceEquals(this, subQueryObj.Visitor);
+        if (!isCurrentVisitor && !this.RefQueries.Contains(subQueryObj))
         {
+            if (subQueryObj.Visitor.DbParameters != null && subQueryObj.Visitor.DbParameters.Count > 0)
+            {
+                this.DbParameters ??= new TheaDbParameterCollection();
+                foreach (var dbParameter in subQueryObj.Visitor.DbParameters)
+                {
+                    if (this.DbParameters.Contains(dbParameter)) continue;
+                    this.DbParameters.Add(dbParameter);
+                }
+            }
             if (subQueryObj.Visitor.NextDbParameters != null && subQueryObj.Visitor.NextDbParameters.Count > 0)
             {
                 this.NextDbParameters ??= new TheaDbParameterCollection();
@@ -2710,14 +2725,15 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             tableName = $"({sql})";
             tableType = TableType.FromQuery;
         }
-        if (isSameVisitor)
+        //只有第一个表是子查询表时，visitor对象才相同
+        if (isCurrentVisitor)
         {
             subQueryObj.Visitor.Clear();
             this.Tables.Clear();
         }
         var tableSegment = this.AddJoinTable(targetType, null, tableType, tableName, readerFields);
         this.InitUseQueryReaderFields(tableSegment, readerFields);
-        if (!isSameVisitor)
+        if (!isCurrentVisitor)
         {
             if (subQueryObj.Visitor.IsNeedUnionShardingTables)
                 this.IsNeedUnionShardingTables = true;

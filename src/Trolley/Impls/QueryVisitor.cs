@@ -633,17 +633,17 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             this.UseQuery(targetType, subQueryObj);
             return;
         }
-        (var sql,  var readerFields) = this.VisitFromQuery(subQueryExpr);
+        (var sql, var readerFields) = this.VisitFromQuery(subQueryExpr);
         if (typeof(ICteQuery).IsAssignableFrom(lambdaExpr.Body.Type))
             return;
-     
-        //TODO:子查询中，有多分表并且还有Group By + Having/Count(Distinct)操作，出子查询后，需要把所有多分表都打开UNION ALL起来，合成新的子查询，并去掉分表属性，以单表处理后续操作
+
+        //TODO:子查询中，有多分表并且还有Group By + Having/Count(Distinct)操作，出子查询后，
+        //需要把所有多分表都打开UNION ALL起来，合成新的子查询，并去掉分表属性，以单表处理后续操作
         //除此之外，其他场景，还需要继续保留多分表属性，以便后面映射多分表
         //变成子查询了，不再需要UnionAll操作了
         this.IsNeedUnionShardingTables = false;
         this.IsManyShardingTables = false;
-        //CTE引用表，已经添加过了，直接返回
-        if (tableSegment != null) return tableSegment;
+      
 
         if (isFirstTable)
         {

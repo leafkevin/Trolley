@@ -96,7 +96,7 @@ public static class RepositoryHelper
         var fieldValueType = parameterValueExpr.Type;
         var addMethodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add));
         bool isNullableType = fieldValueType.IsNullableType(out var underlyingType);
-        if (underlyingType.IsEnumType(out _, out var enumUnderlyingType))
+        if (underlyingType.IsEnumType(out var enumUnderlyingType))
             fieldValueExpr = Expression.Convert(fieldValueExpr, enumUnderlyingType);
         if (fieldValueExpr.Type != typeof(object))
             fieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
@@ -1390,18 +1390,14 @@ public static class RepositoryHelper
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
         var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
-        var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
 
         var readerField = readerFields[0];
-        var visitor = new ReplaceMemberVisitor();
-        var bodyExpr = visitor.Visit(readerField.Expression);
-
         var fieldType = reader.GetFieldType(0);
         //延迟的方法调用，有字段值作为方法参数就读取，没有什么也不做
         var childReaderField = readerField.Fields[0];
         var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(0),
             childReaderField.ReaderType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
-        var executeExpr = Expression.Invoke(Expression.Lambda(bodyExpr, visitor.NewParameters), readerValueExpr);
+        var executeExpr = Expression.Invoke(Expression.Lambda(readerField.Expression, readerField.NewParameters), readerValueExpr);
 
         var resultLabelExpr = Expression.Label(typeof(object));
         var returnExpr = Expression.Convert(executeExpr, typeof(object));
@@ -1478,7 +1474,6 @@ public static class RepositoryHelper
                                 current = NewBuildInfo(readerField.ReaderType, readerField.TargetMember, parent);
                                 readerBuilders.Add(readerField, current);
                             }
-                            Expression bodyExpr = readerField.Expression;
                             //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
                             //f.TotalAmount.ToString("C")
                             //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
@@ -1498,9 +1493,9 @@ public static class RepositoryHelper
                                     argsExprs.Add(readerValueExpr);
                                     index++;
                                 }
-                                executeExpr = Expression.Invoke(Expression.Lambda(bodyExpr, readerField.NewParameters), argsExprs);
+                                executeExpr = Expression.Invoke(Expression.Lambda(readerField.Expression, readerField.NewParameters), argsExprs);
                             }
-                            else executeExpr = Expression.Invoke(Expression.Lambda(bodyExpr));
+                            else executeExpr = Expression.Invoke(Expression.Lambda(readerField.Expression));
                             //把延迟方法调用委托当作参数传进来，这样缓存才有效，相同key，不同的延迟方法
                             if (!current.IsDefault) current.Arguments.Add(executeExpr);
                             else if (readerField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(readerField.TargetMember, executeExpr));

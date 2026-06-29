@@ -78,7 +78,7 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     void AddTable(params Type[] entityTypes);
     TableSegment AddTable(TableSegment tableSegment);
     TableSegment UseQuery(Type targetType, IQuery subQuery);
-    TableSegment UseNewQuery(Type targetType, Expression subQueryExpr, bool isFirstTable);
+    TableSegment UseNewQuery(Type targetType, Expression subQueryExpr);
 
     void Union(string union, Type targetType, IQuery subQuery);
     void Union(string union, Type targetType, Expression subQueryExpr);
