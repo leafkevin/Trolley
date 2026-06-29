@@ -648,7 +648,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             //主动延迟方法调用：如，把返回的枚举列转成描述，参数就是枚举列，返回值是对应的描述
             string fields = null;
             List<SqlSegment> readerFields = null;
-            var visitor = new MemberVisitor();
+            var visitor = new DeferredExpressionVisitor();
             visitor.Visit(memberExpr);
             //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
             //f.TotalAmount.ToString("C")

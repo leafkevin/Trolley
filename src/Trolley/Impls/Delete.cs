@@ -159,8 +159,18 @@ public class Deleted : IDeleted
     }
     #endregion
 
-    void WithHeadSql(string rawSql);
-    void WithTailSql(string rawSql);
+    #region WithRawSql
+    public IDeleted WithLeadingSql(string rawSql)
+    {
+        this.Visitor.WithLeadingSql(rawSql);
+        return this;
+    }
+    public IDeleted WithTrailingSql(string rawSql)
+    {
+        this.Visitor.WithTrailingSql(rawSql);
+        return this;
+    }
+    #endregion
 
     #region Execute
     public virtual int Execute()
@@ -223,6 +233,14 @@ public class Delete<TEntity> : Delete, IDelete<TEntity>
     #region UseTableSchema
     public new IDelete<TEntity> UseTableSchema(string tableSchema)
         => base.UseTableSchema(tableSchema) as IDelete<TEntity>;
+    #endregion
+
+    #region WithTableAliasTrailing
+    public new IDelete<TEntity> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        return this;
+    }
     #endregion
 
     #region Where

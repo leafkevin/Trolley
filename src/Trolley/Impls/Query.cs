@@ -169,28 +169,28 @@ public class QueryBase : QueryInternal, IQueryBase
     #endregion
 
     #region QueryScalar
-    protected TTarget QueryScalar<TTarget>(string sqlFormat, string shardingFieldAlias)
+    protected TTarget QueryScalar<TTarget>(string aggSql, string shardingFieldAlias)
     {
         this.Visitor.AggFieldAlias = shardingFieldAlias;
-        this.Visitor.SelectRaw(typeof(TTarget), sqlFormat);
+        this.Visitor.SelectRaw(typeof(TTarget), aggSql);
         return this.DbContext.QueryScalar<TTarget>(this.Visitor);
     }
-    protected TTarget QueryScalar<TTarget>(string sqlFormat, string shardingFieldAlias, Expression fieldExpr)
+    protected TTarget QueryScalar<TTarget>(string aggSqlFormat, string shardingFieldAlias, Expression fieldExpr)
     {
         this.Visitor.AggFieldAlias = shardingFieldAlias;
-        this.Visitor.Select(sqlFormat, fieldExpr);
+        this.Visitor.Select(aggSqlFormat, fieldExpr);
         return this.DbContext.QueryScalar<TTarget>(this.Visitor);
     }
-    protected async Task<TTarget> QueryScalarAsync<TTarget>(string sqlFormat, string shardingFieldAlias, CancellationToken cancellationToken = default)
+    protected async Task<TTarget> QueryScalarAsync<TTarget>(string aggSql, string shardingFieldAlias, CancellationToken cancellationToken = default)
     {
         this.Visitor.AggFieldAlias = shardingFieldAlias;
-        this.Visitor.SelectRaw(typeof(TTarget), sqlFormat);
+        this.Visitor.SelectRaw(typeof(TTarget), aggSql);
         return await this.DbContext.QueryScalarAsync<TTarget>(this.Visitor, cancellationToken);
     }
-    protected async Task<TTarget> QueryScalarAsync<TTarget>(string sqlFormat, string shardingFieldAlias, Expression fieldExpr, CancellationToken cancellationToken = default)
+    protected async Task<TTarget> QueryScalarAsync<TTarget>(string aggSqlFormat, string shardingFieldAlias, Expression fieldExpr, CancellationToken cancellationToken = default)
     {
         this.Visitor.AggFieldAlias = shardingFieldAlias;
-        this.Visitor.Select(sqlFormat, fieldExpr);
+        this.Visitor.Select(aggSqlFormat, fieldExpr);
         return await this.DbContext.QueryScalarAsync<TTarget>(this.Visitor, cancellationToken);
     }
     #endregion
@@ -570,7 +570,7 @@ public class Query<T> : QueryBase, IQuery<T>
     public virtual IQuery<T> Select()
     {
         Expression<Func<T, T>> defaultExpr = f => f;
-        this.Visitor.Select(null, defaultExpr);
+        this.Visitor.SelectDefault(defaultExpr);
         return this;
     }
     public virtual IQuery<TTarget> Select<TTarget>(string rawFields)

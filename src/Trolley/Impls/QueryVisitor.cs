@@ -618,26 +618,27 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 tableSegment.TableShardingInfo = tableShardingInfo;
         }
     }
-    public TableSegment UseNewQuery(Type targetType, Expression subQueryExpr, bool isFirstTable)
+    public void UseNewQuery(Type targetType, Expression subQueryExpr, bool isFirstTable)
     {
         //repository.FromQuery(f => ... ) 或是 ... .WithTable(f => ... )，具体参数如下：
         //f => f.From<Order>().Where(o=>o.Id==1) ... 或是 f => cteOrders 或是 f => myRefOrders等
         //或是 f => myCteOrders.Where(o=>o.Id==1) ... 或是 f => myRefOrders.Where(o=>o.Id==1)等
         //都是从引用现有子查询、CTE表、新建子查询生成一个子查询加入到当前Tables中，后续会有Join/Where...等操作，子查询中表别名从'a'开始
         //必须新建一个QueryVisitor对象，不能使用已有表，后续的字段引用只存在于新表中
-        IQueryVisitor queryVisitor = null;
-        if (isFirstTable) queryVisitor = this;
-        else
+
+        var lambdaExpr = this.EnsureLambda(subQueryExpr);
+        if (lambdaExpr.Body.NodeType == ExpressionType.MemberAccess)
         {
-            //queryVisiter = this.CreateQueryVisitor();
-            queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, 'a', this.Command);
-            //queryVisiter.CteQueryObj = null;
-            //queryVisiter.IsRecursive = false;
+            var subQueryObj = lambdaExpr.Body.Evaluate() as IQuery;
+            this.UseQuery(targetType, subQueryObj);
+            return;
         }
+        (var sql,  var readerFields) = this.VisitFromQuery(subQueryExpr);
+        if (typeof(ICteQuery).IsAssignableFrom(lambdaExpr.Body.Type))
+            return;
+     
         //TODO:子查询中，有多分表并且还有Group By + Having/Count(Distinct)操作，出子查询后，需要把所有多分表都打开UNION ALL起来，合成新的子查询，并去掉分表属性，以单表处理后续操作
         //除此之外，其他场景，还需要继续保留多分表属性，以便后面映射多分表
-        var fromQuery = new FromQuery(this.DbContext, queryVisitor);
-        (var sql, var tableSegment, var readerFields) = this.VisitFromQuery(subQueryExpr, fromQuery);
         //变成子查询了，不再需要UnionAll操作了
         this.IsNeedUnionShardingTables = false;
         this.IsManyShardingTables = false;
@@ -682,7 +683,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.UnionSql = rawSql;
         this.IsUnion = false;
     }
-    public virtual void UnionRecursive(string union, ICteQuery selfQueryObj, Expression subQueryExpr)
+    public virtual void UnionRecursive(string union, Type targetType, Expression subQueryExpr)
     {
         this.IsUnion = true;
         var rawSql = this.BuildSql(false, out var readerFields);
@@ -690,8 +691,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.Tables.Clear();
         //此时产生的queryObj是一个新的对象，只能用于解析sql，与传进来的queryObj不是同一个对象，舍弃
         //临时产生一个随机表名，在后面的AsCteTable时，再做替换
-        var tempTableName = $"__CTE_TABLE_{Guid.NewGuid():N}__";
-        selfQueryObj.TableName = tempTableName;
+        var entityType = typeof(CteQuery<>).MakeGenericType(targetType);
+        var selfQueryObj = RepositoryHelper.CreateInstance(entityType,
+            [typeof(DbContext), typeof(IQueryVisitor)], this.DbContext, this) as ICteQuery;
+        selfQueryObj.TableName = $"__CTE_TABLE_{Guid.NewGuid():N}__";
         selfQueryObj.ReaderFields = readerFields;
         selfQueryObj.IsRecursive = true;
         this.CteQueryObj = selfQueryObj;
@@ -1706,16 +1709,16 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         this.IsCteTable = true;
         //每次要新建一个CteQuery对象，避免多次使用同一个对象
-        if (this.CteQueryObj != null && this.IsRecursive && !string.IsNullOrEmpty(this.UnionSql))
-        {
-            var tempTableName = this.CteQueryObj.TableName;
-            this.UnionSql = this.UnionSql.Replace(tempTableName, tableName);
-        }
         if (this.CteQueryObj == null)
         {
             var cteQueryType = typeof(CteQuery<>).MakeGenericType(targetType);
             this.CteQueryObj = RepositoryHelper.CreateInstance(cteQueryType,
                 [typeof(DbContext), typeof(IQueryVisitor)], this.DbContext, this) as ICteQuery;
+        }
+        if (this.IsRecursive)
+        {
+            var tempTableName = this.CteQueryObj.TableName;
+            this.UnionSql = this.UnionSql.Replace(tempTableName, tableName);
         }
         this.CteQueryObj.Body = this.BuildCteTableSql(tableName, out var readerFields);
         this.CteQueryObj.ReaderFields = readerFields;

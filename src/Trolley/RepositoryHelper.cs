@@ -1487,10 +1487,7 @@ public static class RepositoryHelper
                             Expression executeExpr = null;
                             if (readerField.Fields != null && readerField.Fields.Count > 0)
                             {
-                                var visitor = new ReplaceMemberVisitor();
-                                bodyExpr = visitor.Visit(readerField.Expression);
                                 var argsExprs = new List<Expression>();
-
                                 for (int i = 0; i < readerField.Fields.Count; i++)
                                 {
                                     var fieldType = reader.GetFieldType(index);
@@ -1501,7 +1498,7 @@ public static class RepositoryHelper
                                     argsExprs.Add(readerValueExpr);
                                     index++;
                                 }
-                                executeExpr = Expression.Invoke(Expression.Lambda(bodyExpr, visitor.NewParameters), argsExprs);
+                                executeExpr = Expression.Invoke(Expression.Lambda(bodyExpr, readerField.NewParameters), argsExprs);
                             }
                             else executeExpr = Expression.Invoke(Expression.Lambda(bodyExpr));
                             //把延迟方法调用委托当作参数传进来，这样缓存才有效，相同key，不同的延迟方法

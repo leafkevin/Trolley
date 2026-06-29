@@ -200,13 +200,13 @@ public interface IDeleted
     /// </summary>
     /// <param name="rawSql">原始SQL片</param>
     /// <returns>返回删除对象</returns>
-    IDelete WithLeadingSql(string rawSql);
+    IDeleted WithLeadingSql(string rawSql);
     /// <summary>
     /// 在最后面添加原始SQL片段，rawSql可以是任意SQL片段
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回删除对象</returns>
-    IDelete WithTrailingSql(string rawSql);
+    IDeleted WithTrailingSql(string rawSql);
     #endregion
 
     #region Execute
@@ -274,7 +274,7 @@ public interface IDelete<TEntity> : IDelete
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回插入对象</returns>
-    new IDelete<TEntity> WithTableAliasTrailing(bool isIncludeMany, string rawSql);
+    new IDelete<TEntity> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region Where

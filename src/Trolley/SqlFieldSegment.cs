@@ -164,6 +164,10 @@ public class ReaderField
     public ITypeHandler TypeHandler { get; set; }
     public MemberInfo TargetMember { get; set; }
     public bool IsDeferredFields { get; set; }
+    /// <summary>
+    /// 延迟字段的新参数列表
+    /// </summary>
+    public List<ParameterExpression> NewParameters { get; set; }
     public bool IsGroupingField { get; set; }
     public List<ReaderField> Fields { get; set; }
     public string Path { get; set; }

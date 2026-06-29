@@ -77,7 +77,7 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     void From(char tableAsStart = 'a', params Type[] entityTypes);
     void AddTable(params Type[] entityTypes);
     TableSegment AddTable(TableSegment tableSegment);
-    TableSegment UseQuery(Type targetType, IQuery subQuery, bool isCopyRefParameters);
+    TableSegment UseQuery(Type targetType, IQuery subQuery);
     TableSegment UseNewQuery(Type targetType, Expression subQueryExpr, bool isFirstTable);
 
     void Union(string union, Type targetType, IQuery subQuery);
@@ -120,7 +120,7 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     void Page(int pageNumber, int pageSize);
     void Skip(int skip);
     void Take(int limit);
-    void AsCteTable(Type targetType, string tableName); 
+    void AsCteTable(Type targetType, string tableName);
 
     void WithLeadingSql(string rawSql);
     void WithTrailingSql(string rawSql);
