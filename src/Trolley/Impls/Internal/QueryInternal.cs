@@ -9,6 +9,7 @@ public class QueryInternal
     #region Properties
     public DbContext DbContext { get; set; }
     public IQueryVisitor Visitor { get; set; }
+    public virtual bool IsCteTable => false;
     public virtual IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
@@ -60,19 +61,19 @@ public class QueryInternal
     #endregion
 
     #region WithTable
-    protected void WithTableInternal<TOther>(IQuery<TOther> subQuery)
+    protected void WithQueryInternal<TOther>(IQuery<TOther> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        this.Visitor.UseQuery(typeof(TOther), subQuery, true);
+        this.Visitor.UseQuery(typeof(TOther), subQuery);
     }
-    protected void WithTableInternal<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    protected void WithQueryInternal<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
         if (subQueryExpr == null)
             throw new ArgumentNullException(nameof(subQueryExpr));
 
-        this.Visitor.UseNewQuery(typeof(TOther), subQueryExpr, false);
+        this.Visitor.UseNewQuery(typeof(TOther), subQueryExpr);
     }
     #endregion
 

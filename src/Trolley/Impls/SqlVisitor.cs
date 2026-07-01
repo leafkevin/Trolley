@@ -2471,22 +2471,22 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         if (memberExpr == null) return false;
         return memberExpr.Member.Name == "Grouping" && memberExpr.Member.DeclaringType.FullName.StartsWith("Trolley.IGroupingObject");
     }
-    public List<ICteQuery> FlattenRefCteTables(List<IQuery> cteQueries)
-    {
-        var result = new List<ICteQuery>();
-        AddRefCteTables(result, cteQueries);
-        return result;
-    }
-    private void AddRefCteTables(List<ICteQuery> result, List<IQuery> fromCteQueries)
-    {
-        foreach (var subQueryObj in fromCteQueries)
-        {
-            if (subQueryObj.Visitor.RefQueries.Count > 0 && !fromCteQueries.Equals(subQueryObj.Visitor.RefQueries))
-                this.AddRefCteTables(result, subQueryObj.Visitor.RefQueries);
-            if (!result.Contains(subQueryObj) && subQueryObj is ICteQuery cteQueryObj)
-                result.Add(cteQueryObj);
-        }
-    }
+    //public List<ICteQuery> FlattenRefCteTables(List<IQuery> cteQueries)
+    //{
+    //    var result = new List<ICteQuery>();
+    //    AddRefCteTables(result, cteQueries);
+    //    return result;
+    //}
+    //private void AddRefCteTables(List<ICteQuery> result, List<IQuery> fromCteQueries)
+    //{
+    //    foreach (var subQueryObj in fromCteQueries)
+    //    {
+    //        if (subQueryObj.Visitor.RefQueries.Count > 0 && !fromCteQueries.Equals(subQueryObj.Visitor.RefQueries))
+    //            this.AddRefCteTables(result, subQueryObj.Visitor.RefQueries);
+    //        if (!result.Contains(subQueryObj) && subQueryObj is ICteQuery cteQueryObj)
+    //            result.Add(cteQueryObj);
+    //    }
+    //}
     public DataTable ToDataTable(string tableName, IEnumerable entities, List<MemberMap> memberMappers, List<Func<object, object>> valueGetters)
     {
         var result = new DataTable(tableName);

@@ -24,9 +24,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
     protected string GroupBySql { get; set; }
     protected string HavingSql { get; set; }
-    protected string OrderBySql { get; set; }
+    //protected string OrderBySql { get; set; }
     protected bool IsDistinct { get; set; }
-    public bool IsNeedCommandTableAlias { get; set; }
 
     public List<ReaderField> IncludeReaderFields { get; set; }
     public TableSegment LastIncludeSegment { get; set; }
@@ -51,21 +50,21 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (isBuildCteSql && this.RefQueries != null && this.RefQueries.Count > 0)
         {
             bool isRecursive = false;
-            var cteQueries = this.FlattenRefCteTables(this.RefQueries);
-            if (cteQueries.Count > 0)
+            int index = 0;
+            foreach (var refQueryObj in this.RefQueries)
             {
-                for (int i = 0; i < cteQueries.Count; i++)
-                {
-                    if (i > 0) builder.AppendLine(",");
-                    builder.Append(cteQueries[i].Body);
-                    if (cteQueries[i].IsRecursive)
-                        isRecursive = true;
-                }
-                if (isRecursive)
-                    builder.Insert(0, "WITH RECURSIVE ");
-                else builder.Insert(0, "WITH ");
-                builder.AppendLine();
+                if (!refQueryObj.IsCteTable || refQueryObj is not ICteQuery cteQueryObj)
+                    continue;
+                if (index > 0) builder.AppendLine(",");
+                builder.Append(cteQueryObj.Body);
+                if (cteQueryObj.IsRecursive)
+                    isRecursive = true;
+                index++;
             }
+            if (isRecursive)
+                builder.Insert(0, "WITH RECURSIVE ");
+            else builder.Insert(0, "WITH ");
+            builder.AppendLine();
         }
         readerFields = this.ReaderFields;
 
@@ -164,15 +163,34 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (!this.IsManyShardingTables && !string.IsNullOrEmpty(this.HavingSql))
             builder.Append($" HAVING {this.HavingSql}");
 
+        string others = null;
         string orderBy = null;
-        if (!string.IsNullOrEmpty(this.OrderBySql) && (!this.IsManyShardingTables
-            || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue)))
+        if (this.OrderByFields != null && this.OrderByFields.Count > 0)
         {
-            orderBy = $"ORDER BY {this.OrderBySql}";
-            if (!this.offset.HasValue && !this.limit.HasValue)
-                builder.Append(" " + orderBy);
+            others = builder.ToString();
+            builder.Clear();
+            //当有多分表时，有排序，Select字段中，没有完全的排序字段，则需要补全所有排序字段
+            foreach (var orderByField in this.OrderByFields)
+            {
+                var fieldName = orderByField.Field.Value.ToString();
+                var readerField = this.ReaderFields.Find(f => f.Value.ToString() == fieldName);
+                //OrderBy字段，优先使用SELECT字段别名
+                if (readerField != null && readerField.IsNeedAlias)
+                    builder.Append(readerField.AliasName);
+                else builder.Append(fieldName);
+            }
+            orderBy = builder.ToString();
+            builder.Clear();
+            builder.Append(others);
+
+            if (!this.IsManyShardingTables || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue))
+            {
+                orderBy = $"ORDER BY {orderBy}";
+                if (!this.offset.HasValue && !this.limit.HasValue)
+                    builder.Append(" " + orderBy);
+            }
         }
-        string others = builder.ToString();
+        others = builder.ToString();
 
         builder.Clear();
         if (!string.IsNullOrEmpty(headSql))
@@ -199,11 +217,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
         if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql)
-            || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue || this.HasAggFields))
+            || !string.IsNullOrEmpty(orderBy) || this.offset.HasValue || this.limit.HasValue || this.HasAggFields))
             this.IsNeedUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
-        bool isNeedWrap = ((this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
+        bool isNeedWrap = ((this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(orderBy) || this.limit.HasValue))
             || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue);
         if (isNeedWrap)
         {
@@ -238,21 +256,23 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var fieldsSql = builder.ToString();
             builder.Clear();
             bool isRecursive = false;
-            var cteQueries = this.FlattenRefCteTables(this.RefQueries);
-            if (cteQueries.Count > 0)
+
+            index = 0;
+            foreach (var refQueryObj in this.RefQueries)
             {
-                for (int i = 0; i < cteQueries.Count; i++)
-                {
-                    if (i > 0) builder.AppendLine(",");
-                    builder.Append(cteQueries[i].Body);
-                    if (cteQueries[i].IsRecursive)
-                        isRecursive = true;
-                }
-                if (isRecursive)
-                    builder.Insert(0, "WITH RECURSIVE ");
-                else builder.Insert(0, "WITH ");
-                builder.AppendLine();
+                if (!refQueryObj.IsCteTable || refQueryObj is not ICteQuery cteQueryObj)
+                    continue;
+                if (index > 0) builder.AppendLine(",");
+                builder.Append(cteQueryObj.Body);
+                if (cteQueryObj.IsRecursive)
+                    isRecursive = true;
+                index++;
             }
+
+            if (isRecursive)
+                builder.Insert(0, "WITH RECURSIVE ");
+            else builder.Insert(0, "WITH ");
+            builder.AppendLine();
             builder.Append(fieldsSql);
         }
         dbParameters = this.DbParameters;
@@ -326,7 +346,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //当有多分表时，有排序，Select字段中，没有完全的排序字段，则需要补全所有排序字段
                 foreach (var orderByField in this.OrderByFields)
                 {
-                    if (this.ReaderFields.Exists(f => f.TargetMember.Name == orderByField.Field.TargetMember.Name))
+                    var fieldName = orderByField.Field.Value.ToString();
+                    if (this.ReaderFields.Exists(f => f.Value.ToString() == fieldName || f.TargetMember.Name == fieldName))
                         continue;
                     //这里不需要克隆，只用于生成SQL
                     this.ReaderFields.Add(orderByField.Field);
@@ -335,7 +356,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
 
         this.AddSelectFieldsSql(builder, this.ReaderFields);
-        if (this.IsManyShardingTables && this.IsManyShardingTables && this.AggFieldAlias != null)
+        if (this.IsManyShardingTables && this.AggFieldAlias != null)
             builder.Append($" AS {this.AggFieldAlias},COUNT(*) AS AVG_COUNT");
 
         string selectSql = null;
@@ -554,6 +575,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         {
             if (readerField.FieldType == ReaderFieldType.Field)
             {
+                if (readerField.IsDeferredFields)
+                    throw new NotSupportedException($"CTE表不支持延迟字段，Field: {readerField.TargetMember.Name}");
                 if (index > 0) builder.Append(',');
                 builder.Append(this.OrmProvider.GetFieldName(readerField.TargetMember.Name));
                 index++;
@@ -567,8 +590,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     index++;
                 }
             }
-            //在引用CTE表时，会更新FromMember，此处无需更新
-            //readerField.FromMember = readerField.TargetMember; 
         }
         builder.AppendLine(") AS ");
         builder.AppendLine("(");
@@ -643,7 +664,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //变成子查询了，不再需要UnionAll操作了
         this.IsNeedUnionShardingTables = false;
         this.IsManyShardingTables = false;
-      
+
 
         if (isFirstTable)
         {
@@ -1873,7 +1894,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         if (index > 0) builder.Append(',');
                         builder.Append(readerField.Value.ToString());
                         if (readerField.FieldsCount == 1)
-                            builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
+                        {
+                            readerField.IsNeedAlias = true;
+                            readerField.AliasName = this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
+                            builder.Append($" AS {readerField.AliasName}");
+                        }
                         break;
                     default:
                         if (readerField.IsDeferredFields)
@@ -1889,14 +1914,26 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         {
                             if (index > 0) builder.Append(',');
                             //TODO: 只有参数字段，不做数据库查询，否则，才使用参数
-                            var body = readerField.ToString();
+                            var body = readerField.Value.ToString();
+                            //TODO: 需要验证，多分表场景不支持AVG/COUNT(DISTINCT)操作
                             //在前面select时，有可能是多分表并且是AVG操作时，没有包裹AVG函数，现在确认不是多分表，需要加上AVG函数包裹
-                            if (this.IsManyShardingTables && this.AggFieldAlias == "AVG_VALUE" && !this.IsManyShardingTables)
-                                body = $"AVG({body})";
+                            //if (this.AggFieldAlias == "AVG_VALUE" && !this.IsManyShardingTables)
+                            //    body = $"AVG({body})";
+                            //如果是多分表场景并且是聚合函数字段，SQL生成的时候，需要包裹聚合函数
+                            var isNeedAlas = false;
+                            if (this.IsManyShardingTables && readerField.IsAggField)
+                            {
+                                isNeedAlas = true;
+                                body = $"{readerField.AggFunc}({body})";
+                            }
                             builder.Append(body);
                             //生成SQL的时候，才加上AS别名
-                            if (this.IsNeedAlias(readerField))
-                                builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
+                            if (isNeedAlas || this.IsNeedAlias(readerField))
+                            {
+                                readerField.IsNeedAlias = true;
+                                readerField.AliasName = this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
+                                builder.Append($" AS {readerField.AliasName}");
+                            }
                         }
                         break;
                 }
@@ -1922,9 +1959,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         //TODO: 只有参数字段，不做数据库查询，否则，才使用参数
                         //TODO: 需要处理多分表时，AVG函数场景
                         body = readerField.Value.ToString();
+                        //TODO: 需要验证，多分表场景不支持AVG/COUNT(DISTINCT)操作
                         //在前面select时，有可能是多分表并且是AVG操作时，没有包裹AVG函数，现在确认不是多分表，需要加上AVG函数包裹
-                        if (this.IsManyShardingTables && this.AggFieldAlias == "AVG_VALUE" && !this.IsManyShardingTables)
-                            body = $"AVG({body})";
+                        //if (this.AggFieldAlias == "AVG_VALUE" && !this.IsManyShardingTables)
+                        //    body = $"AVG({body})";
+
+                        //如果是多分表场景并且是聚合函数字段，SQL生成的时候，需要包裹聚合函数
+                        if (this.IsManyShardingTables && readerField.IsAggField)
+                            body = $"{readerField.AggFunc}({body})";
                     }
                     builder.Append(body);
                     break;
@@ -2010,7 +2052,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         queryVisitor.RefQueries = this.RefQueries;
         queryVisitor.IsNeedUnionShardingTables = this.IsNeedUnionShardingTables;
         queryVisitor.IsManyShardingTables = this.IsManyShardingTables;
-        queryVisitor.IsManyShardingTables = this.IsManyShardingTables;
         queryVisitor.AggFieldAlias = this.AggFieldAlias;
         queryVisitor.HasAggFields = this.HasAggFields;
         queryVisitor.ShardingTables = this.ShardingTables;
@@ -2019,9 +2060,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         queryVisitor.UnionSql = this.UnionSql;
         queryVisitor.GroupBySql = this.GroupBySql;
         queryVisitor.HavingSql = this.HavingSql;
-        queryVisitor.OrderBySql = this.OrderBySql;
         queryVisitor.IsDistinct = this.IsDistinct;
-        queryVisitor.IsNeedCommandTableAlias = this.IsNeedCommandTableAlias;
         queryVisitor.IsCteTable = this.IsCteTable;
         queryVisitor.IsUnion = this.IsUnion;
         queryVisitor.IsSecondUnion = this.IsSecondUnion;

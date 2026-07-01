@@ -188,7 +188,7 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #region WithTable
     public virtual IMultiQuery<T, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
     {
-        base.WithTableInternal(subQuery);
+        base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
     }
     public virtual IMultiQuery<T, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)

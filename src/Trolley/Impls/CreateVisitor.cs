@@ -43,7 +43,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (this.TryGetTableShardingInfo(entityType, TableShardingUsageMode.WriteOnly, out var tableShardingInfo))
             this.Tables[0].TableShardingInfo = tableShardingInfo;
     }
-    public virtual string BuildSql(ITheaCommand command, out List<SqlSegment> readerFields)
+    public virtual string BuildSql(ITheaCommand command, out List<ReaderField> readerFields)
     {
         string tailSql = null;
         readerFields = this.ReaderFields;
@@ -226,7 +226,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         });
     }
     public virtual (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
-        Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlSegment>) BuildWithBulk(ITheaCommand command)
+        Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<ReaderField>) BuildWithBulk(ITheaCommand command)
     {
         (var insertObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
 

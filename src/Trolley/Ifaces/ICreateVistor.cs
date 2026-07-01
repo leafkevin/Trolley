@@ -21,8 +21,7 @@ public interface ICreateVisitor : ICommandContext, IDisposable
     List<IQuery> RefQueries { get; set; }
     List<TableSegment> ShardingTables { get; set; }
     Dictionary<string, TableSegment> RefTableAliases { get; set; }
-    ICteQuery CteQueryObj { get; set; }
-    object RefFrom { get; set; }
+    ICteQuery CteQueryObj { get; set; } 
     string FromSql { get; set; }
     bool IsRecursive { get; set; }
 

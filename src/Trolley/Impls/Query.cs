@@ -203,10 +203,9 @@ public class QueryBase : QueryInternal, IQueryBase
         createVisiter.Tables = this.Visitor.Tables;
         createVisiter.RefQueries = this.Visitor.RefQueries;
         createVisiter.ShardingTables = this.Visitor.ShardingTables;
-        createVisiter.RefTableAliases = this.Visitor.RefTableAliases;
+        //createVisiter.RefTableAliases = this.Visitor.RefTableAliases;
         createVisiter.IsRecursive = this.Visitor.IsRecursive;
-        createVisiter.CteQueryObj = this.Visitor.CteQueryObj;
-        createVisiter.RefFrom = this;
+        //createVisiter.CteQueryObj = this.Visitor.CteQueryObj;
         createVisiter.FromSql = this.Visitor.BuildCommandSql(entityType, out _);
         return createVisiter;
     }
@@ -310,14 +309,17 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.AddTable(typeof(TOther));
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    #endregion
+
+    #region WithQuery
+    public virtual IQuery<T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
-        base.WithTableInternal(subQuery);
+        base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IQuery<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithTableInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -793,6 +795,7 @@ public class CteQuery<T> : Query<T>, ICteQuery<T>
     #region Properties
     public string TableName { get; set; }
     public List<ReaderField> ReaderFields { get; set; }
+    public override bool IsCteTable => true;
     public bool IsRecursive { get; set; }
     #endregion
 

@@ -176,6 +176,8 @@ public class ReaderField
     public bool IsAggField { get; set; }
     public bool IsAvgField { get; set; }
     public string AggFunc { get; set; }
+    public bool IsNeedAlias { get; set; }
+    public string AliasName { get; set; }
     /// <summary>
     /// OrderBy子句中引用的GroupBy/Select子句的ReaderField对象，方便在BuildSql时，尽力使用Select子句的ReaderField别名
     /// </summary>
