@@ -78,12 +78,6 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     /// 在最外层再进行一次GROUP BY/ORDER BY/LIMIT、SUM/AVG/MAX/MIN等操作
     /// </summary>
     public bool IsManyShardingTables { get; set; }
-
-    public string AggFieldAlias { get; set; }
-    /// <summary>
-    /// 分页查询的Count操作，是否需要全部字段Count
-    /// </summary>
-    public bool HasAggFields { get; set; }
     /// <summary>
     /// 当前查询语句中，所有有多个分表的实体表列表，第一个多个分表的实体表为主表，其他多个分表的实体表，必须调用UseTableMap方法，指定与主表的映射关系
     /// </summary>
@@ -684,11 +678,13 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     {
         var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
         var declaringType = methodCallExpr.Method.DeclaringType;
-        if (declaringType == typeof(Sql) || declaringType == typeof(IRepository)
+        if (declaringType == typeof(Sql)
+           || typeof(IRepository).IsAssignableFrom(declaringType)
            || typeof(IAggregateSelect).IsAssignableFrom(declaringType)
-           || declaringType == typeof(IQueryBase))
+           || typeof(IQueryBase).IsAssignableFrom(declaringType))
         {
             sqlSegment = this.VisitSqlMethodCall(sqlSegment);
+            //TODO: 
             //sqlSegment.TargetType = methodCallExpr.Type;
             return sqlSegment;
         }
@@ -1031,18 +1027,17 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 {
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     //COUNT有时候是常量*,1等
-                    sqlSegment.Change($"COUNT({sqlSegment.Value})", SqlType.MethodCall);
+                    sqlSegment.Value = $"COUNT({sqlSegment.Value})";
                 }
-                else sqlSegment.Change("COUNT(1)", SqlType.MethodCall);
+                else sqlSegment.Value = "COUNT(1)";
                 sqlSegment.Change(new ReaderField
                 {
-                    FieldType = ReaderFieldType.Field,
+                    FieldType = ReaderFieldType.Expression,
                     ReaderType = methodCallExpr.Type,
                     Value = sqlSegment.Value,
                     IsAggField = true,
                     AggFunc = "SUM"
                 }, SqlType.ReaderField);
-                this.HasAggFields = true;
                 break;
             case "CountDistinct":
             case "LongCountDistinct":
@@ -1051,55 +1046,81 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
                 {
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    sqlSegment.Change($"COUNT(DISTINCT {sqlSegment.Value})", SqlType.MethodCall);
+                    sqlSegment.Value = $"COUNT(DISTINCT {sqlSegment.Value})";
                 }
                 sqlSegment.Change(new ReaderField
                 {
-                    FieldType = ReaderFieldType.Field,
+                    FieldType = ReaderFieldType.Expression,
                     ReaderType = methodCallExpr.Type,
                     Value = sqlSegment.Value,
                     IsAggField = true,
                     AggFunc = "COUNT"
                 }, SqlType.ReaderField);
-                this.HasAggFields = true;
                 break;
             case "Sum":
                 sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                 sqlSegment.Change(new ReaderField
                 {
-                    FieldType = ReaderFieldType.Field,
+                    FieldType = ReaderFieldType.Expression,
                     ReaderType = methodCallExpr.Type,
                     Value = $"SUM({sqlSegment.Value})",
                     IsAggField = true,
                     AggFunc = "SUM"
                 }, SqlType.ReaderField);
-                this.HasAggFields = true;
                 break;
             case "Avg":
-                if (this.IsManyShardingTables)
-                    throw new NotSupportedException($"多分表时不支持Avg聚合操作，因为得到的结果是不正确的，可以考虑拆分成Sum和Count两个聚合操作，再进行Sum/Count操作得到平均值");
                 sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                sqlSegment.Change(new ReaderField
+                if (this.IsManyShardingTables)
                 {
-                    FieldType = ReaderFieldType.Field,
-                    ReaderType = methodCallExpr.Type,
-                    Value = $"AVG({sqlSegment.Value})",
-                    IsAggField = true,
-                    AggFunc = "AVG"
-                }, SqlType.ReaderField);
-                this.HasAggFields = true;
+                    List<ReaderField> readerFields = [new ReaderField
+                    {
+                        FieldType = ReaderFieldType.Expression,
+                        ReaderType = methodCallExpr.Type,
+                        Value = $"SUM({sqlSegment.Value})",
+                        IsAggField = true,
+                        IsAvgField = true,
+                        AggFunc = "SUM"
+                    },new ReaderField
+                    {
+                        FieldType = ReaderFieldType.Expression,
+                        ReaderType = methodCallExpr.Type,
+                        Value = $"COUNT({sqlSegment.Value})",
+                        IsAggField = true,
+                        IsAvgField = true,
+                        AggFunc = "COUNT"
+                    }];
+                    sqlSegment.Change(new ReaderField
+                    {
+                        FieldType = ReaderFieldType.Expression,
+                        ReaderType = methodCallExpr.Type,
+                        Fields = readerFields,
+                        IsAggField = true,
+                        IsAvgField = true,
+                        AggFunc = "AVG"
+                    }, SqlType.ReaderField);
+                }
+                else
+                {
+                    sqlSegment.Change(new ReaderField
+                    {
+                        FieldType = ReaderFieldType.Expression,
+                        ReaderType = methodCallExpr.Type,
+                        Value = $"AVG({sqlSegment.Value})",
+                        IsAggField = true,
+                        AggFunc = "AVG"
+                    }, SqlType.ReaderField);
+                }
                 break;
             case "Max":
                 sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                 sqlSegment.Change(new ReaderField
                 {
-                    FieldType = ReaderFieldType.Field,
+                    FieldType = ReaderFieldType.Expression,
                     ReaderType = methodCallExpr.Type,
                     Value = $"MAX({sqlSegment.Value})",
                     IsAggField = true,
                     AggFunc = "MAX"
                 }, SqlType.ReaderField);
-                this.HasAggFields = true;
                 break;
             case "Min":
                 sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
@@ -1111,7 +1132,6 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     IsAggField = true,
                     AggFunc = "MIN"
                 }, SqlType.ReaderField);
-                this.HasAggFields = true;
                 break;
         }
         return sqlSegment;

@@ -123,9 +123,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 {
                     if (this.ReaderFields.Exists(f => f.IsGroupingField && f.FieldType == ReaderFieldType.Entity))
                         break;
-                    if (this.ReaderFields.Exists(f => f.IsGroupingField && f.Value.ToString() == groupByField.Value.ToString()))
+                    var readerField = this.ReaderFields.Find(f => f.Value.ToString() == groupByField.Value.ToString());
+                    if (readerField != null)
+                    {
+                        readerField.IsGroupingField = true;
                         continue;
-                    //这里不需要克隆，只用于生成SQL
+                    }
                     this.ReaderFields.Add(groupByField);
                 }
             }
@@ -135,18 +138,19 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 foreach (var orderByField in this.OrderByFields)
                 {
                     var fieldName = orderByField.Field.Value.ToString();
-                    if (this.ReaderFields.Exists(f => f.Value.ToString() == fieldName || f.TargetMember.Name == fieldName))
+                    var readerField = this.ReaderFields.Find(f => f.Value.ToString() == fieldName);
+                    if (readerField != null)
+                    {
+                        readerField.IsOrderingField = true;
                         continue;
-                    //这里不需要克隆，只用于生成SQL
+                    }
+                    orderByField.Field.IsOrderingField = true;
                     this.ReaderFields.Add(orderByField.Field);
                 }
             }
         }
 
         this.AddSelectFieldsSql(builder, this.ReaderFields);
-        //TODO:需要重新审视一下逻辑
-        if (this.IsManyShardingTables && this.AggFieldAlias != null)
-            builder.Append($" AS {this.AggFieldAlias},COUNT(*) AS AVG_COUNT");
 
         string selectSql = null;
         if (this.IsDistinct)
@@ -158,16 +162,23 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             builder.Append($" WHERE {this.WhereBuilder.ToString()}");
         //有多分表还有Group By操作，每个分表语句中做Group By操作，Union All语句后，还要再做Group By操作
         if (!string.IsNullOrEmpty(this.GroupBySql))
+        {
+            if (this.IsManyShardingTables) this.IsNeedUnionShardingTables = true;
             builder.Append($" GROUP BY {this.GroupBySql}");
+        }
         //有多分表还有Group By+Having操作，每个分表语句中只做Group By操作，不做Having操作，在Union All语句后，再做Group By+Having操作
         if (!this.IsManyShardingTables && !string.IsNullOrEmpty(this.HavingSql))
             builder.Append($" HAVING {this.HavingSql}");
 
-        string others = null;
+        //包含Where+GroupBy语句，不包含OrderBy语句
+        var others = builder.ToString();
         string orderBy = null;
-        if (this.OrderByFields != null && this.OrderByFields.Count > 0)
+
+        //多分表场景只要没有Limit语句，不添加OrderBy语句，也不添加Offset语句
+        //多分表场景有Limit语句，没有Offset语句，正常添加OrderBy语句
+        if (this.OrderByFields != null && this.OrderByFields.Count > 0
+           && (!this.IsManyShardingTables || this.limit.HasValue))
         {
-            others = builder.ToString();
             builder.Clear();
             //当有多分表时，有排序，Select字段中，没有完全的排序字段，则需要补全所有排序字段
             foreach (var orderByField in this.OrderByFields)
@@ -179,51 +190,63 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     builder.Append(readerField.AliasName);
                 else builder.Append(fieldName);
             }
-            orderBy = builder.ToString();
-            builder.Clear();
-            builder.Append(others);
-
-            if (!this.IsManyShardingTables || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue))
-            {
-                orderBy = $"ORDER BY {orderBy}";
-                if (!this.offset.HasValue && !this.limit.HasValue)
-                    builder.Append(" " + orderBy);
-            }
+            orderBy = $" ORDER BY {builder.ToString()}";
+            //if (!this.IsManyShardingTables || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue))
+            //{
+            //    orderBy = $"ORDER BY {orderBy}";
+            //    if (!this.offset.HasValue && !this.limit.HasValue)
+            //        builder.Append(" " + orderBy);
+            //}
         }
-        others = builder.ToString();
-
         builder.Clear();
         if (!string.IsNullOrEmpty(headSql))
             builder.Append(headSql);
 
-        if (!this.IsManyShardingTables && (this.offset.HasValue || this.limit.HasValue)
-            || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue))
+        //多分表场景同时有Offset和Limit语句分页，正常添加OrderBy语句，不添加Offset，Limit设置为Offset+Limit
+        //多分表场景下，offset有值，limit没有值，不添加offset语句，在最外层UNION ALL后，再添加offset语句
+        //多分表场景下有分页，offset/limit都有值，limit要加上offset的值，防止丢失数据，在最外层UNION ALL后，再添加offset语句
+
+        int offset = 0, limit = 0;
+        if (this.limit.HasValue) limit = this.limit.Value;
+        if (this.offset.HasValue || this.limit.HasValue)
         {
+            if (this.offset.HasValue && this.limit.HasValue)
+            {
+                if (this.IsManyShardingTables)
+                    limit = this.offset.Value + this.limit.Value;
+
+                //生成分页COUNT语句，不需要添加OrderBy语句
+                if (this.IsNeedPaging)
+                {
+                    var fromSql = $"{tableSql}{others}";
+                    if (!string.IsNullOrEmpty(this.GroupBySql))
+                        fromSql = $"(SELECT {selectSql} FROM {tableSql}{others}) a";
+                    builder.Append($"SELECT COUNT(*) FROM {fromSql};");
+                }
+            }
+
+            //生成查询数据语句时，需要添加OrderBy语句
+            if (!string.IsNullOrEmpty(orderBy))
+                others += orderBy;
+
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
-            var pageSql = this.OrmProvider.GetPagingTemplate(this.offset, this.limit, orderBy);
+            var pageSql = this.OrmProvider.GetPagingTemplate(offset, limit, orderBy);
             pageSql = pageSql.Replace("/**fields**/", selectSql);
             pageSql = pageSql.Replace("/**tables**/", tableSql);
             pageSql = pageSql.Replace(" /**others**/", others);
-
-            if (this.IsNeedPaging && this.offset.HasValue && this.limit.HasValue)
-            {
-                var myTableSql = $"{tableSql}{others}";
-                if (this.HasAggFields || !string.IsNullOrEmpty(this.GroupBySql))
-                    myTableSql = $"(SELECT {selectSql} FROM {tableSql}{others}) a";
-                builder.Append($"SELECT COUNT(*) FROM {myTableSql};");
-            }
             builder.Append($"{pageSql}");
         }
-        else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
-
-        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql)
-            || !string.IsNullOrEmpty(orderBy) || this.offset.HasValue || this.limit.HasValue || this.HasAggFields))
-            this.IsNeedUnionShardingTables = true;
+        else
+        {
+            //生成查询数据语句时，需要添加OrderBy语句
+            if (!string.IsNullOrEmpty(orderBy))
+                others += orderBy;
+            builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
+        }
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
-        bool isNeedWrap = ((this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(orderBy) || this.limit.HasValue))
-            || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue);
-        if (isNeedWrap)
+        if (this.IsUnion && (!string.IsNullOrEmpty(orderBy) || this.offset.HasValue || this.limit.HasValue)
+            || this.IsManyShardingTables && (this.offset.HasValue || this.limit.HasValue))
         {
             builder.Insert(0, "SELECT * FROM (");
             builder.Append($") a");
@@ -504,6 +527,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     builder.Append(orderByField.Suffix);
             }
             orderBy = "ORDER BY " + builder.ToString();
+
+
+            //如果是多分表场景并且是聚合函数字段，SQL生成的时候，需要包裹聚合函数
+            if (this.IsManyShardingTables && readerField.IsAggField)
+                body = $"{readerField.AggFunc}({body})";
         }
 
         builder.Clear();
@@ -1217,13 +1245,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     builder.Append(fieldName);
                     this.GroupByFields.Add(new ReaderField
                     {
+                        IsGroupingField = true,
                         FieldType = ReaderFieldType.Field,
                         ReaderType = memberInfo.GetMemberType(),
                         MappedTargetType = sqlSegment.MappedTargetType,
                         MemberName = sqlSegment.MemberName,
                         Value = fieldName,
-                        TargetMember = memberInfo,
-                        IsGroupingField = true
+                        TargetMember = memberInfo
                     });
                     index++;
                 }
@@ -1237,13 +1265,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     var fieldName = this.WrapSql(sqlSegment);
                     this.GroupByFields.Add(new ReaderField
                     {
+                        IsGroupingField = true,
                         FieldType = ReaderFieldType.Field,
                         ReaderType = memberExpr.Type,
                         MappedTargetType = sqlSegment.MappedTargetType,
                         MemberName = sqlSegment.MemberName,
                         Value = fieldName,
-                        TargetMember = memberExpr.Member,
-                        IsGroupingField = true
+                        TargetMember = memberExpr.Member
                     });
                     this.GroupBySql = fieldName;
                 }
@@ -1341,7 +1369,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     Value = sqlSegment.Value
                 }];
                 break;
-            //成员访问，多个字段实体类型的原始SQL
+            //成员访问，多个字段实体类型的原始SQL，聚合字段
             case SqlType.ReaderField:
                 var readerField = sqlSegment.Value as ReaderField;
                 readerField.ReaderType = toTargetExpr.Body.Type;
@@ -1360,6 +1388,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     ReaderType = toTargetExpr.Body.Type,
                     Value = wrapSql
                 }];
+
                 break;
         }
         this.IsSelect = false;
@@ -1523,6 +1552,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 {
                     readerField = new ReaderField
                     {
+                        IsGroupingField = true,
                         FieldType = ReaderFieldType.Entity,
                         ReaderType = memberInfo.GetMemberType(),
                         Fields = new List<ReaderField>()
@@ -1799,7 +1829,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             TargetMember = memberInfo
                         }];
                         break;
-                    //成员访问，多个字段实体类型的原始SQL
+                    //成员访问，多个字段实体类型的原始SQL，聚合字段
                     case SqlType.ReaderField:
                         var readerField = sqlSegment.Value as ReaderField;
                         readerField.ReaderType = memberInfo.GetMemberType();
@@ -1913,26 +1943,28 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         else
                         {
                             if (index > 0) builder.Append(',');
-                            //TODO: 只有参数字段，不做数据库查询，否则，才使用参数
-                            var body = readerField.Value.ToString();
-                            //TODO: 需要验证，多分表场景不支持AVG/COUNT(DISTINCT)操作
-                            //在前面select时，有可能是多分表并且是AVG操作时，没有包裹AVG函数，现在确认不是多分表，需要加上AVG函数包裹
-                            //if (this.AggFieldAlias == "AVG_VALUE" && !this.IsManyShardingTables)
-                            //    body = $"AVG({body})";
-                            //如果是多分表场景并且是聚合函数字段，SQL生成的时候，需要包裹聚合函数
-                            var isNeedAlas = false;
-                            if (this.IsManyShardingTables && readerField.IsAggField)
-                            {
-                                isNeedAlas = true;
-                                body = $"{readerField.AggFunc}({body})";
-                            }
-                            builder.Append(body);
-                            //生成SQL的时候，才加上AS别名
-                            if (isNeedAlas || this.IsNeedAlias(readerField))
+                            if (this.IsManyShardingTables && readerField.IsAggField && readerField.IsAvgField)
                             {
                                 readerField.IsNeedAlias = true;
-                                readerField.AliasName = this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
-                                builder.Append($" AS {readerField.AliasName}");
+                                var aliasName = readerField.TargetMember.Name;
+                                var fieldName1 = readerField.Fields[0].Value.ToString();
+                                var fieldNamd2 = readerField.Fields[1].Value.ToString();
+                                var aliasName1 = this.OrmProvider.GetFieldName($"{aliasName}_SUM_VALUE");
+                                var aliasName2 = this.OrmProvider.GetFieldName($"{aliasName}_COUNT_VALUE");
+                                readerField.Fields[0].AliasName = aliasName1;
+                                readerField.Fields[1].AliasName = aliasName2;
+                                builder.Append($"{fieldName1} AS {aliasName1},{fieldNamd2} AS {aliasName2}");
+                            }
+                            else
+                            {
+                                builder.Append(readerField.Value.ToString());
+                                //生成SQL的时候，才加上AS别名
+                                if (this.IsNeedAlias(readerField))
+                                {
+                                    readerField.IsNeedAlias = true;
+                                    readerField.AliasName = this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
+                                    builder.Append($" AS {readerField.AliasName}");
+                                }
                             }
                         }
                         break;
@@ -1943,31 +1975,45 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else
         {
             var readerField = readerFields[0];
+            string body = null;
             switch (readerField.FieldType)
             {
                 case ReaderFieldType.Field:
                     //不引用任何字段，没必要访问数据库
-                    var body = readerField.Value.ToString();
+                    body = readerField.Value.ToString();
                     if (readerField.IsDeferredFields)
                     {
                         if (readerField.Fields == null)
                             break;
                         this.AddSelectFieldsSql(builder, readerField.Fields);
                     }
-                    else
+                    //TODO: 只有参数字段，不做数据库查询，否则，才使用参数
+                    else body = readerField.Value.ToString();
+                    builder.Append(body);
+                    if (readerField.IsNeedAlias)
+                        builder.Append($" AS {readerField.AliasName}");
+                    break;
+                case ReaderFieldType.Expression:
+                    if (this.IsManyShardingTables && readerField.IsAggField)
                     {
-                        //TODO: 只有参数字段，不做数据库查询，否则，才使用参数
-                        //TODO: 需要处理多分表时，AVG函数场景
-                        body = readerField.Value.ToString();
-                        //TODO: 需要验证，多分表场景不支持AVG/COUNT(DISTINCT)操作
-                        //在前面select时，有可能是多分表并且是AVG操作时，没有包裹AVG函数，现在确认不是多分表，需要加上AVG函数包裹
-                        //if (this.AggFieldAlias == "AVG_VALUE" && !this.IsManyShardingTables)
-                        //    body = $"AVG({body})";
-
-                        //如果是多分表场景并且是聚合函数字段，SQL生成的时候，需要包裹聚合函数
-                        if (this.IsManyShardingTables && readerField.IsAggField)
-                            body = $"{readerField.AggFunc}({body})";
+                        readerField.IsNeedAlias = true;
+                        if (readerField.IsAvgField)
+                        {
+                            var fieldName1 = readerField.Fields[0].Value.ToString();
+                            var fieldNamd2 = readerField.Fields[1].Value.ToString();
+                            var aliasName1 = this.OrmProvider.GetFieldName("SUM_VALUE");
+                            var aliasName2 = this.OrmProvider.GetFieldName("COUNT_VALUE");
+                            readerField.Fields[0].AliasName = aliasName1;
+                            readerField.Fields[1].AliasName = aliasName2;
+                            body = $"{fieldName1} AS {aliasName1},{fieldNamd2} AS {aliasName2}";
+                        }
+                        else
+                        {
+                            readerField.AliasName = $"{readerField.AggFunc}_VALUE";
+                            body = $"{body} AS {readerField.AliasName}";
+                        }
                     }
+                    else body = readerField.Value.ToString();
                     builder.Append(body);
                     break;
                 case ReaderFieldType.RawSql:
@@ -2052,8 +2098,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         queryVisitor.RefQueries = this.RefQueries;
         queryVisitor.IsNeedUnionShardingTables = this.IsNeedUnionShardingTables;
         queryVisitor.IsManyShardingTables = this.IsManyShardingTables;
-        queryVisitor.AggFieldAlias = this.AggFieldAlias;
-        queryVisitor.HasAggFields = this.HasAggFields;
         queryVisitor.ShardingTables = this.ShardingTables;
         queryVisitor.GroupByFields = this.GroupByFields;
         queryVisitor.OrderByFields = this.OrderByFields;

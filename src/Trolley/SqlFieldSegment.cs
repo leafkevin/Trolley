@@ -169,6 +169,7 @@ public class ReaderField
     /// </summary>
     public List<ParameterExpression> NewParameters { get; set; }
     public bool IsGroupingField { get; set; }
+    public bool IsOrderingField { get; set; }
     public List<ReaderField> Fields { get; set; }
     public string Path { get; set; }
     public bool HasNextInclude { get; set; }
@@ -178,15 +179,10 @@ public class ReaderField
     public string AggFunc { get; set; }
     public bool IsNeedAlias { get; set; }
     public string AliasName { get; set; }
-    /// <summary>
-    /// OrderBy子句中引用的GroupBy/Select子句的ReaderField对象，方便在BuildSql时，尽力使用Select子句的ReaderField别名
-    /// </summary>
-    public ReaderField RefField { get; set; }
 
     public ReaderField Clone()
     {
         var result = (ReaderField)this.MemberwiseClone();
-        result.RefField = this.RefField;
         if (this.Fields != null && this.Fields.Count > 0)
         {
             result.Fields = new();
