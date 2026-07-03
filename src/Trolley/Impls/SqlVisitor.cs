@@ -1379,6 +1379,8 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             var sqlSegment = this.Visit(new SqlSegment { Expression = conditionExpr });
             if (conditionExpr.NodeType == ExpressionType.MemberAccess && conditionExpr.Type == typeof(bool))
                 sqlSegment.Push(DeferredOperation.IsTrue);
+            //TODO: 多分表时，Having语句中，聚合函数中的字段是SUM(...)、COUNT(...)等，在Union时，需要去掉表别名，
+            //在Select readerFields中添加Having语句，在最外层Union时使用
             builder.Append(this.WrapSql(sqlSegment));
         }
     }

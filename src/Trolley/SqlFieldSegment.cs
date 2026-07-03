@@ -180,6 +180,7 @@ public class ReaderField
     public string AggFunc { get; set; }
     public bool IsNeedAlias { get; set; }
     public string AliasName { get; set; }
+    public bool IsIgnore { get; set; }
 
     public ReaderField Clone()
     {

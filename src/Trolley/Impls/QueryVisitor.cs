@@ -127,10 +127,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 foreach (var groupByField in this.GroupByFields)
                 {
                     if (this.ReaderFields.Exists(f => f.IsGroupingField && f.FieldType == ReaderFieldType.Entity))
-                    {
-                        this.isRefGroupingFields = true;
                         break;
-                    }
                     var readerField = this.ReaderFields.Find(f => f.Value.ToString() == groupByField.Value.ToString());
                     if (readerField != null && groupByField != readerField)
                     {
@@ -138,6 +135,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         groupByField.RefField = readerField;
                         continue;
                     }
+                    groupByField.IsIgnore = true;
                     this.ReaderFields.Add(groupByField);
                 }
             }
@@ -154,6 +152,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         orderByField.Field.RefField = readerField;
                         continue;
                     }
+                    orderByField.Field.IsIgnore = true;
                     this.ReaderFields.Add(orderByField.Field);
                 }
             }
@@ -370,10 +369,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 foreach (var groupByField in this.GroupByFields)
                 {
                     if (this.ReaderFields.Exists(f => f.IsGroupingField && f.FieldType == ReaderFieldType.Entity))
-                    {
-                        this.isRefGroupingFields = true;
                         break;
-                    }
                     var readerField = this.ReaderFields.Find(f => f.Value.ToString() == groupByField.Value.ToString());
                     if (readerField != null && groupByField != readerField)
                     {
@@ -381,6 +377,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         groupByField.RefField = readerField;
                         continue;
                     }
+                    groupByField.IsIgnore = true;
                     this.ReaderFields.Add(groupByField);
                 }
             }
@@ -397,6 +394,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         orderByField.Field.RefField = readerField;
                         continue;
                     }
+                    orderByField.Field.IsIgnore = true;
                     this.ReaderFields.Add(orderByField.Field);
                 }
             }
@@ -514,6 +512,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         for (int i = 0; i < this.ReaderFields.Count; i++)
         {
             var readerField = this.ReaderFields[i];
+            //跳过后加的字段
+            if (readerField.IsIgnore) continue;
+
             string fieldName = null;
             if (readerField.IsAggField)
             {
@@ -543,6 +544,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 builder.Append(fieldName);
             }
             groupBy = "GROUP BY " + builder.ToString();
+            //TODO: 需要添加Having字段
         }
         string orderBy = null;
         if (this.OrderByFields != null && this.OrderByFields.Count > 0)
