@@ -54,7 +54,7 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     /// 当有多个分表时，当有GROUP BY/ORDER BY/LIMIT/SUM/AVG/MAX/MIN等操作时，就需要UNION多个分表查询结果，
     /// 在最外层再进行一次GROUP BY/ORDER BY/LIMIT、SUM/AVG/MAX/MIN等操作
     /// </summary>
-    bool IsNeedUnionShardingTables { get; }
+    bool IsNeedChangeUnionShardingTables { get; }
     string AggFieldAlias { get; set; }
     List<TableSegment> ShardingTables { get; set; }
     string ShardingTableJointMark { get; set; }

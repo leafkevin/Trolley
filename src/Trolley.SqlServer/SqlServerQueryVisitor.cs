@@ -173,7 +173,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
         if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql) || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue))
-            this.IsNeedUnionShardingTables = true;
+            this.IsNeedChangeUnionShardingTables = true;
 
         if (isNeedWrap)
         {
@@ -357,7 +357,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
         if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql) || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue))
-            this.IsNeedUnionShardingTables = true;
+            this.IsNeedChangeUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
         if (isNeedWrap)

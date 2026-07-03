@@ -174,6 +174,7 @@ public class ReaderField
     public string Path { get; set; }
     public bool HasNextInclude { get; set; }
     public ReaderField Parent { get; set; }
+    public ReaderField RefField { get; set; }
     public bool IsAggField { get; set; }
     public bool IsAvgField { get; set; }
     public string AggFunc { get; set; }

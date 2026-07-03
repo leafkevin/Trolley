@@ -3,11 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Schema;
 
 namespace Trolley;
 
@@ -1500,14 +1498,14 @@ public sealed class DbContext
     }
     #endregion
 
-    #region Sharding
+    #region BuildSql
     public (string, List<ReaderField>) BuildSql(IQueryVisitor visitor)
     {
         var sql = visitor.BuildSql(true, out var readerFields);
         if (visitor.IsManyShardingTables)
         {
             sql = this.BuildShardingTablesSqlByFormat(visitor as SqlVisitor, sql, visitor.ShardingTableJointMark);
-            if (visitor.IsNeedUnionShardingTables)
+            if (visitor.IsNeedChangeUnionShardingTables)
                 sql = visitor.BuildShardingSql(sql);
         }
         return (sql, readerFields);
@@ -1541,7 +1539,7 @@ public sealed class DbContext
     }
     public string BuildShardingTablesSqlByFormat(SqlVisitor visitor, string formatSql, string jointMark)
     {
-        //查询，分表多个表时，都使用表名替换生成分表sql
+        //查询，多分表时，都使用表名替换生成分表sql
         var builder = new StringBuilder();
         if (visitor.ShardingTables.Count > 1)
         {
