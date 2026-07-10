@@ -42,6 +42,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     public bool IsWhere { get; set; }
     public bool IsSelect { get; set; }
     public bool IsSelectMember { get; set; }
+    public bool IsHaving { get; set; }
     public bool IsOrderBy { get; set; }
     public bool IsIncludeMany { get; set; }
     #endregion

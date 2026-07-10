@@ -55,6 +55,24 @@ public class DeferredExpressionVisitor : ExpressionVisitor
             this.parameters.Add(parameterExpr);
             return parameterExpr;
         }
+        else if (node.Expression.NodeType == ExpressionType.Constant)
+        {
+            this.hasMemberAccess = true;
+            var sqlSegment = this.sqlVisitor.Visit(new SqlSegment { Expression = node });
+            this.readerFields.Add(new ReaderField
+            {
+                FieldType = ReaderFieldType.RawSql,
+                ReaderType = node.Type,
+                TypeHandler = sqlSegment.TypeHandler,
+                Value = sqlSegment.Value
+            });
+            var parameterName = $"{node.Member.Name}${this.parameters.Count}";
+            var parameterExpr = this.parameters.Find(f => f.Name == parameterName);
+            if (parameterExpr != null) return parameterExpr;
+            parameterExpr = Expression.Parameter(node.Type, parameterName);
+            this.parameters.Add(parameterExpr);
+            return parameterExpr;
+        }
         return base.VisitMember(node);
     }
     protected override Expression VisitMethodCall(MethodCallExpression node)
@@ -62,6 +80,7 @@ public class DeferredExpressionVisitor : ExpressionVisitor
         this.hasMemberAccess = false;
         this.isAggSelect = typeof(IAggregateSelect).IsAssignableFrom(node.Method.DeclaringType);
         var result = base.VisitMethodCall(node);
+        //支持Max、Min、Sum、Avg等聚合函数的参数表达式中包含成员访问表达式的情况
         if (this.isAggSelect && this.hasMemberAccess)
         {
             var sqlSegment = this.sqlVisitor.Visit(new SqlSegment { Expression = node });
@@ -82,40 +101,18 @@ public class DeferredExpressionVisitor : ExpressionVisitor
         }
         return result;
     }
-}
-public class ReplaceMemberVisitor : ExpressionVisitor
-{
-    public List<ParameterExpression> NewParameters { get; private set; } = new();
-    public List<MemberExpression> OrgMembers { get; private set; } = new();
 
-    protected override Expression VisitMember(MemberExpression node)
-    {
-        if (node.Expression.NodeType == ExpressionType.Parameter)
-        {
-            var parameterExpr = node.Expression as ParameterExpression;
-            var parameterName = $"{parameterExpr.Name}${node.Member.Name}";
-            parameterExpr = NewParameters.Find(f => f.Name == parameterName);
-            if (parameterExpr != null) return parameterExpr;
-            this.OrgMembers.Add(node);
-            parameterExpr = Expression.Parameter(node.Type, parameterName);
-            this.NewParameters.Add(parameterExpr);
-            return parameterExpr;
-        }
-        return base.VisitMember(node);
-    }
 }
 public class HasParameterVisitor : ExpressionVisitor
 {
     private bool hasMemberAccess;
     public bool HasParameter { get; private set; }
     public bool HasVariable => this.hasMemberAccess && !this.HasParameter;
-    public string LastParameterName { get; private set; }
     public List<ParameterExpression> Parameters { get; private set; }
 
     protected override Expression VisitParameter(ParameterExpression node)
     {
         this.HasParameter = true;
-        this.LastParameterName = node.Name;
         this.Parameters ??= new();
         if (!this.Parameters.Contains(node))
             this.Parameters.Add(node);
@@ -123,7 +120,7 @@ public class HasParameterVisitor : ExpressionVisitor
     }
     protected override Expression VisitMember(MemberExpression node)
     {
-        if (node.Expression == null)
+        if (node.Expression.NodeType == ExpressionType.Constant)
             this.hasMemberAccess = true;
         return base.VisitMember(node);
     }

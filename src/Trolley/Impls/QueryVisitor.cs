@@ -1348,11 +1348,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual void Having(Expression havingExpr)
     {
-        this.IsWhere = true;
+        this.IsHaving = true;
         var lambdaExpr = havingExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
         this.HavingSql = this.VisitConditionExpr(lambdaExpr.Body, out _);
-        this.IsWhere = false;
+        this.IsHaving = false;
     }
 
     public virtual void SelectGrouping() => this.ReaderFields = this.GroupByFields;
