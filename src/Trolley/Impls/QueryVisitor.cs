@@ -355,7 +355,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //各种单值查询，如：SELECT COUNT(*)/MAX(*)..等，都有SELECT操作     
         //如：From(f=>...).InnerJoin/UnionAll(f=>...)
         //生成sql时，include表的字段，一定要紧跟着主表字段后面，方便赋值主表实体的属性中，所以在插入时候就排好序
-        //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
         if (this.ReaderFields == null)
             throw new Exception("缺少Select语句");
 

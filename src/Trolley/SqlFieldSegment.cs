@@ -165,9 +165,14 @@ public class ReaderField
     public MemberInfo TargetMember { get; set; }
     public bool IsDeferredFields { get; set; }
     /// <summary>
-    /// 延迟字段的新参数列表
+    /// 延迟字段中来自数据库字段的参数列表
     /// </summary>
-    public List<ParameterExpression> NewParameters { get; set; }
+    public List<ParameterExpression> FieldParameters { get; set; }
+    /// <summary>
+    /// 延迟字段中来自常量/闭包变量的参数列表
+    /// </summary>
+    public List<ParameterExpression> ValuesParameters { get; set; }
+    public List<object> LocalValues { get; set; }
     public bool IsGroupingField { get; set; }
     public bool IsOrderingField { get; set; }
     public List<ReaderField> Fields { get; set; }

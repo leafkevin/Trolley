@@ -682,12 +682,10 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
            || typeof(IRepository).IsAssignableFrom(declaringType)
            || typeof(IAggregateSelect).IsAssignableFrom(declaringType)
            || typeof(IQueryBase).IsAssignableFrom(declaringType))
-        {
-            sqlSegment = this.VisitSqlMethodCall(sqlSegment);
-            //TODO: 
-            //sqlSegment.TargetType = methodCallExpr.Type;
-            return sqlSegment;
-        }
+            return this.VisitSqlMethodCall(sqlSegment);
+        //TODO: 
+        //sqlSegment.TargetType = methodCallExpr.Type;
+
         if (methodCallExpr.Method.Name == "ToValue")
         {
             if (declaringType.FullName.StartsWith("Trolley.ISqlOver") || declaringType.FullName.StartsWith("Trolley.IPartitionByOver"))
@@ -717,6 +715,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             //f.TotalAmount.ToString("C")
             //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
             //this.DeferredInvoke(f.Price, f.Quantity)
+            sqlSegment.IsDeferredFields = true;
             return this.VisitDeferredSqlSegment(sqlSegment);
         }
 
@@ -1070,9 +1069,10 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 break;
             case "Avg":
                 sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                List<ReaderField> readerFields = null;
                 if (this.IsManyShardingTables)
                 {
-                    List<ReaderField> readerFields = [new ReaderField
+                    readerFields = [new ReaderField
                     {
                         FieldType = ReaderFieldType.Expression,
                         ReaderType = methodCallExpr.Type,
@@ -1089,27 +1089,17 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                         IsAvgField = true,
                         AggFunc = "COUNT"
                     }];
-                    sqlSegment.Change(new ReaderField
-                    {
-                        FieldType = ReaderFieldType.Expression,
-                        ReaderType = methodCallExpr.Type,
-                        Fields = readerFields,
-                        IsAggField = true,
-                        IsAvgField = true,
-                        AggFunc = "AVG"
-                    }, SqlType.ReaderField);
                 }
-                else
+                sqlSegment.Change(new ReaderField
                 {
-                    sqlSegment.Change(new ReaderField
-                    {
-                        FieldType = ReaderFieldType.Expression,
-                        ReaderType = methodCallExpr.Type,
-                        Value = $"AVG({sqlSegment.Value})",
-                        IsAggField = true,
-                        AggFunc = "AVG"
-                    }, SqlType.ReaderField);
-                }
+                    FieldType = ReaderFieldType.Expression,
+                    ReaderType = methodCallExpr.Type,
+                    Value = $"AVG({sqlSegment.Value})",
+                    IsAggField = true,
+                    IsAvgField = true,
+                    AggFunc = "AVG",
+                    Fields = readerFields
+                }, SqlType.ReaderField);
                 break;
             case "Max":
                 sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
@@ -1238,13 +1228,12 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     else sqlSegment.Change("COUNT(1)", SqlType.MethodCall);
                     sqlSegment.Change(new ReaderField
                     {
-                        FieldType = ReaderFieldType.Field,
+                        FieldType = ReaderFieldType.Expression,
                         ReaderType = methodCallExpr.Type,
                         Value = sqlSegment.Value,
                         IsAggField = true,
                         AggFunc = "SUM"
                     }, SqlType.ReaderField);
-                    this.HasAggFields = true;
                     break;
                 case "CountDistinct":
                 case "LongCountDistinct":
@@ -1258,36 +1247,35 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     //TODO:已知bug，分表后，count(distinct)，这个聚合结果是不准确的
                     sqlSegment.Change(new ReaderField
                     {
-                        FieldType = ReaderFieldType.Field,
+                        FieldType = ReaderFieldType.Expression,
                         ReaderType = methodCallExpr.Type,
                         Value = sqlSegment.Value,
                         IsAggField = true,
                         AggFunc = "COUNT"
                     }, SqlType.ReaderField);
-                    this.HasAggFields = true;
                     break;
                 case "Sum":
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change(new ReaderField
                     {
-                        FieldType = ReaderFieldType.Field,
+                        FieldType = ReaderFieldType.Expression,
                         ReaderType = methodCallExpr.Type,
                         Value = $"SUM({sqlSegment.Value})",
                         IsAggField = true,
                         AggFunc = "SUM"
                     }, SqlType.ReaderField);
-                    this.HasAggFields = true;
                     break;
                 case "Avg":
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     //优先确定是否是多分表情况，多分表时Value值是两个字段，SUM(...),COUNT(...)，
                     //最外层SELECT时，捞取IsAvgField=true的字段，再进行SUM(...)/COUNT(...)得到平均值，不是多分表时，直接Value值是AVG(...)
                     //最外层SELECT时，
+                    List<ReaderField> readerFields = null;
                     if (this.IsManyShardingTables)
                     {
-                        List<ReaderField> readerFields = [new ReaderField
+                        readerFields = [new ReaderField
                         {
-                            FieldType = ReaderFieldType.Field,
+                            FieldType = ReaderFieldType.Expression,
                             ReaderType = methodCallExpr.Type,
                             Value = $"SUM({sqlSegment.Value})",
                             IsAggField = true,
@@ -1295,22 +1283,23 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                             AggFunc = "SUM"
                         },new ReaderField
                         {
-                            FieldType = ReaderFieldType.Field,
+                            FieldType = ReaderFieldType.Expression,
                             ReaderType = methodCallExpr.Type,
                             Value = $"COUNT({sqlSegment.Value})",
                             IsAggField = true,
                             IsAvgField = true,
                             AggFunc = "COUNT"
                         }];
-                        sqlSegment.Change(readerFields, SqlType.ReaderFields);
                     }
-                    else sqlSegment.Change(new ReaderField
+                    sqlSegment.Change(new ReaderField
                     {
-                        FieldType = ReaderFieldType.Field,
+                        FieldType = ReaderFieldType.Expression,
                         ReaderType = methodCallExpr.Type,
                         Value = $"AVG({sqlSegment.Value})",
                         IsAggField = true,
-                        AggFunc = "AVG"
+                        AggFunc = "AVG",
+                        IsAvgField = true,
+                        Fields = readerFields
                     }, SqlType.ReaderField);
                     this.HasAggFields = true;
                     break;
@@ -1408,12 +1397,12 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             if (this.IsWhere)
             {
                 sql = refQueryObj.Visitor.BuildSql(true, out _);
-                return (sql, null, null);
+                return (sql, null);
             }
             //直接引用，无任何操作
             var targetType = currentExpr.Type.GenericTypeArguments[0];
             sql = refQueryObj.Visitor.BuildSql(true, out readerFields);
-            return (sql, null, readerFields);
+            return (sql, readerFields);
         }
 
         var callStack = new Stack<MethodCallExpression>();
@@ -1442,20 +1431,20 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 if (this.IsWhere)
                 {
                     sql = subQueryObj.Visitor.BuildSql(false, out _);
-                    return (sql, tableSegment, readerFields);
+                    return (sql, readerFields);
                 }
 
                 //直接引用，无任何操作
                 var targetType = currentExpr.Type.GenericTypeArguments[0];
-                tableSegment = queryVisitor.UseQuery(targetType, subQueryObj, true);
-                return (sql, tableSegment, readerFields);
+                tableSegment = queryVisitor.UseQuery(targetType, subQueryObj);
+                return (sql, readerFields);
             }
 
             if (subQueryObj is ICteQuery cteQueryObj)
             {
                 entityType = currentExpr.Type.GenericTypeArguments[0];
                 var isCopyRefParameters = !(this.IsSecondUnion && this.IsRecursive);
-                tableSegment = queryVisitor.UseQuery(entityType, subQueryObj, isCopyRefParameters);
+                tableSegment = queryVisitor.UseQuery(entityType, subQueryObj);
                 readerFields = tableSegment.Fields;
             }
             else
@@ -1698,17 +1687,17 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     queryVisitor.AndBy(callExpr.Arguments[0].Evaluate());
                     queryVisitor.Select("*");
                     sql = queryVisitor.BuildSql(true, out _);
-                    return (sql, null, null);
+                    return (sql, null);
                 case "ExistsById":
                     queryVisitor.AndById(callExpr.Arguments[0].Evaluate());
                     queryVisitor.Select("*");
                     sql = queryVisitor.BuildSql(true, out _);
-                    return (sql, null, null);
+                    return (sql, null);
                 case "ExistsByIds":
                     queryVisitor.AndByIds(callExpr.Arguments[0].Evaluate());
                     queryVisitor.Select("*");
                     sql = queryVisitor.BuildSql(true, out _);
-                    return (sql, null, null);
+                    return (sql, null);
                 case "Exists":
                     //repository.Exists<TEntity>(t => ...)
                     if (callExpr.Arguments.Count > 0)
@@ -1722,7 +1711,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     //Sql.From<Company>().Where(t => ...).Exists()
                     queryVisitor.Select("*");
                     sql = queryVisitor.BuildSql(true, out _);
-                    return (sql, null, null);
+                    return (sql, null);
                 case "AsCteTable":
                     //TODO: 当前visitor添加该CTE子查询表引用，并生成CTE子查询表的引用的SQL
                     var cteTableName = callExpr.Arguments[0].Evaluate<string>();
@@ -1769,9 +1758,9 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             entityType = currentExpr.Type.GenericTypeArguments[0];
             if (subQueryObj is ICteQuery cteQueryObj)
             {
-                callStack
+                entityType = currentExpr.Type.GenericTypeArguments[0];
+                queryVisitor.UseQuery(entityType, subQueryObj);
             }
-
 
             if (callStack.Count == 0) return (null, null);
 
@@ -2671,17 +2660,8 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         //this.DeferredInvoke(f.Price, f.Quantity)
         //DateTimeOffset.FromUnixTimeMilliseconds(x.Max(f.UpdatedAt)).UtcDateTime.Add(timeZone.ToTimeZone()).Deferred()
         var visitor = new DeferredExpressionVisitor(this);
-        var newExpr = visitor.Visit(sqlSegment.Expression);
-        (var rawSql, var readerFields, var parameters) = visitor.BuildSql();
-        return sqlSegment.Change(new ReaderField
-        {
-            IsDeferredFields = true,
-            FieldType = ReaderFieldType.Field,
-            Expression = newExpr,
-            Fields = readerFields,
-            NewParameters = parameters,
-            Value = rawSql
-        }, SqlType.ReaderField);
+        var readerField = visitor.Build(sqlSegment.Expression);
+        return sqlSegment.Change(readerField, SqlType.ReaderField);
     }
     public TableSegment UseQuery(Type targetType, IQuery subQueryObj)
     {

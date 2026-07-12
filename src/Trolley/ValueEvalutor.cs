@@ -153,15 +153,27 @@ public static class ValueEvalutor
         throw new NotSupportedException($"不支持的参数访问，参数类型必须有无参构造函数，Type:{expression.Type}");
     }
     public static object Evaluate(DefaultExpression expression) => expression.Type.IsValueType ? Activator.CreateInstance(expression.Type) : null;
-    public static object Evaluate(MemberInfo member, object obj, object[] parameters = null, bool isCache = true)
+    public static object Evaluate(MemberInfo member, object instance, object[] parameters = null, bool isCache = true)
     {
-        return member switch
+        if (isCache)
         {
-            FieldInfo fieldInfo => EvaluateAndCache(obj, fieldInfo),
-            PropertyInfo propertyInfo => EvaluateAndCache(obj, propertyInfo, parameters),
-            MethodInfo methodInfo => methodInfo.Invoke(obj, parameters),
-            _ => throw new NotSupportedException($"不支持的成员访问，只支持字段、属性、方法访问，obj:{obj}")
-        };
+            return member switch
+            {
+                FieldInfo fieldInfo => EvaluateAndCache(instance, fieldInfo),
+                PropertyInfo propertyInfo => EvaluateAndCache(instance, propertyInfo, parameters),
+                MethodInfo methodInfo => methodInfo.Invoke(instance, parameters),
+                _ => throw new NotSupportedException($"不支持的成员访问，只支持字段、属性、方法访问，obj:{instance}")
+            };
+        }
+        else
+        {
+            return member switch
+            {
+                FieldInfo fieldInfo => fieldInfo.GetValue(instance),
+                PropertyInfo propertyInfo => propertyInfo.GetValue(instance),
+                _ => null
+            };
+        }
     }
     public static object Evaluate(MemberBinding member)
     {

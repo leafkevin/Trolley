@@ -9,31 +9,45 @@ public class DeferredExpressionVisitor : ExpressionVisitor
     private readonly SqlVisitor sqlVisitor;
     private bool isAggSelect;
     private bool hasMemberAccess;
-    private List<ParameterExpression> parameters = new();
-    private List<ReaderField> readerFields = new();
+    private readonly List<ParameterExpression> fieldsParameters = new();
+    private readonly List<ParameterExpression> valuesParameters = new();
+    private List<ReaderField> readerFields = null;
+    private List<object> localValues = new();
 
     public DeferredExpressionVisitor(SqlVisitor sqlVisitor)
     {
         this.sqlVisitor = sqlVisitor;
     }
-    public (string, List<ReaderField>, List<ParameterExpression>) BuildSql()
+    public ReaderField Build(Expression expr)
     {
-        if (this.parameters.Count == 0)
-            return ("NULL", null, null);
-
-        var builder = new StringBuilder();
-        foreach (var readerField in readerFields)
+        var rawSql = "NULL";
+        if (this.readerFields != null && this.readerFields.Count > 0)
         {
-            if (builder.Length > 0)
-                builder.Append(',');
-            builder.Append(readerField.Value.ToString());
+            var builder = new StringBuilder();
+            foreach (var readerField in this.readerFields)
+            {
+                if (builder.Length > 0)
+                    builder.Append(',');
+                builder.Append(readerField.Value.ToString());
+            }
+            rawSql = builder.ToString();
         }
-        var sql = builder.ToString();
-        return (sql, this.readerFields, this.parameters);
+        return new ReaderField
+        {
+            IsDeferredFields = true,
+            FieldType = ReaderFieldType.Field,
+            Expression = this.Visit(expr),
+            Fields = this.readerFields,
+            FieldParameters = this.fieldsParameters,
+            ValuesParameters = this.valuesParameters,
+            LocalValues = this.localValues,
+            Value = rawSql
+        };
     }
+
     protected override Expression VisitMember(MemberExpression node)
     {
-        if (node.Expression.NodeType == ExpressionType.Parameter)
+        if (node.Expression?.NodeType == ExpressionType.Parameter)
         {
             this.hasMemberAccess = true;
             if (this.isAggSelect) return base.VisitMember(node);
@@ -46,31 +60,22 @@ public class DeferredExpressionVisitor : ExpressionVisitor
                 TypeHandler = sqlSegment.TypeHandler,
                 Value = sqlSegment.Value
             });
-
             var parameterExpr = node.Expression as ParameterExpression;
             var parameterName = $"{parameterExpr.Name}${node.Member.Name}";
-            parameterExpr = this.parameters.Find(f => f.Name == parameterName);
+
+            parameterExpr = this.fieldsParameters.Find(f => f.Name == parameterName);
             if (parameterExpr != null) return parameterExpr;
             parameterExpr = Expression.Parameter(node.Type, parameterName);
-            this.parameters.Add(parameterExpr);
+            this.fieldsParameters.Add(parameterExpr);
             return parameterExpr;
         }
-        else if (node.Expression.NodeType == ExpressionType.Constant)
+
+        if (TryGetClosureValue(node, out var closureValue))
         {
-            this.hasMemberAccess = true;
-            var sqlSegment = this.sqlVisitor.Visit(new SqlSegment { Expression = node });
-            this.readerFields.Add(new ReaderField
-            {
-                FieldType = ReaderFieldType.RawSql,
-                ReaderType = node.Type,
-                TypeHandler = sqlSegment.TypeHandler,
-                Value = sqlSegment.Value
-            });
-            var parameterName = $"{node.Member.Name}${this.parameters.Count}";
-            var parameterExpr = this.parameters.Find(f => f.Name == parameterName);
-            if (parameterExpr != null) return parameterExpr;
-            parameterExpr = Expression.Parameter(node.Type, parameterName);
-            this.parameters.Add(parameterExpr);
+            var parameterName = $"lv{this.localValues.Count}";
+            var parameterExpr = Expression.Parameter(node.Type, parameterName);
+            this.valuesParameters.Add(parameterExpr);
+            this.localValues.Add(closureValue);
             return parameterExpr;
         }
         return base.VisitMember(node);
@@ -91,17 +96,30 @@ public class DeferredExpressionVisitor : ExpressionVisitor
                 ReaderType = node.Type,
                 Value = rawSql
             });
-
-            var parameterName = $"{node.Method.Name}${this.parameters.Count}";
-            var parameterExpr = this.parameters.Find(f => f.Name == parameterName);
+            var parameterName = $"{node.Method.Name}${this.fieldsParameters.Count}";
+            var parameterExpr = this.fieldsParameters.Find(f => f.Name == parameterName);
             if (parameterExpr != null) return parameterExpr;
             parameterExpr = Expression.Parameter(node.Type, parameterName);
-            this.parameters.Add(parameterExpr);
+            this.fieldsParameters.Add(parameterExpr);
             return parameterExpr;
         }
         return result;
     }
-
+    private static bool TryGetClosureValue(MemberExpression node, out object value)
+    {
+        if (node.Expression is ConstantExpression constantExpr)
+        {
+            value = ValueEvalutor.Evaluate(node.Member, constantExpr.Value);
+            return true;
+        }
+        else if (node.Expression is MemberExpression memberExpr && TryGetClosureValue(memberExpr, out var parentValue))
+        {
+            value = ValueEvalutor.Evaluate(node.Member, parentValue);
+            return true;
+        }
+        value = null;
+        return false;
+    }
 }
 public class HasParameterVisitor : ExpressionVisitor
 {

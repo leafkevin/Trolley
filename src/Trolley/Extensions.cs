@@ -306,6 +306,10 @@ public static class Extensions
             {
                 if (readerFields.Exists(f => f.IsDeferredFields))
                 {
+                    var hasRuntimeValues = readerFields.Any(f => f.IsDeferredFields && f.LocalValues != null && f.LocalValues.Count > 0);
+                    if (hasRuntimeValues)
+                        return RepositoryHelper.CreateReaderDeferredValueDeserializer(targetType, dbContext, reader, readerFields);
+
                     cacheKey = GetTypeReaderKey(targetType, ormProviderType, reader, readerFields);
                     if (!deferredValueReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
                         deferredValueReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderDeferredValueDeserializer(targetType, dbContext, reader, readerFields));
@@ -349,6 +353,10 @@ public static class Extensions
             }
             else
             {
+                var hasRuntimeValues = readerFields.Any(f => f.IsDeferredFields && f.LocalValues != null && f.LocalValues.Count > 0);
+                if (hasRuntimeValues)
+                    return RepositoryHelper.CreateReaderEntityDeserializer(targetType, dbContext, reader, readerFields);
+
                 //TEntity类型与Target类型，不一定一致，可能是dynamic或是object类型，内部还是它真正的Target类型
                 if (!queryReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
                     queryReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderEntityDeserializer(targetType, dbContext, reader, readerFields));
