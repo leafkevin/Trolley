@@ -1459,7 +1459,9 @@ public static class RepositoryHelper
                             var argsExprs = new List<Expression>();
                             foreach (var childReaderField in readerField.Fields)
                             {
-                                var readerValueExpr = Expression.Convert(blockParameters[index], childReaderField.ReaderType);
+                                var fieldType = reader.GetFieldType(index);
+                                var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(index),
+                                    readerField.ReaderType, fieldType, readerField.TypeHandler, blockParameters, blockBodies);
                                 argsExprs.Add(readerValueExpr);
                                 index++;
                             }
@@ -1467,9 +1469,20 @@ public static class RepositoryHelper
                             if (readerField.LocalValues != null && readerField.LocalValues.Count > 0)
                             {
                                 newParameters.AddRange(readerField.ValuesParameters);
-                                for (int i = 0; i < (readerField.ValuesParameters?.Count ?? 0); i++)
+                                var itemPropertyInfo = typeof(List<ReaderField>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                                    .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(int)).First();
+                                var readerIndex = readerFields.IndexOf(readerField);
+                                var readerFieldExpr = Expression.Property(readerFieldsExpr, itemPropertyInfo, Expression.Constant(readerIndex));
+                                var localValuesExpr = Expression.Property(readerFieldExpr, nameof(ReaderField.LocalValues));
+                                itemPropertyInfo = typeof(List<object>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                                    .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(int)).First();
+                                for (int i = 0; i < readerField.ValuesParameters.Count; i++)
                                 {
-                                    argsExprs.Add(Expression.Constant(readerField.LocalValues[i]));
+                                    var localValueType = readerField.ValuesParameters[i].Type;
+                                    Expression localValueExpr = Expression.Property(localValuesExpr, itemPropertyInfo, Expression.Constant(i));
+                                    if (localValueType != typeof(object))
+                                        localValueExpr = Expression.Convert(localValueExpr, localValueType);
+                                    argsExprs.Add(localValueExpr);
                                 }
                             }
                             executeExpr = Expression.Invoke(Expression.Lambda(readerField.Expression, newParameters), argsExprs);
