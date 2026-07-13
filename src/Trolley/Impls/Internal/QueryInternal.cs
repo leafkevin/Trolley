@@ -66,14 +66,14 @@ public class QueryInternal
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        this.Visitor.UseQuery(typeof(TOther), subQuery);
+        this.Visitor.UseQuery(typeof(TOther), subQuery, false);
     }
     protected void WithQueryInternal<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
         if (subQueryExpr == null)
             throw new ArgumentNullException(nameof(subQueryExpr));
 
-        this.Visitor.UseNewQuery(typeof(TOther), subQueryExpr);
+        this.Visitor.UseNewQuery(typeof(TOther), subQueryExpr, false);
     }
     #endregion
 

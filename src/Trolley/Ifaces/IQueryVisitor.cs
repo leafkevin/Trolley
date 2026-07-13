@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,24 +41,19 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     bool IsRecursive { get; set; }
     string UnionSql { get; set; }
 
-    object RefFrom { get; set; }
-
     bool IsSecondUnion { get; set; }
     char TableAliasStart { get; set; }
     int PageNumber { get; }
     int PageSize { get; }
-    bool IsNeedCommandTableAlias { get; set; }
     bool IsManyShardingTables { get; }
     /// <summary>
     /// 当有多个分表时，当有GROUP BY/ORDER BY/LIMIT/SUM/AVG/MAX/MIN等操作时，就需要UNION多个分表查询结果，
     /// 在最外层再进行一次GROUP BY/ORDER BY/LIMIT、SUM/AVG/MAX/MIN等操作
     /// </summary>
     bool IsNeedChangeUnionShardingTables { get; }
-    string AggFieldAlias { get; set; }
     List<TableSegment> ShardingTables { get; set; }
     string ShardingTableJointMark { get; set; }
     bool IsNeedPaging { get; set; }
-    bool HasAggFields { get; set; }
 
     string BuildSql(bool isBuildCteSql, out List<ReaderField> readerFields);
     string BuildCommandSql(Type entityType, out IDataParameterCollection dbParameters);
@@ -77,8 +71,8 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     void From(char tableAsStart = 'a', params Type[] entityTypes);
     void AddTable(params Type[] entityTypes);
     TableSegment AddTable(TableSegment tableSegment);
-    TableSegment UseQuery(Type targetType, IQuery subQuery);
-    TableSegment UseNewQuery(Type targetType, Expression subQueryExpr);
+    TableSegment UseQuery(Type targetType, IQuery subQuery, bool isClearTables);
+    TableSegment UseNewQuery(Type targetType, Expression subQueryExpr, bool isClearTables);
 
     void Union(string union, Type targetType, IQuery subQuery);
     void Union(string union, Type targetType, Expression subQueryExpr);
@@ -113,7 +107,7 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     void SelectDefault(Expression defaultExpr);
     void SelectRaw(Type targetType, string rawFields);
     void Select(Expression selectExpr);
-    void Select(string sqlFormat, Expression selectExpr = null);
+    void Select(string sqlFormat, Expression selectExpr);
     void SelectTo(Type targetType, Expression specialMemberSelector = null);
 
     void Distinct();

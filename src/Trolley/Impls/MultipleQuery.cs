@@ -112,7 +112,7 @@ public class MultipleQuery : IMultipleQuery, ICommandContext
     public virtual IMultiQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
         var visitor = this.CreateQueryVisitor();
-        visitor.UseNewQuery(typeof(T), subQueryExpr, true);
+        visitor.UseNewQuery(typeof(T), subQueryExpr, false);
         return this.OrmProvider.NewMultiQuery<T>(this, visitor);
     }
     #endregion

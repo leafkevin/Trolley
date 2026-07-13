@@ -559,7 +559,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var assignmentExpr = deferredSegmentValue as LambdaExpression;
         this.InitTableAlias(assignmentExpr);
         if (this.UpdateIndex > 0) this.UpdateBuilder.Append(',');
-        this.VisitAndDeferred(new SqlSegment { Expression = assignmentExpr });
+        this.Visit(new SqlSegment { Expression = assignmentExpr });
         this.UpdateIndex++;
     }
     public virtual void VisitSetField(object deferredSegmentValue)
@@ -625,11 +625,11 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     {
         (var fieldSelector, var valueGetter) = ((Expression, Expression))deferredSegmentValue;
         this.InitTableAlias(fieldSelector as LambdaExpression);
-        var fieldSegment = this.VisitAndDeferred(new SqlSegment { Expression = fieldSelector });
+        var fieldSegment = this.Visit(new SqlSegment { Expression = fieldSelector });
         this.InitTableAlias(valueGetter as LambdaExpression);
-        var valueSegment = this.VisitAndDeferred(new SqlSegment { Expression = valueGetter });
+        var valueSegment = this.Visit(new SqlSegment { Expression = valueGetter });
         if (this.UpdateIndex > 0) this.UpdateBuilder.Append(',');
-        this.UpdateBuilder.Append($"{fieldSegment.Body}={valueSegment.Body}");
+        this.UpdateBuilder.Append($"{fieldSegment.Value}={this.WrapSql(valueSegment)}");
         this.UpdateIndex++;
     }
     public virtual List<string> VisitFields(Expression fieldsSelector, bool isIgnoreCase = true)
@@ -787,7 +787,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         queryVisitor.IncludeTables = this.IncludeTables;
         queryVisitor.IsRecursive = this.IsRecursive;
         queryVisitor.CteQueryObj = this.CteQueryObj;
-        queryVisitor.RefFrom = this;
 
         queryVisitor.Tables = this.Tables;
         return queryVisitor;

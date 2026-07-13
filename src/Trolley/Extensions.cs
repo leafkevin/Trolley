@@ -24,10 +24,10 @@ public static class Extensions
         typeof(BitArray),typeof(DBNull)
     };
 
-    private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> valueTupleReaderDeserializerCache = new();
-    private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> typeReaderDeserializerCache = new();
-    private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> queryReaderDeserializerCache = new();
-    private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> deferredValueReaderDeserializerCache = new();
+    private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> typedValueTupleReaderDeserializerCache = new();
+    private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> typedReaderDeserializerCache = new();
+    private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, List<ReaderField>, object>> queryReaderDeserializerCache = new();
+    private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, List<ReaderField>, object>> deferredValueReaderDeserializerCache = new();
 
     extension(OrmDbFactoryBuilder builder)
     {
@@ -271,8 +271,8 @@ public static class Extensions
             var cacheKey = GetTypeReaderKey(targetType, ormProviderType, reader);
             if (targetType.FullName.StartsWith("System.ValueTuple`"))
             {
-                if (!valueTupleReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
-                    valueTupleReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderValueTupleDeserializer(targetType, dbContext, reader));
+                if (!typedValueTupleReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
+                    typedValueTupleReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderValueTupleDeserializer(targetType, dbContext, reader));
                 return deserializer;
             }
             else if (typeof(IDictionary<string, object>).IsAssignableFrom(targetType))
@@ -290,57 +290,46 @@ public static class Extensions
             }
             else
             {
-                if (!typeReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
-                    typeReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderEntityDeserializer(targetType, dbContext, reader));
+                if (!typedReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
+                    typedReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderEntityDeserializer(targetType, dbContext, reader));
                 return deserializer;
             }
         }
-        public Func<ITheaDataReader, object> GetReaderDeserializer(Type targetType, DbContext dbContext, List<ReaderField> readerFields)
+        public Func<ITheaDataReader, List<ReaderField>, object> GetReaderDeserializer(Type targetType, DbContext dbContext, List<ReaderField> readerFields)
         {
-            if (readerFields == null)
-                return GetReaderDeserializer(reader, targetType, dbContext);
-
             int cacheKey = 0;
             var ormProviderType = dbContext.OrmProvider.OrmProviderType;
             if (reader.FieldCount == 1 && !targetType.IsEntityType(out _))
             {
                 if (readerFields.Exists(f => f.IsDeferredFields))
                 {
-                    var hasRuntimeValues = readerFields.Any(f => f.IsDeferredFields && f.LocalValues != null && f.LocalValues.Count > 0);
-                    if (hasRuntimeValues)
-                        return RepositoryHelper.CreateReaderDeferredValueDeserializer(targetType, dbContext, reader, readerFields);
-
                     cacheKey = GetTypeReaderKey(targetType, ormProviderType, reader, readerFields);
                     if (!deferredValueReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
-                        deferredValueReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderDeferredValueDeserializer(targetType, dbContext, reader, readerFields));
+                        deferredValueReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderDeferredValueDeserializer(dbContext, reader, readerFields));
                     return deserializer;
                 }
-
-                var fieldType = reader.GetFieldType(0);
-                if (fieldType != targetType)
+                else
                 {
-                    var typeHandler = readerFields[0].TypeHandler;
-                    if (typeHandler != null)
-                        return reader => typeHandler.Parse(readerFields[0].ReaderType, reader.GetValue(0));
-                    else
+                    var fieldType = reader.GetFieldType(0);
+                    if (fieldType != targetType)
                     {
-                        var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext.Options);
-                        return reader => valueGetter.Invoke(reader.GetValue(0));
+                        var typeHandler = readerFields[0].TypeHandler;
+                        if (typeHandler != null)
+                            return (reader, readerFields) => typeHandler.Parse(readerFields[0].ReaderType, reader.GetValue(0));
+                        else
+                        {
+                            var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext.Options);
+                            return (reader, readerFields) => valueGetter.Invoke(reader.GetValue(0));
+                        }
                     }
+                    return (reader, readerFields) => reader.GetValue(0);
                 }
-                return reader => reader.GetValue(0);
             }
 
             cacheKey = GetTypeReaderKey(targetType, ormProviderType, reader, readerFields);
-            if (targetType.FullName.StartsWith("System.ValueTuple`"))
+            if (typeof(IDictionary<string, object>).IsAssignableFrom(targetType))
             {
-                if (!valueTupleReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
-                    valueTupleReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderValueTupleDeserializer(targetType, dbContext, reader));
-                return deserializer;
-            }
-            else if (typeof(IDictionary<string, object>).IsAssignableFrom(targetType))
-            {
-                return reader =>
+                return (reader, readerFields) =>
                 {
                     var row = new Dictionary<string, object>();
                     for (var i = 0; i < reader.FieldCount; i++)
@@ -353,10 +342,6 @@ public static class Extensions
             }
             else
             {
-                var hasRuntimeValues = readerFields.Any(f => f.IsDeferredFields && f.LocalValues != null && f.LocalValues.Count > 0);
-                if (hasRuntimeValues)
-                    return RepositoryHelper.CreateReaderEntityDeserializer(targetType, dbContext, reader, readerFields);
-
                 //TEntity类型与Target类型，不一定一致，可能是dynamic或是object类型，内部还是它真正的Target类型
                 if (!queryReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
                     queryReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderEntityDeserializer(targetType, dbContext, reader, readerFields));

@@ -1316,7 +1316,6 @@ public static class RepositoryHelper
     public static Func<ITheaDataReader, object> CreateReaderValueTupleDeserializer(Type targetType, DbContext dbContext, ITheaDataReader reader)
     {
         var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
-        var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
         var index = 0;
         var target = NewBuildInfo(targetType);
         var blockParameters = new List<ParameterExpression>();
@@ -1342,6 +1341,7 @@ public static class RepositoryHelper
     public static Func<ITheaDataReader, object> CreateReaderEntityDeserializer(Type targetType, DbContext dbContext, ITheaDataReader reader)
     {
         var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
+        var readerFieldsExpr = Expression.Parameter(typeof(List<ReaderField>), "readerFields");
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
         var memberInfos = GetMembers(targetType).Where(f => f.CanWrite).ToList();
         var entityMapProvider = dbContext.EntityMapProvider;
@@ -1385,37 +1385,53 @@ public static class RepositoryHelper
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(object))));
         return Expression.Lambda<Func<ITheaDataReader, object>>(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
     }
-    public static Func<ITheaDataReader, object> CreateReaderDeferredValueDeserializer(Type valueType, DbContext dbContext, ITheaDataReader reader, List<ReaderField> readerFields)
+    public static Func<ITheaDataReader, List<ReaderField>, object> CreateReaderDeferredValueDeserializer(DbContext dbContext, ITheaDataReader reader, List<ReaderField> readerFields)
     {
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
         var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
+        var readerFieldsExpr = Expression.Parameter(typeof(List<ReaderField>), "readerFields");
 
+        Expression executeExpr = null;
         var readerField = readerFields[0];
-        var fieldType = reader.GetFieldType(0);
-        var childReaderField = readerField.Fields[0];
-        var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(0),
-            childReaderField.ReaderType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
-
-        var newParameters = (readerField.FieldParameters ?? new List<ParameterExpression>()).ToList();
+        var newParameters = readerField.FieldParameters;
         var argsExprs = new List<Expression>();
-        if (readerField.LocalValues != null && readerField.LocalValues.Count > 0)
+        if (readerField.Fields != null && readerField.Fields.Count > 0)
         {
-            newParameters.AddRange(readerField.ValuesParameters ?? new List<ParameterExpression>());
-            for (int i = 0; i < (readerField.ValuesParameters?.Count ?? 0); i++)
+            var fieldType = reader.GetFieldType(0);
+            var childReaderField = readerField.Fields[0];
+            var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(0),
+                childReaderField.ReaderType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
+            argsExprs.Add(readerValueExpr);
+
+            if (readerField.ValuesParameters.Count > 0)
             {
-                argsExprs.Add(Expression.Constant(readerField.LocalValues[i]));
+                newParameters.AddRange(readerField.ValuesParameters);
+                var itemPropertyInfo = typeof(List<ReaderField>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                    .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(int)).First();
+                var readerFieldExpr = Expression.Property(readerFieldsExpr, itemPropertyInfo, Expression.Constant(0));
+                var localValuesExpr = Expression.Property(readerFieldExpr, nameof(ReaderField.LocalValues));
+                itemPropertyInfo = typeof(List<object>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                    .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(int)).First();
+
+                var localValueType = readerField.ValuesParameters[0].Type;
+                Expression localValueExpr = Expression.Property(localValuesExpr, itemPropertyInfo, Expression.Constant(0));
+                if (localValueType != typeof(object))
+                    localValueExpr = Expression.Convert(localValueExpr, localValueType);
+                argsExprs.Add(localValueExpr);
             }
         }
-        var executeExpr = Expression.Invoke(Expression.Lambda(readerField.Expression, newParameters), argsExprs);
-
+        if (newParameters.Count > 0)
+            executeExpr = Expression.Invoke(Expression.Lambda(readerField.Expression, newParameters), argsExprs);
+        else executeExpr = Expression.Invoke(Expression.Lambda(readerField.Expression));
         var resultLabelExpr = Expression.Label(typeof(object));
         var returnExpr = Expression.Convert(executeExpr, typeof(object));
         blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(object))));
-        return Expression.Lambda<Func<ITheaDataReader, object>>(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
+        return Expression.Lambda<Func<ITheaDataReader, List<ReaderField>, object>>(Expression.Block(blockParameters,
+            blockBodies), readerExpr, readerFieldsExpr).Compile();
     }
-    public static Func<ITheaDataReader, List<ReaderField>, object> CreateReaderEntityDeserializer(Type targetType, DbContext dbContext, ITheaDataReader reader, List<ReaderField> readerFields)
+     public static Func<ITheaDataReader, List<ReaderField>, object> CreateReaderEntityDeserializer(Type targetType, DbContext dbContext, ITheaDataReader reader, List<ReaderField> readerFields)
     {
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
@@ -1424,7 +1440,7 @@ public static class RepositoryHelper
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
 
         //IDataReader的索引，readerFields的索引
-        int index = 0, readerFieldIndex = 0;
+        int index = 0;
         var root = NewBuildInfo(targetType);
         var current = root;
         var parent = root;
@@ -1454,9 +1470,10 @@ public static class RepositoryHelper
                         //new DateTimeOffset(DateTime.SpecifyKind(f.DateTimeField, DateTimeKind.Local)).UtcDateTime.Deferred()
                         //DateTimeOffset.FromUnixTimeMilliseconds(f.CreatedAt).UtcDateTime.Add(request.TimeZone.ToTimeZone()).Deferred()
                         Expression executeExpr = null;
+                        var newParameters = readerField.FieldParameters;
+                        var argsExprs = new List<Expression>();
                         if (readerField.Fields != null && readerField.Fields.Count > 0)
                         {
-                            var argsExprs = new List<Expression>();
                             foreach (var childReaderField in readerField.Fields)
                             {
                                 var fieldType = reader.GetFieldType(index);
@@ -1465,8 +1482,7 @@ public static class RepositoryHelper
                                 argsExprs.Add(readerValueExpr);
                                 index++;
                             }
-                            var newParameters = readerField.FieldParameters;
-                            if (readerField.LocalValues != null && readerField.LocalValues.Count > 0)
+                            if (readerField.ValuesParameters != null && readerField.ValuesParameters.Count > 0)
                             {
                                 newParameters.AddRange(readerField.ValuesParameters);
                                 var itemPropertyInfo = typeof(List<ReaderField>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
@@ -1476,6 +1492,7 @@ public static class RepositoryHelper
                                 var localValuesExpr = Expression.Property(readerFieldExpr, nameof(ReaderField.LocalValues));
                                 itemPropertyInfo = typeof(List<object>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
                                     .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(int)).First();
+
                                 for (int i = 0; i < readerField.ValuesParameters.Count; i++)
                                 {
                                     var localValueType = readerField.ValuesParameters[i].Type;
@@ -1485,8 +1502,9 @@ public static class RepositoryHelper
                                     argsExprs.Add(localValueExpr);
                                 }
                             }
-                            executeExpr = Expression.Invoke(Expression.Lambda(readerField.Expression, newParameters), argsExprs);
                         }
+                        if (newParameters.Count > 0)
+                            executeExpr = Expression.Invoke(Expression.Lambda(readerField.Expression, newParameters), argsExprs);
                         else executeExpr = Expression.Invoke(Expression.Lambda(readerField.Expression));
                         //把延迟方法调用委托当作参数传进来，这样缓存才有效，相同key，不同的延迟方法
                         if (!current.IsDefault) current.Arguments.Add(executeExpr);
@@ -1505,8 +1523,10 @@ public static class RepositoryHelper
                     break;
                 case ReaderFieldType.RawSql:
                     var myTargetType = targetType;
-                    if (readerField.FieldsCount > 1)
+                    var isEntityType = false;
+                    if (readerField.ReaderType.IsEntityType(out _))
                     {
+                        isEntityType = true;
                         current = NewBuildInfo(readerField.ReaderType, readerField.TargetMember, parent);
                         readerBuilders.Add(readerField, current);
                         myTargetType = readerField.ReaderType;
@@ -1537,7 +1557,7 @@ public static class RepositoryHelper
                         else if (memberInfo.CanWrite) current.Bindings.Add(Expression.Bind(memberInfo, readerValueExpr));
                         index++;
                     }
-                    if (readerField.FieldsCount > 1)
+                    if (isEntityType)
                     {
                         Expression instanceExpr = null;
                         if (current.IsDefault)
@@ -1559,8 +1579,6 @@ public static class RepositoryHelper
                         //此处生成的副本，从新new的一个对象
                         if (!parent.IsDefault) parent.Arguments.Add(instanceExpr);
                         else if (readerField.TargetMember.CanWrite) parent.Bindings.Add(Expression.Bind(readerField.TargetMember, instanceExpr));
-                        readerFieldIndex++;
-                        continue;
                     }
                     else
                     {
@@ -1620,7 +1638,8 @@ public static class RepositoryHelper
 
         blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(object))));
-        return Expression.Lambda<Func<ITheaDataReader, List<ReaderField>, object>>(Expression.Block(blockParameters, blockBodies), readerExpr, readerFieldsExpr).Compile();
+        return Expression.Lambda<Func<ITheaDataReader, List<ReaderField>, object>>(Expression.Block(blockParameters,
+            blockBodies), readerExpr, readerFieldsExpr).Compile();
     }
     public static Expression GetReaderValue(DbContext dbContext, ParameterExpression readerExpr, Expression indexExpr,
         Type targetType, Type fieldType, ITypeHandler typeHandler, List<ParameterExpression> blockParameters, List<Expression> blockBodies)

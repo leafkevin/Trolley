@@ -339,8 +339,8 @@ public sealed class DbContext
     #endregion
 
     #region Query
-    public TResult Query<TTarget, TResult>(string rawSql, bool isBulk,
-        Func<ITheaDataReader, Func<ITheaDataReader, object>, TResult> readerInitializer, CommandType commandType = CommandType.Text)
+    public TResult Query<TTarget, TResult>(string rawSql, bool isBulk, Func<ITheaDataReader,
+        Func<ITheaDataReader, object>, TResult> readerInitializer, CommandType commandType = CommandType.Text)
     {
         (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlCommand(rawSql, commandType);
 
@@ -355,8 +355,8 @@ public sealed class DbContext
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<TResult> QueryAsync<TTarget, TResult>(string rawSql, bool isBulk,
-        Func<ITheaDataReader, Func<ITheaDataReader, object>, CancellationToken, Task<TResult>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+    public async Task<TResult> QueryAsync<TTarget, TResult>(string rawSql, bool isBulk, Func<ITheaDataReader, Func<ITheaDataReader,
+        object>, CancellationToken, Task<TResult>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlCommand(rawSql, commandType);
 
@@ -371,8 +371,8 @@ public sealed class DbContext
         if (isNeedClose) await connection.CloseAsync();
         return result;
     }
-    public TResult Query<TTarget, TResult>(string rawSql, bool isBulk, object parameters,
-        Func<ITheaDataReader, Func<ITheaDataReader, object>, TResult> readerInitializer, CommandType commandType = CommandType.Text)
+    public TResult Query<TTarget, TResult>(string rawSql, bool isBulk, object parameters, Func<ITheaDataReader,
+        Func<ITheaDataReader, object>, TResult> readerInitializer, CommandType commandType = CommandType.Text)
     {
         (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlCommand(rawSql, parameters, commandType);
 
@@ -387,8 +387,8 @@ public sealed class DbContext
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<TResult> QueryAsync<TTarget, TResult>(string rawSql, bool isBulk, object parameters,
-        Func<ITheaDataReader, Func<ITheaDataReader, object>, CancellationToken, Task<TResult>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+    public async Task<TResult> QueryAsync<TTarget, TResult>(string rawSql, bool isBulk, object parameters, Func<ITheaDataReader, Func<ITheaDataReader,
+        object>, CancellationToken, Task<TResult>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlCommand(rawSql, parameters, commandType);
 
@@ -446,8 +446,8 @@ public sealed class DbContext
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<TResult> QueryRawAsync<TTarget, TResult>(string rawSql, bool isBulk, List<IDbDataParameter> parameters,
-        Func<ITheaDataReader, Func<ITheaDataReader, object>, CancellationToken, Task<TResult>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+    public async Task<TResult> QueryRawAsync<TTarget, TResult>(string rawSql, bool isBulk, List<IDbDataParameter> parameters, Func<ITheaDataReader, Func<ITheaDataReader,
+        object>, CancellationToken, Task<TResult>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlParametersCommand(rawSql, parameters, commandType);
 
@@ -491,7 +491,8 @@ public sealed class DbContext
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<TResult> QueryAsync<TEntity, TResult>(object whereObjs, bool isUseKey, bool isBulk, Func<ITheaDataReader, Func<ITheaDataReader, object>, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
+    public async Task<TResult> QueryAsync<TEntity, TResult>(object whereObjs, bool isUseKey, bool isBulk, Func<ITheaDataReader,
+        Func<ITheaDataReader, object>, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command) = this.CreateQueryWhereCommand(typeof(TEntity), whereObjs, isUseKey, isBulk);
 
@@ -596,7 +597,7 @@ public sealed class DbContext
         var entityType = typeof(TResult);
         var deserializer = reader.GetReaderDeserializer(typeof(TResult), this, readerFields);
         while (reader.Read())
-            result.Data.Add((TResult)deserializer.Invoke(reader));
+            result.Data.Add((TResult)deserializer.Invoke(reader, readerFields));
         result.Count = result.Data.Count;
         if (visitor.BuildIncludeSql(entityType, result.Data, false, out sql))
         {
@@ -637,7 +638,7 @@ public sealed class DbContext
         await reader.NextResultAsync(cancellationToken);
         var deserializer = reader.GetReaderDeserializer(typeof(TResult), this, readerFields);
         while (await reader.ReadAsync(cancellationToken))
-            result.Data.Add((TResult)deserializer.Invoke(reader));
+            result.Data.Add((TResult)deserializer.Invoke(reader, readerFields));
         result.Count = result.Data.Count;
         if (visitor.BuildIncludeSql(entityType, result.Data, false, out sql))
         {
@@ -1050,7 +1051,7 @@ public sealed class DbContext
         return result;
     }
 
-    public TResult CreateResult<TTarget, TResult>(ICreateVisitor visitor, Func<ITheaDataReader, Func<ITheaDataReader, object>, TResult> readerInitializer)
+    public TResult CreateResult<TTarget, TResult>(ICreateVisitor visitor, Func<ITheaDataReader, List<ReaderField>, Func<ITheaDataReader, List<ReaderField>, object>, TResult> readerInitializer)
     {
         (var isNeedClose, var connection, var command) = this.UseMasterCommand(visitor);
         command.CommandText = visitor.BuildSql(command, out var readerFields);
@@ -1058,14 +1059,14 @@ public sealed class DbContext
         connection.Open();
         using var reader = command.ExecuteReader(CommandSqlType.Insert, CommandBehavior.SequentialAccess);
         var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this, readerFields);
-        var result = readerInitializer.Invoke(reader, deserializer);
+        var result = readerInitializer.Invoke(reader, readerFields, deserializer);
 
         reader.Dispose();
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<TResult> CreateResultAsync<TTarget, TResult>(ICreateVisitor visitor, Func<ITheaDataReader, Func<ITheaDataReader, object>, TResult> readerInitializer, CancellationToken cancellationToken = default)
+    public async Task<TResult> CreateResultAsync<TTarget, TResult>(ICreateVisitor visitor, Func<ITheaDataReader, List<ReaderField>, Func<ITheaDataReader, List<ReaderField>, object>, TResult> readerInitializer, CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command) = this.UseMasterCommand(visitor);
         command.CommandText = visitor.BuildSql(command, out var readerFields);
@@ -1073,7 +1074,7 @@ public sealed class DbContext
         await connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Insert, CommandBehavior.SequentialAccess, cancellationToken);
         var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this, readerFields);
-        var result = readerInitializer.Invoke(reader, deserializer);
+        var result = readerInitializer.Invoke(reader, readerFields, deserializer);
 
         await reader.DisposeAsync();
         await command.DisposeAsync();

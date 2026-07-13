@@ -5,6 +5,7 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 
 namespace Trolley;
@@ -83,11 +84,6 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     /// 当前查询语句中，所有有多个分表的实体表列表，第一个多个分表的实体表为主表，其他多个分表的实体表，必须调用UseTableMap方法，指定与主表的映射关系
     /// </summary>
     public List<TableSegment> ShardingTables { get; set; }
-    /// <summary>
-    /// 如果当前queryVisitor对象是在一个queryVisitor对象中创建的，这个值就是父queryVisitor对象，
-    /// 用于判断一些引用参数是否需要拷贝
-    /// </summary>
-    public object RefFrom { get; set; }
     public string UnionSql { get; set; }
     public string HeadRawSql { get; set; }
     public string TailRawSql { get; set; }
@@ -1116,7 +1112,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                 sqlSegment.Change(new ReaderField
                 {
-                    FieldType = ReaderFieldType.Field,
+                    FieldType = ReaderFieldType.Expression,
                     ReaderType = methodCallExpr.Type,
                     Value = $"MIN({sqlSegment.Value})",
                     IsAggField = true,
@@ -1297,35 +1293,32 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                         ReaderType = methodCallExpr.Type,
                         Value = $"AVG({sqlSegment.Value})",
                         IsAggField = true,
-                        AggFunc = "AVG",
                         IsAvgField = true,
+                        AggFunc = "AVG",
                         Fields = readerFields
                     }, SqlType.ReaderField);
-                    this.HasAggFields = true;
                     break;
                 case "Max":
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change(new ReaderField
                     {
-                        FieldType = ReaderFieldType.Field,
+                        FieldType = ReaderFieldType.Expression,
                         ReaderType = methodCallExpr.Type,
                         Value = $"MAX({sqlSegment.Value})",
                         IsAggField = true,
                         AggFunc = "MAX"
                     }, SqlType.ReaderField);
-                    this.HasAggFields = true;
                     break;
                 case "Min":
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change(new ReaderField
                     {
-                        FieldType = ReaderFieldType.Field,
+                        FieldType = ReaderFieldType.Expression,
                         ReaderType = methodCallExpr.Type,
                         Value = $"MIN({sqlSegment.Value})",
                         IsAggField = true,
                         AggFunc = "MIN"
                     }, SqlType.ReaderField);
-                    this.HasAggFields = true;
                     break;
             }
         }
@@ -1374,40 +1367,13 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             builder.Append(this.WrapSql(sqlSegment));
         }
     }
-    /// <summary>
-    /// 访问FromQuery表达式，生成子查询SQL，通常是Where方法中的Exists、In方法调用，或者Union中的第二个查询对象，引用子查询表
-    /// </summary>
-    /// <param name="lambdaExpr"></param>
-    /// <param name="isSecondUnion"></param>
-    /// <param name="selfQueryObj"></param>
-    /// <returns></returns>
-    /// <exception cref="NotSupportedException"></exception>
-    public virtual (string, List<ReaderField>) VisitFromQuery(Expression lambdaExpr, ICteQuery selfQueryObj = null)
+    public virtual (string, List<ReaderField>) VisitFromQuery(Expression methodCallExpr, ICteQuery selfQueryObj = null)
     {
-        var myLambdaExpr = this.EnsureLambda(lambdaExpr);
-        var currentExpr = myLambdaExpr.Body;
         string sql = null;
+        Type entityType = null;
         List<ReaderField> readerFields = null;
-
-        //引用现有子查询对象，在外层处理
-        if (currentExpr.NodeType == ExpressionType.MemberAccess
-            && typeof(IQuery).IsAssignableFrom(currentExpr.Type))
-        {
-            var refQueryObj = currentExpr.Evaluate() as IQuery;
-            if (this.IsWhere)
-            {
-                sql = refQueryObj.Visitor.BuildSql(true, out _);
-                return (sql, null);
-            }
-            //直接引用，无任何操作
-            var targetType = currentExpr.Type.GenericTypeArguments[0];
-            sql = refQueryObj.Visitor.BuildSql(true, out readerFields);
-            return (sql, readerFields);
-        }
-
+        Expression currentExpr = methodCallExpr;
         var callStack = new Stack<MethodCallExpression>();
-        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, 'a', this.Command);
-        if (this.IsWhere) queryVisitor.TableAliasStart = (char)(this.TableAliasStart + this.Tables.Count);
         while (true)
         {
             if (currentExpr == null || currentExpr is not MethodCallExpression callExpr
@@ -1416,56 +1382,22 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             callStack.Push(callExpr);
             currentExpr = callExpr.Object;
         }
-
-        Type entityType = null;
-        TableSegment tableSegment = null;
-        IQuery subQueryObj = null;
-
-        //引用现有子查询对象，在外层处理
-        if (currentExpr.NodeType == ExpressionType.MemberAccess
-            && typeof(IQuery).IsAssignableFrom(currentExpr.Type))
+        IQueryVisitor queryVisitor = null;
+        char tableIndex = 'a';
+        if (this.IsWhere) tableIndex = (char)(tableIndex + this.Tables.Count);
+        queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableIndex, this.Command);
+        if (currentExpr != null && currentExpr is MemberExpression memberExpr)
         {
-            subQueryObj = ValueEvalutor.Evaluate(currentExpr) as IQuery;
-            if (callStack.Count == 0)
-            {
-                if (this.IsWhere)
-                {
-                    sql = subQueryObj.Visitor.BuildSql(false, out _);
-                    return (sql, readerFields);
-                }
-
-                //直接引用，无任何操作
-                var targetType = currentExpr.Type.GenericTypeArguments[0];
-                tableSegment = queryVisitor.UseQuery(targetType, subQueryObj);
-                return (sql, readerFields);
-            }
-
+            var subQueryObj = memberExpr.Evaluate<IQuery>();
+            entityType = currentExpr.Type.GenericTypeArguments[0];
+            //在CTE表基础上，又做了WHERE/SELECT...其他操作
             if (subQueryObj is ICteQuery cteQueryObj)
-            {
-                entityType = currentExpr.Type.GenericTypeArguments[0];
-                var isCopyRefParameters = !(this.IsSecondUnion && this.IsRecursive);
-                tableSegment = queryVisitor.UseQuery(entityType, subQueryObj);
-                readerFields = tableSegment.Fields;
-            }
-            else
-            {
-                //TODO:一些引用类型的拷贝是不对的，比如：排序，分组等不能引用，也需要拷贝，否则会更改之前的内容
-                //如果子查询有排序、分组、分页，此处再次更改，则需要包装一下子查询，再做排序、分组、分页
-                //如果子查询没有排序、分组、分页，则不需要包装子查询，直接继续做排序、分组、分页
-                //如果是where条件，也不需要包装子查询，直接继续做where条件
-                subQueryObj.Visitor.CloneTo(queryVisitor);
-                if (subQueryObj.Visitor.Tables != null && subQueryObj.Visitor.Tables.Count > 0)
-                {
-                    queryVisitor.Tables ??= new();
-                    subQueryObj.Visitor.Tables.ForEach(f => queryVisitor.Tables.Add(f));
-                }
-                if (subQueryObj.Visitor.ReaderFields != null && subQueryObj.Visitor.ReaderFields.Count > 0)
-                {
-                    readerFields = new();
-                    subQueryObj.Visitor.ReaderFields.ForEach(f => readerFields.Add(f.Clone()));
-                }
-            }
+                this.RefQueries.Add(cteQueryObj);
+            queryVisitor.UseQuery(entityType, subQueryObj, false);
         }
+
+        //引用现有子查询对象不做任何处理场景，在最外层直接处理
+        //引用现有子查询对象，并做了一些处理，比如：Where/And/Or等
 
         string unionType = null;
         object[] fieldValues = null;
@@ -1512,7 +1444,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     {
                         entityType = genericArguments[0];
                         if (typeof(IQuery).IsAssignableFrom(callExpr.Arguments[0].Type))
-                            queryVisitor.UseQuery(entityType, callExpr.Arguments[0].Evaluate<IQuery>(), true);
+                            queryVisitor.UseQuery(entityType, callExpr.Arguments[0].Evaluate<IQuery>(), false);
                         else queryVisitor.UseNewQuery(entityType, callExpr.Arguments[0], false);
                     }
                     else queryVisitor.AddTable(genericArguments);
@@ -1684,18 +1616,10 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     queryVisitor.Distinct();
                     break;
                 case "ExistsBy":
-                    queryVisitor.AndBy(callExpr.Arguments[0].Evaluate());
-                    queryVisitor.Select("*");
-                    sql = queryVisitor.BuildSql(true, out _);
-                    return (sql, null);
                 case "ExistsById":
-                    queryVisitor.AndById(callExpr.Arguments[0].Evaluate());
-                    queryVisitor.Select("*");
-                    sql = queryVisitor.BuildSql(true, out _);
-                    return (sql, null);
                 case "ExistsByIds":
                     queryVisitor.AndByIds(callExpr.Arguments[0].Evaluate());
-                    queryVisitor.Select("*");
+                    queryVisitor.SelectRaw(genericArguments[0], "*");
                     sql = queryVisitor.BuildSql(true, out _);
                     return (sql, null);
                 case "Exists":
@@ -1706,334 +1630,12 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                         queryVisitor.From(queryVisitor.TableAliasStart, genericArguments);
                         queryVisitor.RefTableAliases = this.TableAliases;
                         queryVisitor.And(lambdaArgsExpr);
-                    }
-                    //repository.From<Company>('b').Where(t => ...).Exists()
-                    //Sql.From<Company>().Where(t => ...).Exists()
-                    queryVisitor.Select("*");
-                    sql = queryVisitor.BuildSql(true, out _);
-                    return (sql, null);
-                case "AsCteTable":
-                    //TODO: 当前visitor添加该CTE子查询表引用，并生成CTE子查询表的引用的SQL
-                    var cteTableName = callExpr.Arguments[0].Evaluate<string>();
-                    entityType = callExpr.Type.GenericTypeArguments[0];
-                    queryVisitor.AsCteTable(entityType, cteTableName);
-                    queryVisitor.Clear();
-                    queryVisitor.Tables.Clear();
-                    tableSegment = this.UseQuery(entityType, queryVisitor.CteQueryObj, true);
-                    return (sql, tableSegment, readerFields);
-                default: throw new NotSupportedException("不支持的表达式解析");
-            }
-        }
-        if (queryVisitor.ReaderFields == null || queryVisitor.ReaderFields.Count == 0)
-        {
-            if (this.IsWhere) queryVisitor.Select("*");
-            else queryVisitor.ReaderFields = readerFields;
-        }
-        sql = queryVisitor.BuildSql(false, out readerFields);
-        return (sql, tableSegment, readerFields);
-    }
-
-
-
-    public virtual (string, List<ReaderField>) VisitFromQuery(MethodCallExpression methodCallExpr, ICteQuery selfQueryObj = null)
-    {
-        string sql = null;
-        Type entityType = null;
-        List<ReaderField> readerFields = null;
-        Expression currentExpr = methodCallExpr;
-        var callStack = new Stack<MethodCallExpression>();
-        while (true)
-        {
-            if (currentExpr == null || currentExpr is not MethodCallExpression callExpr
-                || currentExpr.NodeType == ExpressionType.Parameter)
-                break;
-            callStack.Push(callExpr);
-            currentExpr = callExpr.Object;
-        }
-        IQueryVisitor queryVisitor = null;
-        if (currentExpr != null && currentExpr is MemberExpression memberExpr)
-        {
-            var subQueryObj = memberExpr.Evaluate<IQuery>();
-            queryVisitor = subQueryObj.Visitor;
-            entityType = currentExpr.Type.GenericTypeArguments[0];
-            if (subQueryObj is ICteQuery cteQueryObj)
-            {
-                entityType = currentExpr.Type.GenericTypeArguments[0];
-                queryVisitor.UseQuery(entityType, subQueryObj);
-            }
-
-            if (callStack.Count == 0) return (null, null);
-
-            //{
-            //    //TODO:一些引用类型的拷贝是不对的，比如：排序，分组等不能引用，也需要拷贝，否则会更改之前的内容
-            //    //如果子查询有排序、分组、分页，此处再次更改，则需要包装一下子查询，再做排序、分组、分页
-            //    //如果子查询没有排序、分组、分页，则不需要包装子查询，直接继续做排序、分组、分页
-            //    //如果是where条件，也不需要包装子查询，直接继续做where条件
-            //    subQueryObj.Visitor.CloneTo(queryVisitor);
-            //    if (subQueryObj.Visitor.Tables != null && subQueryObj.Visitor.Tables.Count > 0)
-            //    {
-            //        queryVisitor.Tables ??= new();
-            //        subQueryObj.Visitor.Tables.ForEach(f => queryVisitor.Tables.Add(f));
-            //    }
-            //    if (subQueryObj.Visitor.ReaderFields != null && subQueryObj.Visitor.ReaderFields.Count > 0)
-            //    {
-            //        readerFields = new();
-            //        subQueryObj.Visitor.ReaderFields.ForEach(f => readerFields.Add(f.Clone()));
-            //    }
-            //}
-
-
-            queryVisitor.UseQuery(entityType, subQueryObj);
-        }
-        queryVisitor ??= this.OrmProvider.NewQueryVisitor(this.DbContext, 'a', this.Command);
-        if (this.IsWhere) queryVisitor.TableAliasStart = (char)(this.TableAliasStart + this.Tables.Count);
-
-        //引用现有子查询对象不做任何处理场景，在最外层直接处理
-        //引用现有子查询对象，并做了一些处理，比如：Where/And/Or等
-
-        string unionType = null;
-        object[] fieldValues = null;
-        while (callStack.TryPop(out var callExpr))
-        {
-            var methodInfo = callExpr.Method;
-            var genericArguments = methodInfo.GetGenericArguments();
-            LambdaExpression lambdaArgsExpr = null;
-            switch (methodInfo.Name)
-            {
-                case "UseTable":
-                    entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
-                    var parameterInfos = methodInfo.GetParameters();
-                    var tableNames = callExpr.Arguments[0].Evaluate<string[]>();
-                    queryVisitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
-                    break;
-                case "UseTableMap":
-                    var tableNameMapGetter = callExpr.Arguments[0].Evaluate<Func<string, string, string, string>>();
-                    queryVisitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameMapGetter);
-                    break;
-                case "UseTableBy":
-                    fieldValues = callExpr.Arguments[0].Evaluate<object[]>();
-                    entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
-                    queryVisitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
-                    break;
-                case "UseTableByRange":
-                    fieldValues = callExpr.Arguments[0].Evaluate<object[]>();
-                    entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
-                    queryVisitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
-                    break;
-                case "UseTableSchema":
-                    queryVisitor.UseTableSchema(false, callExpr.Arguments[0].Evaluate<string>());
-                    break;
-                case "From":
-                    if (callExpr.Arguments.Count > 0)
-                    {
-                        var tableAsStart = callExpr.Arguments[0].Evaluate<char>();
-                        queryVisitor.From(tableAsStart, genericArguments);
-                    }
-                    else queryVisitor.AddTable(genericArguments);
-                    break;
-                case "WithTable":
-                    if (callExpr.Arguments.Count > 0)
-                    {
                         entityType = genericArguments[0];
-                        if (typeof(IQuery).IsAssignableFrom(callExpr.Arguments[0].Type))
-                            queryVisitor.UseQuery(entityType, callExpr.Arguments[0].Evaluate<IQuery>());
-                        else queryVisitor.UseNewQuery(entityType, callExpr.Arguments[0]);
                     }
-                    else queryVisitor.AddTable(genericArguments);
-                    break;
-                case "Union":
-                case "UnionAll":
-                    entityType = callExpr.Object.Type.GenericTypeArguments[0];
-                    unionType = methodInfo.Name == "Union" ? " UNION" : " UNION ALL";
-                    if (typeof(IQuery).IsAssignableFrom(callExpr.Arguments[0].Type))
-                    {
-                        var queryObj = callExpr.Arguments[0].Evaluate<IQuery>();
-                        queryVisitor.Union(unionType, entityType, queryObj);
-                    }
-                    else queryVisitor.Union(unionType, entityType, callExpr.Arguments[0]);
-                    break;
-                case "UnionRecursive":
-                case "UnionAllRecursive":
-                    entityType = callExpr.Object.Type.GenericTypeArguments[0];
-                    unionType = methodInfo.Name == "UnionRecursive" ? " UNION" : " UNION ALL";
-                    entityType = typeof(CteQuery<>).MakeGenericType(entityType);
-                    var cteQueryObj = RepositoryHelper.CreateInstance(entityType,
-                         [typeof(DbContext), typeof(IQueryVisitor)], this.DbContext, queryVisitor) as ICteQuery;
-                    queryVisitor.UnionRecursive(unionType, cteQueryObj, callExpr.Arguments[0]);
-                    break;
-                case "InnerJoin":
-                case "LeftJoin":
-                case "RightJoin":
-                    var joinType = methodInfo.Name switch
-                    {
-                        "LeftJoin" => "LEFT JOIN",
-                        "RightJoin" => "RIGHT JOIN",
-                        _ => "INNER JOIN"
-                    };
-                    lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments.Last());
-                    queryVisitor.RefTableAliases = this.TableAliases;
-                    if (genericArguments.Length > 0)
-                    {
-                        if (callExpr.Arguments.Count > 1)
-                        {
-                            if (typeof(IQuery).IsAssignableFrom(callExpr.Arguments[0].Type))
-                            {
-                                IQuery queryObj = null;
-                                //如果是递归查询，且是第二个UNION，则使用CteQueryObj对象
-                                if (callExpr.Arguments[0].NodeType == ExpressionType.Parameter
-                                    && queryVisitor.IsRecursive && queryVisitor.IsSecondUnion)
-                                    queryObj = selfQueryObj;
-                                else queryObj = callExpr.Arguments[0].Evaluate<IQuery>();
-                                queryVisitor.Join(joinType, genericArguments[0], queryObj, lambdaArgsExpr);
-                            }
-                            else queryVisitor.Join(joinType, genericArguments[0], callExpr.Arguments[0], lambdaArgsExpr);
-                        }
-                        else queryVisitor.Join(joinType, genericArguments[0], lambdaArgsExpr);
-                    }
-                    else queryVisitor.Join(joinType, lambdaArgsExpr);
-                    queryVisitor.RefTableAliases = null;
-                    break;
-                case "WhereBy":
-                case "AndBy":
-                    queryVisitor.AndBy(callExpr.Arguments[0].Evaluate());
-                    break;
-                case "WhereById":
-                case "AndById":
-                    queryVisitor.AndById(callExpr.Arguments[0].Evaluate());
-                    break;
-                case "WhereByIds":
-                case "AndByIds":
-                    queryVisitor.AndByIds(callExpr.Arguments[0].Evaluate());
-                    break;
-                case "OrBy":
-                    queryVisitor.OrBy(callExpr.Arguments[0].Evaluate());
-                    break;
-                case "OrById":
-                    queryVisitor.OrById(callExpr.Arguments[0].Evaluate());
-                    break;
-                case "OrByIds":
-                    queryVisitor.OrByIds(callExpr.Arguments[0].Evaluate());
-                    break;
-                case "Where":
-                case "And":
-                case "Or":
-                    if (callExpr.Arguments.Count > 1)
-                    {
-                        if (callExpr.Arguments[0].Evaluate<bool>())
-                            lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[1]);
-                        else if (callExpr.Arguments.Count > 2) lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[2]);
-                    }
-                    else lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-                    if (lambdaArgsExpr != null)
-                    {
-                        queryVisitor.RefTableAliases = this.TableAliases;
-                        switch (methodInfo.Name)
-                        {
-                            case "Where":
-                            case "And": queryVisitor.And(lambdaArgsExpr); break;
-                            case "Or": queryVisitor.Or(lambdaArgsExpr); break;
-                        }
-                        queryVisitor.RefTableAliases = null;
-                    }
-                    break;
-                case "WherePredicate":
-                case "AndPredicate":
-                case "OrPredicate":
-                    var builderType = callExpr.Arguments[0].Type.GenericTypeArguments[0];
-                    var initializer = callExpr.Arguments[0].Evaluate<Delegate>();
-                    var builder = RepositoryHelper.CreateInstance(builderType);
-                    var predicateExpr = initializer.DynamicInvoke(builder) as Expression;
-                    lambdaArgsExpr = this.EnsureLambda(predicateExpr);
-                    queryVisitor.RefTableAliases = this.TableAliases;
-                    switch (methodInfo.Name)
-                    {
-                        case "WherePredicate":
-                        case "AndPredicate": queryVisitor.And(lambdaArgsExpr); break;
-                        case "OrPredicate": queryVisitor.Or(lambdaArgsExpr); break;
-                    }
-                    queryVisitor.RefTableAliases = null;
-                    break;
-                case "GroupBy":
-                    lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-                    queryVisitor.GroupBy(lambdaArgsExpr);
-                    break;
-                case "Having":
-                    if (callExpr.Arguments.Count > 1 && callExpr.Arguments[0].Evaluate<bool>())
-                        lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[1]);
-                    else lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-                    queryVisitor.RefTableAliases = this.TableAliases;
-                    queryVisitor.Having(lambdaArgsExpr);
-                    queryVisitor.RefTableAliases = null;
-                    break;
-                case "OrderBy":
-                    lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-                    queryVisitor.OrderBy("ASC", lambdaArgsExpr);
-                    break;
-                case "OrderByDescending":
-                    lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-                    queryVisitor.OrderBy("DESC", lambdaArgsExpr);
-                    break;
-                case "Skip":
-                    queryVisitor.Skip(callExpr.Arguments[0].Evaluate<int>());
-                    break;
-                case "Take":
-                    queryVisitor.Take(callExpr.Arguments[0].Evaluate<int>());
-                    break;
-                case "Page":
-                    queryVisitor.Page(callExpr.Arguments[0].Evaluate<int>(), callExpr.Arguments[1].Evaluate<int>());
-                    break;
-                case "Select":
-                    if (callExpr.Arguments.Count > 0)
-                    {
-                        if (callExpr.Arguments[0].Type == typeof(string))
-                            queryVisitor.SelectRaw(genericArguments[0], callExpr.Arguments[0].Evaluate<string>());
-                        else
-                        {
-                            lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-                            queryVisitor.Select(lambdaArgsExpr);
-                        }
-                    }
-                    else queryVisitor.SelectGrouping();
-                    break;
-                case "SelectAggregate":
-                    lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-                    queryVisitor.Select(lambdaArgsExpr);
-                    break;
-                case "SelectTo":
-                    if (callExpr.Arguments.Count > 0)
-                        lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-                    queryVisitor.SelectTo(genericArguments[0], lambdaArgsExpr);
-                    break;
-                case "Distinct":
-                    queryVisitor.Distinct();
-                    break;
-                case "ExistsBy":
-                    queryVisitor.AndBy(callExpr.Arguments[0].Evaluate());
-                    queryVisitor.Select("*");
-                    sql = queryVisitor.BuildSql(true, out _);
-                    return (sql, null);
-                case "ExistsById":
-                    queryVisitor.AndById(callExpr.Arguments[0].Evaluate());
-                    queryVisitor.Select("*");
-                    sql = queryVisitor.BuildSql(true, out _);
-                    return (sql, null);
-                case "ExistsByIds":
-                    queryVisitor.AndByIds(callExpr.Arguments[0].Evaluate());
-                    queryVisitor.Select("*");
-                    sql = queryVisitor.BuildSql(true, out _);
-                    return (sql, null);
-                case "Exists":
-                    //repository.Exists<TEntity>(t => ...)
-                    if (callExpr.Arguments.Count > 0)
-                    {
-                        lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-                        queryVisitor.From(queryVisitor.TableAliasStart, genericArguments);
-                        queryVisitor.RefTableAliases = this.TableAliases;
-                        queryVisitor.And(lambdaArgsExpr);
-                    }
+                    else entityType = callExpr.Object.Type.GenericTypeArguments[0];
                     //repository.From<Company>('b').Where(t => ...).Exists()
                     //Sql.From<Company>().Where(t => ...).Exists()
-                    queryVisitor.Select("*");
+                    queryVisitor.SelectRaw(entityType, "*");
                     sql = queryVisitor.BuildSql(true, out _);
                     return (sql, null);
                 case "AsCteTable":
@@ -2045,10 +1647,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     entityType = callExpr.Type.GenericTypeArguments[0];
                     //每次要新建一个CteQuery对象，避免多次使用同一个对象
                     queryVisitor.AsCteTable(entityType, cteTableName);
-                    queryVisitor.UseQuery(entityType, queryVisitor.CteQueryObj);
-
-                    queryVisitor.Clear();
-                    queryVisitor.Tables.Clear();
+                    queryVisitor.UseQuery(entityType, queryVisitor.CteQueryObj, true);
 
                     readerFields = new();
                     queryVisitor.CteQueryObj.ReaderFields.ForEach(f => readerFields.Add(f.Clone()));
@@ -2061,7 +1660,9 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             }
         }
         if (readerFields == null || readerFields.Count == 0)
+        {
             queryVisitor.Select("*");
+        }
         sql = queryVisitor.BuildSql(false, out readerFields);
         return (sql, readerFields);
     }
@@ -2176,7 +1777,6 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         queryVisitor.NextDbParameters = this.NextDbParameters;
         queryVisitor.IsRecursive = this.IsRecursive;
         queryVisitor.CteQueryObj = this.CteQueryObj;
-        queryVisitor.RefFrom = this;
         return queryVisitor;
     }
     public List<ReaderField> FlattenTableFields(TableSegment tableSegment, bool isNeedAlias = true)
@@ -2658,12 +2258,12 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         //f.TotalAmount.ToString("C")
         //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
         //this.DeferredInvoke(f.Price, f.Quantity)
-        //DateTimeOffset.FromUnixTimeMilliseconds(x.Max(f.UpdatedAt)).UtcDateTime.Add(timeZone.ToTimeZone()).Deferred()
+        //DateTimeOffset.FromUnixTimeMilliseconds(x.Max(f.UpdatedAt)).UtcDateTime.Add(request.TimeZone.ToTimeZone()).Deferred()
         var visitor = new DeferredExpressionVisitor(this);
         var readerField = visitor.Build(sqlSegment.Expression);
         return sqlSegment.Change(readerField, SqlType.ReaderField);
     }
-    public TableSegment UseQuery(Type targetType, IQuery subQueryObj)
+    public TableSegment UseQuery(Type targetType, IQuery subQueryObj, bool isClearTables)
     {
         //包含该查询对象引用，就说明当前visitor对象已经包含了该子查询引用到的参数，只需要添加表即可
         var isCurrentVisitor = ReferenceEquals(this, subQueryObj.Visitor);
@@ -2723,8 +2323,8 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             tableName = $"({sql})";
             tableType = TableType.FromQuery;
         }
-        //只有第一个表是子查询表时，visitor对象才相同
-        if (isCurrentVisitor)
+        //第一个表是子查询表或是Union场景时，需要清零表，Join场景不需要清表
+        if (isClearTables)
         {
             subQueryObj.Visitor.Clear();
             this.Tables.Clear();

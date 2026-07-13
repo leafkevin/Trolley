@@ -523,7 +523,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     var fieldName2 = $"{readerField.Fields[1].AggFunc}({readerField.Fields[1].AliasName})";
                     fieldName = $"{fieldName1}/{fieldName2} AS {readerField.AliasName}";
                 }
-                else fieldName = $"{readerField.AggFunc}({fieldName}) AS {fieldName}";
+                else fieldName = $"{readerField.AggFunc}({readerField.Value}) AS {fieldName}";
             }
             else fieldName = readerField.IsNeedAlias ? readerField.AliasName : readerField.Value.ToString().Substring(2);
             if (i > 0) builder.Append(',');
@@ -695,7 +695,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 tableSegment.TableShardingInfo = tableShardingInfo;
         }
     }
-    public void UseNewQuery(Type targetType, Expression subQueryExpr, bool isFirstTable)
+    public void UseNewQuery(Type targetType, Expression subQueryExpr, bool isClearTables)
     {
         //repository.FromQuery(f => ... ) 或是 ... .WithTable(f => ... )，具体参数如下：
         //f => f.From<Order>().Where(o=>o.Id==1) ... 或是 f => cteOrders 或是 f => myRefOrders等
@@ -706,11 +706,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var lambdaExpr = this.EnsureLambda(subQueryExpr);
         if (lambdaExpr.Body.NodeType == ExpressionType.MemberAccess)
         {
+            //直接引用子查询，也可以是CTE表
             var subQueryObj = lambdaExpr.Body.Evaluate() as IQuery;
-            this.UseQuery(targetType, subQueryObj);
+            this.UseQuery(targetType, subQueryObj, isClearTables);
             return;
         }
-        (var sql, var readerFields) = this.VisitFromQuery(subQueryExpr);
+        (var sql, var readerFields) = this.VisitFromQuery(lambdaExpr.Body);
+
+        //CTE表，在VisitFromQuery中已经做了处理
         if (typeof(ICteQuery).IsAssignableFrom(lambdaExpr.Body.Type))
             return;
 
@@ -721,17 +724,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.IsNeedChangeUnionShardingTables = false;
         this.IsManyShardingTables = false;
 
-
-        if (isFirstTable)
+        if (isClearTables)
         {
             this.Clear();
             this.Tables.Clear();
         }
-        tableSegment = this.AddJoinTable(targetType, null, TableType.FromQuery, $"({sql})", readerFields);
-
+        var tableSegment = this.AddJoinTable(targetType, null, TableType.FromQuery, $"({sql})", readerFields);
         //从FromQuery对象开始的场景，直接build和生成SQL，就可以，正常逻辑    
         this.InitUseQueryReaderFields(tableSegment, readerFields);
-        return tableSegment;
     }
     public virtual void Union(string union, Type targetType, IQuery subQuery)
     {
@@ -743,7 +743,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual void Union(string union, Type targetType, Expression subQueryExpr)
     {
-        (var sql, _, _) = this.VisitFromQuery(subQueryExpr, true);
+        var lambdaExpr = this.EnsureLambda(subQueryExpr);
+        if (lambdaExpr.Body.NodeType == ExpressionType.MemberAccess)
+        {
+            var subQueryObj = lambdaExpr.Body.Evaluate() as IQuery;
+            this.UseQuery(targetType, subQueryObj, true);
+            return;
+        }
+        (var sql, _) = this.VisitFromQuery(lambdaExpr.Body);
         this.Union(union, targetType, sql);
     }
     private void Union(string union, Type targetType, string subQuerySql)
@@ -788,7 +795,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void Join(string joinType, Type newEntityType, Expression joinOn)
         => this.Join(joinType, joinOn, f => { this.From(this.TableAliasStart, newEntityType); return this.InitTableAlias(f); });
     public virtual void Join(string joinType, Type newEntityType, IQuery subQuery, Expression joinOn)
-        => this.Join(joinType, joinOn, f => { this.UseQuery(newEntityType, subQuery, true); return this.InitTableAlias(f); });
+        => this.Join(joinType, joinOn, f => { this.UseQuery(newEntityType, subQuery, false); return this.InitTableAlias(f); });
     public virtual void Join(string joinType, Type newEntityType, Expression subQueryExpr, Expression joinOn)
         => this.Join(joinType, joinOn, f => { this.UseNewQuery(newEntityType, subQueryExpr, false); return this.InitTableAlias(f); });
     private void Join(string joinType, Expression joinOn, Func<LambdaExpression, TableSegment> joinTableSegmentGetter = null)
@@ -1425,13 +1432,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void Select(string sqlFormat, Expression selectExpr)
     {
         this.Select(selectExpr);
-
-        //单值操作，SELECT COUNT(DISTINCT b.Id),MAX(b.Amount),COUNT(1)等
-        var readerField = this.ReaderFields[0];
-        if (this.IsManyShardingTables && this.AggFieldAlias == "AVG_VALUE")
-            readerField.Value = $"SUM({readerField.Value})";
-        //当有多分表并且是AVG场景时，UNION之后，再做AVG操作
-        else readerField.Value = string.Format(sqlFormat, readerField.Value);
+        //带字段的单值操作，SELECT COUNT(DISTINCT b.Id),MAX(b.Amount)等
+        foreach (var readerField in this.ReaderFields)
+        {
+            readerField.Value = string.Format(sqlFormat, readerField.Value);
+        }
     }
     public virtual void SelectTo(Type targetType, Expression specialMemberSelector = null)
     {

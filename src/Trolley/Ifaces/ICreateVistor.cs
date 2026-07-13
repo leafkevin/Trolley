@@ -21,13 +21,13 @@ public interface ICreateVisitor : ICommandContext, IDisposable
     List<IQuery> RefQueries { get; set; }
     List<TableSegment> ShardingTables { get; set; }
     Dictionary<string, TableSegment> RefTableAliases { get; set; }
-    ICteQuery CteQueryObj { get; set; } 
+    ICteQuery CteQueryObj { get; set; }
     string FromSql { get; set; }
     bool IsRecursive { get; set; }
 
-    string BuildSql(ITheaCommand command, out List<SqlSegment> readerFields);
+    string BuildSql(ITheaCommand command, out List<ReaderField> readerFields);
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
-        Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlSegment>) BuildWithBulk(ITheaCommand command);
+        Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<ReaderField>) BuildWithBulk(ITheaCommand command);
 
     IQueryVisitor CreateQueryVisitor(char? tableAsStart = null);
     void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);

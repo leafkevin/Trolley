@@ -20,12 +20,12 @@ public class QueryBase : QueryInternal, IQueryBase
     #endregion
 
     #region Count
-    public virtual int Count() => this.QueryScalar<int>("COUNT(*)", "COUNT_VALUE");
+    public virtual int Count() => this.QueryScalar<int>("COUNT(*)");
     public virtual async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryScalarAsync<int>("COUNT(*)", "COUNT_VALUE", cancellationToken);
-    public virtual long LongCount() => this.QueryScalar<long>("COUNT(*)", "COUNT_VALUE");
+        => await this.QueryScalarAsync<int>("COUNT(*)", cancellationToken);
+    public virtual long LongCount() => this.QueryScalar<long>("COUNT(*)");
     public virtual async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryScalarAsync<long>("COUNT(*)", "COUNT_VALUE", cancellationToken);
+        => await this.QueryScalarAsync<long>("COUNT(*)", cancellationToken);
     #endregion
 
     #region Count/Aggregate Internal
@@ -34,125 +34,125 @@ public class QueryBase : QueryInternal, IQueryBase
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
-        return this.QueryScalar<int>("COUNT({0})", "COUNT_VALUE", fieldExpr);
+        return this.QueryScalar<int>("COUNT({0})", fieldExpr);
     }
     protected async Task<int> CountInternalAsync(Expression fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
-        return await this.QueryScalarAsync<int>("COUNT({0})", "COUNT_VALUE", fieldExpr, cancellationToken);
+        return await this.QueryScalarAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
     }
     protected int CountDistinctInternal(Expression fieldExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
-        return this.QueryScalar<int>("COUNT(DISTINCT {0})", "COUNT_VALUE", fieldExpr);
+        return this.QueryScalar<int>("COUNT(DISTINCT {0})", fieldExpr);
     }
     protected async Task<int> CountDistinctInternalAsync(Expression fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
-        return await this.QueryScalarAsync<int>("COUNT(DISTINCT {0})", "COUNT_VALUE", fieldExpr, cancellationToken);
+        return await this.QueryScalarAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
     }
     protected long LongCountInternal(Expression fieldExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
-        return this.QueryScalar<long>("COUNT({0})", "COUNT_VALUE", fieldExpr);
+        return this.QueryScalar<long>("COUNT({0})", fieldExpr);
     }
     protected async Task<long> LongCountInternalAsync(Expression fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
-        return await this.QueryScalarAsync<long>("COUNT({0})", "COUNT_VALUE", fieldExpr, cancellationToken);
+        return await this.QueryScalarAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
     }
     protected long LongCountDistinctInternal(Expression fieldExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
-        return this.QueryScalar<long>("COUNT(DISTINCT {0})", "COUNT_VALUE", fieldExpr);
+        return this.QueryScalar<long>("COUNT(DISTINCT {0})", fieldExpr);
     }
     protected async Task<long> LongCountDistinctInternalAsync(Expression fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
-        return await this.QueryScalarAsync<long>("COUNT(DISTINCT {0})", "COUNT_VALUE", fieldExpr, cancellationToken);
+        return await this.QueryScalarAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
     }
     protected decimal SumInternal<TField>(Expression fieldExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
-        return this.QueryScalar<decimal>("SUM({0})", "SUM_VALUE", fieldExpr);
+        return this.QueryScalar<decimal>("SUM({0})", fieldExpr);
     }
     protected async Task<decimal> SumInternalAsync<TField>(Expression fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
-        return await this.QueryScalarAsync<decimal>("SUM({0})", "SUM_VALUE", fieldExpr, cancellationToken);
+        return await this.QueryScalarAsync<decimal>("SUM({0})", fieldExpr, cancellationToken);
     }
     protected TField AvgInternal<TField>(Expression fieldExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
-        return this.QueryScalar<TField>("AVG({0})", "AVG_VALUE", fieldExpr);
+        return this.QueryScalar<TField>("AVG({0})", fieldExpr);
     }
     protected async Task<TField> AvgInternalAsync<TField>(Expression fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
-        return await this.QueryScalarAsync<TField>("AVG({0})", "AVG_VALUE", fieldExpr, cancellationToken);
+        return await this.QueryScalarAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
     }
     protected TField MaxInternal<TField>(Expression fieldExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
-        return this.QueryScalar<TField>("MAX({0})", "MAX_VALUE", fieldExpr);
+        return this.QueryScalar<TField>("MAX({0})", fieldExpr);
     }
     protected async Task<TField> MaxInternalAsync<TField>(Expression fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
-        return await this.QueryScalarAsync<TField>("MAX({0})", "MAX_VALUE", fieldExpr, cancellationToken);
+        return await this.QueryScalarAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
     }
     protected TField MinInternal<TField>(Expression fieldExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
-        return this.QueryScalar<TField>("MIN({0})", "MIN_VALUE", fieldExpr);
+        return this.QueryScalar<TField>("MIN({0})", fieldExpr);
     }
     protected async Task<TField> MinInternalAsync<TField>(Expression fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
-        return await this.QueryScalarAsync<TField>("MIN({0})", "MIN_VALUE", fieldExpr, cancellationToken);
+        return await this.QueryScalarAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
     }
     #endregion   
 
     #region Exists
     public virtual bool Exists()
     {
-        this.Visitor.Select("1");
+        this.Visitor.SelectRaw(typeof(int), "1");
         this.Visitor.Take(1);
         return this.DbContext.QueryExists(this.Visitor);
     }
     public virtual async Task<bool> ExistsAsync(CancellationToken cancellationToken = default)
     {
-        this.Visitor.Select("1");
+        this.Visitor.SelectRaw(typeof(int), "1");
         this.Visitor.Take(1);
         return await this.DbContext.QueryExistsAsync(this.Visitor, cancellationToken);
     }
@@ -169,27 +169,23 @@ public class QueryBase : QueryInternal, IQueryBase
     #endregion
 
     #region QueryScalar
-    protected TTarget QueryScalar<TTarget>(string aggSql, string shardingFieldAlias)
+    protected TTarget QueryScalar<TTarget>(string aggSql)
     {
-        this.Visitor.AggFieldAlias = shardingFieldAlias;
         this.Visitor.SelectRaw(typeof(TTarget), aggSql);
         return this.DbContext.QueryScalar<TTarget>(this.Visitor);
     }
-    protected TTarget QueryScalar<TTarget>(string aggSqlFormat, string shardingFieldAlias, Expression fieldExpr)
+    protected TTarget QueryScalar<TTarget>(string aggSqlFormat, Expression fieldExpr)
     {
-        this.Visitor.AggFieldAlias = shardingFieldAlias;
         this.Visitor.Select(aggSqlFormat, fieldExpr);
         return this.DbContext.QueryScalar<TTarget>(this.Visitor);
     }
-    protected async Task<TTarget> QueryScalarAsync<TTarget>(string aggSql, string shardingFieldAlias, CancellationToken cancellationToken = default)
+    protected async Task<TTarget> QueryScalarAsync<TTarget>(string aggSql, CancellationToken cancellationToken = default)
     {
-        this.Visitor.AggFieldAlias = shardingFieldAlias;
         this.Visitor.SelectRaw(typeof(TTarget), aggSql);
         return await this.DbContext.QueryScalarAsync<TTarget>(this.Visitor, cancellationToken);
     }
-    protected async Task<TTarget> QueryScalarAsync<TTarget>(string aggSqlFormat, string shardingFieldAlias, Expression fieldExpr, CancellationToken cancellationToken = default)
+    protected async Task<TTarget> QueryScalarAsync<TTarget>(string aggSqlFormat, Expression fieldExpr, CancellationToken cancellationToken = default)
     {
-        this.Visitor.AggFieldAlias = shardingFieldAlias;
         this.Visitor.Select(aggSqlFormat, fieldExpr);
         return await this.DbContext.QueryScalarAsync<TTarget>(this.Visitor, cancellationToken);
     }
@@ -670,7 +666,7 @@ public class Query<T> : QueryBase, IQuery<T>
             T result = default;
             var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
             if (reader.Read())
-                result = (T)deserializer.Invoke(reader);
+                result = (T)deserializer.Invoke(reader, readerFields);
             return result;
         });
     }
@@ -681,7 +677,7 @@ public class Query<T> : QueryBase, IQuery<T>
             T result = default;
             var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
             if (await reader.ReadAsync(cancellationToken))
-                result = (T)deserializer.Invoke(reader);
+                result = (T)deserializer.Invoke(reader, readerFields);
             return result;
         }, cancellationToken);
     }
@@ -692,7 +688,7 @@ public class Query<T> : QueryBase, IQuery<T>
             var result = new List<T>();
             var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
             while (reader.Read())
-                result.Add((T)deserializer.Invoke(reader));
+                result.Add((T)deserializer.Invoke(reader, readerFields));
             return result;
         });
     }
@@ -703,7 +699,7 @@ public class Query<T> : QueryBase, IQuery<T>
             var result = new List<T>();
             var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
             while (await reader.ReadAsync(cancellationToken))
-                result.Add((T)deserializer.Invoke(reader));
+                result.Add((T)deserializer.Invoke(reader, readerFields));
             return result;
         }, cancellationToken);
     }
