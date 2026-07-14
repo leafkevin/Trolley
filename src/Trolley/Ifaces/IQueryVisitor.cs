@@ -120,6 +120,7 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     void WithTrailingSql(string rawSql);
 
     TableSegment InitTableAlias(LambdaExpression lambdaExpr);
+    List<ReaderField> FlattenTableFields(TableSegment tableSegment, bool isNeedAlias = true);
     void Clear(bool isClearReaderFields = false);
     void CloneTo(IQueryVisitor visitor);
 }

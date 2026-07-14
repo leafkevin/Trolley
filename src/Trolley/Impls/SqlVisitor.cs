@@ -1401,9 +1401,10 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
 
         string unionType = null;
         object[] fieldValues = null;
+        MethodInfo methodInfo = null;
         while (callStack.TryPop(out var callExpr))
         {
-            var methodInfo = callExpr.Method;
+            methodInfo = callExpr.Method;
             var genericArguments = methodInfo.GetGenericArguments();
             LambdaExpression lambdaArgsExpr = null;
             switch (methodInfo.Name)
@@ -1661,7 +1662,8 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
         }
         if (readerFields == null || readerFields.Count == 0)
         {
-            queryVisitor.Select("*");
+            entityType = methodInfo.DeclaringType.GetGenericArguments()[0];
+            readerFields = queryVisitor.FlattenTableFields(queryVisitor.Tables[0]);
         }
         sql = queryVisitor.BuildSql(false, out readerFields);
         return (sql, readerFields);
