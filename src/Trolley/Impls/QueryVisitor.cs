@@ -136,6 +136,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         continue;
                     }
                     groupByField.IsIgnore = true;
+                    //只有一个分组字段并且还是非字段场景，添加别名方便后面使用
+                    if (groupByField.TargetMember == null)
+                        groupByField.AliasName = "Grouping";
                     this.ReaderFields.Add(groupByField);
                 }
             }
@@ -507,6 +510,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual string BuildShardingSql(string formatSql)
     {
+        string GetFieldName(object fieldString)
+        {
+            var fieldName = fieldString.ToString();
+            var index = fieldName.IndexOf('.');
+            return fieldName.Substring(index + 1);
+        }
         var builder = new StringBuilder();
         for (int i = 0; i < this.ReaderFields.Count; i++)
         {
@@ -523,9 +532,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     var fieldName2 = $"{readerField.Fields[1].AggFunc}({readerField.Fields[1].AliasName})";
                     fieldName = $"{fieldName1}/{fieldName2} AS {readerField.AliasName}";
                 }
-                else fieldName = $"{readerField.AggFunc}({readerField.Value}) AS {fieldName}";
+                else fieldName = $"{readerField.AggFunc}({readerField.Value}) AS {readerField.AliasName}";
             }
-            else fieldName = readerField.IsNeedAlias ? readerField.AliasName : readerField.Value.ToString().Substring(2);
+            else fieldName = readerField.IsNeedAlias ? readerField.AliasName : GetFieldName(readerField.Value);
             if (i > 0) builder.Append(',');
             builder.Append(fieldName);
         }
@@ -538,7 +547,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             {
                 var groupByField = this.GroupByFields[i];
                 var myReaderField = groupByField.RefField ?? groupByField;
-                var fieldName = myReaderField.IsNeedAlias ? myReaderField.AliasName : myReaderField.Value.ToString().Substring(2);
+                var fieldName = myReaderField.IsNeedAlias ? myReaderField.AliasName : GetFieldName(myReaderField.Value);
                 if (i > 0) builder.Append(',');
                 builder.Append(fieldName);
             }
@@ -553,17 +562,20 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             {
                 var orderByField = this.OrderByFields[i];
                 var myReaderField = orderByField.Field.RefField ?? orderByField.Field;
-                var fieldName = myReaderField.IsNeedAlias ? myReaderField.AliasName : myReaderField.Value.ToString().Substring(2);
                 if (i > 0) builder.Append(',');
-                builder.Append(fieldName);
+                builder.Append(myReaderField.Value.ToString());
                 if (!string.IsNullOrEmpty(orderByField.Suffix))
                     builder.Append(orderByField.Suffix);
             }
             orderBy = "ORDER BY " + builder.ToString();
         }
-
         builder.Clear();
         string sql = formatSql;
+
+        //多分表场景同时有Offset和Limit语句分页，正常添加OrderBy语句，不添加Offset，Limit设置为Offset+Limit
+        //多分表场景下，offset有值，limit没有值，不添加offset语句，在最外层UNION ALL后，再添加offset语句
+        //多分表场景下有分页，offset/limit都有值，limit要加上offset的值，防止丢失数据，在最外层UNION ALL后，再添加offset语句
+
         bool isFormated = false;
         if (!string.IsNullOrEmpty(groupBy))
         {
@@ -1265,6 +1277,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
         this.GroupByFields = new();
+        //分组字段都设置为ReaderFieldType.Expression类型，以便于在多分表情况下后加的字段使用别名，
         switch (lambdaExpr.Body.NodeType)
         {
             case ExpressionType.New:
@@ -1275,15 +1288,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 {
                     var memberInfo = newExpr.Members[index];
                     var sqlSegment = this.Visit(new SqlSegment { Expression = argumentExpr });
+                    var readerFieldType = sqlSegment.SqlType == SqlType.OnlyField ? ReaderFieldType.Field : ReaderFieldType.Expression;
                     var fieldName = this.WrapSql(sqlSegment);
                     if (builder.Length > 0) builder.Append(',');
                     builder.Append(fieldName);
                     this.GroupByFields.Add(new ReaderField
                     {
                         IsGroupingField = true,
-                        FieldType = ReaderFieldType.Field,
-                        ReaderType = memberInfo.GetMemberType(),
-                        MappedTargetType = sqlSegment.MappedTargetType,
+                        FieldType = readerFieldType,
                         MemberName = memberInfo.Name,
                         Value = fieldName,
                         TargetMember = memberInfo
@@ -1302,11 +1314,22 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     {
                         IsGroupingField = true,
                         FieldType = ReaderFieldType.Field,
-                        ReaderType = memberExpr.Type,
-                        MappedTargetType = sqlSegment.MappedTargetType,
                         MemberName = memberExpr.Member.Name,
                         Value = fieldName,
                         TargetMember = memberExpr.Member
+                    });
+                    this.GroupBySql = fieldName;
+                }
+                break;
+            default:
+                {
+                    var sqlSegment = this.Visit(new SqlSegment { Expression = lambdaExpr.Body });
+                    var fieldName = this.WrapSql(sqlSegment);
+                    this.GroupByFields.Add(new ReaderField
+                    {
+                        IsGroupingField = true,
+                        FieldType = ReaderFieldType.Expression,
+                        Value = fieldName
                     });
                     this.GroupBySql = fieldName;
                 }
@@ -1325,6 +1348,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         {
             case SqlType.ReaderField:
                 var readerField = sqlSegment.Value as ReaderField;
+                //Grouping分组字段
                 if (readerField.FieldType == ReaderFieldType.Entity)
                     readerField.Fields.ForEach(f => this.AddOrderByField(f, orderType));
                 else this.AddOrderByField(readerField, orderType);
@@ -1335,10 +1359,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 break;
             default:
                 //成员访问、表达式、方法调用、原始SQL等场景
+                var readerFieldType = sqlSegment.SqlType == SqlType.OnlyField ? ReaderFieldType.Field : ReaderFieldType.Expression;
                 this.AddOrderByField(new ReaderField
                 {
-                    FieldType = ReaderFieldType.Field,
-                    Value = this.WrapSql(sqlSegment)
+                    FieldType = readerFieldType,
+                    Value = this.WrapSql(sqlSegment),
+                    TargetMember = sqlSegment.TargetMember
                 }, orderType);
                 break;
         }
@@ -1633,7 +1659,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 while (memberExprs.TryPop(out var lastMemberExpr))
                 {
                     //子查询表通常只有下转1层，只有导航属性才有N层下转
-                    if (lastReaderField != null)
+                    if (lastReaderField != null && lastReaderField.Fields != null && lastReaderField.Fields.Count > 0)
                         lastReaderField = lastReaderField.Fields.Find(f => f.TargetMember.Name == lastMemberExpr.Member.Name);
                     //只有正常实体表和Include表才有Mapper，子查询表没有Mapper
                     else if (fromSegment.Mapper != null)
@@ -1654,12 +1680,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             var myTables = memberMapper.IsToOne ? this.Tables : this.IncludeTables;
                             builder.Append("." + lastMemberExpr.Member.Name);
                             path = builder.ToString();
-                            fromSegment = myTables.Find(f => f.TableType == TableType.Include && f.Path == path);
-                            if (fromSegment == null)
+                            var nextTableSegment = myTables.Find(f => f.TableType == TableType.Include && f.Path == path);
+                            if (nextTableSegment == null)
                                 throw new NotSupportedException($"无法访问成员{lastMemberExpr.Member.Name}，请确认是否已经使用Include访问了导航属性{lastMemberExpr.Member.Name}的主表实体");
+                            fromSegment = nextTableSegment;
                         }
                     }
                     //子查询和CTE子查询场景，fromSegment.TableType: TableType.FromQuery || TableType.CteSelfRef
+                    //OrderBy Select字段
                     else lastReaderField = fromSegment.Fields.Find(f => f.TargetMember.Name == lastMemberExpr.Member.Name);
                 }
                 //子查询临时表字段访问或是OrderBy使用Select字段访问
@@ -1992,7 +2020,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                                 if (this.IsNeedAlias(readerField))
                                 {
                                     readerField.IsNeedAlias = true;
-                                    readerField.AliasName = this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
+                                    //多分表且单分组字段非字段场景，已经设置别名为Grouping
+                                    if (string.IsNullOrEmpty(readerField.AliasName))
+                                        readerField.AliasName = this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
                                     builder.Append($" AS {readerField.AliasName}");
                                 }
                             }
@@ -2103,7 +2133,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.UnionSql = null;
         this.GroupBySql = null;
         this.HavingSql = null;
-        this.OrderBySql = null;
         this.OrderByFields?.Clear();
         this.IsDistinct = false;
         this.LastIncludeSegment = null;
@@ -2178,7 +2207,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.UnionSql = null;
         this.GroupBySql = null;
         this.HavingSql = null;
-        this.OrderBySql = null;
 
         this.LastIncludeSegment = null;
         this.GroupByFields = null;
@@ -2201,23 +2229,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             builder.Append($".{memberInfo.Name}");
         }
         var path = builder.ToString();
-#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        var hashCode = new HashCode();
-        hashCode.Add(targetType);
-        hashCode.Add(pathLength);
-        hashCode.Add(path);
-        return hashCode.ToHashCode();
-#else
-        int hashCode = 17;
-        unchecked
-        {
-            hashCode = hashCode * 23 + this.OrmProvider.OrmProviderType.GetHashCode();
-            hashCode = hashCode * 23 + targetType.GetHashCode();
-            hashCode = hashCode * 23 + pathLength.GetHashCode();
-            hashCode = hashCode * 23 + path.GetHashCode();
-        }
-        return hashCode;
-#endif
+        return HashCode.Combine(this.OrmProvider.OrmProviderType, targetType, pathLength, path);
     }
 }
 public class OrderByField

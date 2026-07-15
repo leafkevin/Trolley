@@ -7,7 +7,7 @@ namespace Trolley;
 public class DeferredExpressionVisitor : ExpressionVisitor
 {
     private readonly SqlVisitor sqlVisitor;
-    private bool isAggSelect;
+    private bool isVisited;
     private bool hasMemberAccess;
     private readonly List<ParameterExpression> fieldsParameters = new();
     private readonly List<ParameterExpression> valuesParameters = new();
@@ -50,7 +50,7 @@ public class DeferredExpressionVisitor : ExpressionVisitor
         if (node.Expression?.NodeType == ExpressionType.Parameter)
         {
             this.hasMemberAccess = true;
-            if (this.isAggSelect) return base.VisitMember(node);
+            if (this.isVisited) return base.VisitMember(node);
 
             var sqlSegment = this.sqlVisitor.Visit(new SqlSegment { Expression = node });
             this.readerFields.Add(new ReaderField
@@ -83,24 +83,34 @@ public class DeferredExpressionVisitor : ExpressionVisitor
     protected override Expression VisitMethodCall(MethodCallExpression node)
     {
         this.hasMemberAccess = false;
-        this.isAggSelect = typeof(IAggregateSelect).IsAssignableFrom(node.Method.DeclaringType);
+        var isSupportMethod = node.Method.DeclaringType == typeof(Sql) ||
+            typeof(IAggregateSelect).IsAssignableFrom(node.Method.DeclaringType);
+
         var result = base.VisitMethodCall(node);
-        //支持Max、Min、Sum、Avg等聚合函数的参数表达式中包含成员访问表达式的情况
-        if (this.isAggSelect && this.hasMemberAccess)
-        {
+        //支持IsNull、Max、Min、Sum、Avg等聚合函数的参数表达式中包含成员访问表达式的情况
+        if (isSupportMethod  && this.hasMemberAccess)
+        {           
             var sqlSegment = this.sqlVisitor.Visit(new SqlSegment { Expression = node });
-            var rawSql = this.sqlVisitor.WrapSql(sqlSegment);
-            this.readerFields.Add(new ReaderField
+            if (sqlSegment.SqlType == SqlType.ReaderField)
+                this.readerFields.Add(sqlSegment.Value as ReaderField);
+            else
             {
-                FieldType = ReaderFieldType.RawSql,
-                ReaderType = node.Type,
-                Value = rawSql
-            });
+                var rawSql = this.sqlVisitor.WrapSql(sqlSegment);
+                this.readerFields.Add(new ReaderField
+                {
+                    FieldType = ReaderFieldType.RawSql,
+                    ReaderType = node.Type,
+                    Value = rawSql
+                });
+            }
+
             var parameterName = $"{node.Method.Name}${this.fieldsParameters.Count}";
             var parameterExpr = this.fieldsParameters.Find(f => f.Name == parameterName);
             if (parameterExpr != null) return parameterExpr;
             parameterExpr = Expression.Parameter(node.Type, parameterName);
             this.fieldsParameters.Add(parameterExpr);
+
+            this.isVisited = true;
             return parameterExpr;
         }
         return result;
