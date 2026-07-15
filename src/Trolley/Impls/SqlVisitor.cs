@@ -5,7 +5,6 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Reflection.Metadata.Ecma335;
 using System.Text;
 
 namespace Trolley;
@@ -13,7 +12,6 @@ namespace Trolley;
 public class SqlVisitor : ISqlVisitor, ICommandContext
 {
     private bool isDisposed;
-    private static MethodInfo IsNullMethodInfo = typeof(Sql).GetMethods().Where(f => f.Name == nameof(Sql.IsNull) && f.GetParameters().Length == 2).First();
 
     public DbContext DbContext { get; set; }
     public string DbKey => this.DbContext.DbKey;
@@ -1465,10 +1463,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 case "UnionAllRecursive":
                     entityType = callExpr.Object.Type.GenericTypeArguments[0];
                     unionType = methodInfo.Name == "UnionRecursive" ? " UNION" : " UNION ALL";
-                    entityType = typeof(CteQuery<>).MakeGenericType(entityType);
-                    var cteQueryObj = RepositoryHelper.CreateInstance(entityType,
-                         [typeof(DbContext), typeof(IQueryVisitor)], this.DbContext, queryVisitor) as ICteQuery;
-                    queryVisitor.UnionRecursive(unionType, cteQueryObj, callExpr.Arguments[0]);
+                    queryVisitor.UnionRecursive(unionType, entityType, callExpr.Arguments[0]);
                     break;
                 case "InnerJoin":
                 case "LeftJoin":

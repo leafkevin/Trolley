@@ -72,11 +72,11 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     void AddTable(params Type[] entityTypes);
     TableSegment AddTable(TableSegment tableSegment);
     TableSegment UseQuery(Type targetType, IQuery subQuery, bool isClearTables);
-    TableSegment UseNewQuery(Type targetType, Expression subQueryExpr, bool isClearTables);
+    void UseNewQuery(Type targetType, Expression subQueryExpr, bool isClearTables);
 
     void Union(string union, Type targetType, IQuery subQuery);
     void Union(string union, Type targetType, Expression subQueryExpr);
-    void UnionRecursive(string union, ICteQuery cteQueryObj, Expression selfSubQueryExpr);
+    void UnionRecursive(string union, Type targetType, Expression selfSubQueryExpr);
 
     void Join(string joinType, Expression joinOn);
     void Join(string joinType, Type newEntityType, Expression joinOn);

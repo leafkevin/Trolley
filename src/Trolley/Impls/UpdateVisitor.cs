@@ -620,17 +620,23 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
     public override SqlSegment VisitNew(SqlSegment sqlSegment)
     {
-        if (sqlSegment.Expression.HasParameter(out _))
+        var visitor = new HasParameterVisitor();
+        visitor.Visit(sqlSegment.Expression);
+        if (visitor.HasParameter)
             throw new NotSupportedException($"不支持的表达式访问,{sqlSegment.Expression}");
         //当作常量处理
-        return sqlSegment.ChangeValue(sqlSegment.Expression.Evaluate(), true);
+        var sqlType = visitor.HasVariable ? SqlType.Variable : SqlType.Constant;
+        return sqlSegment.Change(sqlSegment.Expression.Evaluate(), sqlType);
     }
     public override SqlSegment VisitMemberInit(SqlSegment sqlSegment)
     {
-        if (sqlSegment.Expression.HasParameter(out _))
+        var visitor = new HasParameterVisitor();
+        visitor.Visit(sqlSegment.Expression);
+        if (visitor.HasParameter)
             throw new NotSupportedException($"不支持的表达式访问,{sqlSegment.Expression}");
         //当作常量处理
-        return sqlSegment.ChangeValue(sqlSegment.Expression.Evaluate(), true);
+        var sqlType = visitor.HasVariable ? SqlType.Variable : SqlType.Constant;
+        return sqlSegment.Change(sqlSegment.Expression.Evaluate(), sqlType);
     }
     public override SqlSegment VisitMethodCall(SqlSegment sqlSegment)
     {

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 
 namespace Trolley;
@@ -33,7 +34,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         if (this.TryGetTableShardingInfo(entityType, TableShardingUsageMode.WriteOnly, out var tableShardingInfo))
             this.Tables[0].TableShardingInfo = tableShardingInfo;
     }
-    public virtual string BuildSql(ITheaCommand command, out List<SqlSegment> readerFields)
+    public virtual string BuildSql(ITheaCommand command, out List<ReaderField> readerFields)
     {
         readerFields = null;
         this.DbParameters = command.Parameters;
@@ -301,7 +302,10 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             }
             return sqlSegment.Change(builder.ToString());
         }
-        return this.Evaluate(sqlSegment);
+        var visitor = new HasParameterVisitor();
+        visitor.Visit(newExpr);
+        var sqlType = visitor.HasVariable ? SqlType.Variable : SqlType.Constant;
+        return sqlSegment.Change(ValueEvalutor.Evaluate(newExpr), sqlType);
     }
     public override SqlSegment VisitMemberInit(SqlSegment sqlSegment)
     {
@@ -335,12 +339,11 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     }
     public void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper, StringBuilder builder)
     {
-        sqlSegment = this.VisitAndDeferred(sqlSegment);
+        var result = this.Visit(sqlSegment);
         if (builder.Length > 0)
             builder.Append(',');
-        builder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName) + "=");
-        if (sqlSegment == SqlSegment.Null)
-            builder.Append("NULL");
-        else builder.Append(this.GetQuotedValue(sqlSegment));
+        builder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
+        if (result.IsNull) builder.Append("IS NULL");
+        else builder.Append($"={this.WrapSql(sqlSegment)}");
     }
 }

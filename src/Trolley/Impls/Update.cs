@@ -57,6 +57,14 @@ public class Update : IUpdate
     }
     #endregion
 
+    #region WithTableAliasTrailing
+    public virtual IUpdate WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        return this;
+    }
+    #endregion
+
     #region Set
     public virtual IContinuedUpdate Set(object updateObj)
         => this.Set(true, updateObj);
@@ -128,20 +136,11 @@ public class Updated : IUpdated
     #region WithRawSql
     public IUpdated WithLeadingSql(string rawSql)
     {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
         this.Visitor.WithLeadingSql(rawSql);
         return this;
     }
-    /// <summary>
-    /// 在最后面添加原始SQL片段，rawSql可以是任意SQL片段
-    /// </summary>
-    /// <param name="rawSql">原始SQL片段</param>
-    /// <returns>返回删除对象</returns>
     public IUpdated WithTrailingSql(string rawSql)
     {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
         this.Visitor.WithTrailingSql(rawSql);
         return this;
     }
@@ -782,7 +781,7 @@ public class ResultUpdated<TResult> : IBulkResultCommand<TResult>
         var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
 
         while (reader.Read())
-            result.Add((TResult)readerDeserializer.Invoke(reader));
+            result.Add((TResult)readerDeserializer.Invoke(reader, readerFields));
 
         reader.Dispose();
         command.Dispose();
@@ -803,7 +802,7 @@ public class ResultUpdated<TResult> : IBulkResultCommand<TResult>
         var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
 
         while (await reader.ReadAsync(cancellationToken))
-            result.Add((TResult)readerDeserializer.Invoke(reader));
+            result.Add((TResult)readerDeserializer.Invoke(reader, readerFields));
 
         await reader.DisposeAsync();
         await command.DisposeAsync();

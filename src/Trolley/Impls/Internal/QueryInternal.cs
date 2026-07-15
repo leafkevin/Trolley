@@ -47,16 +47,14 @@ public class QueryInternal
         if (selfSubQueryExpr == null)
             throw new ArgumentNullException(nameof(selfSubQueryExpr));
 
-        var cteQuery = new CteQuery<T>(this.DbContext, this.Visitor);
-        this.Visitor.UnionRecursive(" UNION", cteQuery, selfSubQueryExpr);
+        this.Visitor.UnionRecursive(" UNION", typeof(T), selfSubQueryExpr);
     }
     protected void UnionAllRecursiveInternal<T>(Expression<Func<IFromQuery, ICteQuery<T>, IQuery<T>>> selfSubQueryExpr)
     {
         if (selfSubQueryExpr == null)
             throw new ArgumentNullException(nameof(selfSubQueryExpr));
 
-        var cteQuery = new CteQuery<T>(this.DbContext, this.Visitor);
-        this.Visitor.UnionRecursive(" UNION ALL", cteQuery, selfSubQueryExpr);
+        this.Visitor.UnionRecursive(" UNION ALL", typeof(T), selfSubQueryExpr);
     }
     #endregion
 

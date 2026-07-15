@@ -364,11 +364,11 @@ public class ResultDeleted<TResult> : IBulkResultCommand<TResult>
         var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
 
         while (reader.Read())
-            result.Add((TResult)readerDeserializer.Invoke(reader));
+            result.Add((TResult)readerDeserializer.Invoke(reader, readerFields));
         while (reader.NextResult())
         {
             while (reader.Read())
-                result.Add((TResult)readerDeserializer.Invoke(reader));
+                result.Add((TResult)readerDeserializer.Invoke(reader, readerFields));
         }
 
         reader.Dispose();
@@ -390,11 +390,11 @@ public class ResultDeleted<TResult> : IBulkResultCommand<TResult>
         var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
 
         while (await reader.ReadAsync(cancellationToken))
-            result.Add((TResult)readerDeserializer.Invoke(reader));
+            result.Add((TResult)readerDeserializer.Invoke(reader, readerFields));
         while (await reader.NextResultAsync(cancellationToken))
         {
             while (await reader.ReadAsync(cancellationToken))
-                result.Add((TResult)readerDeserializer.Invoke(reader));
+                result.Add((TResult)readerDeserializer.Invoke(reader, readerFields));
         }
 
         await reader.DisposeAsync();

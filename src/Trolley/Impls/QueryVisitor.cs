@@ -226,7 +226,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     limit = this.offset.Value + this.limit.Value;
 
                 //生成分页COUNT语句，不需要添加OrderBy语句
-                if (this.IsNeedPaging)
+                if (this.IsNeedPaging && !this.IsManyShardingTables)
                 {
                     var fromSql = $"{tableSql}{others}";
                     if (!string.IsNullOrEmpty(this.GroupBySql))
@@ -570,67 +570,39 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             orderBy = "ORDER BY " + builder.ToString();
         }
         builder.Clear();
-        string sql = formatSql;
 
         //多分表场景同时有Offset和Limit语句分页，正常添加OrderBy语句，不添加Offset，Limit设置为Offset+Limit
         //多分表场景下，offset有值，limit没有值，不添加offset语句，在最外层UNION ALL后，再添加offset语句
         //多分表场景下有分页，offset/limit都有值，limit要加上offset的值，防止丢失数据，在最外层UNION ALL后，再添加offset语句
 
-        bool isFormated = false;
-        if (!string.IsNullOrEmpty(groupBy))
-        {
-            builder.Append($"SELECT {selectSql} FROM ({formatSql}) a");
-            builder.Append($" {groupBy}");
-            //TODO:有Having操作，要添加Having操作
-            sql = builder.ToString();
-            isFormated = true;
-        }
-        //TODO:此处的ReaderFields的字段，如果有join表，需要添加alias表名前缀
+
+
+        var tableSql = $"({formatSql})";
         if (this.offset.HasValue || this.limit.HasValue)
         {
+            //生成分页COUNT语句，不需要添加OrderBy语句
+            if (this.IsNeedPaging)
+                builder.Append($"SELECT COUNT(*) FROM {tableSql}");
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
             var pageSql = this.OrmProvider.GetPagingTemplate(this.offset, this.limit, orderBy);
-            pageSql = pageSql.Replace("/**fields**/", "*");
-            pageSql = pageSql.Replace("/**tables**/", $"({sql}) b");
-            pageSql = pageSql.Replace(" /**others**/", "");
-
-            builder.Clear();
-            if (this.IsNeedPaging && this.offset.HasValue && this.limit.HasValue)
-                builder.Append($"SELECT COUNT(*) FROM ({sql}) a;");
+            pageSql = pageSql.Replace("/**fields**/", selectSql);
+            pageSql = pageSql.Replace("/**tables**/", tableSql);
+            pageSql = pageSql.Replace(" /**others**/", groupBy);
+            //TODO:有Having操作，要添加Having操作
             builder.Append($"{pageSql}");
-            sql = builder.ToString();
         }
-        else if (!string.IsNullOrEmpty(orderBy))
+        else
         {
-            builder.Clear();
-            if (isFormated) builder.Append(sql);
-            else builder.Append($"SELECT * FROM ({sql}) a");
-            builder.Append($" {orderBy}");
-            sql = builder.ToString();
+            //生成查询数据语句时，需要添加OrderBy语句
+            builder.Append($"SELECT {selectSql} FROM {tableSql}");
+            if (!string.IsNullOrEmpty(groupBy))
+                builder.Append($" {groupBy}");
+            //TODO:有Having操作，要添加Having操作
+
+            if (!string.IsNullOrEmpty(orderBy))
+                builder.Append($" {orderBy}");
         }
-        else if (this.HasAggFields)
-        {
-            builder.Clear();
-            //TODO:
-            for (int i = 0; i < this.ReaderFields.Count; i++)
-            {
-                var readerField = this.ReaderFields[i];
-                string fieldName = null;
-                if (readerField.IsAggField)
-                {
-                    fieldName = FieldNameFetcher(readerField);
-                    fieldName = $"{readerField.AggFunc}({fieldName}) AS {fieldName}";
-                }
-                else fieldName = readerField.Value.ToString();
-                if (i > 0) builder.Append(',');
-                builder.Append(fieldName);
-            }
-            selectSql = builder.ToString();
-            builder.Clear();
-            builder.Append($"SELECT {selectSql} FROM ({sql}) a");
-            sql = builder.ToString();
-        }
-        builder.Clear();
+        var sql = builder.ToString();
         return sql;
     }
     public virtual string BuildCteTableSql(string tableName, out List<ReaderField> readerFields)

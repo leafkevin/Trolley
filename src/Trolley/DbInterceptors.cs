@@ -25,7 +25,7 @@ public interface IDbCommandInterceptor
     ValueTask NonQueryExecutingAsync(ITheaCommand command, CancellationToken cancellationToken = default);
     int NonQueryExecuted(ITheaCommand command, int result);
     ValueTask<int> NonQueryExecutedAsync(ITheaCommand command, int result, CancellationToken cancellationToken = default);
-    int NonQueryExecuted(ITheaCommand command, int result);
+    //int NonQueryExecuted(ITheaCommand command, int result);
 }
 
 

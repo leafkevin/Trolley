@@ -19,9 +19,9 @@ public interface IUpdateVisitor : ICommandContext, IDisposable
     ActionMode ActionMode { get; set; }
     List<TableSegment> ShardingTables { get; set; }
 
-    string BuildSql(ITheaCommand command, out List<SqlSegment> readerFields);
+    string BuildSql(ITheaCommand command, out List<ReaderField> readerFields);
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>, Action<IDataParameterCollection,
-        StringBuilder, DbContext, string, object, string>, List<SqlSegment>) BuildSetBulk(ITheaCommand command);
+        StringBuilder, DbContext, string, object, string>, List<ReaderField>) BuildSetBulk(ITheaCommand command);
 
     void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
     void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
@@ -52,9 +52,9 @@ public interface IUpdateVisitor : ICommandContext, IDisposable
     void OrById(object whereKey);
     void OrByIds(IEnumerable whereKeys);
     void Or(Expression whereExpr);
- 
+
     void WithLeadingSql(string rawSql);
-    void WithTrailingSql(string rawSql); 
+    void WithTrailingSql(string rawSql);
 
     DataTable ToDataTable(string tableName, IEnumerable entities, List<MemberMap> memberMappers, List<Func<object, object>> valueGetters);
     (List<MemberMap>, List<Func<object, object>>) GetRefMemberMappers(Type parameterType, EntityMap entityMapper, object parameterSample, bool isUpdate = false);
