@@ -1193,7 +1193,7 @@ public static class RepositoryHelper
         var entityType = typeof(TTarget);
         var deserializer = reader.GetReaderDeserializer(entityType, dbContext, readerFields);
         while (reader.Read())
-            result.Add((TTarget)deserializer.Invoke(reader));
+            result.Add((TTarget)deserializer.Invoke(reader, readerFields));
         return result;
     }
     public static async Task<List<TEntity>> ReadTypedListAsync<TEntity>(ITheaDataReader reader, DbContext dbContext, List<ReaderField> readerFields, CancellationToken cancellationToken)
@@ -1202,7 +1202,7 @@ public static class RepositoryHelper
         var entityType = typeof(TEntity);
         var deserializer = reader.GetReaderDeserializer(entityType, dbContext, readerFields);
         while (await reader.ReadAsync(cancellationToken))
-            result.Add((TEntity)deserializer.Invoke(reader));
+            result.Add((TEntity)deserializer.Invoke(reader, readerFields));
         return result;
     }
 
@@ -1431,7 +1431,7 @@ public static class RepositoryHelper
         return Expression.Lambda<Func<ITheaDataReader, List<ReaderField>, object>>(Expression.Block(blockParameters,
             blockBodies), readerExpr, readerFieldsExpr).Compile();
     }
-     public static Func<ITheaDataReader, List<ReaderField>, object> CreateReaderEntityDeserializer(Type targetType, DbContext dbContext, ITheaDataReader reader, List<ReaderField> readerFields)
+    public static Func<ITheaDataReader, List<ReaderField>, object> CreateReaderEntityDeserializer(Type targetType, DbContext dbContext, ITheaDataReader reader, List<ReaderField> readerFields)
     {
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();

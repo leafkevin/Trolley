@@ -2392,8 +2392,6 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     }
     public virtual SqlSegment ToEnumString(SqlSegment sqlSegment)
     {
-        if (sqlSegment.SqlType != SqlType.OnlyField || sqlSegment.MemberMapper == null)
-            return sqlSegment;
         if (sqlSegment.MappedTargetType == typeof(string))
             return sqlSegment;
 
