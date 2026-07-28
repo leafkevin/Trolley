@@ -29,7 +29,7 @@ public interface IOrmDbFactory
     /// <summary>
     /// 拦截器，默认为null
     /// </summary>
-    DbInterceptors DbInterceptors { get; }
+    IDbInterceptor DbInterceptor { get; }
     /// <summary>
     /// 默认全局配置
     /// </summary>
@@ -54,6 +54,7 @@ public interface IOrmDbFactory
     bool TryGetTableShardingProvider(OrmProviderType ormProviderType, out ITableShardingProvider tableShardingProvider);
 
     void AddTypeHandler(ITypeHandler typeHandler);
+    void UseInterceptor(IDbInterceptor interceptor);
 
     IRepository Create(string dbKey = null);
     void Build();

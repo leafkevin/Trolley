@@ -39,6 +39,8 @@ public static class Extensions
             => builder.UseTableSharding(ormProviderType, new TTableShardingConfiguration());
         public OrmDbFactoryBuilder UseTableSharding<TTableShardingConfiguration>(string dbKey) where TTableShardingConfiguration : class, ITableShardingConfiguration, new()
             => builder.UseTableSharding(dbKey, new TTableShardingConfiguration());
+        public OrmDbFactoryBuilder UseInterceptor<TDbInterceptor>() where TDbInterceptor : class, IDbInterceptor, new()
+            => builder.UseInterceptor(new TDbInterceptor());
     }
     extension(IEntityMapProvider entityMapProvider)
     {
@@ -251,7 +253,7 @@ public static class Extensions
             if (fieldType == targetType)
                 return (TValue)reader.GetValue(0);
 
-            var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext.Options);
+            var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext.DbOptions);
             return (TValue)valueGetter.Invoke(reader.GetValue(0));
         }
         public Func<ITheaDataReader, object> GetReaderDeserializer(Type targetType, DbContext dbContext)
@@ -263,7 +265,7 @@ public static class Extensions
                     return reader => reader.GetValue(0);
                 else
                 {
-                    var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext.Options);
+                    var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext.DbOptions);
                     return reader => valueGetter.Invoke(reader.GetValue(0));
                 }
             }
@@ -318,7 +320,7 @@ public static class Extensions
                             return (reader, readerFields) => typeHandler.Parse(readerFields[0].ReaderType, reader.GetValue(0));
                         else
                         {
-                            var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext.Options);
+                            var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext.DbOptions);
                             return (reader, readerFields) => valueGetter.Invoke(reader.GetValue(0));
                         }
                     }

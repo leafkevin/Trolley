@@ -8,6 +8,7 @@ namespace Trolley;
 public enum CommandSqlType
 {
     Select,
+    SelectScalar,
     RawExecute,
     Insert,
     BulkInsert,
@@ -24,6 +25,7 @@ public interface ITheaCommand : IDisposable, IAsyncDisposable
     string CommandId { get; }
     IDbCommand BaseCommand { get; }
     CommandSqlType CommandSqlType { get; }
+    IDbInterceptor DbInterceptor { get; set; }
 
     string CommandText { get; set; }
     int CommandTimeout { get; set; }
@@ -31,9 +33,6 @@ public interface ITheaCommand : IDisposable, IAsyncDisposable
     ITheaConnection Connection { get; set; }
     IDataParameterCollection Parameters { get; }
     ITheaTransaction Transaction { get; set; }
-
-    //Action<CommandEventArgs> OnExecuting { get; set; }
-    //Action<CommandCompletedEventArgs> OnExecuted { get; set; }
 
     int ExecuteNonQuery(CommandSqlType sqlType);
     Task<int> ExecuteNonQueryAsync(CommandSqlType sqlType, CancellationToken cancellationToken = default);

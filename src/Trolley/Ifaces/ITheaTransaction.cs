@@ -1,5 +1,4 @@
-﻿using System;
-using System.Data;
+﻿using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,6 +9,8 @@ public interface ITheaTransaction
     string TransactionId { get; }
     ITheaConnection Connection { get; }
     IDbTransaction BaseTransaction { get; }
+    IDbInterceptor DbInterceptor { get; set; }
+
     void Commit();
     Task CommitAsync(CancellationToken cancellationToken = default);
     void Rollback();

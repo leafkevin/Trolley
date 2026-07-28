@@ -4,7 +4,7 @@ namespace Trolley;
 
 public sealed class OrmDbFactoryBuilder
 {
-    private readonly IOrmDbFactory dbFactory = new OrmDbFactory();
+    private readonly IOrmDbFactory dbFactory = OrmDbFactory.Instance;
 
     public OrmDbFactoryBuilder Register(OrmProviderType ormProviderType, string dbKey, Action<OrmDatabaseBuilder> databaseInitializer, bool isDefaultDatabase = false)
     {
@@ -101,12 +101,9 @@ public sealed class OrmDbFactoryBuilder
         return this.UseTableSharding(ormProviderType, configuration.Configure);
     }
 
-    public OrmDbFactoryBuilder UseInterceptors(Action<DbInterceptors> filterInitializer)
+    public OrmDbFactoryBuilder UseInterceptor(IDbInterceptor interceptor)
     {
-        if (filterInitializer == null)
-            throw new ArgumentNullException(nameof(filterInitializer));
-
-        filterInitializer.Invoke(this.dbFactory.DbInterceptors);
+        this.dbFactory.UseInterceptor(interceptor);
         return this;
     }
     public OrmDbFactoryBuilder UseTypeHandler(ITypeHandler typeHandler)

@@ -105,7 +105,7 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
 
     void SelectGrouping();
     void SelectDefault(Expression defaultExpr);
-    void SelectRaw(Type targetType, string rawFields);
+    void SelectRaw(Type targetType, string rawFields, string aggFunc = null);
     void Select(Expression selectExpr);
     void Select(string sqlFormat, Expression selectExpr);
     void SelectTo(Type targetType, Expression specialMemberSelector = null);

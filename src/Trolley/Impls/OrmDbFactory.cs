@@ -7,6 +7,8 @@ namespace Trolley;
 
 public sealed class OrmDbFactory : IOrmDbFactory
 {
+    public static OrmDbFactory Instance = new();
+
     private readonly ConcurrentDictionary<string, TheaDatabase> databases = new();
     private readonly ConcurrentDictionary<OrmProviderType, IOrmProvider> ormProviders = new();
     private readonly ConcurrentDictionary<string, IEntityMapProvider> entityMapProviders = new();
@@ -21,15 +23,15 @@ public sealed class OrmDbFactory : IOrmDbFactory
     private List<IOrmProvider> allOrmProviders = null;
     private List<IEntityMapProvider> allEntityMapProviders = null;
     private List<ITableShardingProvider> allTableShardingProviders = null;
-    private DbInterceptors dbInterceptors = new DbInterceptors();
-    private OrmDbFactoryOptions options = new OrmDbFactoryOptions();
+    private IDbInterceptor interceptor = null;
+    private OrmDbFactoryOptions options = new OrmDbFactoryOptions();    
 
     public Delegate DbKeySelector => this.dbKeySelector;
     public List<TheaDatabase> Databases => this.allDatabases;
     public List<IOrmProvider> OrmProviders => this.allOrmProviders;
     public List<IEntityMapProvider> EntityMapProviders => this.allEntityMapProviders;
     public List<ITableShardingProvider> TableShardingProviders => this.allTableShardingProviders;
-    public DbInterceptors DbInterceptors => this.dbInterceptors;
+    public IDbInterceptor DbInterceptor => this.interceptor;
     public OrmDbFactoryOptions Options => this.options;
 
     public void Register(TheaDatabase database)
@@ -122,6 +124,12 @@ public sealed class OrmDbFactory : IOrmDbFactory
         var typeHandlerType = typeHandler.GetType();
         this.typeHandlers.AddOrUpdate(typeHandlerType, typeHandler, (o, k) => typeHandler);
     }
+    public void UseInterceptor(IDbInterceptor interceptor)
+    {
+        if (interceptor == null)
+            throw new ArgumentNullException(nameof(interceptor));
+        this.interceptor = interceptor;
+    }
     public IRepository Create(string dbKey = null)
     {
         if (string.IsNullOrEmpty(dbKey))
@@ -137,9 +145,9 @@ public sealed class OrmDbFactory : IOrmDbFactory
             Database = database,
             //mysql默认Schema是数据库名，暂时此处为null,pgsql的默认Schema是public，sqlserver的默认Schema是dbo
             DefaultTableSchema = database.OrmProvider.DefaultTableSchema,
-            DbInterceptors = this.DbInterceptors
+            DbInterceptor = this.interceptor
         };
-        this.options.CopyTo(dbContext.Options);
+        this.options.CopyTo(dbContext.DbOptions);
         return database.OrmProvider.CreateRepository(dbContext);
     }
     public void Build()

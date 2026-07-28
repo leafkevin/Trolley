@@ -172,11 +172,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (this.WhereBuilder != null && this.WhereBuilder.Length > 0)
             builder.Append($" WHERE {this.WhereBuilder.ToString()}");
         //有多分表还有Group By操作，每个分表语句中做Group By操作，Union All语句后，还要再做Group By操作
-        if (hasGroupBy)
-        {
-            if (this.IsManyShardingTables) this.IsNeedChangeUnionShardingTables = true;
-            builder.Append($" GROUP BY {this.GroupBySql}");
-        }
+        if (hasGroupBy) builder.Append($" GROUP BY {this.GroupBySql}");
         //有多分表还有Group By+Having操作，每个分表语句中只做Group By操作，不做Having操作，在Union All语句后，再做Group By+Having操作
         if (!this.IsManyShardingTables && !string.IsNullOrEmpty(this.HavingSql))
             builder.Append($" HAVING {this.HavingSql}");
@@ -1366,15 +1362,23 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             return;
         this.Select(defaultExpr);
     }
-    public virtual void SelectRaw(Type targetType, string rawFields)
+    public virtual void SelectRaw(Type targetType, string rawFields, string aggFunc = null)
     {
         //原始SQL，SELECT COUNT(*)，SELECT * 等
-        this.ReaderFields = [new ReaderField
+        var readerField = new ReaderField
         {
             FieldType = ReaderFieldType.RawSql,
             ReaderType = targetType,
             Value = rawFields
-        }];
+        };
+        if (!string.IsNullOrEmpty(aggFunc))
+        {
+            //聚合字段，都是Expression类型
+            readerField.FieldType = ReaderFieldType.Expression;
+            readerField.IsAggField = true;
+            readerField.AggFunc = aggFunc;
+        }
+        this.ReaderFields = [readerField];
     }
     public virtual void Select(Expression selectExpr)
     {
@@ -1965,18 +1969,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             builder.Append($" AS {readerField.AliasName}");
                         }
                         break;
-                    default:
-                        //延迟方法调用字段，不需要加别名
-                        if (readerField.IsDeferredFields)
-                            builder.Append(readerField.Value.ToString());
-                        else
+                    case ReaderFieldType.Expression:
+                        readerField.IsNeedAlias = true;
+                        readerField.AliasName = this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
+                        if (this.IsManyShardingTables && readerField.IsAggField)
                         {
-                            if (this.IsManyShardingTables && readerField.IsAggField && readerField.IsAvgField)
+                            var aliasName = readerField.TargetMember.Name;
+                            if (readerField.IsAvgField)
                             {
-                                var aliasName = readerField.TargetMember.Name;
-                                readerField.IsNeedAlias = true;
-                                readerField.AliasName = this.OrmProvider.GetFieldName(aliasName);
-
                                 var fieldName1 = readerField.Fields[0].Value.ToString();
                                 var fieldNamd2 = readerField.Fields[1].Value.ToString();
                                 var aliasName1 = this.OrmProvider.GetFieldName($"{aliasName}_SUM_VALUE");
@@ -1988,15 +1988,34 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             else
                             {
                                 builder.Append(readerField.Value.ToString());
-                                //生成SQL的时候，才加上AS别名
-                                if (this.IsNeedAlias(readerField))
-                                {
-                                    readerField.IsNeedAlias = true;
-                                    //多分表且单分组字段非字段场景，已经设置别名为Grouping
-                                    if (string.IsNullOrEmpty(readerField.AliasName))
-                                        readerField.AliasName = this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
-                                    builder.Append($" AS {readerField.AliasName}");
-                                }
+                                builder.Append($" AS {aliasName}");
+                            }
+                        }
+                        else
+                        {
+                            builder.Append(readerField.Value.ToString());
+
+                            readerField.IsNeedAlias = true;
+                            //多分表且单分组字段非字段场景，已经设置别名为Grouping
+                            readerField.AliasName = this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
+                            builder.Append($" AS {readerField.AliasName}");
+                        }
+                        break;
+                    default:
+                        //延迟方法调用字段，不需要加别名
+                        if (readerField.IsDeferredFields)
+                            builder.Append(readerField.Value.ToString());
+                        else
+                        {
+                            builder.Append(readerField.Value.ToString());
+                            //生成SQL的时候，才加上AS别名
+                            if (this.IsNeedAlias(readerField))
+                            {
+                                readerField.IsNeedAlias = true;
+                                //多分表且单分组字段非字段场景，已经设置别名为Grouping
+                                if (string.IsNullOrEmpty(readerField.AliasName))
+                                    readerField.AliasName = this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
+                                builder.Append($" AS {readerField.AliasName}");
                             }
                         }
                         break;
@@ -2012,7 +2031,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             {
                 case ReaderFieldType.Field:
                     //不引用任何字段，没必要访问数据库
-                    body = readerField.Value.ToString();
                     if (readerField.IsDeferredFields)
                     {
                         if (readerField.Fields == null)
@@ -2020,10 +2038,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         this.AddSelectFieldsSql(builder, readerField.Fields);
                     }
                     //TODO: 只有参数字段，不做数据库查询，否则，才使用参数
-                    else body = readerField.Value.ToString();
-                    builder.Append(body);
-                    if (readerField.IsNeedAlias)
-                        builder.Append($" AS {readerField.AliasName}");
+                    else builder.Append(readerField.Value.ToString());
                     break;
                 case ReaderFieldType.Expression:
                     if (this.IsManyShardingTables && readerField.IsAggField)

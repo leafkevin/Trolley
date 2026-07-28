@@ -556,7 +556,7 @@ public class MySqlCreateVisitor : CreateVisitor
             else
             {
                 var targetType = memberMapper.MappedTargetType;
-                var valueGetter = this.OrmProvider.GetParameterValueGetter(dbFieldValue.GetType(), targetType, false, this.DbContext.Options);
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(dbFieldValue.GetType(), targetType, false, this.DbContext.DbOptions);
                 dbFieldValue = valueGetter.Invoke(dbFieldValue);
             }
 

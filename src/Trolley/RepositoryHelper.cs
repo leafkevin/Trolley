@@ -133,7 +133,7 @@ public static class RepositoryHelper
         else if (parameterType.ToUnderlyingType() != memberMapper.MappedTargetType)
         {
             var ormProvider = dbContext.OrmProvider;
-            var valueGetter = ormProvider.GetParameterValueGetter(parameterType, memberMapper.MappedTargetType, !memberMapper.IsRequired, dbContext.Options);
+            var valueGetter = ormProvider.GetParameterValueGetter(parameterType, memberMapper.MappedTargetType, !memberMapper.IsRequired, dbContext.DbOptions);
             if (memberValueExpr.Type != typeof(object))
                 memberValueExpr = Expression.Convert(memberValueExpr, typeof(object));
             memberValueExpr = Expression.Invoke(Expression.Constant(valueGetter), memberValueExpr);
@@ -634,7 +634,7 @@ public static class RepositoryHelper
                 var fieldValueType = dict[itemKey].GetType();
                 if (fieldValueType.ToUnderlyingType() != targetType)
                 {
-                    var myValueGetter = ormProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, dbContext.Options);
+                    var myValueGetter = ormProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, dbContext.DbOptions);
                     valueGetter = insertObj => myValueGetter.Invoke(insertObj[itemKey]);
                 }
                 else valueGetter = insertObj => insertObj[itemKey];
@@ -1661,7 +1661,7 @@ public static class RepositoryHelper
         }
         else if (targetType != fieldType)
         {
-            var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext.Options);
+            var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext.DbOptions);
             targetValueExpr = Expression.Invoke(Expression.Constant(valueGetter), readerValueExpr);
         }
         else targetValueExpr = readerValueExpr;

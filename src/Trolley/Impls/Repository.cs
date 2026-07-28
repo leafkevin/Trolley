@@ -373,13 +373,13 @@ public class Repository : IRepository
         => await this.DbContext.RollbackAsync(cancellationToken);
     public virtual IRepository WithTimeout(int seconds)
     {
-        this.DbContext.Options.CommandTimeout = seconds;
+        this.DbContext.DbOptions.CommandTimeout = seconds;
         return this;
     }
     public virtual IRepository WithOptions(Action<OrmDbFactoryOptions> optionsInitializer)
     {
         if (optionsInitializer == null) throw new ArgumentNullException(nameof(optionsInitializer));
-        optionsInitializer.Invoke(this.DbContext.Options);
+        optionsInitializer.Invoke(this.DbContext.DbOptions);
         return this;
     }
     //抛异常的时候，会走到析构函数，但是Transaction，没有提交也没有回滚

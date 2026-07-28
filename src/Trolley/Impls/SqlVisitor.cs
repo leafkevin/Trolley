@@ -19,8 +19,8 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     public IEntityMapProvider EntityMapProvider => this.DbContext.EntityMapProvider;
     public ITableShardingProvider ShardingProvider => this.DbContext.TableShardingProvider;
     public string DefaultTableSchema => this.DbContext.DefaultTableSchema;
-    public bool IsConstantParameterized => this.DbContext.Options.IsConstantParameterized;
-    public string UserParameterPrefix => this.DbContext.Options.UserParameterPrefix;
+    public bool IsConstantParameterized => this.DbContext.DbOptions.IsConstantParameterized;
+    public string UserParameterPrefix => this.DbContext.DbOptions.UserParameterPrefix;
 
     public ITheaCommand Command { get; set; }
     public IDataParameterCollection DbParameters { get; set; }
@@ -450,7 +450,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                         var segmentType = dbFieldValue.GetType();
                         if (segmentType != targetType)
                         {
-                            var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext.Options);
+                            var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext.DbOptions);
                             dbFieldValue = valueGetter.Invoke(dbFieldValue);
                         }
                         dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
@@ -511,7 +511,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     var segmentType = dbFieldValue.GetType();
                     if (segmentType != targetType)
                     {
-                        var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext.Options);
+                        var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext.DbOptions);
                         dbFieldValue = valueGetter.Invoke(dbFieldValue);
                     }
                     dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
@@ -694,7 +694,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
 
         if (this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formatter))
         {
-            sqlSegment = formatter.Invoke(this, methodCallExpr, methodCallExpr.Object, sqlSegment.DeferredOperations, methodCallExpr.Arguments.ToArray());
+            sqlSegment = formatter.Invoke(this, methodCallExpr, sqlSegment.DeferredOperations);
             //sqlSegment.TargetType = methodCallExpr.Type;
             return sqlSegment;
         }
@@ -909,7 +909,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                 {
                     if (!this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var sqlFormatter))
                         throw new NotImplementedException($"当前Provider:{this.OrmProvider.GetType().FullName}未实现方法IsNull");
-                    sqlSegment = sqlFormatter.Invoke(this, methodCallExpr, null, null, methodCallExpr.Arguments.ToArray());
+                    sqlSegment = sqlFormatter.Invoke(this, methodCallExpr, sqlSegment.DeferredOperations);
                 }
                 else
                 {
@@ -1815,7 +1815,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
             if (!this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formater))
                 throw new NotImplementedException($"当前OrmProvider未实现的字符串连接表达式: {methodCallExpr}");
             //返回的SQL表达式中直接拼接好
-            result = formater.Invoke(this, methodCallExpr, null, null, binaryExpr.Left, binaryExpr.Right);
+            result = formater.Invoke(this, methodCallExpr, sqlSegment.DeferredOperations);
             return true;
         }
         result = default;
@@ -2148,7 +2148,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                                 throw new InvalidOperationException($"参数字典中成员{memberMapper.MemberName}对应的值不能为空");
 
                             typedValueGetter = this.OrmProvider.GetParameterValueGetter(
-                                fieldValue.GetType(), memberMapper.MappedTargetType, true, this.DbContext.Options);
+                                fieldValue.GetType(), memberMapper.MappedTargetType, true, this.DbContext.DbOptions);
                             valueGetter = value =>
                             {
                                 var dict = value as IDictionary<string, object>;
@@ -2160,7 +2160,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                         else
                         {
                             typedValueGetter = this.OrmProvider.GetParameterValueGetter(dict[itemKey].GetType(),
-                                memberMapper.MappedTargetType, !memberMapper.IsRequired, this.DbContext.Options);
+                                memberMapper.MappedTargetType, !memberMapper.IsRequired, this.DbContext.DbOptions);
                             valueGetter = value =>
                             {
                                 var dict = value as IDictionary<string, object>;
@@ -2203,7 +2203,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     {
                         Func<object, object> typedValueGetter = null;
                         typedValueGetter = this.OrmProvider.GetParameterValueGetter(memberInfo.GetMemberType(),
-                            memberMapper.MappedTargetType, !memberMapper.IsRequired, this.DbContext.Options);
+                            memberMapper.MappedTargetType, !memberMapper.IsRequired, this.DbContext.DbOptions);
                         valueGetter = value =>
                         {
                             var fieldValue = ValueEvalutor.Evaluate(memberInfo, value);

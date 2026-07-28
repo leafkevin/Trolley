@@ -29,7 +29,7 @@ public class OrmDbFactoryOptions
     /// </summary>
     public DateTimeKind DefaultDateTimeKind { get; set; } = DateTimeKind.Local;
 
-    public void CopyTo(OrmDbFactoryOptions target)
+    internal void CopyTo(OrmDbFactoryOptions target)
     {
         if (target == null) throw new ArgumentNullException(nameof(target));
 

@@ -20,12 +20,12 @@ public class QueryBase : QueryInternal, IQueryBase
     #endregion
 
     #region Count
-    public virtual int Count() => this.QueryScalar<int>("COUNT(*)");
+    public virtual int Count() => this.QueryScalar<int>("COUNT(*)", "SUM");
     public virtual async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryScalarAsync<int>("COUNT(*)", cancellationToken);
-    public virtual long LongCount() => this.QueryScalar<long>("COUNT(*)");
+        => await this.QueryScalarAsync<int>("COUNT(*)", "SUM", cancellationToken);
+    public virtual long LongCount() => this.QueryScalar<long>("COUNT(*)", "SUM");
     public virtual async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryScalarAsync<long>("COUNT(*)", cancellationToken);
+        => await this.QueryScalarAsync<long>("COUNT(*)", "SUM", cancellationToken);
     #endregion
 
     #region Count/Aggregate Internal
@@ -169,9 +169,9 @@ public class QueryBase : QueryInternal, IQueryBase
     #endregion
 
     #region QueryScalar
-    protected TTarget QueryScalar<TTarget>(string aggSql)
+    protected TTarget QueryScalar<TTarget>(string aggSql, string aggFunc)
     {
-        this.Visitor.SelectRaw(typeof(TTarget), aggSql);
+        this.Visitor.SelectRaw(typeof(TTarget), aggSql, aggFunc);
         return this.DbContext.QueryScalar<TTarget>(this.Visitor);
     }
     protected TTarget QueryScalar<TTarget>(string aggSqlFormat, Expression fieldExpr)
@@ -179,9 +179,9 @@ public class QueryBase : QueryInternal, IQueryBase
         this.Visitor.Select(aggSqlFormat, fieldExpr);
         return this.DbContext.QueryScalar<TTarget>(this.Visitor);
     }
-    protected async Task<TTarget> QueryScalarAsync<TTarget>(string aggSql, CancellationToken cancellationToken = default)
+    protected async Task<TTarget> QueryScalarAsync<TTarget>(string aggSql, string aggFunc, CancellationToken cancellationToken = default)
     {
-        this.Visitor.SelectRaw(typeof(TTarget), aggSql);
+        this.Visitor.SelectRaw(typeof(TTarget), aggSql, aggFunc);
         return await this.DbContext.QueryScalarAsync<TTarget>(this.Visitor, cancellationToken);
     }
     protected async Task<TTarget> QueryScalarAsync<TTarget>(string aggSqlFormat, Expression fieldExpr, CancellationToken cancellationToken = default)

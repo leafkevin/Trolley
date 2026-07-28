@@ -9,23 +9,22 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public sealed class DbContext
+public class DialectProvider : IDialectProvider
 {
-    //默认配置的副本，方便单次设置有效
-    private OrmDbFactoryOptions options = new OrmDbFactoryOptions();
+    private string dbKey => this.DbContext.DbKey;
+    private string ConnectionString => this.DbContext.ConnectionString;
+    private TheaDatabase database => this.DbContext.Database;
+    private ITheaConnection connection => this.DbContext.Connection;
+    private ITheaTransaction transaction => this.DbContext.Transaction;
+    private string defaultTableSchema => this.DbContext.DbKey;
+    private IOrmProvider ormProvider => this.database.OrmProvider;
+    private IEntityMapProvider entityMapProvider => this.database.EntityMapProvider;
+    private ITableShardingProvider tableShardingProvider => this.database.TableShardingProvider;
+    private IDbInterceptor dbInterceptor => this.DbContext.DbInterceptor;
+    private OrmDbFactoryOptions dbOptions => this.DbContext.DbOptions;
 
     #region Properties
-    public string DbKey { get; internal set; }
-    public string ConnectionString { get; internal set; }
-    public TheaDatabase Database { get; internal set; }
-    public ITheaConnection Connection { get; set; }
-    public ITheaTransaction Transaction { get; set; }
-    public string DefaultTableSchema { get; internal set; }
-    public IOrmProvider OrmProvider => this.Database.OrmProvider;
-    public IEntityMapProvider EntityMapProvider => this.Database.EntityMapProvider;
-    public ITableShardingProvider TableShardingProvider => this.Database.TableShardingProvider;
-    public IDbInterceptor DbInterceptor { get; internal set; }
-    public OrmDbFactoryOptions DbOptions => this.options;
+    public DbContext DbContext { get; set; }
     #endregion
 
     #region UseMasterCommand/UseSlaveCommand
@@ -34,21 +33,20 @@ public sealed class DbContext
         bool isNeedClose = false;
         ITheaConnection connection;
         ITheaCommand command;
-        if (this.Transaction != null)
-            connection = this.Connection;
+        if (this.transaction != null)
+            connection = this.connection;
         else
         {
             isNeedClose = true;
-            var connString = this.ConnectionString ?? this.Database.Select();
+            var connString = this.ConnectionString ?? this.database.Select();
             connection = this.CreateConnection(connString);
         }
-        command = commandContext?.Command ?? this.OrmProvider.CreateCommand();
+        command = commandContext?.Command ?? this.ormProvider.CreateCommand();
         command.Connection = connection;
         command.CommandType = CommandType.Text;
-        command.CommandTimeout = this.options.CommandTimeout;
-        command.Transaction = this.Transaction;
-        command.OnExecuting = this.DbInterceptor.OnCommandExecuting;
-        command.OnExecuted = this.DbInterceptor.OnCommandExecuted;
+        command.CommandTimeout = this.dbOptions.CommandTimeout;
+        command.Transaction = this.transaction;
+        command.DbInterceptor = this.dbInterceptor;
         return (isNeedClose, connection, command);
     }
     public (bool, ITheaConnection, ITheaCommand) UseSlaveCommand(ICommandContext commandContext = null)
@@ -56,40 +54,32 @@ public sealed class DbContext
         bool isNeedClose = false;
         ITheaConnection connection;
         ITheaCommand command;
-        if (this.Transaction != null)
-            connection = this.Connection;
+        if (this.transaction != null)
+            connection = this.connection;
         else
         {
             isNeedClose = true;
-            var connString = this.ConnectionString ?? this.Database.SelectSlave();
+            var connString = this.ConnectionString ?? this.database.SelectSlave();
             connection = this.CreateConnection(connString);
         }
-        command = commandContext?.Command ?? this.OrmProvider.CreateCommand();
+        command = commandContext?.Command ?? this.ormProvider.CreateCommand();
         command.Connection = connection;
         command.CommandType = CommandType.Text;
-        command.CommandTimeout = this.options.CommandTimeout;
-        command.Transaction = this.Transaction;
-        command.OnExecuting = this.DbInterceptor.OnCommandExecuting;
-        command.OnExecuted = this.DbInterceptor.OnCommandExecuted;
+        command.CommandTimeout = this.dbOptions.CommandTimeout;
+        command.Transaction = this.transaction;
+        command.DbInterceptor = this.dbInterceptor;
         return (isNeedClose, connection, command);
     }
     private ITheaConnection CreateConnection(string connectionString)
     {
-        var connection = this.OrmProvider.CreateConnection(this.DbKey, connectionString);
-        connection.OnOpening = this.DbInterceptor.OnConnectionOpening;
-        connection.OnOpened = this.DbInterceptor.OnConnectionOpened;
-        connection.OnClosing = this.DbInterceptor.OnConnectionClosing;
-        connection.OnClosed = this.DbInterceptor.OnConnectionClosed;
-        connection.OnTransactionCreated = this.DbInterceptor.OnTransactionCreated;
-        connection.OnTransactionCompleted = this.DbInterceptor.OnTransactionCompleted;
-
-        this.DbInterceptor.OnConnectionCreated?.Invoke(new ConectionEventArgs
+        var isNext = this.dbInterceptor?.ConnectionCreating() ?? true;
+        if (isNext)
         {
-            DbKey = this.DbKey,
-            ConnectionId = connection.ConnectionId,
-            ConnectionString = connectionString
-        });
-        return connection;
+            var connection = this.ormProvider.CreateConnection(this.dbKey, connectionString);
+            connection.DbInterceptor = this.dbInterceptor;
+            return connection;
+        }
+        return null;
     }
     #endregion
 
@@ -181,7 +171,7 @@ public sealed class DbContext
     public TResult QueryScalar<TResult>(IQueryVisitor visitor)
     {
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor);
-        (var sql, _) = this.BuildSql(visitor);
+        (var sql, var readerFields) = this.BuildSql(visitor);
         sql = this.BuildScalarShardingSql(visitor, sql);
         command.CommandText = sql;
 
@@ -347,7 +337,7 @@ public sealed class DbContext
         connection.Open();
         var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
-        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this);
+        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext);
         var result = readerInitializer.Invoke(reader, deserializer);
         reader.Dispose();
 
@@ -363,7 +353,7 @@ public sealed class DbContext
         await connection.OpenAsync(cancellationToken);
         var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this);
+        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext);
         var result = await readerInitializer.Invoke(reader, deserializer, cancellationToken);
         await reader.DisposeAsync();
 
@@ -379,7 +369,7 @@ public sealed class DbContext
         connection.Open();
         var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
-        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this);
+        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext);
         var result = readerInitializer.Invoke(reader, deserializer);
         reader.Dispose();
 
@@ -395,7 +385,7 @@ public sealed class DbContext
         await connection.OpenAsync(cancellationToken);
         var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this);
+        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext);
         var result = await readerInitializer.Invoke(reader, deserializer, cancellationToken);
         await reader.DisposeAsync();
 
@@ -423,8 +413,8 @@ public sealed class DbContext
             throw new NotSupportedException("不支持的参数类型，此方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
 
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        var commandInitializer = RepositoryHelper.BuildQueryRawSqlCommandInitializer(this.OrmProvider, rawSql, parameters);
-        commandInitializer.Invoke(command.Parameters, this.OrmProvider, parameters);
+        var commandInitializer = RepositoryHelper.BuildQueryRawSqlCommandInitializer(this.ormProvider, rawSql, parameters);
+        commandInitializer.Invoke(command.Parameters, this.ormProvider, parameters);
         command.CommandText = rawSql;
         command.CommandType = commandType;
         return (isNeedClose, connection, command);
@@ -438,7 +428,7 @@ public sealed class DbContext
         connection.Open();
         var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
-        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this);
+        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext);
         var result = readerInitializer.Invoke(reader, deserializer);
         reader.Dispose();
 
@@ -454,7 +444,7 @@ public sealed class DbContext
         await connection.OpenAsync(cancellationToken);
         var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this);
+        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext);
         var result = await readerInitializer.Invoke(reader, deserializer, cancellationToken);
         await reader.DisposeAsync();
 
@@ -483,7 +473,7 @@ public sealed class DbContext
         connection.Open();
         var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
-        var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this);
+        var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this.DbContext);
         var result = readerInitializer.Invoke(reader, deserializer);
 
         reader.Dispose();
@@ -499,7 +489,7 @@ public sealed class DbContext
         await connection.OpenAsync(cancellationToken);
         var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-        var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this);
+        var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this.DbContext);
         var result = await readerInitializer.Invoke(reader, deserializer, cancellationToken);
 
         await reader.DisposeAsync();
@@ -510,8 +500,8 @@ public sealed class DbContext
     private (bool, ITheaConnection, ITheaCommand) CreateQueryWhereCommand(Type entityType, object whereObjs, bool isUseKey, bool isBulk)
     {
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this, entityType, whereObjs, 1, isUseKey, false, isBulk);
-        command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereObjs);
+        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjs, 1, isUseKey, false, isBulk);
+        command.CommandText = commandInitializer.Invoke(command.Parameters, this.DbContext, whereObjs);
         return (isNeedClose, connection, command);
     }
     #endregion
@@ -589,13 +579,13 @@ public sealed class DbContext
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess;
         var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
-        if (reader.Read()) result.TotalCount = reader.ToValue<int>(this);
+        if (reader.Read()) result.TotalCount = reader.ToValue<int>(this.DbContext);
         result.PageNumber = visitor.PageNumber;
         result.PageSize = visitor.PageSize;
 
         reader.NextResult();
         var entityType = typeof(TResult);
-        var deserializer = reader.GetReaderDeserializer(typeof(TResult), this, readerFields);
+        var deserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
         while (reader.Read())
             result.Data.Add((TResult)deserializer.Invoke(reader, readerFields));
         result.Count = result.Data.Count;
@@ -630,13 +620,13 @@ public sealed class DbContext
         var behavior = CommandBehavior.SequentialAccess;
         var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
-            result.TotalCount = reader.ToValue<int>(this);
+            result.TotalCount = reader.ToValue<int>(this.DbContext);
         result.PageNumber = visitor.PageNumber;
         result.PageSize = visitor.PageSize;
 
         var entityType = typeof(TResult);
         await reader.NextResultAsync(cancellationToken);
-        var deserializer = reader.GetReaderDeserializer(typeof(TResult), this, readerFields);
+        var deserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
         while (await reader.ReadAsync(cancellationToken))
             result.Data.Add((TResult)deserializer.Invoke(reader, readerFields));
         result.Count = result.Data.Count;
@@ -688,8 +678,8 @@ public sealed class DbContext
         if (whereObjs == null)
             throw new ArgumentNullException(nameof(whereObjs));
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this, entityType, whereObjs, 2, isUseKey, false, isBulk);
-        command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereObjs);
+        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjs, 2, isUseKey, false, isBulk);
+        command.CommandText = commandInitializer.Invoke(command.Parameters, this.DbContext, whereObjs);
         return (isNeedClose, connection, command);
     }
 
@@ -730,7 +720,7 @@ public sealed class DbContext
         var builder = new StringBuilder(headSql);
         foreach (var insertObj in insertObjs)
         {
-            commandInitializer.Invoke(command.Parameters, builder, this, insertObj, index.ToString());
+            commandInitializer.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
             index++;
 
             if (index >= bulkCount)
@@ -770,7 +760,7 @@ public sealed class DbContext
         var builder = new StringBuilder(headSql);
         foreach (var insertObj in insertObjs)
         {
-            commandInitializer.Invoke(command.Parameters, builder, this, insertObj, index.ToString());
+            commandInitializer.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
             index++;
 
             if (index >= bulkCount)
@@ -806,7 +796,7 @@ public sealed class DbContext
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(CommandSqlType.Insert, behavior);
-        if (reader.Read()) result = reader.ToValue<TResult>(this);
+        if (reader.Read()) result = reader.ToValue<TResult>(this.DbContext);
 
         reader.Dispose();
         command.Dispose();
@@ -821,7 +811,7 @@ public sealed class DbContext
         await connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Insert, behavior, cancellationToken);
-        if (await reader.ReadAsync(cancellationToken)) result = reader.ToValue<TResult>(this);
+        if (await reader.ReadAsync(cancellationToken)) result = reader.ToValue<TResult>(this.DbContext);
 
         await reader.DisposeAsync();
         await command.DisposeAsync();
@@ -836,7 +826,7 @@ public sealed class DbContext
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         if (insertObj is IDictionary<string, object> dict)
         {
-            var entityMapper = this.EntityMapProvider.GetEntityMap(entityType);
+            var entityMapper = this.entityMapProvider.GetEntityMap(entityType);
             int index = 0;
             var fieldsBuilder = new StringBuilder();
             var valuesBuilder = new StringBuilder();
@@ -848,13 +838,13 @@ public sealed class DbContext
                     continue;
 
                 var fieldValue = dict[key];
-                var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}";
+                var parameterName = $"{this.ormProvider.ParameterPrefix}{memberMapper.MemberName}";
                 if (index > 0)
                 {
                     fieldsBuilder.Append(',');
                     valuesBuilder.Append(',');
                 }
-                fieldsBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
+                fieldsBuilder.Append(this.ormProvider.GetFieldName(memberMapper.FieldName));
                 valuesBuilder.Append(parameterName);
                 if (fieldValue == null)
                     fieldValue = DBNull.Value;
@@ -866,18 +856,18 @@ public sealed class DbContext
                     var fieldValueType = fieldValue.GetType();
                     if (fieldValueType != targetType)
                     {
-                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.options);
+                        var myValueGetter = this.ormProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.dbOptions);
                         fieldValue = myValueGetter.Invoke(fieldValue);
                     }
                 }
-                command.Parameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                command.Parameters.Add(this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                 index++;
             }
-            command.CommandText = $"INSERT INTO {this.OrmProvider.GetTableName(entityMapper.TableName)} ({fieldsBuilder.ToString()}) VALUES ({valuesBuilder.ToString()})";
+            command.CommandText = $"INSERT INTO {this.ormProvider.GetTableName(entityMapper.TableName)} ({fieldsBuilder.ToString()}) VALUES ({valuesBuilder.ToString()})";
             if (hasIdentity)
             {
-                var keyFieldName = this.OrmProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName);
-                command.CommandText += this.OrmProvider.GetIdentitySql(keyFieldName);
+                var keyFieldName = this.ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName);
+                command.CommandText += this.ormProvider.GetIdentitySql(keyFieldName);
             }
         }
         else
@@ -886,9 +876,9 @@ public sealed class DbContext
                 throw new NotSupportedException("此方法只支持单条数据插入");
 
             var parameterType = insertObj.GetType();
-            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this, entityType, parameterType, 1, true, hasIdentity, null, null)
+            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this.DbContext, entityType, parameterType, 1, true, hasIdentity, null, null)
                 as Func<IDataParameterCollection, DbContext, object, string>;
-            command.CommandText = commandInitializer.Invoke(command.Parameters, this, insertObj);
+            command.CommandText = commandInitializer.Invoke(command.Parameters, this.DbContext, insertObj);
         }
         return (isNeedClose, connection, command);
     }
@@ -911,13 +901,13 @@ public sealed class DbContext
 
         string headSql = null;
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string> commandInitializer = null;
-        var entityMapper = this.EntityMapProvider.GetEntityMap(entityType);
+        var entityMapper = this.entityMapProvider.GetEntityMap(entityType);
         if (firstInsertObj is IDictionary<string, object> dict)
         {
             int index = 0;
             var builder = new StringBuilder();
             var valueSetters = new List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>>();
-            builder.Append($"INSERT INTO {this.OrmProvider.GetTableName(entityMapper.TableName)} (");
+            builder.Append($"INSERT INTO {this.ormProvider.GetTableName(entityMapper.TableName)} (");
             foreach (var key in dict.Keys)
             {
                 if (!entityMapper.TryGetMemberMap(key, out var memberMapper) || memberMapper.IsIgnore
@@ -926,7 +916,7 @@ public sealed class DbContext
                     continue;
 
                 if (index > 0) builder.Append(',');
-                builder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
+                builder.Append(this.ormProvider.GetFieldName(memberMapper.FieldName));
                 Func<IDictionary<string, object>, object> valueGetter = null;
 
                 if (memberMapper.TypeHandler != null)
@@ -943,7 +933,7 @@ public sealed class DbContext
                         var fieldValueType = fieldValue.GetType();
                         if (fieldValueType.ToUnderlyingType() != targetType)
                         {
-                            var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbOptions);
+                            var myValueGetter = this.ormProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.dbOptions);
                             valueGetter = insertObj => myValueGetter.Invoke(insertObj[key]);
                         }
                         else valueGetter = insertObj => insertObj[key];
@@ -955,7 +945,7 @@ public sealed class DbContext
                             var fieldValueType = dict[key].GetType();
                             if (fieldValueType.ToUnderlyingType() != targetType)
                             {
-                                var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbOptions);
+                                var myValueGetter = this.ormProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.dbOptions);
                                 valueGetter = insertObj =>
                                 {
                                     var fieldValue = insertObj[key];
@@ -974,10 +964,10 @@ public sealed class DbContext
                     valueSetter = (dbParameters, builder, insertObj, suffix) =>
                     {
                         var fieldValue = valueGetter.Invoke(insertObj);
-                        var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
+                        var parameterName = $"{this.ormProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
                         builder.Append(',');
                         builder.Append(parameterName);
-                        dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                        dbParameters.Add(this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                     };
                 }
                 else
@@ -985,9 +975,9 @@ public sealed class DbContext
                     valueSetter = (dbParameters, builder, insertObj, suffix) =>
                     {
                         var fieldValue = valueGetter.Invoke(insertObj);
-                        var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
+                        var parameterName = $"{this.ormProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
                         builder.Append(parameterName);
-                        dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                        dbParameters.Add(this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                     };
                 }
                 valueSetters.Add(valueSetter);
@@ -1008,8 +998,8 @@ public sealed class DbContext
         else
         {
             (var fieldsSql, var typedCommandInitializer) = ((string, Action<IDataParameterCollection, StringBuilder, DbContext, string, string, object, string>))
-                RepositoryHelper.BuildTypedBulkCommandInitializer(this, entityType, insertObjType, 1, null, null);
-            headSql = $"INSERT INTO {this.OrmProvider.GetTableName(entityMapper.TableName)} ({fieldsSql}) VALUES ";
+                RepositoryHelper.BuildTypedBulkCommandInitializer(this.DbContext, entityType, insertObjType, 1, null, null);
+            headSql = $"INSERT INTO {this.ormProvider.GetTableName(entityMapper.TableName)} ({fieldsSql}) VALUES ";
             commandInitializer = (dbParameters, builder, dbContext, insertObj, suffix) =>
                 typedCommandInitializer.Invoke(dbParameters, builder, dbContext, "(", "),", insertObj, suffix);
         }
@@ -1026,7 +1016,7 @@ public sealed class DbContext
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(CommandSqlType.Insert, behavior);
-        if (reader.Read()) result = reader.ToValue<TResult>(this);
+        if (reader.Read()) result = reader.ToValue<TResult>(this.DbContext);
 
         reader.Dispose();
         command.Dispose();
@@ -1043,7 +1033,7 @@ public sealed class DbContext
         await connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Insert, behavior, cancellationToken);
-        if (await reader.ReadAsync(cancellationToken)) result = reader.ToValue<TResult>(this);
+        if (await reader.ReadAsync(cancellationToken)) result = reader.ToValue<TResult>(this.DbContext);
 
         await reader.DisposeAsync();
         await command.DisposeAsync();
@@ -1058,7 +1048,7 @@ public sealed class DbContext
 
         connection.Open();
         using var reader = command.ExecuteReader(CommandSqlType.Insert, CommandBehavior.SequentialAccess);
-        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this, readerFields);
+        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext, readerFields);
         var result = readerInitializer.Invoke(reader, readerFields, deserializer);
 
         reader.Dispose();
@@ -1073,7 +1063,7 @@ public sealed class DbContext
 
         await connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Insert, CommandBehavior.SequentialAccess, cancellationToken);
-        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this, readerFields);
+        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext, readerFields);
         var result = readerInitializer.Invoke(reader, readerFields, deserializer);
 
         await reader.DisposeAsync();
@@ -1112,7 +1102,7 @@ public sealed class DbContext
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         if (updateObj is IDictionary<string, object> dict)
         {
-            var entityMapper = this.EntityMapProvider.GetEntityMap(entityType);
+            var entityMapper = this.entityMapProvider.GetEntityMap(entityType);
             int index = 0;
             var fieldsBuilder = new StringBuilder();
             var whereBuilder = new StringBuilder();
@@ -1124,10 +1114,10 @@ public sealed class DbContext
                     continue;
 
                 var fieldValue = dict[key];
-                var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}";
+                var parameterName = $"{this.ormProvider.ParameterPrefix}{memberMapper.MemberName}";
                 if (fieldsBuilder.Length > 0) fieldsBuilder.Append(',');
                 if (whereBuilder.Length > 0) whereBuilder.Append(" AND ");
-                var sql = $"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}";
+                var sql = $"{this.ormProvider.GetFieldName(memberMapper.FieldName)}={parameterName}";
                 if (memberMapper.IsKey) whereBuilder.Append(sql);
                 else fieldsBuilder.Append(sql);
 
@@ -1141,14 +1131,14 @@ public sealed class DbContext
                     var fieldValueType = fieldValue.GetType();
                     if (fieldValueType != targetType)
                     {
-                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.options);
+                        var myValueGetter = this.ormProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.dbOptions);
                         fieldValue = myValueGetter.Invoke(fieldValue);
                     }
                 }
-                command.Parameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                command.Parameters.Add(this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                 index++;
             }
-            command.CommandText = $"UPDATE {this.OrmProvider.GetTableName(entityMapper.TableName)} SET {fieldsBuilder.ToString()} WHERE ({whereBuilder.ToString()})";
+            command.CommandText = $"UPDATE {this.ormProvider.GetTableName(entityMapper.TableName)} SET {fieldsBuilder.ToString()} WHERE ({whereBuilder.ToString()})";
         }
         else
         {
@@ -1156,9 +1146,9 @@ public sealed class DbContext
                 throw new NotSupportedException("此方法只支持单条数据更新");
 
             var parameterType = updateObj.GetType();
-            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this, entityType, parameterType, 2, true, false, null, null)
+            var commandInitializer = RepositoryHelper.BuildTypedCommandInitializer(this.DbContext, entityType, parameterType, 2, true, false, null, null)
                 as Func<IDataParameterCollection, DbContext, object, string>;
-            command.CommandText = commandInitializer.Invoke(command.Parameters, this, updateObj);
+            command.CommandText = commandInitializer.Invoke(command.Parameters, this.DbContext, updateObj);
         }
         return (isNeedClose, connection, command);
     }
@@ -1174,7 +1164,7 @@ public sealed class DbContext
         foreach (var updateObj in updateObjs)
         {
             if (index > 0) builder.Append(';');
-            commandInitializer.Invoke(command.Parameters, builder, this, updateObj, index.ToString());
+            commandInitializer.Invoke(command.Parameters, builder, this.DbContext, updateObj, index.ToString());
             index++;
 
             if (index >= bulkCount)
@@ -1209,7 +1199,7 @@ public sealed class DbContext
         foreach (var updateObj in updateObjs)
         {
             if (index > 0) builder.Append(';');
-            commandInitializer.Invoke(command.Parameters, builder, this, updateObj, index.ToString());
+            commandInitializer.Invoke(command.Parameters, builder, this.DbContext, updateObj, index.ToString());
             index++;
 
             if (index >= bulkCount)
@@ -1254,7 +1244,7 @@ public sealed class DbContext
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string> commandInitializer = null;
         if (firstUpdateObj is IDictionary<string, object> dict)
         {
-            var entityMapper = this.EntityMapProvider.GetEntityMap(entityType);
+            var entityMapper = this.entityMapProvider.GetEntityMap(entityType);
             var valueSetters = new List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>>();
             var whereSetters = new List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>>();
             foreach (var key in dict.Keys)
@@ -1279,7 +1269,7 @@ public sealed class DbContext
                         var fieldValueType = fieldValue.GetType();
                         if (fieldValueType.ToUnderlyingType() != targetType)
                         {
-                            var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbOptions);
+                            var myValueGetter = this.ormProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.dbOptions);
                             valueGetter = updateObj => myValueGetter.Invoke(updateObj[key]);
                         }
                         else valueGetter = updateObj => updateObj[key];
@@ -1291,7 +1281,7 @@ public sealed class DbContext
                             var fieldValueType = dict[key].GetType();
                             if (fieldValueType.ToUnderlyingType() != targetType)
                             {
-                                var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbOptions);
+                                var myValueGetter = this.ormProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.dbOptions);
                                 valueGetter = updateObj =>
                                 {
                                     var fieldValue = updateObj[key];
@@ -1313,9 +1303,9 @@ public sealed class DbContext
                         {
                             var fieldValue = valueGetter.Invoke(insertObj);
                             builder.Append(" AND ");
-                            var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
-                            builder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
-                            dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                            var parameterName = $"{this.ormProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
+                            builder.Append($"{this.ormProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+                            dbParameters.Add(this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                         };
                     }
                     else
@@ -1323,9 +1313,9 @@ public sealed class DbContext
                         valueSetter = (dbParameters, builder, insertObj, suffix) =>
                         {
                             var fieldValue = valueGetter.Invoke(insertObj);
-                            var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
-                            builder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
-                            dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                            var parameterName = $"{this.ormProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
+                            builder.Append($"{this.ormProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+                            dbParameters.Add(this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                         };
                     }
                     whereSetters.Add(valueSetter);
@@ -1338,9 +1328,9 @@ public sealed class DbContext
                         {
                             var fieldValue = valueGetter.Invoke(insertObj);
                             builder.Append(',');
-                            var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
-                            builder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
-                            dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                            var parameterName = $"{this.ormProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
+                            builder.Append($"{this.ormProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+                            dbParameters.Add(this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                         };
                     }
                     else
@@ -1348,9 +1338,9 @@ public sealed class DbContext
                         valueSetter = (dbParameters, builder, insertObj, suffix) =>
                         {
                             var fieldValue = valueGetter.Invoke(insertObj);
-                            var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
-                            builder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
-                            dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                            var parameterName = $"{this.ormProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
+                            builder.Append($"{this.ormProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+                            dbParameters.Add(this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                         };
                     }
                     valueSetters.Add(valueSetter);
@@ -1359,7 +1349,7 @@ public sealed class DbContext
             commandInitializer = (dbParameters, builder, dbContext, insertObj, suffix) =>
             {
                 var dictObj = insertObj as IDictionary<string, object>;
-                builder.Append($"UPDATE {this.OrmProvider.GetTableName(entityMapper.TableName)} SET ");
+                builder.Append($"UPDATE {this.ormProvider.GetTableName(entityMapper.TableName)} SET ");
                 foreach (var valueSetter in valueSetters)
                     valueSetter.Invoke(dbParameters, builder, dictObj, suffix);
                 builder.Append(" WHERE ");
@@ -1367,7 +1357,7 @@ public sealed class DbContext
                     valueSetter.Invoke(dbParameters, builder, dictObj, suffix);
             };
         }
-        else commandInitializer = RepositoryHelper.BuildTypedBulkCommandInitializer(this, entityType, updateObjType, 2, null, null)
+        else commandInitializer = RepositoryHelper.BuildTypedBulkCommandInitializer(this.DbContext, entityType, updateObjType, 2, null, null)
             as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
         return (isNeedClose, connection, command, commandInitializer);
     }
@@ -1399,8 +1389,8 @@ public sealed class DbContext
         if (whereObjs == null)
             throw new ArgumentNullException(nameof(whereObjs));
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this, entityType, whereObjs, 3, isUseKey, false, isBulk);
-        command.CommandText = commandInitializer.Invoke(command.Parameters, this, whereObjs);
+        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjs, 3, isUseKey, false, isBulk);
+        command.CommandText = commandInitializer.Invoke(command.Parameters, this.DbContext, whereObjs);
         return (isNeedClose, connection, command);
     }
     #endregion
@@ -1447,55 +1437,55 @@ public sealed class DbContext
     #region Others   
     public void BeginTransaction()
     {
-        if (this.Transaction != null)
+        if (this.transaction != null)
             throw new Exception("上一个事务还没有完成，无法开启新事务");
-        this.Connection ??= this.CreateConnection(this.Database.Select());
-        this.Connection.Open();
-        this.Transaction = this.Connection.BeginTransaction();
+        this.DbContext.Connection ??= this.CreateConnection(this.database.Select());
+        this.connection.Open();
+        this.DbContext.Transaction = this.connection.BeginTransaction();
     }
-    public async ValueTask BeginTransactionAsync(CancellationToken cancellationToken = default)
+    public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
-        if (this.Transaction != null)
+        if (this.transaction != null)
             throw new Exception("上一个事务还没有完成，无法开启新事务");
-        this.Connection ??= this.CreateConnection(this.Database.Select());
-        await this.Connection.OpenAsync(cancellationToken);
-        this.Transaction = await this.Connection.BeginTransactionAsync(cancellationToken);
+        this.DbContext.Connection ??= this.CreateConnection(this.database.Select());
+        await this.connection.OpenAsync(cancellationToken);
+        this.DbContext.Transaction = await this.connection.BeginTransactionAsync(cancellationToken);
     }
     public void Commit()
     {
-        if (this.Transaction == null)
+        if (this.transaction == null)
             throw new Exception("还没有开启事务，无法完成提交");
-        this.Transaction.Commit();
-        this.Connection.Close();
-        this.Transaction = null;
-        this.Connection = null;
+        this.transaction.Commit();
+        this.connection.Close();
+        this.DbContext.Transaction = null;
+        this.DbContext.Connection = null;
     }
     public async Task CommitAsync(CancellationToken cancellationToken = default)
     {
-        if (this.Transaction == null)
+        if (this.transaction == null)
             throw new Exception("还没有开启事务，无法完成提交");
-        await this.Transaction.CommitAsync(cancellationToken);
-        await this.Connection.CloseAsync();
-        this.Transaction = null;
-        this.Connection = null;
+        await this.transaction.CommitAsync(cancellationToken);
+        await this.connection.CloseAsync();
+        this.DbContext.Transaction = null;
+        this.DbContext.Connection = null;
     }
     public void Rollback()
     {
-        if (this.Transaction == null)
+        if (this.transaction == null)
             throw new Exception("还没有开启事务，无法完成回滚");
-        this.Transaction.Rollback();
-        this.Connection.Close();
-        this.Transaction = null;
-        this.Connection = null;
+        this.transaction.Rollback();
+        this.connection.Close();
+        this.DbContext.Transaction = null;
+        this.DbContext.Connection = null;
     }
     public async Task RollbackAsync(CancellationToken cancellationToken = default)
     {
-        if (this.Transaction == null)
+        if (this.transaction == null)
             throw new Exception("还没有开启事务，无法完成回滚");
-        await this.Transaction.RollbackAsync(cancellationToken);
-        await this.Connection.CloseAsync();
-        this.Transaction = null;
-        this.Connection = null;
+        await this.transaction.RollbackAsync(cancellationToken);
+        await this.connection.CloseAsync();
+        this.DbContext.Transaction = null;
+        this.DbContext.Connection = null;
     }
     #endregion
 
@@ -1600,9 +1590,9 @@ public sealed class DbContext
     {
         if (fieldValues == null || fieldValues.Length == 0)
             throw new ArgumentNullException(nameof(fieldValues), "参数fieldValues不能为null或是空元素");
-        if (this.TableShardingProvider == null || !this.TableShardingProvider.TryGetTableSharding(entityType, out var shardingTableInfo))
+        if (this.tableShardingProvider == null || !this.tableShardingProvider.TryGetTableSharding(entityType, out var shardingTableInfo))
             throw new InvalidOperationException($"实体表{entityType.FullName}没有配置分表，无需调用此方法");
-        if (!this.EntityMapProvider.TryGetEntityMap(entityType, out var entityMap))
+        if (!this.entityMapProvider.TryGetEntityMap(entityType, out var entityMap))
             throw new InvalidOperationException($"实体表{entityType.FullName}没有配置映射关系，无法获取分表信息");
         return shardingTableInfo.Rule.Invoke(entityMap.TableName, fieldValues) as string;
     }
