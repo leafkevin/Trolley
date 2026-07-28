@@ -6,7 +6,7 @@ using System.Linq.Expressions;
 namespace Trolley;
 
 public delegate SqlSegment MemberAccessSqlFormatter(ISqlVisitor visitor, SqlSegment target);
-public delegate SqlSegment MethodCallSqlFormatter(ISqlVisitor visitor, Expression orgExpr, Expression target, Stack<DeferredOperation> DeferredExprs, params Expression[] arguments);
+public delegate SqlSegment MethodCallSqlFormatter(ISqlVisitor visitor, MethodCallExpression methodCallExpr, Stack<DeferredOperation> deferredOperations);
 
 public enum OrmProviderType
 {

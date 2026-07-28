@@ -109,7 +109,7 @@ class MySqlTheaCommand : ITheaCommand
         }
         return recordsAffected;
     }
-    public async Task<int> ExecuteNonQueryAsync(CommandSqlType sqlType, CancellationToken cancellationToken = default)
+    public async Task<int> ExecuteNonQueryAsync(  CancellationToken cancellationToken = default)
     {
         this.index++;
         var createdAt = DateTime.Now;

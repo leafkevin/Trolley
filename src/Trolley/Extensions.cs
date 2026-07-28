@@ -439,33 +439,26 @@ public static class Extensions
         }
     }
 #endif
-
-    /// <summary>
-    /// 用在方法调用中，判断!=,NOT IN,NOT LIKE三种情况
-    /// </summary>
-    /// <param name="deferExprs"></param>
-    /// <returns></returns>
-    //public static bool IsDeferredNot(this Stack<DeferredExpr> deferExprs)
-    //{
-    //    if (deferExprs != null && deferExprs.Count > 0)
-    //    {
-    //        int notIndex = 0;
-    //        while (deferExprs.Count > 0)
-    //        {
-    //            var deferredExpr = deferExprs.Pop();
-    //            switch (deferredExpr.OperationType)
-    //            {
-    //                case OperationType.Equal:
-    //                    break;
-    //                case OperationType.Not:
-    //                    notIndex++;
-    //                    break;
-    //            }
-    //        }
-    //        return notIndex % 2 > 0;
-    //    }
-    //    return false;
-    //}
+    public static bool HasNotOperation(this Stack<DeferredOperation> deferredOperations, out DeferredOperation lastOperation)
+    {
+        lastOperation = DeferredOperation.None;
+        int notIndex = 0;
+        while (deferredOperations.Count > 0)
+        {
+            var operationType = deferredOperations.Pop();
+            switch (operationType)
+            {
+                case DeferredOperation.IsNull:
+                case DeferredOperation.IsTrue:
+                    lastOperation = operationType;
+                    break;
+                case DeferredOperation.Not:
+                    notIndex++;
+                    break;
+            }
+        }
+        return notIndex % 2 > 0;
+    }
 
     public static bool TryGetKeyIgnoreCase(this IDictionary<string, object> dict, string memberName, out string itemKey)
     {

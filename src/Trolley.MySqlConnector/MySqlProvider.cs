@@ -441,7 +441,7 @@ public partial class MySqlProvider : BaseOrmProvider
                 {
                     cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo.GetGenericMethodDefinition());
                     //.Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key =>  (visitor, methodCallExpr, deferredOperations) =>
                     {
                         var dialectVisitor = visitor as MySqlCreateVisitor;
                         if (args[1] is not MemberExpression memberExpr)
@@ -469,7 +469,7 @@ public partial class MySqlProvider : BaseOrmProvider
                 break;
             case "IsNull":
                 cacheKey = HashCode.Combine(typeof(Sql), methodInfo.GetGenericMethodDefinition());
-                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key =>  (visitor, methodCallExpr, deferredOperations) =>
                 {
                     var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0], IsNullFields = true });
                     var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });

@@ -79,26 +79,7 @@ public struct SqlSegment
         this.DeferredOperations ??= new();
         this.DeferredOperations.Push(deferredOperation);
     }
-    public bool HasNotOperation(out DeferredOperation lastOperation)
-    {
-        lastOperation = DeferredOperation.None;
-        int notIndex = 0;
-        while (this.DeferredOperations.Count > 0)
-        {
-            var operationType = this.DeferredOperations.Pop();
-            switch (operationType)
-            {
-                case DeferredOperation.IsNull:
-                case DeferredOperation.IsTrue:
-                    lastOperation = operationType;
-                    break;
-                case DeferredOperation.Not:
-                    notIndex++;
-                    break;
-            }
-        }
-        return notIndex % 2 > 0;
-    }
+    public bool HasNotOperation(out DeferredOperation lastOperation) => this.DeferredOperations.HasNotOperation(out lastOperation);
     public string GetQuotedValue(IOrmProvider ormProvider)
     {
         if (this.IsNull || this.Value == null || this.Value is DBNull)

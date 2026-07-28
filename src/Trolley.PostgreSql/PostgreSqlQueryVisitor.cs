@@ -649,7 +649,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             string fields = null;
             List<SqlSegment> readerFields = null;
             var visitor = new DeferredExpressionVisitor();
-            visitor.Visit(memberExpr);
+            visitor.Build(memberExpr);
             //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
             //f.TotalAmount.ToString("C")
             //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")

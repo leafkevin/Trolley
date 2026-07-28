@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -2002,10 +2001,10 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             case "Equals":
                 if (!methodInfo.IsStatic && parameterInfos.Length == 1)
                 {
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                     {
-                        var leftSegment = visitor.Visit(new SqlSegment { Expression = target });
-                        var rightSegment = visitor.Visit(new SqlSegment { Expression = args[0] });
+                        var leftSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
+                        var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
 
                         var leftArgument = visitor.WrapSql(leftSegment);
                         var rightArgument = visitor.WrapSql(rightSegment);
@@ -2017,10 +2016,10 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             case "Compare":
                 if (methodInfo.IsStatic && parameterInfos.Length == 2)
                 {
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                     {
-                        var leftSegment = visitor.Visit(new SqlSegment { Expression = args[0] });
-                        var rightSegment = visitor.Visit(new SqlSegment { Expression = args[1] });
+                        var leftSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                        var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
 
                         var leftArgument = visitor.WrapSql(leftSegment);
                         var rightArgument = visitor.WrapSql(rightSegment);
@@ -2032,10 +2031,10 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             case "CompareTo":
                 if (!methodInfo.IsStatic && parameterInfos.Length == 1)
                 {
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                     {
-                        var targetSegment = visitor.Visit(new SqlSegment { Expression = target });
-                        var rightSegment = visitor.Visit(new SqlSegment { Expression = args[0] });
+                        var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
+                        var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
 
                         var targetArgument = visitor.WrapSql(targetSegment);
                         var rightArgument = visitor.WrapSql(rightSegment);
@@ -2047,206 +2046,162 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             case "ToString":
                 if (!methodInfo.IsStatic && parameterInfos.Length == 0)
                 {
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                     {
-                        var targetSegment = visitor.Visit(new SqlSegment { Expression = target });
+                        var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         if (targetSegment.IsValue) return targetSegment.Change(targetSegment.Value.ToString());
                         if (targetSegment.SqlType == SqlType.OnlyField && targetSegment.IsEnum)
-                            visitor.ToEnumString(targetSegment);
-                        if (targetSegment.SegmentType != methodInfo.ReturnType)
-                        {
-                            targetSegment.Body = this.CastTo(methodInfo.ReturnType, targetSegment.Body);
-                            targetSegment.IsMethodCall = true;
-                        }
-                        return targetSegment;
+                            return visitor.ToEnumString(targetSegment);
+                        return targetSegment.Change(this.CastTo(methodInfo.ReturnType, targetSegment.Value), SqlType.MethodCall);
                     });
                     return true;
                 }
-                if (!methodInfo.IsStatic && parameterInfos.Length == 1 && (parameterInfos[0].ParameterType == typeof(string) || typeof(IFormatProvider).IsAssignableFrom(parameterInfos[0].ParameterType)))
+                if (!methodInfo.IsStatic && parameterInfos.Length == 1 && (parameterInfos[0].ParameterType == typeof(string)
+                    || typeof(IFormatProvider).IsAssignableFrom(parameterInfos[0].ParameterType)))
                 {
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                     {
-                        var targetSegment = visitor.Visit(new SqlSegment { Expression = target });
-                        var args0Segment = visitor.Visit(new SqlSegment { Expression = args[0] });
-                        if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return targetSegment.ChangeValue(methodInfo.Invoke(targetSegment.Value, new object[] { args0Segment.Value }));
-
-                        //f.Balance.ToString("C")
-                        //args0.ToString("C")
-                        //(args0)=>{args0.ToString("C")}
-
-                        //f.Balance.ToString(new CultureInfo("en-US"))
-                        //args.ToString(new CultureInfo("en-US"))
-                        //(args)=>{args.ToString(new CultureInfo("en-US"))}
-                        if (visitor.IsSelect && (args0Segment.IsConstant || args0Segment.IsVariable))
-                            return visitor.BuildDeferredSqlSegment(methodCallExpr, targetSegment);
-
-                        throw new NotSupportedException("不支持的方法调用，方法.ToString(string format)只支持常量或是变量的解析");
+                        var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
+                        var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                        if (targetSegment.IsValue && args0Segment.IsValue)
+                            return targetSegment.Change(methodInfo.Invoke(targetSegment.Value, new object[] { args0Segment.Value }));
+                        return visitor.VisitDeferredSqlSegment(targetSegment.Next(methodCallExpr));
                     });
                     return true;
                 }
                 if (!methodInfo.IsStatic && parameterInfos.Length == 2 && parameterInfos[0].ParameterType == typeof(string) && typeof(IFormatProvider).IsAssignableFrom(parameterInfos[1].ParameterType))
                 {
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                     {
-                        var targetSegment = visitor.Visit(new SqlSegment { Expression = target });
-                        var args0Segment = visitor.Visit(new SqlSegment { Expression = args[0] });
-                        var args1Segment = visitor.Visit(new SqlSegment { Expression = args[1] });
-                        if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return targetSegment.ChangeValue(methodInfo.Invoke(targetSegment.Value, new object[] { args0Segment.Value, args1Segment.Value }));
-                        //f.Balance.ToString("C", new CultureInfo("en-US"))
-                        //args.ToString("C", new CultureInfo("en-US"))
-                        //(args)=>{args.ToString("C", new CultureInfo("en-US"))}
-                        if (visitor.IsSelect && (args0Segment.IsConstant || args0Segment.IsVariable) && (args1Segment.IsConstant || args1Segment.IsVariable))
-                            return visitor.BuildDeferredSqlSegment(methodCallExpr, targetSegment);
-                        throw new NotSupportedException("不支持的方法调用，方法.ToString(string format, IFormatProvider provider)只支持常量或是变量的解析");
+                        var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
+                        var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                        var args1Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
+                        if (targetSegment.IsValue)
+                            return targetSegment.Change(methodInfo.Invoke(targetSegment.Value, new object[] { args0Segment.Value, args1Segment.Value }));
+                        return visitor.VisitDeferredSqlSegment(targetSegment.Next(methodCallExpr));
                     });
                     return true;
                 }
                 break;
             case "Parse":
+                //Enum.Parse
                 if (methodInfo.IsStatic && methodInfo.DeclaringType == typeof(Enum))
                 {
-                    if (parameterInfos.Length == 1 || parameterInfos[0].ParameterType != typeof(Type))
+                    var genericArguments = methodInfo.GetGenericArguments();
+                    if (genericArguments.Length > 0)
                     {
                         var enumType = methodInfo.GetGenericArguments()[0];
-                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                        if (parameterInfos.Length == 1)
                         {
-                            var args0Segment = visitor.Visit(new SqlSegment { Expression = args[0] });
-                            if (args0Segment.IsConstant || args0Segment.IsVariable)
-                                return args0Segment.ChangeValue(Enum.Parse(enumType, args0Segment.Value.ToString(), true));
-
-                            throw new NotSupportedException("不支持的表达式访问，Enum.Parse方法只支持常量、变量参数");
-                        });
-                        return true;
-                    }
-                    if (parameterInfos.Length > 1 && parameterInfos[0].ParameterType == typeof(Type))
-                    {
-                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
-                        {
-                            SqlSegment resultSegment = null;
-                            var arguments = new List<object>();
-                            Array.ForEach(args, f =>
+                            formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                             {
-                                var sqlSegment = visitor.Visit(new SqlSegment { Expression = f });
-                                if (sqlSegment.IsConstant || sqlSegment.IsVariable)
-                                    arguments.Add(sqlSegment.Value);
-                                else arguments.Add(sqlSegment.Body);
-                                if (resultSegment == null) resultSegment = sqlSegment;
-                                else resultSegment.Merge(sqlSegment);
+                                var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                                if (!args0Segment.IsValue)
+                                    throw new NotSupportedException("不支持的表达式访问，Enum.Parse方法只支持常量、变量参数");
+                                return args0Segment.Change(Enum.Parse(enumType, args0Segment.Value.ToString(), true));
                             });
-                            if (resultSegment.IsConstant || resultSegment.IsVariable)
-                                return resultSegment.ChangeValue(methodInfo.Invoke(null, arguments.ToArray()));
-
-                            throw new NotSupportedException("不支持的表达式访问，Enum.Parse方法只支持常量、变量参数");
-                        });
-                        return true;
-                    }
-                }
-                if (methodInfo.IsStatic && parameterInfos.Length >= 1)
-                {
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
-                    {
-                        SqlSegment resultSegment = null;
-                        var arguments = new List<object>();
-                        Array.ForEach(args, f =>
-                        {
-                            var sqlSegment = visitor.Visit(new SqlSegment { Expression = f });
-                            if (sqlSegment.IsConstant || sqlSegment.IsVariable)
-                                arguments.Add(sqlSegment.Value);
-                            else arguments.Add(sqlSegment.Body);
-                            if (resultSegment == null) resultSegment = sqlSegment;
-                            else resultSegment.Merge(sqlSegment);
-                        });
-                        if (resultSegment.IsConstant || resultSegment.IsVariable)
-                            return resultSegment.ChangeValue(methodInfo.Invoke(null, arguments.ToArray()));
-                        return resultSegment.Change(this.CastTo(methodInfo.ReturnType, arguments[0]), false, true);
-                    });
-                    return true;
-                }
-                break;
-            case "TryParse":
-                if (methodInfo.IsStatic && methodInfo.DeclaringType == typeof(Enum))
-                {
-                    if (parameterInfos.Length == 1 || parameterInfos[0].ParameterType != typeof(Type))
-                    {
-                        var enumType = methodInfo.GetGenericArguments()[0];
-                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
-                        {
-                            var args0Segment = visitor.Visit(new SqlSegment { Expression = args[0] });
-                            if (args0Segment.IsConstant || args0Segment.IsVariable)
-                                return args0Segment.ChangeValue(Enum.Parse(enumType, args0Segment.Value.ToString(), true));
-
-                            throw new NotSupportedException("不支持的表达式访问，Enum.Parse方法只支持常量、变量参数");
-                        });
-                        return true;
-                    }
-                    if (parameterInfos.Length > 1 && parameterInfos[0].ParameterType == typeof(Type))
-                    {
-                        var enumType = parameterInfos[0].ParameterType;
-                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
-                        {
-                            SqlSegment resultSegment = null;
-                            var arguments = new List<object>();
-                            for (int i = 0; i < args.Length - 1; i++)
-                            {
-                                var sqlSegment = visitor.Visit(new SqlSegment { Expression = args[i] });
-                                if (sqlSegment.IsConstant || sqlSegment.IsVariable)
-                                    arguments.Add(sqlSegment.Value);
-                                else arguments.Add(sqlSegment.Body);
-                                if (resultSegment == null) resultSegment = sqlSegment;
-                                else resultSegment.Merge(sqlSegment);
-                            }
-                            if (resultSegment.IsConstant || resultSegment.IsVariable)
-                                return resultSegment.ChangeValue(methodInfo.Invoke(null, arguments.ToArray()));
-
-                            throw new NotSupportedException("不支持的表达式访问，Enum.Parse方法只支持常量、变量参数");
-                        });
-                        return true;
-                    }
-                }
-                if (methodInfo.IsStatic && parameterInfos.Length >= 1)
-                {
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
-                    {
-                        SqlSegment resultSegment = null;
-                        var arguments = new List<object>();
-                        for (int i = 0; i < args.Length - 1; i++)
-                        {
-                            var sqlSegment = visitor.Visit(new SqlSegment { Expression = args[i] });
-                            if (sqlSegment.IsConstant || sqlSegment.IsVariable)
-                                arguments.Add(sqlSegment.Value);
-                            else arguments.Add(sqlSegment.Body);
-                            if (resultSegment == null) resultSegment = sqlSegment;
-                            else resultSegment.Merge(sqlSegment);
                         }
-                        if (resultSegment.IsConstant || resultSegment.IsVariable)
-                            return resultSegment.ChangeValue(methodInfo.Invoke(null, arguments.ToArray()));
-                        return resultSegment.Change(this.CastTo(methodInfo.ReturnType, arguments[0]), false, true);
-                    });
-                    return true;
+                        else
+                        {
+                            formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
+                            {
+                                var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                                var args1Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
+                                if (!args0Segment.IsValue || !args1Segment.IsValue)
+                                    throw new NotSupportedException("不支持的表达式访问，Enum.Parse方法只支持常量、变量参数");
+                                var ignoreCase = (bool)args1Segment.Value;
+                                return args0Segment.Change(Enum.Parse(enumType, args0Segment.Value.ToString(), ignoreCase));
+                            });
+                        }
+                        return true;
+                    }
+                    else
+                    {
+                        if (parameterInfos.Length == 2)
+                        {
+                            formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
+                            {
+                                var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                                var args1Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
+                                if (!args0Segment.IsValue || !args1Segment.IsValue)
+                                    throw new NotSupportedException("不支持的表达式访问，Enum.Parse方法只支持常量、变量参数");
+                                var enumType = args0Segment.Value as Type;
+                                return args0Segment.Change(Enum.Parse(enumType, args1Segment.Value.ToString(), true));
+                            });
+                        }
+                        else
+                        {
+                            formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
+                            {
+                                var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                                var args1Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
+                                var args2Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[2] });
+                                if (!args0Segment.IsValue || !args1Segment.IsValue || !args2Segment.IsValue)
+                                    throw new NotSupportedException("不支持的表达式访问，Enum.Parse方法只支持常量、变量参数");
+                                var enumType = args0Segment.Value as Type;
+                                var ignoreCase = (bool)args2Segment.Value;
+                                return args0Segment.Change(Enum.Parse(enumType, args1Segment.Value.ToString(), ignoreCase));
+                            });
+                        }
+                        return true;
+                    }
+                }
+                //int.Parse,double.Parse
+                if (methodInfo.IsStatic && parameterInfos.Length >= 1)
+                {
+                    if (parameterInfos[0].ParameterType == typeof(string))
+                    {
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
+                        {
+                            var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                            var arguments = new List<object>();
+                            for (int i = 1; i < methodCallExpr.Arguments.Count; i++)
+                            {
+                                var sqlSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[i] });
+                                if (!sqlSegment.IsValue)
+                                    throw new NotSupportedException($"不支持的表达式访问，{methodInfo.DeclaringType}.Parse方法，第2个以后的参数只支持常量、变量");
+                                arguments.Add(sqlSegment.Value);
+                            }
+                            if (args0Segment.IsValue)
+                                return args0Segment.Change(methodInfo.Invoke(null, arguments.ToArray()));
+                            return args0Segment.Change(this.CastTo(methodInfo.DeclaringType, arguments[0]), SqlType.MethodCall);
+                        });
+                        return true;
+                    }
                 }
                 break;
             case "get_Item":
                 if (!methodInfo.IsStatic && parameterInfos.Length > 0)
                 {
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                    if (parameterInfos.Length > 1)
                     {
-                        var targetSegment = visitor.Visit(new SqlSegment { Expression = target });
-                        var arguments = new List<object>();
-                        for (int i = 0; i < args.Length; i++)
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                         {
-                            var argumentSegment = visitor.Visit(new SqlSegment { Expression = args[i] });
-                            if (argumentSegment.IsConstant || argumentSegment.IsVariable)
+                            var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
+                            if (!targetSegment.IsValue)
+                                throw new NotSupportedException("不支持的表达式访问，get_Item索引方法只支持常量、变量参数");
+                            var arguments = new List<object>();
+                            for (int i = 0; i < methodCallExpr.Arguments.Count; i++)
+                            {
+                                var argumentSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[i] });
+                                if (!argumentSegment.IsValue)
+                                    throw new NotSupportedException("不支持的表达式访问，get_Item索引方法只支持常量、变量参数");
                                 arguments.Add(argumentSegment.Value);
-                            else arguments.Add(argumentSegment.Body);
-                            targetSegment.Merge(argumentSegment);
-                        }
-                        if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return targetSegment.ChangeValue(methodInfo.Invoke(targetSegment.Value, arguments.ToArray()));
-
-                        throw new NotSupportedException("不支持的表达式访问，get_Item索引方法只支持常量、变量参数");
-                    });
+                            }
+                            return targetSegment.Change(methodInfo.Invoke(targetSegment.Value, arguments.ToArray()));
+                        });
+                    }
+                    else
+                    {
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
+                        {
+                            var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
+                            var argumentSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                            if (!targetSegment.IsValue || !argumentSegment.IsValue)
+                                throw new NotSupportedException("不支持的表达式访问，get_Item索引方法只支持常量、变量参数");
+                            return targetSegment.Change(methodInfo.Invoke(targetSegment.Value, [argumentSegment.Value]));
+                        });
+                    }
                     return true;
                 }
                 break;
@@ -2293,37 +2248,27 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             case "ToDecimal":
                 if (parameterInfos.Length == 1)
                 {
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                     {
-                        var args0Segment = visitor.Visit(new SqlSegment { Expression = args[0] });
-                        if (args0Segment.IsConstant || args0Segment.IsVariable)
-                            return args0Segment.ChangeValue(methodInfo.Invoke(null, new object[] { args0Segment.Value }));
-                        if (args0Segment.SegmentType != methodInfo.ReturnType)
-                            return args0Segment.Change(this.CastTo(methodCallExpr.Type, args0Segment.Body), false, true);
-                        return args0Segment;
+                        var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                        if (args0Segment.IsValue)
+                            return args0Segment.Change(methodInfo.Invoke(null, [args0Segment.Value]));
+                        return args0Segment.Change(this.CastTo(methodCallExpr.Type, args0Segment.Value), SqlType.MethodCall);
                     });
-                    result = true;
+                    return true;
                 }
                 break;
             case "ToString":
                 if (parameterInfos.Length == 1)
                 {
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, formatter = (visitor, methodCallExpr, deferredOperations) =>
                     {
-                        var args0Segment = visitor.Visit(new SqlSegment { Expression = args[0] });
-                        if (args0Segment.IsConstant || args0Segment.IsVariable)
-                            return args0Segment.ChangeValue(methodInfo.Invoke(null, new object[] { args0Segment.Value }));
-                        if (args0Segment.SegmentType != methodInfo.ReturnType)
-                        {
-                            if (args0Segment.SegmentType.IsEnum && !args0Segment.IsExpression && !args0Segment.IsMethodCall)
-                                visitor.ToEnumString(args0Segment);
-                            else
-                            {
-                                args0Segment.Body = this.CastTo(methodCallExpr.Type, args0Segment.Body);
-                                args0Segment.IsMethodCall = true;
-                            }
-                        }
-                        return args0Segment;
+                        var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                        if (args0Segment.IsValue)
+                            return args0Segment.Change(methodInfo.Invoke(null, new object[] { args0Segment.Value }));
+                        if (args0Segment.IsEnum && args0Segment.SqlType == SqlType.OnlyField)
+                            return visitor.ToEnumString(args0Segment);
+                        return args0Segment.Change(this.CastTo(methodCallExpr.Type, args0Segment.Value), SqlType.MethodCall);
                     });
                     result = true;
                 }
@@ -2341,26 +2286,31 @@ public abstract partial class BaseOrmProvider : IOrmProvider
         switch (methodInfo.Name)
         {
             case "Contains":
+                //public static bool Contains<T>(this ReadOnlySpan<T> span, T value) where T : IEquatable<T>
                 //public static bool Contains<TSource>(this IEnumerable<TSource> source, TSource value);
                 //public static bool Contains<TSource>(this IEnumerable<TSource> source, TSource value, IEqualityComparer<TSource>? comparer);
-                if (methodInfo.IsStatic && parameterInfos.Length >= 2)
+                if (methodInfo.IsStatic)
                 {
-                    //数组调用
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                    if (parameterInfos.Length > 2)
                     {
-                        var builder = new StringBuilder();
-                        var elementSegment = visitor.Visit(new SqlSegment { Expression = args[1] });
-                        var arraySegment = visitor.Visit(new SqlSegment { Expression = args[0] });
-
-                        var enumerable = arraySegment.Value as IEnumerable;
-                        foreach (var item in enumerable)
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                         {
-                            if (builder.Length > 0)
-                                builder.Append(',');
-                            var sqlArgument = visitor.GetQuotedValue(item, arraySegment, elementSegment);
-                            builder.Append(sqlArgument);
-                        }
-                        if (builder.Length > 0)
+                            var enumerableOrSapnSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                            var elementSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
+                            var comparerSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[2] });
+
+                            if (enumerableOrSapnSegment.IsValue && elementSegment.IsValue && comparerSegment.IsValue)
+                            {
+                                var isContains = (bool)methodInfo.Invoke(null, [enumerableOrSapnSegment.Value, elementSegment.Value, comparerSegment.Value]);
+                                var wrapSql = isContains && !deferredOperations.HasNotOperation(out _) ? "1=1" : "1<>0";
+                                return enumerableOrSapnSegment.Change(wrapSql);
+                            }
+                            throw new NotSupportedException("不支持的表达式访问，Contains不支持3个以上的非常量、变量参数的表达式访问");
+                        });
+                    }
+                    else
+                    {
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                         {
                             var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
                             var elementArgument = visitor.GetQuotedValue(elementSegment);

@@ -23,7 +23,7 @@ partial class PostgreSqlProvider
                 if (methodInfo.IsStatic && parameterInfos.Length >= 2)
                 {
                     //数组调用
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key =>  (visitor, methodCallExpr, deferredOperations) =>
                     {
                         var elementSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
                         var arraySegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
@@ -64,7 +64,7 @@ partial class PostgreSqlProvider
                 if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType.GenericTypeArguments.Length > 0
                      && typeof(IEnumerable<>).MakeGenericType(methodInfo.DeclaringType.GenericTypeArguments[0]).IsAssignableFrom(methodInfo.DeclaringType))
                 {
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key =>  (visitor, methodCallExpr, deferredOperations) =>
                     {
                         var elementSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
@@ -104,7 +104,7 @@ partial class PostgreSqlProvider
                 if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType.GenericTypeArguments.Length > 0
                     && methodInfo.DeclaringType.GenericTypeArguments[0] == typeof(char))
                 {
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key =>  (visitor, methodCallExpr, deferredOperations) =>
                     {
                         var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (args0Segment.IsConstant || args0Segment.IsVariable)
