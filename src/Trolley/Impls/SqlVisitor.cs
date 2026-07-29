@@ -9,6 +9,12 @@ using System.Text;
 
 namespace Trolley;
 
+public enum OperationType
+{
+    None = 0,
+    And,
+    Or
+}
 public class SqlVisitor : ISqlVisitor, ICommandContext
 {
     private bool isDisposed;
@@ -19,8 +25,8 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
     public IEntityMapProvider EntityMapProvider => this.DbContext.EntityMapProvider;
     public ITableShardingProvider ShardingProvider => this.DbContext.TableShardingProvider;
     public string DefaultTableSchema => this.DbContext.DefaultTableSchema;
-    public bool IsConstantParameterized => this.DbContext.DbOptions.IsConstantParameterized;
-    public string UserParameterPrefix => this.DbContext.DbOptions.UserParameterPrefix;
+    public bool IsConstantParameterized => this.DbContext.Options.IsConstantParameterized;
+    public string UserParameterPrefix => this.DbContext.Options.UserParameterPrefix;
 
     public ITheaCommand Command { get; set; }
     public IDataParameterCollection DbParameters { get; set; }
@@ -450,7 +456,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                         var segmentType = dbFieldValue.GetType();
                         if (segmentType != targetType)
                         {
-                            var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext.DbOptions);
+                            var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext.Options);
                             dbFieldValue = valueGetter.Invoke(dbFieldValue);
                         }
                         dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
@@ -511,7 +517,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     var segmentType = dbFieldValue.GetType();
                     if (segmentType != targetType)
                     {
-                        var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext.DbOptions);
+                        var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext.Options);
                         dbFieldValue = valueGetter.Invoke(dbFieldValue);
                     }
                     dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
@@ -1029,7 +1035,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     ReaderType = methodCallExpr.Type,
                     Value = sqlSegment.Value,
                     IsAggField = true,
-                    AggFunc = "SUM"
+                    AggFunc = "COUNT"
                 }, SqlType.ReaderField);
                 break;
             case "CountDistinct":
@@ -2148,7 +2154,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                                 throw new InvalidOperationException($"参数字典中成员{memberMapper.MemberName}对应的值不能为空");
 
                             typedValueGetter = this.OrmProvider.GetParameterValueGetter(
-                                fieldValue.GetType(), memberMapper.MappedTargetType, true, this.DbContext.DbOptions);
+                                fieldValue.GetType(), memberMapper.MappedTargetType, true, this.DbContext.Options);
                             valueGetter = value =>
                             {
                                 var dict = value as IDictionary<string, object>;
@@ -2160,7 +2166,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                         else
                         {
                             typedValueGetter = this.OrmProvider.GetParameterValueGetter(dict[itemKey].GetType(),
-                                memberMapper.MappedTargetType, !memberMapper.IsRequired, this.DbContext.DbOptions);
+                                memberMapper.MappedTargetType, !memberMapper.IsRequired, this.DbContext.Options);
                             valueGetter = value =>
                             {
                                 var dict = value as IDictionary<string, object>;
@@ -2203,7 +2209,7 @@ public class SqlVisitor : ISqlVisitor, ICommandContext
                     {
                         Func<object, object> typedValueGetter = null;
                         typedValueGetter = this.OrmProvider.GetParameterValueGetter(memberInfo.GetMemberType(),
-                            memberMapper.MappedTargetType, !memberMapper.IsRequired, this.DbContext.DbOptions);
+                            memberMapper.MappedTargetType, !memberMapper.IsRequired, this.DbContext.Options);
                         valueGetter = value =>
                         {
                             var fieldValue = ValueEvalutor.Evaluate(memberInfo, value);

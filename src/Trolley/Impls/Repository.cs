@@ -183,9 +183,10 @@ public class Repository : IRepository
     }
     public virtual async Task<List<TEntity>> QueryByIdsAsync<TEntity>(IEnumerable whereKeys, CancellationToken cancellationToken = default)
     {
-        return await this.DbContext.QueryAsync<TEntity, List<TEntity>>(whereKeys, true, true, async (reader, deserializer, cancellationToken) =>
+        return await this.DbContext.QueryAsync<TEntity, List<TEntity>>(whereKeys, true, true, async (reader,  cancellationToken) =>
         {
             var result = new List<TEntity>();
+            var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this.DbContext);
             while (await reader.ReadAsync(cancellationToken))
                 result.Add((TEntity)deserializer.Invoke(reader));
             return result;
@@ -373,13 +374,13 @@ public class Repository : IRepository
         => await this.DbContext.RollbackAsync(cancellationToken);
     public virtual IRepository WithTimeout(int seconds)
     {
-        this.DbContext.DbOptions.CommandTimeout = seconds;
+        this.DbContext.Options.CommandTimeout = seconds;
         return this;
     }
     public virtual IRepository WithOptions(Action<OrmDbFactoryOptions> optionsInitializer)
     {
         if (optionsInitializer == null) throw new ArgumentNullException(nameof(optionsInitializer));
-        optionsInitializer.Invoke(this.DbContext.DbOptions);
+        optionsInitializer.Invoke(this.DbContext.Options);
         return this;
     }
     //抛异常的时候，会走到析构函数，但是Transaction，没有提交也没有回滚

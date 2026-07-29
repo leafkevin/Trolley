@@ -31,12 +31,12 @@ public interface IDialectProvider
     #endregion
 
     #region QueryValue
-    List<TTarget> QueryValue<TTarget>(string rawSql, Func<ITheaDataReader, List<TTarget>> readerInitializer, CommandType commandType = CommandType.Text);
-    Task<List<TTarget>> QueryValueAsync<TTarget>(string rawSql, Func<ITheaDataReader, CancellationToken, Task<List<TTarget>>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
-    List<TTarget> QueryValue<TTarget>(string rawSql, object parameters, Func<ITheaDataReader, List<TTarget>> readerInitializer, CommandType commandType = CommandType.Text);
-    Task<List<TTarget>> QueryValueAsync<TTarget>(string rawSql, object parameters, Func<ITheaDataReader, CancellationToken, Task<List<TTarget>>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
-    List<TTarget> QueryValue<TTarget>(string rawSql, List<IDbDataParameter> parameters, Func<ITheaDataReader, List<TTarget>> readerInitializer, CommandType commandType = CommandType.Text);
-    Task<List<TTarget>> QueryValueAsync<TTarget>(string rawSql, List<IDbDataParameter> parameters, Func<ITheaDataReader, CancellationToken, Task<List<TTarget>>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
+    List<TTarget> QueryRaw<TTarget>(string rawSql, Func<ITheaDataReader, List<TTarget>> readerInitializer, CommandType commandType = CommandType.Text);
+    Task<List<TTarget>> QueryRawAsync<TTarget>(string rawSql, Func<ITheaDataReader, CancellationToken, Task<List<TTarget>>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
+    List<TTarget> QueryRaw<TTarget>(string rawSql, object parameters, Func<ITheaDataReader, List<TTarget>> readerInitializer, CommandType commandType = CommandType.Text);
+    Task<List<TTarget>> QueryRawAsync<TTarget>(string rawSql, object parameters, Func<ITheaDataReader, CancellationToken, Task<List<TTarget>>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
+    List<TTarget> QueryRaw<TTarget>(string rawSql, List<IDbDataParameter> parameters, Func<ITheaDataReader, List<TTarget>> readerInitializer, CommandType commandType = CommandType.Text);
+    Task<List<TTarget>> QueryRawAsync<TTarget>(string rawSql, List<IDbDataParameter> parameters, Func<ITheaDataReader, CancellationToken, Task<List<TTarget>>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
     #endregion
 
     #region Query

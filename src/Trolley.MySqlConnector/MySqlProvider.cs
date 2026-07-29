@@ -522,7 +522,7 @@ public partial class MySqlProvider : BaseOrmProvider
     {
         var createdAt = DateTime.Now;
         bulkCopyObj.DestinationTableName = tableName;
-        dbContext.DbInterceptor.OnCommandExecuting?.Invoke(new CommandEventArgs
+        dbContext.Interceptor.OnCommandExecuting?.Invoke(new CommandEventArgs
         {
             DbKey = dbContext.DbKey,
             ConnectionString = connection.ConnectionString,
@@ -544,7 +544,7 @@ public partial class MySqlProvider : BaseOrmProvider
         finally
         {
             var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
-            dbContext.DbInterceptor.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
+            dbContext.Interceptor.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
             {
                 DbKey = dbContext.DbKey,
                 ConnectionString = connection.ConnectionString,
@@ -565,7 +565,7 @@ public partial class MySqlProvider : BaseOrmProvider
     {
         var createdAt = DateTime.Now;
         bulkCopyObj.DestinationTableName = tableName;
-        dbContext.DbInterceptor.OnCommandExecuting?.Invoke(new CommandEventArgs
+        dbContext.Interceptor.OnCommandExecuting?.Invoke(new CommandEventArgs
         {
             DbKey = dbContext.DbKey,
             ConnectionString = connection.ConnectionString,
@@ -587,7 +587,7 @@ public partial class MySqlProvider : BaseOrmProvider
         finally
         {
             var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
-            dbContext.DbInterceptor.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
+            dbContext.Interceptor.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
             {
                 DbKey = dbContext.DbKey,
                 ConnectionString = connection.ConnectionString,

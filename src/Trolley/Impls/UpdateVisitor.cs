@@ -735,7 +735,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     var fieldValueType = fieldValue.GetType();
                     if (fieldValueType != targetType)
                     {
-                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext.DbOptions);
+                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext.Options);
                         fieldValue = myValueGetter.Invoke(fieldValue);
                     }
                 }
@@ -912,7 +912,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         else
         {
             var targetType = memberMapper.MappedTargetType;
-            var valueGetter = this.OrmProvider.GetParameterValueGetter(memberValue.GetType(), targetType, false, this.DbContext.DbOptions);
+            var valueGetter = this.OrmProvider.GetParameterValueGetter(memberValue.GetType(), targetType, false, this.DbContext.Options);
             fieldValue = valueGetter.Invoke(fieldValue);
         }
         this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
@@ -942,7 +942,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             else
             {
                 var targetType = memberMapper.MappedTargetType;
-                var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, !memberMapper.IsRequired, this.DbContext.DbOptions);
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, !memberMapper.IsRequired, this.DbContext.Options);
                 fieldValue = valueGetter.Invoke(fieldValue);
             }
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
@@ -989,7 +989,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     var fieldValueType = fieldValue.GetType();
                     if (fieldValueType.ToUnderlyingType() != targetType)
                     {
-                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext.DbOptions);
+                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext.Options);
                         valueGetter = updateObj => myValueGetter.Invoke(updateObj[key]);
                     }
                     else valueGetter = updateObj => updateObj[key];
@@ -1001,7 +1001,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         var fieldValueType = dict[key].GetType();
                         if (fieldValueType.ToUnderlyingType() != targetType)
                         {
-                            var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext.DbOptions);
+                            var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext.Options);
                             valueGetter = updateObj =>
                             {
                                 var fieldValue = updateObj[key];

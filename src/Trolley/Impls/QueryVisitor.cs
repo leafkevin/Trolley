@@ -1985,19 +1985,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                                 readerField.Fields[1].AliasName = aliasName2;
                                 builder.Append($"{fieldName1} AS {aliasName1},{fieldNamd2} AS {aliasName2}");
                             }
-                            else
-                            {
-                                builder.Append(readerField.Value.ToString());
-                                builder.Append($" AS {aliasName}");
-                            }
                         }
                         else
                         {
                             builder.Append(readerField.Value.ToString());
-
-                            readerField.IsNeedAlias = true;
-                            //多分表且单分组字段非字段场景，已经设置别名为Grouping
-                            readerField.AliasName = this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
                             builder.Append($" AS {readerField.AliasName}");
                         }
                         break;
@@ -2044,6 +2035,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     if (this.IsManyShardingTables && readerField.IsAggField)
                     {
                         readerField.IsNeedAlias = true;
+                        readerField.AliasName = this.OrmProvider.GetFieldName($"{readerField.AggFunc}_VALUE");
                         if (readerField.IsAvgField)
                         {
                             var fieldName1 = readerField.Fields[0].Value.ToString();
@@ -2054,11 +2046,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             readerField.Fields[1].AliasName = aliasName2;
                             body = $"{fieldName1} AS {aliasName1},{fieldNamd2} AS {aliasName2}";
                         }
-                        else
-                        {
-                            readerField.AliasName = $"{readerField.AggFunc}_VALUE";
-                            body = $"{body} AS {readerField.AliasName}";
-                        }
+                        else body = $"{readerField.Value.ToString()} AS {readerField.AliasName}";
                     }
                     else body = readerField.Value.ToString();
                     builder.Append(body);

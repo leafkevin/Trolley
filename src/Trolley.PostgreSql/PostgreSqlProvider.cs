@@ -2585,7 +2585,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         }
         builder.Append(") FROM STDIN BINARY");
         var createdAt = DateTime.Now;
-        dbContext.DbInterceptor.OnCommandExecuting?.Invoke(new CommandEventArgs
+        dbContext.Interceptor.OnCommandExecuting?.Invoke(new CommandEventArgs
         {
             DbKey = dbContext.DbKey,
             ConnectionString = connection.ConnectionString,
@@ -2623,7 +2623,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         finally
         {
             var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
-            dbContext.DbInterceptor.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
+            dbContext.Interceptor.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
             {
                 DbKey = dbContext.DbKey,
                 ConnectionString = connection.ConnectionString,
@@ -2652,7 +2652,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         }
         builder.Append(") FROM STDIN BINARY");
         var createdAt = DateTime.Now;
-        dbContext.DbInterceptor.OnCommandExecuting?.Invoke(new CommandEventArgs
+        dbContext.Interceptor.OnCommandExecuting?.Invoke(new CommandEventArgs
         {
             DbKey = dbContext.DbKey,
             ConnectionString = connection.ConnectionString,
@@ -2690,7 +2690,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         finally
         {
             var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
-            dbContext.DbInterceptor.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
+            dbContext.Interceptor.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
             {
                 DbKey = dbContext.DbKey,
                 ConnectionString = connection.ConnectionString,

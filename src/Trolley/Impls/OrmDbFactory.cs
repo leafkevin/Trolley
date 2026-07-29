@@ -24,14 +24,14 @@ public sealed class OrmDbFactory : IOrmDbFactory
     private List<IEntityMapProvider> allEntityMapProviders = null;
     private List<ITableShardingProvider> allTableShardingProviders = null;
     private IDbInterceptor interceptor = null;
-    private OrmDbFactoryOptions options = new OrmDbFactoryOptions();    
+    private OrmDbFactoryOptions options = new();
 
     public Delegate DbKeySelector => this.dbKeySelector;
     public List<TheaDatabase> Databases => this.allDatabases;
     public List<IOrmProvider> OrmProviders => this.allOrmProviders;
     public List<IEntityMapProvider> EntityMapProviders => this.allEntityMapProviders;
     public List<ITableShardingProvider> TableShardingProviders => this.allTableShardingProviders;
-    public IDbInterceptor DbInterceptor => this.interceptor;
+    public IDbInterceptor Interceptor => this.interceptor;
     public OrmDbFactoryOptions Options => this.options;
 
     public void Register(TheaDatabase database)
@@ -145,9 +145,9 @@ public sealed class OrmDbFactory : IOrmDbFactory
             Database = database,
             //mysql默认Schema是数据库名，暂时此处为null,pgsql的默认Schema是public，sqlserver的默认Schema是dbo
             DefaultTableSchema = database.OrmProvider.DefaultTableSchema,
-            DbInterceptor = this.interceptor
+            Interceptor = this.interceptor
         };
-        this.options.CopyTo(dbContext.DbOptions);
+        this.options.CopyTo(dbContext.Options);
         return database.OrmProvider.CreateRepository(dbContext);
     }
     public void Build()

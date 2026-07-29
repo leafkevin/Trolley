@@ -20,8 +20,8 @@ public class DialectProvider : IDialectProvider
     private IOrmProvider ormProvider => this.database.OrmProvider;
     private IEntityMapProvider entityMapProvider => this.database.EntityMapProvider;
     private ITableShardingProvider tableShardingProvider => this.database.TableShardingProvider;
-    private IDbInterceptor dbInterceptor => this.DbContext.DbInterceptor;
-    private OrmDbFactoryOptions dbOptions => this.DbContext.DbOptions;
+    private IDbInterceptor dbInterceptor => this.DbContext.Interceptor;
+    private OrmDbFactoryOptions dbOptions => this.DbContext.Options;
 
     #region Properties
     public DbContext DbContext { get; set; }
@@ -171,6 +171,14 @@ public class DialectProvider : IDialectProvider
     public TResult QueryScalar<TResult>(IQueryVisitor visitor)
     {
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor);
+        var sql = visitor.BuildSql(true, out var readerFields);
+        if (visitor.IsManyShardingTables)
+        {
+            sql = this.BuildShardingTablesSqlByFormat(visitor as SqlVisitor, sql, visitor.ShardingTableJointMark);
+            if (visitor.IsNeedChangeUnionShardingTables)
+                sql = visitor.BuildShardingSql(sql);
+        }
+
         (var sql, var readerFields) = this.BuildSql(visitor);
         sql = this.BuildScalarShardingSql(visitor, sql);
         command.CommandText = sql;
@@ -236,37 +244,51 @@ public class DialectProvider : IDialectProvider
     }
     #endregion
 
-    #region QueryValue
-    public List<TTarget> QueryValue<TTarget>(string rawSql, Func<ITheaDataReader, List<TTarget>> readerInitializer, CommandType commandType = CommandType.Text)
+    #region QueryRaw
+    public TResult QueryRaw<TTarget, TResult>(string rawSql, bool isBulk, Func<ITheaDataReader, TResult> readerInitializer, CommandType commandType = CommandType.Text)
     {
         (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlCommand(rawSql, commandType);
-
-        connection.Open();
-        var behavior = CommandBehavior.SequentialAccess;
-        using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
-        var result = readerInitializer.Invoke(reader);
-        reader.Dispose();
-
-        command.Dispose();
-        if (isNeedClose) connection.Close();
-        return result;
+        return this.QueryRawInternal<TTarget, TResult>(isBulk, isNeedClose, connection, command, readerInitializer);
     }
-    public async Task<List<TTarget>> QueryValueAsync<TTarget>(string rawSql, Func<ITheaDataReader, CancellationToken, Task<List<TTarget>>> readerInitializer,
-        CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+    public async Task<TResult> QueryRawAsync<TTarget, TResult>(string rawSql, bool isBulk, Func<ITheaDataReader, CancellationToken, Task<TResult>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlCommand(rawSql, commandType);
-
-        await connection.OpenAsync(cancellationToken);
-        var behavior = CommandBehavior.SequentialAccess;
-        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-        var result = await readerInitializer.Invoke(reader, cancellationToken);
-        await reader.DisposeAsync();
-
-        await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
-        return result;
+        return await this.QueryRawInternalAsync<TTarget, TResult>(isBulk, isNeedClose, connection, command, readerInitializer, cancellationToken);
     }
-    public List<TTarget> QueryValue<TTarget>(string rawSql, object parameters,
+    public TResult QueryRaw<TTarget, TResult>(string rawSql, bool isBulk, object parameter, Func<ITheaDataReader, TResult> readerInitializer, CommandType commandType = CommandType.Text)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlCommand(rawSql, parameter, commandType);
+        return this.QueryRawInternal<TTarget, TResult>(isBulk, isNeedClose, connection, command, readerInitializer);
+    }
+    public async Task<TResult> QueryRawAsync<TTarget, TResult>(string rawSql, bool isBulk, object parameter, Func<ITheaDataReader, CancellationToken, Task<TResult>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlCommand(rawSql, parameter, commandType);
+        return await this.QueryRawInternalAsync<TTarget, TResult>(isBulk, isNeedClose, connection, command, readerInitializer, cancellationToken);
+    }
+    public TResult QueryRaw<TTarget, TResult>(string rawSql, bool isBulk, List<IDbDataParameter> parameters, Func<ITheaDataReader, TResult> readerInitializer, CommandType commandType = CommandType.Text)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlParametersCommand(rawSql, parameters, commandType);
+        return this.QueryRawInternal<TTarget, TResult>(isBulk, isNeedClose, connection, command, readerInitializer);
+    }
+    public async Task<TResult> QueryRawAsync<TTarget, TResult>(string rawSql, bool isBulk, List<IDbDataParameter> parameters, Func<ITheaDataReader, CancellationToken, Task<TResult>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlParametersCommand(rawSql, parameters, commandType);
+        return await this.QueryRawInternalAsync<TTarget, TResult>(isBulk, isNeedClose, connection, command, readerInitializer, cancellationToken);
+    }
+    private (bool, ITheaConnection, ITheaCommand) CreateQueryRawSqlParametersCommand(string rawSql, List<IDbDataParameter> parameters, CommandType commandType)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+        if (parameters == null || parameters.Count == 0)
+            throw new ArgumentNullException(nameof(parameters));
+
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        command.CommandText = rawSql;
+        command.CommandType = commandType;
+        parameters.ForEach(f => command.Parameters.Add(f));
+        return (isNeedClose, connection, command);
+    }
+    public List<TTarget> QueryRaw<TTarget>(string rawSql, List<IDbDataParameter> parameters,
          Func<ITheaDataReader, List<TTarget>> readerInitializer, CommandType commandType = CommandType.Text)
     {
         (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlCommand(rawSql, parameters, commandType);
@@ -281,7 +303,7 @@ public class DialectProvider : IDialectProvider
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<List<TTarget>> QueryValueAsync<TTarget>(string rawSql, object parameters,
+    public async Task<List<TTarget>> QueryRawAsync<TTarget>(string rawSql, List<IDbDataParameter> parameters,
         Func<ITheaDataReader, CancellationToken, Task<List<TTarget>>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlCommand(rawSql, parameters, commandType);
@@ -296,103 +318,8 @@ public class DialectProvider : IDialectProvider
         if (isNeedClose) await connection.CloseAsync();
         return result;
     }
-    public List<TTarget> QueryValue<TTarget>(string rawSql, List<IDbDataParameter> parameters,
-        Func<ITheaDataReader, List<TTarget>> readerInitializer, CommandType commandType = CommandType.Text)
-    {
-        (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlCommand(rawSql, parameters, commandType);
 
-        connection.Open();
-        var behavior = CommandBehavior.SequentialAccess;
-        using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
-        var result = readerInitializer.Invoke(reader);
-        reader.Dispose();
 
-        command.Dispose();
-        if (isNeedClose) connection.Close();
-        return result;
-    }
-    public async Task<List<TTarget>> QueryValueAsync<TTarget>(string rawSql, List<IDbDataParameter> parameters,
-        Func<ITheaDataReader, CancellationToken, Task<List<TTarget>>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
-    {
-        (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlCommand(rawSql, parameters, commandType);
-
-        await connection.OpenAsync(cancellationToken);
-        var behavior = CommandBehavior.SequentialAccess;
-        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-        var result = await readerInitializer.Invoke(reader, cancellationToken);
-        await reader.DisposeAsync();
-
-        await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
-        return result;
-    }
-    #endregion
-
-    #region Query
-    public TResult Query<TTarget, TResult>(string rawSql, bool isBulk, Func<ITheaDataReader,
-        Func<ITheaDataReader, object>, TResult> readerInitializer, CommandType commandType = CommandType.Text)
-    {
-        (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlCommand(rawSql, commandType);
-
-        connection.Open();
-        var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
-        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext);
-        var result = readerInitializer.Invoke(reader, deserializer);
-        reader.Dispose();
-
-        command.Dispose();
-        if (isNeedClose) connection.Close();
-        return result;
-    }
-    public async Task<TResult> QueryAsync<TTarget, TResult>(string rawSql, bool isBulk, Func<ITheaDataReader, Func<ITheaDataReader,
-        object>, CancellationToken, Task<TResult>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
-    {
-        (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlCommand(rawSql, commandType);
-
-        await connection.OpenAsync(cancellationToken);
-        var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext);
-        var result = await readerInitializer.Invoke(reader, deserializer, cancellationToken);
-        await reader.DisposeAsync();
-
-        await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
-        return result;
-    }
-    public TResult Query<TTarget, TResult>(string rawSql, bool isBulk, object parameters, Func<ITheaDataReader,
-        Func<ITheaDataReader, object>, TResult> readerInitializer, CommandType commandType = CommandType.Text)
-    {
-        (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlCommand(rawSql, parameters, commandType);
-
-        connection.Open();
-        var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
-        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext);
-        var result = readerInitializer.Invoke(reader, deserializer);
-        reader.Dispose();
-
-        command.Dispose();
-        if (isNeedClose) connection.Close();
-        return result;
-    }
-    public async Task<TResult> QueryAsync<TTarget, TResult>(string rawSql, bool isBulk, object parameters, Func<ITheaDataReader, Func<ITheaDataReader,
-        object>, CancellationToken, Task<TResult>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
-    {
-        (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlCommand(rawSql, parameters, commandType);
-
-        await connection.OpenAsync(cancellationToken);
-        var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext);
-        var result = await readerInitializer.Invoke(reader, deserializer, cancellationToken);
-        await reader.DisposeAsync();
-
-        await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
-        return result;
-    }
     private (bool, ITheaConnection, ITheaCommand) CreateQueryRawSqlCommand(string rawSql, CommandType commandType)
     {
         if (string.IsNullOrEmpty(rawSql))
@@ -419,53 +346,31 @@ public class DialectProvider : IDialectProvider
         command.CommandType = commandType;
         return (isNeedClose, connection, command);
     }
-
-    public TResult QueryRaw<TTarget, TResult>(string rawSql, bool isBulk, List<IDbDataParameter> parameters,
-        Func<ITheaDataReader, Func<ITheaDataReader, object>, TResult> readerInitializer, CommandType commandType = CommandType.Text)
+    private TResult QueryRawInternal<TTarget, TResult>(bool isBulk, bool isNeedClose, ITheaConnection connection, ITheaCommand command, Func<ITheaDataReader, TResult> readerInitializer)
     {
-        (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlParametersCommand(rawSql, parameters, commandType);
-
         connection.Open();
         var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
-        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext);
-        var result = readerInitializer.Invoke(reader, deserializer);
+        var result = readerInitializer.Invoke(reader);
         reader.Dispose();
-
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<TResult> QueryRawAsync<TTarget, TResult>(string rawSql, bool isBulk, List<IDbDataParameter> parameters, Func<ITheaDataReader, Func<ITheaDataReader,
-        object>, CancellationToken, Task<TResult>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+    private async Task<TResult> QueryRawInternalAsync<TTarget, TResult>(bool isBulk, bool isNeedClose, ITheaConnection connection, ITheaCommand command, Func<ITheaDataReader, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
     {
-        (var isNeedClose, var connection, var command) = this.CreateQueryRawSqlParametersCommand(rawSql, parameters, commandType);
-
         await connection.OpenAsync(cancellationToken);
         var behavior = isBulk ? CommandBehavior.SequentialAccess : CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext);
-        var result = await readerInitializer.Invoke(reader, deserializer, cancellationToken);
+        var result = await readerInitializer.Invoke(reader, cancellationToken);
         await reader.DisposeAsync();
-
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;
     }
-    private (bool, ITheaConnection, ITheaCommand) CreateQueryRawSqlParametersCommand(string rawSql, List<IDbDataParameter> parameters, CommandType commandType)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-        if (parameters == null || parameters.Count == 0)
-            throw new ArgumentNullException(nameof(parameters));
+    #endregion
 
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        command.CommandText = rawSql;
-        command.CommandType = commandType;
-        parameters.ForEach(f => command.Parameters.Add(f));
-        return (isNeedClose, connection, command);
-    }
-
+    #region Query
     public TResult Query<TEntity, TResult>(object whereObjs, bool isUseKey, bool isBulk, Func<ITheaDataReader, Func<ITheaDataReader, object>, TResult> readerInitializer)
     {
         (var isNeedClose, var connection, var command) = this.CreateQueryWhereCommand(typeof(TEntity), whereObjs, isUseKey, isBulk);
@@ -1501,32 +1406,26 @@ public class DialectProvider : IDialectProvider
         }
         return (sql, readerFields);
     }
-    public string BuildScalarShardingSql(IQueryVisitor visitor, string rawSql)
+    public string BuildScalarShardingSql(string rawSql, List<ReaderField> readerFields)
     {
-        if (visitor.IsManyShardingTables && visitor.AggFieldAlias != null)
+        string aggFields = null;
+        var readerField = readerFields[0];
+        switch (readerField.AggFunc)
         {
-            string aggFields = null;
-            switch (visitor.AggFieldAlias)
-            {
-                case "COUNT_VALUE":
-                    aggFields = "SUM(COUNT_VALUE)";
-                    break;
-                case "SUM_VALUE":
-                    aggFields = "SUM(SUM_VALUE)";
-                    break;
-                case "AVG_VALUE":
-                    aggFields = "SUM(AVG_VALUE)/SUM(AVG_COUNT)";
-                    break;
-                case "MAX_VALUE":
-                    aggFields = "MAX(MAX_VALUE)";
-                    break;
-                case "MIN_VALUE":
-                    aggFields = "MIN(MIN_VALUE)";
-                    break;
-            }
-            return $"SELECT {aggFields} FROM ({rawSql}) AS t";
+            case "SUM":
+                aggFields = "SUM(SUM_VALUE)";
+                break;
+            case "AVG_VALUE":
+                aggFields = "SUM(AVG_VALUE)/SUM(AVG_COUNT)";
+                break;
+            case "MAX_VALUE":
+                aggFields = "MAX(MAX_VALUE)";
+                break;
+            case "MIN_VALUE":
+                aggFields = "MIN(MIN_VALUE)";
+                break;
         }
-        return rawSql;
+        return $"SELECT {aggFields} FROM ({rawSql}) AS t";
     }
     public string BuildShardingTablesSqlByFormat(SqlVisitor visitor, string formatSql, string jointMark)
     {

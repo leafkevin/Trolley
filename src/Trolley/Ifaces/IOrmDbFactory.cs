@@ -29,7 +29,7 @@ public interface IOrmDbFactory
     /// <summary>
     /// 拦截器，默认为null
     /// </summary>
-    IDbInterceptor DbInterceptor { get; }
+    IDbInterceptor Interceptor { get; }
     /// <summary>
     /// 默认全局配置
     /// </summary>

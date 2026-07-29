@@ -610,7 +610,7 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
         }
 
         var createdAt = DateTime.Now;
-        dbContext.DbInterceptor.OnCommandExecuting?.Invoke(new CommandEventArgs
+        dbContext.Interceptor.OnCommandExecuting?.Invoke(new CommandEventArgs
         {
             DbKey = dbContext.DbKey,
             ConnectionString = connection.ConnectionString,
@@ -632,7 +632,7 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
         finally
         {
             var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
-            dbContext.DbInterceptor.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
+            dbContext.Interceptor.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
             {
                 DbKey = dbContext.DbKey,
                 ConnectionString = connection.ConnectionString,
@@ -668,7 +668,7 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
         }
 
         var createdAt = DateTime.Now;
-        dbContext.DbInterceptor.OnCommandExecuting?.Invoke(new CommandEventArgs
+        dbContext.Interceptor.OnCommandExecuting?.Invoke(new CommandEventArgs
         {
             DbKey = dbContext.DbKey,
             ConnectionString = connection.ConnectionString,
@@ -690,7 +690,7 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
         finally
         {
             var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
-            dbContext.DbInterceptor.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
+            dbContext.Interceptor.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
             {
                 DbKey = dbContext.DbKey,
                 ConnectionString = connection.ConnectionString,

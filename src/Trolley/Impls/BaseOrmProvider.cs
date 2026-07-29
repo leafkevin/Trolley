@@ -2302,7 +2302,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             if (enumerableOrSapnSegment.IsValue && elementSegment.IsValue && comparerSegment.IsValue)
                             {
                                 var isContains = (bool)methodInfo.Invoke(null, [enumerableOrSapnSegment.Value, elementSegment.Value, comparerSegment.Value]);
-                                var wrapSql = isContains && !deferredOperations.HasNotOperation(out _) ? "1=1" : "1<>0";
+                                var wrapSql = isContains && !deferredOperations.HasNotOperation(out _) ? "1=1" : "1=0";
                                 return enumerableOrSapnSegment.Change(wrapSql);
                             }
                             throw new NotSupportedException("不支持的表达式访问，Contains不支持3个以上的非常量、变量参数的表达式访问");
@@ -2310,14 +2310,14 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     }
                     else
                     {
-                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
-                        {
-                            var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
-                            var elementArgument = visitor.GetQuotedValue(elementSegment);
-                            return elementSegment.Merge(arraySegment, $"{elementArgument} {notString}IN ({builder})");
-                        }
-                        else return elementSegment.Change("1=0");
-                    });
+                        //formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
+                        //{
+                        //    var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
+                        //    var elementArgument = visitor.GetQuotedValue(elementSegment);
+                        //    return elementSegment.Merge(arraySegment, $"{elementArgument} {notString}IN ({builder})");
+                        //}
+                        //else return elementSegment.Change("1=0");
+                    }
                     result = true;
                 }
                 //IEnumerable<T>,List<T>
@@ -2325,7 +2325,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                 if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType.GenericTypeArguments.Length > 0
                      && typeof(IEnumerable<>).MakeGenericType(methodInfo.DeclaringType.GenericTypeArguments[0]).IsAssignableFrom(methodInfo.DeclaringType))
                 {
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                     {
                         var builder = new StringBuilder();
                         var elementSegment = visitor.Visit(new SqlSegment { Expression = args[0] });
@@ -2354,7 +2354,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                 if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType.GenericTypeArguments.Length > 0
                     && methodInfo.DeclaringType.GenericTypeArguments[0] == typeof(char))
                 {
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                     {
                         var args0Segment = visitor.Visit(new SqlSegment { Expression = args[0] });
                         if (args0Segment.IsConstant || args0Segment.IsVariable)
