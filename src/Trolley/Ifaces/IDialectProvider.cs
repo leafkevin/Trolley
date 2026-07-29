@@ -110,7 +110,6 @@ public interface IDialectProvider
 
     #region BuildSql
     (string, List<ReaderField>) BuildSql(IQueryVisitor visitor);
-    string BuildScalarShardingSql(IQueryVisitor visitor, string rawSql);
     string BuildShardingTablesSqlByFormat(SqlVisitor visitor, string formatSql, string jointMark);
     string GetShardingTable(Type entityType, params object[] fieldValues);
     #endregion

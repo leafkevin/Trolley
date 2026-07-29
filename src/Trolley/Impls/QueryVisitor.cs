@@ -250,7 +250,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
         }
 
-        if (this.IsManyShardingTables && (hasGroupBy || hasOrderBy || this.offset.HasValue || this.limit.HasValue))
+        if (this.IsManyShardingTables && (hasGroupBy || hasOrderBy || this.offset.HasValue || this.limit.HasValue) )
             this.IsNeedChangeUnionShardingTables = true;
 
         //UNION的子查询中有OrderBy/Offset/Limit，就需要包装一下SELECT * FROM，否则数据结果不正确
@@ -571,8 +571,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //多分表场景下，offset有值，limit没有值，不添加offset语句，在最外层UNION ALL后，再添加offset语句
         //多分表场景下有分页，offset/limit都有值，limit要加上offset的值，防止丢失数据，在最外层UNION ALL后，再添加offset语句
 
-
-
         var tableSql = $"({formatSql})";
         if (this.offset.HasValue || this.limit.HasValue)
         {
@@ -600,6 +598,30 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         var sql = builder.ToString();
         return sql;
+    }
+    public virtual string BuildShardingScalarSql(string formatSql)
+    {
+        string aggFields = null;
+        var readerField = this.ReaderFields[0];
+        switch (readerField.AggFunc)
+        {
+            case "COUNT":
+                aggFields = "SUM(COUNT_VALUE)";
+                break;
+            case "SUM":
+                aggFields = "SUM(SUM_VALUE)";
+                break;
+            case "AVG":
+                aggFields = "SUM(SUM_VALUE)/SUM(COUNT_VALUE)";
+                break;
+            case "MAX":
+                aggFields = "MAX(MAX_VALUE)";
+                break;
+            case "MIN":
+                aggFields = "MIN(MIN_VALUE)";
+                break;
+        }
+        return $"SELECT {aggFields} FROM ({formatSql}) AS t";
     }
     public virtual string BuildCteTableSql(string tableName, out List<ReaderField> readerFields)
     {

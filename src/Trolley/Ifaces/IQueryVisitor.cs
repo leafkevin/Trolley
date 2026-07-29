@@ -58,6 +58,7 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     string BuildSql(bool isBuildCteSql, out List<ReaderField> readerFields);
     string BuildCommandSql(Type entityType, out IDataParameterCollection dbParameters);
     string BuildShardingSql(string formatSql);
+    string BuildShardingScalarSql(string formatSql);
     string BuildCteTableSql(string tableName, out List<ReaderField> readerFields);
 
     void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
