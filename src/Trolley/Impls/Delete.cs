@@ -145,10 +145,9 @@ public class Delete : Deleted, IDelete
     }
     #endregion
 }
-public class Deleted : IDeleted
+public class Deleted : DialectProvider, IDeleted
 {
     #region Properties
-    public DbContext DbContext { get; set; }
     public IDeleteVisitor Visitor { get; set; }
     #endregion
 
@@ -178,11 +177,13 @@ public class Deleted : IDeleted
         if (!this.Visitor.HasWhere)
             throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
         command.CommandText = this.Visitor.BuildSql(command, out _);
-        connection.Open();
-        var result = command.ExecuteNonQuery(CommandSqlType.Delete);
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
 
+        connection.Open();
+        var result = command.ExecuteNonQuery();
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
@@ -192,11 +193,13 @@ public class Deleted : IDeleted
         if (!this.Visitor.HasWhere)
             throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
         command.CommandText = this.Visitor.BuildSql(command, out _);
-        await connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(CommandSqlType.Delete, cancellationToken);
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
 
+        await connection.OpenAsync(cancellationToken);
+        var result = await command.ExecuteNonQueryAsync(cancellationToken);
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;
@@ -206,7 +209,7 @@ public class Deleted : IDeleted
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (_, _, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (_, _, var command) = this.UseMasterCommand(this.Visitor);
         var sql = this.Visitor.BuildSql(command, out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
@@ -334,10 +337,9 @@ public class Delete<TEntity> : Delete, IDelete<TEntity>
     }
     #endregion
 }
-public class ResultDeleted<TResult> : IBulkResultCommand<TResult>
+public class ResultDeleted<TResult> : DialectProvider, IBulkResultCommand<TResult>
 {
     #region Properties
-    public DbContext DbContext { get; set; }
     public IDeleteVisitor Visitor { get; set; }
     #endregion
 
@@ -356,11 +358,13 @@ public class ResultDeleted<TResult> : IBulkResultCommand<TResult>
             throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
         var result = new List<TResult>();
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
         command.CommandText = this.Visitor.BuildSql(command, out var readerFields);
-        connection.Open();
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
 
-        using var reader = command.ExecuteReader(CommandSqlType.Delete, CommandBehavior.SequentialAccess);
+        connection.Open();
+        using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
         var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
 
         while (reader.Read())
@@ -383,10 +387,13 @@ public class ResultDeleted<TResult> : IBulkResultCommand<TResult>
             throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
         var result = new List<TResult>();
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
         command.CommandText = this.Visitor.BuildSql(command, out var readerFields);
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
+
         await connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Delete, CommandBehavior.SequentialAccess, cancellationToken);
+        using var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
         var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
 
         while (await reader.ReadAsync(cancellationToken))
@@ -408,7 +415,7 @@ public class ResultDeleted<TResult> : IBulkResultCommand<TResult>
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (_, _, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (_, _, var command) = this.UseMasterCommand(this.Visitor);
         var sql = this.Visitor.BuildSql(command, out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();

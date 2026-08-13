@@ -33,43 +33,7 @@ public class AllUnitTest : UnitTestBase
                 .Register(OrmProviderType.MySql, "fengling2", f => f.Use(connectionString2))
                 .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
                 .UseTableSharding<TableShardingConfiguration>(OrmProviderType.MySql)
-                .UseInterceptors(df =>
-                {
-                    df.OnConnectionCreated += evt =>
-                    {
-                        Interlocked.Increment(ref connTotal);
-                        this.output.WriteLine($"Connection {evt.ConnectionId} Created, Total:{Volatile.Read(ref connTotal)}");
-                    };
-                    df.OnConnectionOpened += evt =>
-                    {
-                        Interlocked.Increment(ref connOpenTotal);
-                        this.output.WriteLine($"Connection {evt.ConnectionId} Opened, Total:{Volatile.Read(ref connOpenTotal)}");
-                    };
-                    df.OnConnectionClosed += evt =>
-                    {
-                        Interlocked.Decrement(ref connOpenTotal);
-                        Interlocked.Decrement(ref connTotal);
-                        this.output.WriteLine($"Connection {evt.ConnectionId} Closed, Total:{Volatile.Read(ref connOpenTotal)}");
-                    };
-                    df.OnCommandExecuting += evt =>
-                    {
-                        this.output.WriteLine($"{evt.SqlType} Begin, TransactionId:{evt.TransactionId} Sql: {evt.Sql}, Parameters: {evt.DbParameters.ToMySqlParametersString()}");
-                    };
-                    df.OnCommandExecuted += evt =>
-                    {
-                        this.output.WriteLine($"{evt.SqlType} End, TransactionId:{evt.TransactionId} Elapsed: {evt.Elapsed} ms, Sql: {evt.Sql}, Parameters: {evt.DbParameters.ToMySqlParametersString()}");
-                    };
-                    df.OnTransactionCreated += evt =>
-                    {
-                        Interlocked.Increment(ref tranTotal);
-                        this.output.WriteLine($"Transaction {evt.TransactionId} Created, Total:{Volatile.Read(ref tranTotal)}");
-                    };
-                    df.OnTransactionCompleted += evt =>
-                    {
-                        Interlocked.Decrement(ref tranTotal);
-                        this.output.WriteLine($"Transaction {evt.TransactionId} {evt.Action} Completed, Transaction Total:{Volatile.Read(ref tranTotal)}");
-                    };
-                });
+                .UseInterceptor(new MyDbInterceptor(output));
             return builder.Build();
         });
         services.AddTransient<IPassport>(f => new Passport { TenantId = "104", UserId = "1" });

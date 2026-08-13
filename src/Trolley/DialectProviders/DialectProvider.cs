@@ -647,6 +647,15 @@ public class DialectProvider
             command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
+    public (bool, ITheaConnection, ITheaCommand) CreateInsertCommand(ICreateVisitor visitor, bool hasIdentity)
+    {
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(visitor);
+        visitor.IsReturnIdentity = hasIdentity;
+        command.CommandText = visitor.BuildSql(command, out _);
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
+        return (isNeedClose, connection, command);
+    }
     public (bool, ITheaConnection, ITheaCommand, string, Action<IDataParameterCollection, StringBuilder, DbContext, object, string>)
         CreateInsertBulkCommand(Type entityType, IEnumerable insertObjs, int bulkCount)
     {

@@ -147,13 +147,13 @@ class MySqlTheaTransaction : ITheaTransaction
     public ValueTask DisposeAsync()
     {
         this.transaction.DisposeAsync();
-        return default(ValueTask);
+        return default;
     }
 #else
     public ValueTask DisposeAsync()
     {
         this.transaction.Dispose();
-        return default(ValueTask);
+        return default;
     }
 #endif
 }

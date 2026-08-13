@@ -282,14 +282,14 @@ class MySqlTheaCommand : ITheaCommand
     {
         this.command.DisposeAsync();
         this.Parameters.Clear();
-        return default(ValueTask);
+        return default;
     }
 #else
     public ValueTask DisposeAsync()
     {
         this.command.Dispose();
         this.Parameters.Clear();
-        return default(ValueTask);
+        return default;
     }
 #endif
     private bool OnExecuting(out object evtData)

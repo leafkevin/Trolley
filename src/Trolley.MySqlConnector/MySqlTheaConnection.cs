@@ -197,7 +197,7 @@ class MySqlTheaConnection : ITheaConnection
     public ValueTask DisposeAsync()
     {
         this.connection.DisposeAsync();
-        return default(ValueTask);
+        return default;
     }
 #else
     public ValueTask DisposeAsync()
@@ -205,7 +205,7 @@ class MySqlTheaConnection : ITheaConnection
         this.Interceptor?.ConnectionDisposing(this);
         this.connection.Dispose();
         this.Interceptor?.ConnectionDisposed(this);
-        return default(ValueTask);
+        return default;
     }
 #endif
     IDbTransaction IDbConnection.BeginTransaction()

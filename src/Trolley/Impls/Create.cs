@@ -10,12 +10,10 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public class Create : ICreate
+public class Create : DialectProvider, ICreate
 {
     #region Properties
-    public DbContext DbContext { get; protected set; }
     public ICreateVisitor Visitor { get; protected set; }
-    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Constructor
@@ -72,7 +70,7 @@ public class Create : ICreate
             throw new NotSupportedException($"方法WithBy只支持类对象参数，不支持基础类型参数, insertObj类型: {insertObjType.FullName}");
 
         this.Visitor.WithBy(insertObj);
-        return this.OrmProvider.NewContinuedCreate(this.DbContext, this.Visitor);
+        return this.ormProvider.NewContinuedCreate(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -93,16 +91,14 @@ public class Create : ICreate
         if (isEmpty) throw new Exception("批量插入，insertObjs参数至少要有一条数据");
 
         this.Visitor.WithBulk(insertObjs, bulkCount);
-        return this.OrmProvider.NewBulkContinuedCreate(this.DbContext, this.Visitor);
+        return this.ormProvider.NewBulkContinuedCreate(this.DbContext, this.Visitor);
     }
     #endregion     
 }
-public class Created : ICreated
+public class Created : DialectProvider, ICreated
 {
     #region Properties
-    public DbContext DbContext { get; protected set; }
     public ICreateVisitor Visitor { get; protected set; }
-    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Constructor
@@ -136,7 +132,7 @@ public class Created : ICreated
     public virtual int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.Bulk:
@@ -155,7 +151,10 @@ public class Created : ICreated
                         {
                             builder.Remove(builder.Length - 1, 1);
                             command.CommandText = builder.ToString();
-                            result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                            if (this.interceptor != null)
+                                command = this.interceptor.CommandInitialized(command);
+
+                            result += command.ExecuteNonQuery();
                             builder.Clear();
                             command.Parameters.Clear();
                             firstSqlSetter.Invoke(command.Parameters, builder, tableName);
@@ -184,14 +183,20 @@ public class Created : ICreated
                 {
                     builder.Remove(builder.Length - 1, 1);
                     command.CommandText = builder.ToString();
-                    result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                    if (this.interceptor != null)
+                        command = this.interceptor.CommandInitialized(command);
+
+                    result += command.ExecuteNonQuery();
                 }
                 builder.Clear();
                 break;
             default:
                 command.CommandText = this.Visitor.BuildSql(command, out _);
+                if (this.interceptor != null)
+                    command = this.interceptor.CommandInitialized(command);
+
                 connection.Open();
-                result = command.ExecuteNonQuery(CommandSqlType.Insert);
+                result = command.ExecuteNonQuery();
                 break;
         }
 
@@ -204,7 +209,7 @@ public class Created : ICreated
     public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.Bulk:
@@ -223,7 +228,10 @@ public class Created : ICreated
                         {
                             builder.Remove(builder.Length - 1, 1);
                             command.CommandText = builder.ToString();
-                            result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                            if (this.interceptor != null)
+                                command = this.interceptor.CommandInitialized(command);
+
+                            result += await command.ExecuteNonQueryAsync(cancellationToken);
                             builder.Clear();
                             command.Parameters.Clear();
                             firstSqlSetter.Invoke(command.Parameters, builder, tableName);
@@ -252,14 +260,20 @@ public class Created : ICreated
                 {
                     builder.Remove(builder.Length - 1, 1);
                     command.CommandText = builder.ToString();
-                    result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                    if (this.interceptor != null)
+                        command = this.interceptor.CommandInitialized(command);
+
+                    result += await command.ExecuteNonQueryAsync(cancellationToken);
                 }
                 builder.Clear();
                 break;
             default:
                 command.CommandText = this.Visitor.BuildSql(command, out _);
+                if (this.interceptor != null)
+                    command = this.interceptor.CommandInitialized(command);
+
                 await connection.OpenAsync(cancellationToken);
-                result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
+                result = await command.ExecuteNonQueryAsync(cancellationToken);
                 break;
         }
 
@@ -274,7 +288,7 @@ public class Created : ICreated
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (_, _, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (_, _, var command) = this.UseMasterCommand(this.Visitor);
         var sql = this.Visitor.BuildSql(command, out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
@@ -311,28 +325,32 @@ public class IdentitiedCreated : Created, IIdentitiedCreated
     #region ExecuteIdentity
     public virtual int ExecuteIdentity()
     {
-        var result = this.DbContext.CreateIdentity<int>(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(this.Visitor, true);
+        var result = this.QueryScalar<int>(isNeedClose, connection, command);
         this.Visitor.Dispose();
         this.Visitor = null;
         return result;
     }
     public virtual async Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default)
     {
-        var result = await this.DbContext.CreateIdentityAsync<int>(this.Visitor, cancellationToken);
+        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(this.Visitor, true);
+        var result = await this.QueryScalarAsync<int>(isNeedClose, connection, command, cancellationToken);
         this.Visitor.Dispose();
         this.Visitor = null;
         return result;
     }
     public virtual long ExecuteIdentityLong()
     {
-        var result = this.DbContext.CreateIdentity<long>(this.Visitor); this.Visitor.Dispose();
+        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(this.Visitor, true);
+        var result = this.QueryScalar<long>(isNeedClose, connection, command);
         this.Visitor.Dispose();
         this.Visitor = null;
         return result;
     }
     public virtual async Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
     {
-        var result = await this.DbContext.CreateIdentityAsync<long>(this.Visitor, cancellationToken);
+        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(this.Visitor, true);
+        var result = await this.QueryScalarAsync<long>(isNeedClose, connection, command, cancellationToken);
         this.Visitor.Dispose();
         this.Visitor = null;
         return result;
@@ -405,12 +423,10 @@ public class BulkContinuedCreate : Created, IBulkContinuedCreate
     }
     #endregion
 }
-public class ResultCreated<TResult> : IResultCommand<TResult>
+public class ResultCreated<TResult> : DialectProvider, IResultCommand<TResult>
 {
     #region Properties
-    public DbContext DbContext { get; protected set; }
     public ICreateVisitor Visitor { get; protected set; }
-    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Constructor
@@ -422,17 +438,28 @@ public class ResultCreated<TResult> : IResultCommand<TResult>
     #endregion
 
     #region Execute
-    public TResult Execute() => this.DbContext.CreateResult<TResult, TResult>(this.Visitor,
-        (reader, readerFields, deserializer) => reader.Read() ? (TResult)deserializer.Invoke(reader, readerFields) : default);
+    public TResult Execute()
+    {
+        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(this.Visitor, false);
+        var result = this.QuerySingle<TResult>(isNeedClose, connection, command);
+        this.Visitor.Dispose();
+        this.Visitor = null;
+        return result;
+    }
     public async Task<TResult> ExecuteAsync(CancellationToken cancellationToken)
-        => await this.DbContext.CreateResultAsync<TResult, TResult>(this.Visitor,
-        (reader, readerFields, deserializer) => reader.Read() ? (TResult)deserializer.Invoke(reader, readerFields) : default, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(this.Visitor, false);
+        var result = await this.QuerySingleAsync<TResult>(isNeedClose, connection, command, cancellationToken);
+        this.Visitor.Dispose();
+        this.Visitor = null;
+        return result;
+    }
     #endregion
 
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (_, _, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (_, _, var command) = this.UseMasterCommand(this.Visitor);
         var sql = this.Visitor.BuildSql(command, out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
@@ -442,12 +469,10 @@ public class ResultCreated<TResult> : IResultCommand<TResult>
     }
     #endregion
 }
-public class BulkResultCreated<TResult> : IBulkResultCommand<TResult>
+public class BulkResultCreated<TResult> : DialectProvider, IBulkResultCommand<TResult>
 {
     #region Properties
-    public DbContext DbContext { get; protected set; }
     public ICreateVisitor Visitor { get; protected set; }
-    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Constructor
@@ -459,27 +484,28 @@ public class BulkResultCreated<TResult> : IBulkResultCommand<TResult>
     #endregion
 
     #region Execute
-    public List<TResult> Execute() => this.DbContext.CreateResult<TResult, List<TResult>>(this.Visitor, (reader, readerFields, deserializer) =>
+    public List<TResult> Execute()
     {
-        var result = new List<TResult>();
-        while (reader.Read())
-            result.Add((TResult)deserializer.Invoke(reader, readerFields));
+        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(this.Visitor, false);
+        var result = this.Query<TResult>(isNeedClose, connection, command);
+        this.Visitor.Dispose();
+        this.Visitor = null;
         return result;
-    });
+    }
     public async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken)
-        => await this.DbContext.CreateResultAsync<TResult, List<TResult>>(this.Visitor, (reader, readerFields, deserializer) =>
-        {
-            var result = new List<TResult>();
-            while (reader.Read())
-                result.Add((TResult)deserializer.Invoke(reader, readerFields));
-            return result;
-        }, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(this.Visitor, false);
+        var result = await this.QueryAsync<TResult>(isNeedClose, connection, command, cancellationToken);
+        this.Visitor.Dispose();
+        this.Visitor = null;
+        return result;
+    }
     #endregion
 
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (_, _, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (_, _, var command) = this.UseMasterCommand(this.Visitor);
         var sql = this.Visitor.BuildSql(command, out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
@@ -527,7 +553,7 @@ public class Create<TEntity> : Create, ICreate<TEntity>
     public new IContinuedCreate<TEntity> WithBy(object insertObj)
     {
         base.WithBy(insertObj);
-        return this.OrmProvider.NewContinuedCreate<TEntity>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewContinuedCreate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -535,7 +561,7 @@ public class Create<TEntity> : Create, ICreate<TEntity>
     public new IBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500)
     {
         base.WithBulk(insertObjs, bulkCount);
-        return this.OrmProvider.NewBulkContinuedCreate<TEntity>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewBulkContinuedCreate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion  
 }

@@ -8,7 +8,7 @@ namespace Trolley.MySqlConnector;
 
 class MySqlTheaDataReader : ITheaDataReader
 {
-    private readonly MySqlDataReader reader;   
+    private readonly MySqlDataReader reader;
 
     public int Depth => this.reader.Depth;
     public bool IsClosed => this.reader.IsClosed;
@@ -36,13 +36,13 @@ class MySqlTheaDataReader : ITheaDataReader
     public ValueTask DisposeAsync()
     {
         this.reader.DisposeAsync();
-        return default(ValueTask);
+        return default;
     }
 #else
     public ValueTask DisposeAsync()
     {
         this.reader.Dispose();
-        return default(ValueTask);
+        return default;
     }
 #endif
     public T GetFieldValue<T>(int ordinal) => this.reader.GetFieldValue<T>(ordinal);
@@ -62,7 +62,7 @@ class MySqlTheaDataReader : ITheaDataReader
         => this.reader.ReadAsync(cancellationToken);
 
     public DataTable GetSchemaTable() => this.reader.GetSchemaTable();
- 
+
     public bool GetBoolean(int i) => this.reader.GetBoolean(i);
     public byte GetByte(int i) => this.reader.GetByte(i);
     public long GetBytes(int i, long fieldOffset, byte[] buffer, int bufferoffset, int length)

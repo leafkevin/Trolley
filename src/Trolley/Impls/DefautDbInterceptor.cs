@@ -25,10 +25,10 @@ public class DefautDbInterceptor : IDbInterceptor
     public virtual void TransactionCreating(ITheaConnection connection) { }
     public virtual ITheaTransaction TransactionCreated(ITheaTransaction transaction) => transaction;
     public virtual DbTransactionExecutingEventArgs TransactionCommitting(ITheaTransaction transaction)
-    => new DbTransactionExecutingEventArgs { EventData = DateTime.UtcNow, Transaction = transaction };
+        => new DbTransactionExecutingEventArgs { EventData = DateTime.UtcNow, Transaction = transaction };
     public virtual void TransactionCommitted(DbTransactionCompletedEventArgs eventArgs) { }
     public virtual DbTransactionExecutingEventArgs TransactionRollingBack(ITheaTransaction transaction)
-    => new DbTransactionExecutingEventArgs { EventData = DateTime.UtcNow, Transaction = transaction };
+        => new DbTransactionExecutingEventArgs { EventData = DateTime.UtcNow, Transaction = transaction };
     public virtual void TransactionRolledBack(DbTransactionCompletedEventArgs eventArgs) { }
     public virtual void TransactionFailed(DbTransactionCompletedEventArgs eventArgs) { }
 }

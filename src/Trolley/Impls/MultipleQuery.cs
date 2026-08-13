@@ -14,8 +14,6 @@ public class MultipleQuery : DialectProvider, IMultipleQuery, ICommandContext
     #endregion
 
     #region Properties
-    public DbContext DbContext { get; set; }
-    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     public ITheaCommand Command { get; set; }
     public IDataParameterCollection DbParameters { get; set; }
     public List<ReaderAfter> ReaderAfters { get; private set; }
@@ -44,61 +42,61 @@ public class MultipleQuery : DialectProvider, IMultipleQuery, ICommandContext
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T));
-        return this.OrmProvider.NewMultiQuery<T>(this, visitor);
+        return this.ormProvider.NewMultiQuery<T>(this, visitor);
     }
     public virtual IMultiQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2));
-        return this.OrmProvider.NewMultiQuery<T1, T2>(this, visitor);
+        return this.ormProvider.NewMultiQuery<T1, T2>(this, visitor);
     }
     public virtual IMultiQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3));
-        return this.OrmProvider.NewMultiQuery<T1, T2, T3>(this, visitor);
+        return this.ormProvider.NewMultiQuery<T1, T2, T3>(this, visitor);
     }
     public virtual IMultiQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
-        return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4>(this, visitor);
+        return this.ormProvider.NewMultiQuery<T1, T2, T3, T4>(this, visitor);
     }
     public virtual IMultiQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
-        return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5>(this, visitor);
+        return this.ormProvider.NewMultiQuery<T1, T2, T3, T4, T5>(this, visitor);
     }
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
-        return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6>(this, visitor);
+        return this.ormProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6>(this, visitor);
     }
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
-        return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7>(this, visitor);
+        return this.ormProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7>(this, visitor);
     }
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
-        return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this, visitor);
+        return this.ormProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this, visitor);
     }
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
-        return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this, visitor);
+        return this.ormProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this, visitor);
     }
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
-        return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this, visitor);
+        return this.ormProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this, visitor);
     }
     #endregion
 
@@ -107,13 +105,13 @@ public class MultipleQuery : DialectProvider, IMultipleQuery, ICommandContext
     {
         var visitor = this.CreateQueryVisitor();
         visitor.UseQuery(typeof(T), subQuery, false);
-        return this.OrmProvider.NewMultiQuery<T>(this, visitor);
+        return this.ormProvider.NewMultiQuery<T>(this, visitor);
     }
     public virtual IMultiQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
         var visitor = this.CreateQueryVisitor();
         visitor.UseNewQuery(typeof(T), subQueryExpr, false);
-        return this.OrmProvider.NewMultiQuery<T>(this, visitor);
+        return this.ormProvider.NewMultiQuery<T>(this, visitor);
     }
     #endregion
 
@@ -270,7 +268,7 @@ public class MultipleQuery : DialectProvider, IMultipleQuery, ICommandContext
 
     #region Others
     private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a')
-        => this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart, this.Command);
+        => this.ormProvider.NewQueryVisitor(this.DbContext, tableAsStart, this.Command);
     private void CreateRawReader(string rawSql, Type targetType, ReaderResultType resultType, bool isExists)
     {
         if (string.IsNullOrEmpty(rawSql))
@@ -286,8 +284,8 @@ public class MultipleQuery : DialectProvider, IMultipleQuery, ICommandContext
         var whereObjType = parameters.GetType();
         if (!whereObjType.IsEntityType(out _))
             throw new NotSupportedException("不支持的参数类型，此方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
-        var commandInitializer = RepositoryHelper.BuildRawSqlCommandInitializer(this.OrmProvider, rawSql, parameters);
-        commandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, parameters);
+        var commandInitializer = RepositoryHelper.BuildRawSqlCommandInitializer(this.ormProvider, rawSql, parameters);
+        commandInitializer.Invoke(this.Command.Parameters, this.ormProvider, parameters);
         this.AddReader(targetType, rawSql, resultType, isExists);
     }
     private void CreateRawParametersReader(string rawSql, List<IDbDataParameter> parameters, Type targetType, ReaderResultType resultType, bool isExists)
