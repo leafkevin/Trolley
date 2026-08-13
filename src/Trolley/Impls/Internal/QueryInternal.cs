@@ -4,10 +4,9 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-public class QueryInternal
+public class QueryInternal : DialectProvider
 {
     #region Properties
-    public DbContext DbContext { get; set; }
     public IQueryVisitor Visitor { get; set; }
     public virtual bool IsCteTable => false;
     public virtual IOrmProvider OrmProvider => this.DbContext.OrmProvider;

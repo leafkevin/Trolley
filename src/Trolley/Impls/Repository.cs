@@ -8,15 +8,8 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public class Repository : IRepository
+public class Repository : DialectProvider, IRepository
 {
-    #region Properties
-    public DbContext DbContext { get; set; }
-    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
-    public IEntityMapProvider MapProvider => this.DbContext.EntityMapProvider;
-    public ITableShardingProvider ShardingProvider => this.DbContext.TableShardingProvider;
-    #endregion
-
     #region Constructor
     public Repository(DbContext dbContext) => this.DbContext = dbContext;
     #endregion
@@ -36,17 +29,18 @@ public class Repository : IRepository
 
     #region ShardingTable
     public virtual void CreateShardingTable<TEntity>(string tableName, string fromTableSchema = null) { }
-    public virtual Task CreateShardingTableAsync<TEntity>(string tableName, string fromTableSchema = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public virtual Task CreateShardingTableAsync<TEntity>(string tableName, string fromTableSchema = null, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
     public virtual string GetShardingTableName<TEntity>(params object[] fieldValues)
-        => this.DbContext.GetShardingTable(typeof(TEntity), fieldValues);
+        => this.GetShardingTable(typeof(TEntity), fieldValues);
     public virtual void CreateShardingTable<TEntity>(object[] fieldValues, string fromTableSchema = null)
     {
-        var tableName = this.DbContext.GetShardingTable(typeof(TEntity), fieldValues);
+        var tableName = this.GetShardingTable(typeof(TEntity), fieldValues);
         this.CreateShardingTable<TEntity>(tableName, fromTableSchema);
     }
     public virtual async Task CreateShardingTableAsync<TEntity>(object[] fieldValues, string fromTableSchema = null, CancellationToken cancellationToken = default)
     {
-        var tableName = this.DbContext.GetShardingTable(typeof(TEntity), fieldValues);
+        var tableName = this.GetShardingTable(typeof(TEntity), fieldValues);
         await this.CreateShardingTableAsync<TEntity>(tableName, fromTableSchema, cancellationToken);
     }
     #endregion     
@@ -56,61 +50,61 @@ public class Repository : IRepository
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T));
-        return this.OrmProvider.NewQuery<T>(this.DbContext, visitor);
+        return this.ormProvider.NewQuery<T>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2));
-        return this.OrmProvider.NewQuery<T1, T2>(this.DbContext, visitor);
+        return this.ormProvider.NewQuery<T1, T2>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3));
-        return this.OrmProvider.NewQuery<T1, T2, T3>(this.DbContext, visitor);
+        return this.ormProvider.NewQuery<T1, T2, T3>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
-        return this.OrmProvider.NewQuery<T1, T2, T3, T4>(this.DbContext, visitor);
+        return this.ormProvider.NewQuery<T1, T2, T3, T4>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
-        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5>(this.DbContext, visitor);
+        return this.ormProvider.NewQuery<T1, T2, T3, T4, T5>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
-        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6>(this.DbContext, visitor);
+        return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
-        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7>(this.DbContext, visitor);
+        return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
-        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this.DbContext, visitor);
+        return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
-        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.DbContext, visitor);
+        return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
-        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.DbContext, visitor);
+        return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.DbContext, visitor);
     }
     #endregion
 
@@ -119,214 +113,321 @@ public class Repository : IRepository
     {
         var visitor = this.CreateQueryVisitor('a', subQuery.Visitor);
         visitor.UseQuery(typeof(T), subQuery, true);
-        return this.OrmProvider.NewQuery<T>(this.DbContext, visitor);
+        return this.ormProvider.NewQuery<T>(this.DbContext, visitor);
     }
     public virtual IQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
         var visitor = this.CreateQueryVisitor();
         visitor.UseNewQuery(typeof(T), subQueryExpr, true);
-        return this.OrmProvider.NewQuery<T>(this.DbContext, visitor);
+        return this.ormProvider.NewQuery<T>(this.DbContext, visitor);
     }
     #endregion
 
     #region QueryScalar
     public virtual TValue QueryScalar<TValue>(string rawSql, CommandType commandType = CommandType.Text)
-        => this.DbContext.QueryScalar<TValue>(rawSql, commandType);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryCommand(rawSql, commandType);
+        return this.QueryScalar<TValue>(isNeedClose, connection, command);
+    }
     public virtual async Task<TValue> QueryScalarAsync<TValue>(string rawSql, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryScalarAsync<TValue>(rawSql, commandType, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryCommand(rawSql, commandType);
+        return await this.QueryScalarAsync<TValue>(isNeedClose, connection, command, cancellationToken);
+    }
     public virtual TValue QueryScalar<TValue>(string rawSql, object parameters, CommandType commandType = CommandType.Text)
-        => this.DbContext.QueryScalar<TValue>(rawSql, parameters, commandType);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryCommand(rawSql, parameters, commandType);
+        return this.QueryScalar<TValue>(isNeedClose, connection, command);
+    }
     public virtual async Task<TValue> QueryScalarAsync<TValue>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryScalarAsync<TValue>(rawSql, parameters, commandType, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryCommand(rawSql, parameters, commandType);
+        return await this.QueryScalarAsync<TValue>(isNeedClose, connection, command, cancellationToken);
+    }
     public virtual TValue QueryScalar<TValue>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text)
-        => this.DbContext.QueryScalar<TValue>(rawSql, parameters, commandType);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryCommand(rawSql, parameters, commandType);
+        return this.QueryScalar<TValue>(isNeedClose, connection, command);
+    }
     public virtual async Task<TValue> QueryScalarAsync<TValue>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryScalarAsync<TValue>(rawSql, parameters, commandType, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryCommand(rawSql, parameters, commandType);
+        return await this.QueryScalarAsync<TValue>(isNeedClose, connection, command, cancellationToken);
+    }
     #endregion
 
     #region QueryById
     public virtual TEntity QueryById<TEntity>(object whereKey)
-        => this.DbContext.Query<TEntity, TEntity>(whereKey, true, false, (reader, deserializer) => reader.Read() ? (TEntity)deserializer.Invoke(reader) : default);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereKey, true, false);
+        return this.QuerySingle<TEntity>(isNeedClose, connection, command);
+    }
     public virtual async Task<TEntity> QueryByIdAsync<TEntity>(object whereKey, CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryAsync<TEntity, TEntity>(whereKey, true, false, async (reader, deserializer, cancellationToken) => (await reader.ReadAsync(cancellationToken)) ? (TEntity)deserializer.Invoke(reader) : default, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereKey, true, false);
+        return await this.QuerySingleAsync<TEntity>(isNeedClose, connection, command, cancellationToken);
+    }
     #endregion
 
     #region QueryFirst
     public virtual TEntity QueryFirst<TEntity>(string rawSql, CommandType commandType = CommandType.Text)
-        => this.DbContext.Query<TEntity, TEntity>(rawSql, false, (reader, deserializer) => reader.Read() ? (TEntity)deserializer.Invoke(reader) : default, commandType);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryCommand(rawSql, commandType);
+        return this.QuerySingle<TEntity>(isNeedClose, connection, command);
+    }
     public virtual async Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryAsync<TEntity, TEntity>(rawSql, false, async (reader, deserializer, cancellationToken) => (await reader.ReadAsync(cancellationToken)) ? (TEntity)deserializer.Invoke(reader) : default, commandType, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryCommand(rawSql, commandType);
+        return await this.QuerySingleAsync<TEntity>(isNeedClose, connection, command, cancellationToken);
+    }
     public virtual TEntity QueryFirst<TEntity>(string rawSql, object parameters, CommandType commandType = CommandType.Text)
-        => this.DbContext.Query<TEntity, TEntity>(rawSql, false, parameters, (reader, deserializer) => reader.Read() ? (TEntity)deserializer.Invoke(reader) : default, commandType);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryCommand(rawSql, parameters, commandType);
+        return this.QuerySingle<TEntity>(isNeedClose, connection, command);
+    }
     public virtual async Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, object parameters, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryAsync<TEntity, TEntity>(rawSql, false, parameters, async (reader, deserializer, cancellationToken) => (await reader.ReadAsync(cancellationToken)) ? (TEntity)deserializer.Invoke(reader) : default, commandType, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryCommand(rawSql, parameters, commandType);
+        return await this.QuerySingleAsync<TEntity>(isNeedClose, connection, command, cancellationToken);
+    }
     public virtual TEntity QueryFirst<TEntity>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text)
-        => this.DbContext.QueryRaw<TEntity, TEntity>(rawSql, false, parameters, (reader, deserializer) => reader.Read() ? (TEntity)deserializer.Invoke(reader) : default, commandType);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryCommand(rawSql, parameters, commandType);
+        return this.QuerySingle<TEntity>(isNeedClose, connection, command);
+    }
     public virtual async Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryRawAsync<TEntity, TEntity>(rawSql, false, parameters, async (reader, deserializer, cancellationToken) => (await reader.ReadAsync(cancellationToken)) ? (TEntity)deserializer.Invoke(reader) : default, commandType, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryCommand(rawSql, parameters, commandType);
+        return await this.QuerySingleAsync<TEntity>(isNeedClose, connection, command, cancellationToken);
+    }
     public virtual TEntity QueryFirst<TEntity>(object whereObj = null)
-        => this.DbContext.Query<TEntity, TEntity>(whereObj, false, false, (reader, deserializer) => reader.Read() ? (TEntity)deserializer.Invoke(reader) : default);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereObj, false, false);
+        return this.QuerySingle<TEntity>(isNeedClose, connection, command);
+    }
     public virtual async Task<TEntity> QueryFirstAsync<TEntity>(object whereObj = null, CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryAsync<TEntity, TEntity>(whereObj, false, false, async (reader, deserializer, cancellationToken) => (await reader.ReadAsync(cancellationToken)) ? (TEntity)deserializer.Invoke(reader) : default, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereObj, false, false);
+        return await this.QuerySingleAsync<TEntity>(isNeedClose, connection, command, cancellationToken);
+    }
     #endregion
 
     #region QueryByIds
     public virtual List<TEntity> QueryByIds<TEntity>(IEnumerable whereKeys)
     {
-        return this.DbContext.Query<TEntity, List<TEntity>>(whereKeys, true, true, (reader, deserializer) =>
-        {
-            var result = new List<TEntity>();
-            while (reader.Read())
-                result.Add((TEntity)deserializer.Invoke(reader));
-            return result;
-        });
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereKeys, true, true);
+        return this.Query<TEntity>(isNeedClose, connection, command);
     }
     public virtual async Task<List<TEntity>> QueryByIdsAsync<TEntity>(IEnumerable whereKeys, CancellationToken cancellationToken = default)
     {
-        return await this.DbContext.QueryAsync<TEntity, List<TEntity>>(whereKeys, true, true, async (reader,  cancellationToken) =>
-        {
-            var result = new List<TEntity>();
-            var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this.DbContext);
-            while (await reader.ReadAsync(cancellationToken))
-                result.Add((TEntity)deserializer.Invoke(reader));
-            return result;
-        }, cancellationToken);
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereKeys, true, true);
+        return await this.QueryAsync<TEntity>(isNeedClose, connection, command, cancellationToken);
     }
     #endregion
 
     #region Query
     public virtual List<TEntity> Query<TEntity>(string rawSql, CommandType commandType = CommandType.Text)
-        => this.DbContext.Query<TEntity, List<TEntity>>(rawSql, true, (reader, deserializer) =>
-        {
-            var result = new List<TEntity>();
-            while (reader.Read())
-                result.Add((TEntity)deserializer.Invoke(reader));
-            return result;
-        }, commandType);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryCommand(rawSql, commandType);
+        return this.Query<TEntity>(isNeedClose, connection, command);
+    }
     public virtual async Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryAsync<TEntity, List<TEntity>>(rawSql, true, async (reader, deserializer, cancellationToken) =>
-        {
-            var result = new List<TEntity>();
-            while (await reader.ReadAsync(cancellationToken))
-                result.Add((TEntity)deserializer.Invoke(reader));
-            return result;
-        }, commandType, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryCommand(rawSql, commandType);
+        return await this.QueryAsync<TEntity>(isNeedClose, connection, command, cancellationToken);
+    }
     public virtual List<TEntity> Query<TEntity>(string rawSql, object parameters, CommandType commandType = CommandType.Text)
-        => this.DbContext.Query<TEntity, List<TEntity>>(rawSql, true, parameters, (reader, deserializer) =>
-        {
-            var result = new List<TEntity>();
-            while (reader.Read())
-                result.Add((TEntity)deserializer.Invoke(reader));
-            return result;
-        }, commandType);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryCommand(rawSql, parameters, commandType);
+        return this.Query<TEntity>(isNeedClose, connection, command);
+    }
     public virtual async Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryAsync<TEntity, List<TEntity>>(rawSql, true, parameters, async (reader, deserializer, cancellationToken) =>
-        {
-            var result = new List<TEntity>();
-            while (await reader.ReadAsync(cancellationToken))
-                result.Add((TEntity)deserializer.Invoke(reader));
-            return result;
-        }, commandType, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryCommand(rawSql, parameters, commandType);
+        return await this.QueryAsync<TEntity>(isNeedClose, connection, command, cancellationToken);
+    }
     public virtual List<TEntity> Query<TEntity>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text)
-        => this.DbContext.QueryRaw<TEntity, List<TEntity>>(rawSql, true, parameters, (reader, deserializer) =>
-        {
-            var result = new List<TEntity>();
-            while (reader.Read())
-                result.Add((TEntity)deserializer.Invoke(reader));
-            return result;
-        }, commandType);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryCommand(rawSql, parameters, commandType);
+        return this.Query<TEntity>(isNeedClose, connection, command);
+    }
     public virtual async Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryRawAsync<TEntity, List<TEntity>>(rawSql, true, parameters, async (reader, deserializer, cancellationToken) =>
-        {
-            var result = new List<TEntity>();
-            while (await reader.ReadAsync(cancellationToken))
-                result.Add((TEntity)deserializer.Invoke(reader));
-            return result;
-        }, commandType, cancellationToken);
-
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryCommand(rawSql, parameters, commandType);
+        return await this.QueryAsync<TEntity>(isNeedClose, connection, command, cancellationToken);
+    }
     public virtual List<TEntity> Query<TEntity>(object whereObj = null)
-        => this.DbContext.Query<TEntity, List<TEntity>>(whereObj, false, true, (reader, deserializer) =>
-        {
-            var result = new List<TEntity>();
-            while (reader.Read())
-                result.Add((TEntity)deserializer.Invoke(reader));
-            return result;
-        });
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereObj, false, false);
+        return this.Query<TEntity>(isNeedClose, connection, command);
+    }
     public virtual async Task<List<TEntity>> QueryAsync<TEntity>(object whereObj = null, CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryAsync<TEntity, List<TEntity>>(whereObj, false, true, async (reader, deserializer, cancellationToken) =>
-        {
-            var result = new List<TEntity>();
-            while (await reader.ReadAsync(cancellationToken))
-                result.Add((TEntity)deserializer.Invoke(reader));
-            return result;
-        }, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereObj, false, false);
+        return await this.QueryAsync<TEntity>(isNeedClose, connection, command, cancellationToken);
+    }
     #endregion
 
     #region Exists
-    public virtual bool ExistsBy<TEntity>(object whereObj) => this.DbContext.Exists<TEntity>(whereObj, false, false);
+    public virtual bool ExistsBy<TEntity>(object whereObj)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereObj, false, false);
+        return this.Exists(isNeedClose, connection, command);
+    }
     public virtual async Task<bool> ExistsByAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
-        => await this.DbContext.ExistsAsync<TEntity>(whereObj, false, false, cancellationToken);
-    public virtual bool ExistsById<TEntity>(object whereKey) => this.DbContext.Exists<TEntity>(whereKey, true, false);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereObj, false, false);
+        return await this.ExistsAsync(isNeedClose, connection, command, cancellationToken);
+    }
+    public virtual bool ExistsById<TEntity>(object whereKey)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereKey, true, false);
+        return this.Exists(isNeedClose, connection, command);
+    }
     public virtual async Task<bool> ExistsByIdAsync<TEntity>(object whereKey, CancellationToken cancellationToken = default)
-        => await this.DbContext.ExistsAsync<TEntity>(whereKey, true, false, cancellationToken);
-    public virtual bool ExistsByIds<TEntity>(IEnumerable whereKeys) => this.DbContext.Exists<TEntity>(whereKeys, true, true);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereKey, true, false);
+        return await this.ExistsAsync(isNeedClose, connection, command, cancellationToken);
+    }
+    public virtual bool ExistsByIds<TEntity>(IEnumerable whereKeys)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereKeys, true, true);
+        return this.Exists(isNeedClose, connection, command);
+    }
     public virtual async Task<bool> ExistsByIdsAsync<TEntity>(IEnumerable whereKeys, CancellationToken cancellationToken = default)
-        => await this.DbContext.ExistsAsync<TEntity>(whereKeys, true, true, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereKeys, true, true);
+        return await this.ExistsAsync(isNeedClose, connection, command, cancellationToken);
+    }
     #endregion
 
     #region Create
-    public virtual ICreate Create(Type entityType) => this.OrmProvider.NewCreate(entityType, this.DbContext);
-    public virtual ICreate<TEntity> Create<TEntity>() => this.OrmProvider.NewCreate<TEntity>(this.DbContext);
-    public virtual int Create<TEntity>(object insertObj) => this.DbContext.Create<TEntity>(insertObj);
-    public virtual int Create<TEntity>(IEnumerable insertObjs, int bulkCount = 500)
-        => this.DbContext.Create<TEntity>(insertObjs, bulkCount);
+    public virtual ICreate Create(Type entityType) => this.ormProvider.NewCreate(entityType, this.DbContext);
+    public virtual ICreate<TEntity> Create<TEntity>() => this.ormProvider.NewCreate<TEntity>(this.DbContext);
+    public virtual int Create<TEntity>(object insertObj)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(typeof(TEntity), insertObj, false);
+        return this.Execute(isNeedClose, connection, command);
+    }
     public virtual async Task<int> CreateAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default)
-        => await this.DbContext.CreateAsync<TEntity>(insertObj, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(typeof(TEntity), insertObj, false);
+        return await this.ExecuteAsync(isNeedClose, connection, command, cancellationToken);
+    }
+    public virtual int Create<TEntity>(IEnumerable insertObjs, int bulkCount = 500)
+    {
+        (var isNeedClose, var connection, var command, var headSql, var commandInitializer)
+            = this.CreateInsertBulkCommand(typeof(TEntity), insertObjs, bulkCount);
+        return this.CreateBulk<TEntity>(isNeedClose, connection, command, insertObjs, bulkCount, headSql, commandInitializer);
+    }
     public virtual async Task<int> CreateAsync<TEntity>(IEnumerable insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
-        => await this.DbContext.CreateAsync<TEntity>(insertObjs, bulkCount, cancellationToken);
-    public virtual int CreateIdentity<TEntity>(object insertObj) => this.DbContext.CreateIdentity<TEntity, int>(insertObj);
+    {
+        (var isNeedClose, var connection, var command, var headSql, var commandInitializer)
+            = this.CreateInsertBulkCommand(typeof(TEntity), insertObjs, bulkCount);
+        return await this.CreateBulkAsync<TEntity>(isNeedClose, connection, command, insertObjs, bulkCount, headSql, commandInitializer, cancellationToken);
+    }
+    public virtual int CreateIdentity<TEntity>(object insertObj)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(typeof(TEntity), insertObj, true);
+        return this.QueryScalar<int>(isNeedClose, connection, command);
+    }
     public virtual async Task<int> CreateIdentityAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default)
-        => await this.DbContext.CreateIdentityAsync<TEntity, int>(insertObj, cancellationToken);
-    public virtual long CreateIdentityLong<TEntity>(object insertObj) => this.DbContext.CreateIdentity<TEntity, long>(insertObj);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(typeof(TEntity), insertObj, true);
+        return await this.QueryScalarAsync<int>(isNeedClose, connection, command, cancellationToken);
+    }
+    public virtual long CreateIdentityLong<TEntity>(object insertObj)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(typeof(TEntity), insertObj, true);
+        return this.QueryScalar<long>(isNeedClose, connection, command);
+    }
     public virtual async Task<long> CreateIdentityLongAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default)
-        => await this.DbContext.CreateIdentityAsync<TEntity, long>(insertObj, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(typeof(TEntity), insertObj, true);
+        return await this.QueryScalarAsync<long>(isNeedClose, connection, command, cancellationToken);
+    }
     #endregion
 
     #region Update
-    public virtual IUpdate<TEntity> Update<TEntity>() => this.OrmProvider.NewUpdate<TEntity>(this.DbContext);
-    public virtual int Update<TEntity>(object updateObj) => this.DbContext.Update<TEntity>(updateObj);
+    public virtual IUpdate<TEntity> Update<TEntity>() => this.ormProvider.NewUpdate<TEntity>(this.DbContext);
+    public virtual int Update<TEntity>(object updateObj)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateUpdateCommand(typeof(TEntity), updateObj);
+        return this.Execute(isNeedClose, connection, command);
+    }
     public virtual async Task<int> UpdateAsync<TEntity>(object updateObj, CancellationToken cancellationToken = default)
-        => await this.DbContext.UpdateAsync<TEntity>(updateObj, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateUpdateCommand(typeof(TEntity), updateObj);
+        return await this.ExecuteAsync(isNeedClose, connection, command);
+    }
     public virtual int Update<TEntity>(IEnumerable updateObjs, int bulkCount)
-        => this.DbContext.Update<TEntity>(updateObjs, bulkCount);
+    {
+        (var isNeedClose, var connection, var command, var commandInitializer) = this.CreateUpdateBulkCommand(typeof(TEntity), updateObjs, bulkCount);
+        return this.UpdateBulk<TEntity>(isNeedClose, connection, command, updateObjs, bulkCount, commandInitializer);
+    }
     public virtual async Task<int> UpdateAsync<TEntity>(IEnumerable updateObjs, int bulkCount, CancellationToken cancellationToken = default)
-        => await this.DbContext.UpdateAsync<TEntity>(updateObjs, bulkCount, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command, var commandInitializer) = this.CreateUpdateBulkCommand(typeof(TEntity), updateObjs, bulkCount);
+        return await this.UpdateBulkAsync<TEntity>(isNeedClose, connection, command, updateObjs, bulkCount, commandInitializer, cancellationToken);
+    }
     #endregion
 
     #region Delete
-    public virtual IDelete Delete(Type entityType) => this.OrmProvider.NewDelete(entityType, this.DbContext);
-    public virtual IDelete<TEntity> Delete<TEntity>() => this.OrmProvider.NewDelete<TEntity>(this.DbContext);
+    public virtual IDelete Delete(Type entityType) => this.ormProvider.NewDelete(entityType, this.DbContext);
+    public virtual IDelete<TEntity> Delete<TEntity>() => this.ormProvider.NewDelete<TEntity>(this.DbContext);
     public virtual int DeleteBy<TEntity>(object whereObj)
-        => this.DbContext.Delete<TEntity>(whereObj, false, false);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateDeleteCommand(typeof(TEntity), whereObj, false, false);
+        return this.Execute(isNeedClose, connection, command);
+    }
     public virtual async Task<int> DeleteByAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
-        => await this.DbContext.DeleteAsync<TEntity>(whereObj, false, false, cancellationToken);
-    public virtual int DeleteById<TEntity>(object whereKey) => this.DbContext.Delete<TEntity>(whereKey, true, false);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateDeleteCommand(typeof(TEntity), whereObj, false, false);
+        return await this.ExecuteAsync(isNeedClose, connection, command);
+    }
+    public virtual int DeleteById<TEntity>(object whereKey)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateDeleteCommand(typeof(TEntity), whereKey, true, false);
+        return this.Execute(isNeedClose, connection, command);
+    }
     public virtual async Task<int> DeleteByIdAsync<TEntity>(object whereKey, CancellationToken cancellationToken = default)
-        => await this.DbContext.DeleteAsync<TEntity>(whereKey, true, false, cancellationToken);
-    public virtual int DeleteByIds<TEntity>(IEnumerable whereKeys) => this.DbContext.Delete<TEntity>(whereKeys, true, true);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateDeleteCommand(typeof(TEntity), whereKey, true, false);
+        return await this.ExecuteAsync(isNeedClose, connection, command);
+    }
+    public virtual int DeleteByIds<TEntity>(IEnumerable whereKeys)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateDeleteCommand(typeof(TEntity), whereKeys, true, true);
+        return this.Execute(isNeedClose, connection, command);
+    }
     public virtual async Task<int> DeleteByIdsAsync<TEntity>(IEnumerable whereKeys, CancellationToken cancellationToken = default)
-        => await this.DbContext.DeleteAsync<TEntity>(whereKeys, true, true, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateDeleteCommand(typeof(TEntity), whereKeys, true, true);
+        return await this.ExecuteAsync(isNeedClose, connection, command);
+    }
     #endregion
 
     #region Execute
     public virtual int Execute(string rawSql, object parameters = null, CommandType commandType = CommandType.Text)
-        => this.DbContext.Execute(rawSql, parameters, commandType);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateExecuteCommand(rawSql, parameters, commandType);
+        return this.Execute(isNeedClose, connection, command);
+    }
     public virtual async Task<int> ExecuteAsync(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
-        => await this.DbContext.ExecuteAsync(rawSql, parameters, commandType, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateExecuteCommand(rawSql, parameters, commandType);
+        return await this.ExecuteAsync(isNeedClose, connection, command);
+    }
     public virtual int Execute(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text)
-        => this.DbContext.Execute(rawSql, parameters, commandType);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateExecuteCommand(rawSql, parameters, commandType);
+        return this.Execute(isNeedClose, connection, command);
+    }
     public virtual async Task<int> ExecuteAsync(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
-        => await this.DbContext.ExecuteAsync(rawSql, parameters, commandType, cancellationToken);
+    {
+        (var isNeedClose, var connection, var command) = this.CreateExecuteCommand(rawSql, parameters, commandType);
+        return await this.ExecuteAsync(isNeedClose, connection, command);
+    }
     #endregion
 
     #region QueryMultiple
@@ -335,12 +436,12 @@ public class Repository : IRepository
         if (subQueries == null)
             throw new ArgumentNullException(nameof(subQueries));
 
-        using var multiQuery = this.OrmProvider.NewMultipleQuery(this.DbContext);
+        using var multiQuery = this.ormProvider.NewMultipleQuery(this.DbContext);
         subQueries.Invoke(multiQuery);
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(multiQuery);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(multiQuery);
         command.CommandText = multiQuery.BuildSql(out var readerAfters);
         connection.Open();
-        var reader = command.ExecuteReader(CommandSqlType.MultiQuery, CommandBehavior.SequentialAccess);
+        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
         //多语句查询，在最后reader读取后，自动关闭
         return new MultiQueryReader(this.DbContext, connection, command, reader, readerAfters, isNeedClose);
     }
@@ -349,29 +450,18 @@ public class Repository : IRepository
         if (subQueries == null)
             throw new ArgumentNullException(nameof(subQueries));
 
-        using var multiQuery = this.OrmProvider.NewMultipleQuery(this.DbContext);
+        using var multiQuery = this.ormProvider.NewMultipleQuery(this.DbContext);
         subQueries.Invoke(multiQuery);
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(multiQuery);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(multiQuery);
         command.CommandText = multiQuery.BuildSql(out var readerAfters);
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(CommandSqlType.MultiQuery, CommandBehavior.SequentialAccess, cancellationToken);
+        var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
         //多语句查询，在最后reader读取后，自动关闭
         return new MultiQueryReader(this.DbContext, connection, command, reader, readerAfters, isNeedClose);
     }
     #endregion
 
-    #region Others 
-    public virtual void Close() => this.DbContext.Connection.Close();
-    public virtual async Task CloseAsync() => await this.DbContext.Connection.CloseAsync();
-    public virtual void BeginTransaction() => this.DbContext.BeginTransaction();
-    public virtual async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.BeginTransactionAsync(cancellationToken);
-    public virtual void Commit() => this.DbContext.Commit();
-    public virtual async Task CommitAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.CommitAsync(cancellationToken);
-    public virtual void Rollback() => this.DbContext.Rollback();
-    public virtual async Task RollbackAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.RollbackAsync(cancellationToken);
+    #region Others
     public virtual IRepository WithTimeout(int seconds)
     {
         this.DbContext.Options.CommandTimeout = seconds;
@@ -386,8 +476,8 @@ public class Repository : IRepository
     //抛异常的时候，会走到析构函数，但是Transaction，没有提交也没有回滚
     private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a', ICommandContext commandContext = null)
     {
-        var command = commandContext?.Command ?? this.OrmProvider.CreateCommand();
-        return this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart, command);
+        var command = commandContext?.Command ?? this.ormProvider.CreateCommand();
+        return this.ormProvider.NewQueryVisitor(this.DbContext, tableAsStart, command);
     }
     #endregion
 }

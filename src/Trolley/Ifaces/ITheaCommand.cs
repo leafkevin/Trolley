@@ -5,40 +5,18 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public enum CommandSqlType
-{
-    Select,
-    SelectScalar,
-    RawExecute,
-    Insert,
-    BulkInsert,
-    BulkCopyInsert,
-    Update,
-    BulkUpdate,
-    BulkCopyUpdate,
-    Delete,
-    MultiQuery
-}
-public interface ITheaCommand : IDisposable, IAsyncDisposable
+public interface ITheaCommand : IDbCommand, ICloneable, IAsyncDisposable
 {
     string DbKey { get; }
     string CommandId { get; }
-    IDbCommand BaseCommand { get; }
-    CommandSqlType CommandSqlType { get; }
-    IDbInterceptor DbInterceptor { get; set; }
+    IDbCommand DbCommand { get; }
+    IDbInterceptor Interceptor { get; set; }
 
-    string CommandText { get; set; }
-    int CommandTimeout { get; set; }
-    CommandType CommandType { get; set; }
-    ITheaConnection Connection { get; set; }
-    IDataParameterCollection Parameters { get; }
-    ITheaTransaction Transaction { get; set; }
+    new ITheaDataReader ExecuteReader();
+    new ITheaDataReader ExecuteReader(CommandBehavior behavior);
 
-    int ExecuteNonQuery(CommandSqlType sqlType);
-    Task<int> ExecuteNonQueryAsync(CommandSqlType sqlType, CancellationToken cancellationToken = default);
-    ITheaDataReader ExecuteReader(CommandSqlType sqlType, CommandBehavior behavior = default);
-    Task<ITheaDataReader> ExecuteReaderAsync(CommandSqlType sqlType, CommandBehavior behavior = default, CancellationToken cancellationToken = default);
-    object ExecuteScalar(CommandSqlType sqlType);
-    Task<object> ExecuteScalarAsync(CommandSqlType sqlType, CancellationToken cancellationToken = default);
-    void Cancel();
+    Task<int> ExecuteNonQueryAsync(CancellationToken cancellationToken = default);
+    Task<ITheaDataReader> ExecuteReaderAsync(CancellationToken cancellationToken = default);
+    Task<ITheaDataReader> ExecuteReaderAsync(CommandBehavior behavior, CancellationToken cancellationToken = default);
+    Task<object> ExecuteScalarAsync(CancellationToken cancellationToken = default);
 }

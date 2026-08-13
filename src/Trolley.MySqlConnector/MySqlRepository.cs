@@ -10,7 +10,7 @@ namespace Trolley.MySqlConnector;
 public class MySqlRepository : Repository
 {
     #region fields
-    private MySqlProvider dialectProvider => this.OrmProvider as MySqlProvider;
+    private MySqlProvider dialectProvider => this.ormProvider as MySqlProvider;
     #endregion
 
     #region Constructor

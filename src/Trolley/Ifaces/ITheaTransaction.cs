@@ -1,20 +1,17 @@
-﻿using System.Data;
+﻿using System;
+using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Trolley;
 
-public interface ITheaTransaction
+public interface ITheaTransaction : IDbTransaction, IAsyncDisposable
 {
+    string DbKey { get; }
     string TransactionId { get; }
-    ITheaConnection Connection { get; }
-    IDbTransaction BaseTransaction { get; }
-    IDbInterceptor DbInterceptor { get; set; }
+    IDbTransaction DbTransaction { get; }
+    IDbInterceptor Interceptor { get; set; }
 
-    void Commit();
     Task CommitAsync(CancellationToken cancellationToken = default);
-    void Rollback();
     Task RollbackAsync(CancellationToken cancellationToken = default);
-    void Dispose();
-    ValueTask DisposeAsync();
 }

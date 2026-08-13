@@ -15,7 +15,7 @@ public class CreateDialectProvider : DialectProvider
     {
         (var isNeedClose, var connection, var command) = this.CreateInsertCommand(typeof(TEntity), insertObj, false);
         connection.Open();
-        var result = command.ExecuteNonQuery(CommandSqlType.Insert);
+        var result = command.ExecuteNonQuery();
 
         command.Dispose();
         if (isNeedClose) connection.Close();
@@ -163,13 +163,13 @@ public class CreateDialectProvider : DialectProvider
                     continue;
 
                 var fieldValue = dict[key];
-                var parameterName = $"{this.ormProvider.ParameterPrefix}{memberMapper.MemberName}";
+                var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}";
                 if (index > 0)
                 {
                     fieldsBuilder.Append(',');
                     valuesBuilder.Append(',');
                 }
-                fieldsBuilder.Append(this.ormProvider.GetFieldName(memberMapper.FieldName));
+                fieldsBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
                 valuesBuilder.Append(parameterName);
                 if (fieldValue == null)
                     fieldValue = DBNull.Value;
@@ -181,18 +181,18 @@ public class CreateDialectProvider : DialectProvider
                     var fieldValueType = fieldValue.GetType();
                     if (fieldValueType != targetType)
                     {
-                        var myValueGetter = this.ormProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.options);
+                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.options);
                         fieldValue = myValueGetter.Invoke(fieldValue);
                     }
                 }
-                command.Parameters.Add(this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                command.Parameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                 index++;
             }
-            command.CommandText = $"INSERT INTO {this.ormProvider.GetTableName(entityMapper.TableName)} ({fieldsBuilder.ToString()}) VALUES ({valuesBuilder.ToString()})";
+            command.CommandText = $"INSERT INTO {this.OrmProvider.GetTableName(entityMapper.TableName)} ({fieldsBuilder.ToString()}) VALUES ({valuesBuilder.ToString()})";
             if (hasIdentity)
             {
-                var keyFieldName = this.ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName);
-                command.CommandText += this.ormProvider.GetIdentitySql(keyFieldName);
+                var keyFieldName = this.OrmProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName);
+                command.CommandText += this.OrmProvider.GetIdentitySql(keyFieldName);
             }
         }
         else
@@ -232,7 +232,7 @@ public class CreateDialectProvider : DialectProvider
             int index = 0;
             var builder = new StringBuilder();
             var valueSetters = new List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>>();
-            builder.Append($"INSERT INTO {this.ormProvider.GetTableName(entityMapper.TableName)} (");
+            builder.Append($"INSERT INTO {this.OrmProvider.GetTableName(entityMapper.TableName)} (");
             foreach (var key in dict.Keys)
             {
                 if (!entityMapper.TryGetMemberMap(key, out var memberMapper) || memberMapper.IsIgnore
@@ -241,7 +241,7 @@ public class CreateDialectProvider : DialectProvider
                     continue;
 
                 if (index > 0) builder.Append(',');
-                builder.Append(this.ormProvider.GetFieldName(memberMapper.FieldName));
+                builder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
                 Func<IDictionary<string, object>, object> valueGetter = null;
 
                 if (memberMapper.TypeHandler != null)
@@ -258,7 +258,7 @@ public class CreateDialectProvider : DialectProvider
                         var fieldValueType = fieldValue.GetType();
                         if (fieldValueType.ToUnderlyingType() != targetType)
                         {
-                            var myValueGetter = this.ormProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.options);
+                            var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.options);
                             valueGetter = insertObj => myValueGetter.Invoke(insertObj[key]);
                         }
                         else valueGetter = insertObj => insertObj[key];
@@ -270,7 +270,7 @@ public class CreateDialectProvider : DialectProvider
                             var fieldValueType = dict[key].GetType();
                             if (fieldValueType.ToUnderlyingType() != targetType)
                             {
-                                var myValueGetter = this.ormProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.options);
+                                var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.options);
                                 valueGetter = insertObj =>
                                 {
                                     var fieldValue = insertObj[key];
@@ -289,10 +289,10 @@ public class CreateDialectProvider : DialectProvider
                     valueSetter = (dbParameters, builder, insertObj, suffix) =>
                     {
                         var fieldValue = valueGetter.Invoke(insertObj);
-                        var parameterName = $"{this.ormProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
+                        var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
                         builder.Append(',');
                         builder.Append(parameterName);
-                        dbParameters.Add(this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                        dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                     };
                 }
                 else
@@ -300,9 +300,9 @@ public class CreateDialectProvider : DialectProvider
                     valueSetter = (dbParameters, builder, insertObj, suffix) =>
                     {
                         var fieldValue = valueGetter.Invoke(insertObj);
-                        var parameterName = $"{this.ormProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
+                        var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}{suffix}";
                         builder.Append(parameterName);
-                        dbParameters.Add(this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+                        dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                     };
                 }
                 valueSetters.Add(valueSetter);
@@ -324,7 +324,7 @@ public class CreateDialectProvider : DialectProvider
         {
             (var fieldsSql, var typedCommandInitializer) = ((string, Action<IDataParameterCollection, StringBuilder, DbContext, string, string, object, string>))
                 RepositoryHelper.BuildTypedBulkCommandInitializer(this.DbContext, entityType, insertObjType, 1, null, null);
-            headSql = $"INSERT INTO {this.ormProvider.GetTableName(entityMapper.TableName)} ({fieldsSql}) VALUES ";
+            headSql = $"INSERT INTO {this.OrmProvider.GetTableName(entityMapper.TableName)} ({fieldsSql}) VALUES ";
             commandInitializer = (dbParameters, builder, dbContext, insertObj, suffix) =>
                 typedCommandInitializer.Invoke(dbParameters, builder, dbContext, "(", "),", insertObj, suffix);
         }

@@ -12,19 +12,17 @@ class MySqlTheaConnection : ITheaConnection
 
     public string DbKey { get; private set; }
     public string ConnectionId { get; private set; }
-    public string ConnectionString { get; set; }
+    public string ConnectionString
+    {
+        get => this.connection.ConnectionString;
+        set => this.connection.ConnectionString = value;
+    }
     public int ConnectionTimeout => this.connection.ConnectionTimeout;
     public string Database => this.connection.Database;
     public string ServerVersion => this.connection.ServerVersion;
     public ConnectionState State => this.connection.State;
-    public IDbConnection BaseConnection => this.connection;
-
-    public Action<ConectionEventArgs> OnOpening { get; set; }
-    public Action<ConectionEventArgs> OnOpened { get; set; }
-    public Action<ConectionEventArgs> OnClosing { get; set; }
-    public Action<ConectionEventArgs> OnClosed { get; set; }
-    public Action<TransactionEventArgs> OnTransactionCreated { get; set; }
-    public Action<TransactionCompletedEventArgs> OnTransactionCompleted { get; set; }
+    public IDbConnection DbConnection => this.connection;
+    public IDbInterceptor Interceptor { get; set; }
 
     public MySqlTheaConnection(string dbKey, string connectionString)
         : this(dbKey, new MySqlConnection(connectionString)) { }
@@ -36,134 +34,182 @@ class MySqlTheaConnection : ITheaConnection
         this.connection = connection;
     }
 
+    public IDbCommand CreateCommand() => this.connection.CreateCommand();
+    public void ChangeDatabase(string databaseName)
+        => this.connection.ChangeDatabaseAsync(databaseName);
     public void Close()
     {
-        if (this.connection == null || this.State == ConnectionState.Closed) return;
-        this.OnClosing?.Invoke(new ConectionEventArgs
+        if (this.connection == null || this.State == ConnectionState.Closed)
+            return;
+
+        bool isSuccess = true;
+        Exception exception = null;
+        this.Interceptor?.ConnectionClosing(this);
+        try
         {
-            DbKey = this.DbKey,
-            ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString
-        });
-        this.connection.Close();
-        this.OnClosed?.Invoke(new ConectionEventArgs
+            this.connection.Close();
+        }
+        catch (Exception ex)
         {
-            DbKey = this.DbKey,
-            ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString
-        });
+            exception = ex;
+            isSuccess = false;
+        }
+        finally
+        {
+            this.Interceptor?.ConnectionClosed(this);
+        }
+        if (!isSuccess) throw exception;
     }
     public async Task CloseAsync()
     {
         if (this.connection == null || this.State == ConnectionState.Closed) return;
-        this.OnClosing?.Invoke(new ConectionEventArgs
+
+        bool isSuccess = true;
+        Exception exception = null;
+        this.Interceptor?.ConnectionClosing(this);
+        try
         {
-            DbKey = this.DbKey,
-            ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString
-        });
-        await this.connection.CloseAsync();
-        this.OnClosed?.Invoke(new ConectionEventArgs
+            await this.connection.CloseAsync();
+        }
+        catch (Exception ex)
         {
-            DbKey = this.DbKey,
-            ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString
-        });
+            exception = ex;
+            isSuccess = false;
+        }
+        finally
+        {
+            this.Interceptor?.ConnectionClosed(this);
+        }
+        if (!isSuccess) throw exception;
     }
     public void Open()
     {
-        if (this.connection == null || this.State == ConnectionState.Open) return;
-        if (this.State == ConnectionState.Broken)
-            this.Close();
-        if (this.State == ConnectionState.Closed)
+        if (this.connection == null || this.State == ConnectionState.Open)
+            return;
+
+        bool isSuccess = true;
+        Exception exception = null;
+        this.Interceptor?.ConnectionOpening(this);
+        try
         {
-            //关闭后，连接串被重置，需要重新设置
-            this.connection.ConnectionString = this.ConnectionString;
-            this.OnOpening?.Invoke(new ConectionEventArgs
-            {
-                DbKey = this.DbKey,
-                ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString
-            });
             this.connection.Open();
-            this.OnOpened?.Invoke(new ConectionEventArgs
-            {
-                DbKey = this.DbKey,
-                ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString
-            });
         }
+        catch (Exception ex)
+        {
+            exception = ex;
+            isSuccess = false;
+        }
+        finally
+        {
+            this.Interceptor?.ConnectionOpened(this);
+        }
+        if (!isSuccess) throw exception;
     }
     public async Task OpenAsync(CancellationToken cancellationToken = default)
     {
-        if (this.connection == null || this.State == ConnectionState.Open) return;
+        if (this.connection == null || this.State == ConnectionState.Open)
+            return;
         if (this.State == ConnectionState.Broken)
             await this.CloseAsync();
-        if (this.State == ConnectionState.Closed)
+
+        bool isSuccess = true;
+        Exception exception = null;
+        this.Interceptor?.ConnectionOpening(this);
+        try
         {
-            //关闭后，连接串被重置，需要重新设置
-            this.connection.ConnectionString = this.ConnectionString;
-            this.OnOpening?.Invoke(new ConectionEventArgs
-            {
-                DbKey = this.DbKey,
-                ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString
-            });
             await this.connection.OpenAsync(cancellationToken);
-            this.OnOpened?.Invoke(new ConectionEventArgs
-            {
-                DbKey = this.DbKey,
-                ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString
-            });
         }
-    }
-    public ITheaCommand CreateCommand(IDbCommand command)
-    {
-        if (command is not MySqlCommand myCommand)
-            return null;
-        myCommand.Connection = this.connection;
-        return new MySqlTheaCommand(myCommand, this);
-    }
-    public ITheaTransaction BeginTransaction()
-    {
-        var transaction = this.connection.BeginTransaction();
-        var theaTransaction = new MySqlTheaTransaction(this, transaction)
+        catch (Exception ex)
         {
-            OnCreated = this.OnTransactionCreated,
-            OnCompleted = this.OnTransactionCompleted
-        };
-        this.OnTransactionCreated?.Invoke(new TransactionEventArgs
+            exception = ex;
+            isSuccess = false;
+        }
+        finally
         {
-            DbKey = this.DbKey,
-            TransactionId = theaTransaction.TransactionId,
-            ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString
-        });
-        return theaTransaction;
+            this.Interceptor?.ConnectionOpened(this);
+        }
+        if (!isSuccess) throw exception;
+    }
+    public ITheaTransaction BeginTransaction() => this.BeginTransaction(IsolationLevel.Unspecified);
+    public ITheaTransaction BeginTransaction(IsolationLevel il)
+    {
+        bool isSuccess = true;
+        Exception exception = null;
+        ITheaTransaction transaction = null;
+        this.Interceptor?.TransactionCreating(this);
+        try
+        {
+            var dbTransaction = this.connection.BeginTransaction(il);
+            transaction = new MySqlTheaTransaction(this.DbKey, this, dbTransaction);
+        }
+        catch (Exception ex)
+        {
+            exception = ex;
+            isSuccess = false;
+        }
+        finally
+        {
+            this.Interceptor?.ConnectionOpened(this);
+        }
+        if (!isSuccess)
+        {
+            if (!isSuccess) this.Close();
+            throw exception;
+        }
+        return transaction;
     }
     public async ValueTask<ITheaTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+        => await this.BeginTransactionAsync(IsolationLevel.Unspecified, cancellationToken);
+    public async ValueTask<ITheaTransaction> BeginTransactionAsync(IsolationLevel il, CancellationToken cancellationToken = default)
     {
-        var transaction = await this.connection.BeginTransactionAsync(cancellationToken);
-        var theaTransaction = new MySqlTheaTransaction(this, transaction)
+        bool isSuccess = true;
+        Exception exception = null;
+        ITheaTransaction transaction = null;
+        this.Interceptor?.TransactionCreating(this);
+        try
         {
-            OnCreated = this.OnTransactionCreated,
-            OnCompleted = this.OnTransactionCompleted
-        };
-        this.OnTransactionCreated?.Invoke(new TransactionEventArgs
+            var dbTransaction = await this.connection.BeginTransactionAsync(il);
+            transaction = new MySqlTheaTransaction(this.DbKey, this, dbTransaction);
+        }
+        catch (Exception ex)
         {
-            DbKey = this.DbKey,
-            TransactionId = theaTransaction.TransactionId,
-            ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString
-        });
-        return theaTransaction;
+            exception = ex;
+            isSuccess = false;
+        }
+        finally
+        {
+            this.Interceptor?.ConnectionOpened(this);
+        }
+        if (!isSuccess)
+        {
+            if (!isSuccess) this.Close();
+            throw exception;
+        }
+        return transaction;
     }
     public void Dispose() => this.connection.Dispose();
-    public ValueTask DisposeAsync()
+
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        => this.connection.DisposeAsync();
+    public ValueTask DisposeAsync()
+    {
+        this.connection.DisposeAsync();
+        return default(ValueTask);
+    }
 #else
-        => new ValueTask(this.connection.DisposeAsync());
+    public ValueTask DisposeAsync()
+    {
+        this.connection.Dispose();
+        return default(ValueTask);
+    }   
 #endif
+    IDbTransaction IDbConnection.BeginTransaction()
+    {
+        var transaction = this.BeginTransaction();
+        return transaction.DbTransaction;
+    }
+    IDbTransaction IDbConnection.BeginTransaction(IsolationLevel il)
+    {
+        var transaction = this.BeginTransaction(il);
+        return transaction.DbTransaction;
+    }
 }

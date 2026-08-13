@@ -178,7 +178,7 @@ public static class RepositoryHelper
         }
         return builder.ToString();
     }
-    public static Action<IDataParameterCollection, IOrmProvider, object> BuildQueryRawSqlCommandInitializer(IOrmProvider ormProvider, string rawSql, object parameters)
+    public static Action<IDataParameterCollection, IOrmProvider, object> BuildRawSqlCommandInitializer(IOrmProvider ormProvider, string rawSql, object parameters)
     {
         Action<IDataParameterCollection, IOrmProvider, object> commandInitializer = null;
         if (parameters is IDictionary<string, object>)

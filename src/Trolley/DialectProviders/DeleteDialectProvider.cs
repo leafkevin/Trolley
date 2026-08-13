@@ -16,7 +16,7 @@ public class DeleteDialectProvider : DialectProvider
     {
         (var isNeedClose, var connection, var command) = this.CreateDeleteCommand(typeof(TEntity), whereObjs, isUseKey, isBulk);
         await connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(CommandSqlType.Delete, cancellationToken);
+        var result = await command.ExecuteNonQueryAsync(cancellationToken);
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();

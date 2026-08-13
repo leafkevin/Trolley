@@ -2,50 +2,55 @@
 
 namespace Trolley;
 
-public struct DbEventArgs
+public struct DbCommandExecutingEventArgs
 {
-    public bool IsSuccess { get; set; }
+    public bool IsCanExecuting { get; set; }
     public object EventData { get; set; }
+    public ITheaCommand Command { get; set; }
 }
 public struct DbCommandCompletedEventArgs
 {
-    public CommandSqlType SqlType { get; set; }
-    public bool IsSuccess { get; internal set; }
-    public object EventData { get; internal set; }
-    public int Elapsed { get; internal set; }
-    public Exception Exception { get; internal set; }
+    public ITheaCommand Command { get; set; }
+    public bool IsSuccess { get; set; }
+    public object EventData { get; set; }
+    public Exception Exception { get; set; }
 }
-public struct DbCommandFailedEventArgs
+public struct DbTransactionExecutingEventArgs
 {
-    public CommandSqlType SqlType { get; set; }
-    public object EventData { get; internal set; }
-    public int Elapsed { get; internal set; }
-    public Exception Exception { get; internal set; }
+    public ITheaTransaction Transaction { get; set; }
+    public object EventData { get; set; }
+}
+public struct DbTransactionCompletedEventArgs
+{
+    public ITheaTransaction Transaction { get; set; }
+    public bool IsSuccess { get; set; }
+    public object EventData { get; set; }
+    public Exception Exception { get; set; }
 }
 public interface IDbInterceptor
 {
-    bool ConnectionCreating();
+    void ConnectionCreating();
     ITheaConnection ConnectionCreated(ITheaConnection connection);
-    bool ConnectionOpening(ITheaConnection connection);
+    void ConnectionOpening(ITheaConnection connection);
     void ConnectionOpened(ITheaConnection connection);
-    bool ConnectionClosing(ITheaConnection connection);
+    void ConnectionClosing(ITheaConnection connection);
     void ConnectionClosed(ITheaConnection connection);
-    bool ConnectionDisposing(ITheaConnection connection);
+    void ConnectionDisposing(ITheaConnection connection);
     void ConnectionDisposed(ITheaConnection connection);
 
-    bool CommandCreating(ITheaConnection connection);
+    void CommandCreating(ITheaConnection connection);
     ITheaCommand CommandCreated(ITheaCommand command);
     ITheaCommand CommandInitialized(ITheaCommand command);
     void CommandCanceled(ITheaCommand command);
-    DbEventArgs CommandExecuting(ITheaCommand command);
-    void CommandExecuted(ITheaCommand command, DbCommandCompletedEventArgs eventArgs);
-    void CommandFailed(ITheaCommand command, DbCommandFailedEventArgs eventArgs);
+    DbCommandExecutingEventArgs CommandExecuting(ITheaCommand command);
+    void CommandExecuted(DbCommandCompletedEventArgs eventArgs);
+    void CommandFailed(DbCommandCompletedEventArgs eventArgs);
 
-    bool TransactionCreating(ITheaConnection connection);
+    void TransactionCreating(ITheaConnection connection);
     ITheaTransaction TransactionCreated(ITheaTransaction transaction);
-    bool TransactionCommitting(ITheaTransaction transaction);
-    void TransactionCommitted(ITheaTransaction transaction);
-    bool TransactionRollingBack(ITheaTransaction transaction);
-    void TransactionRolledBack(ITheaTransaction transaction);
-    void TransactionFailed(ITheaTransaction transaction);
+    DbTransactionExecutingEventArgs TransactionCommitting(ITheaTransaction transaction);
+    void TransactionCommitted(DbTransactionCompletedEventArgs eventArgs);
+    DbTransactionExecutingEventArgs TransactionRollingBack(ITheaTransaction transaction);
+    void TransactionRolledBack(DbTransactionCompletedEventArgs eventArgs);
+    void TransactionFailed(DbTransactionCompletedEventArgs eventArgs);
 }

@@ -19,12 +19,7 @@ class PostgreSqlTheaConnection : ITheaConnection
     public ConnectionState State => this.connection.State;
     public IDbConnection BaseConnection => this.connection;
 
-    public Action<ConectionEventArgs> OnOpening { get; set; }
-    public Action<ConectionEventArgs> OnOpened { get; set; }
-    public Action<ConectionEventArgs> OnClosing { get; set; }
-    public Action<ConectionEventArgs> OnClosed { get; set; }
-    public Action<TransactionEventArgs> OnTransactionCreated { get; set; }
-    public Action<TransactionCompletedEventArgs> OnTransactionCompleted { get; set; }
+    Interceptor
 
     public PostgreSqlTheaConnection(string dbKey, string connectionString)
         : this(dbKey, new NpgsqlConnection(connectionString)) { }
@@ -36,22 +31,29 @@ class PostgreSqlTheaConnection : ITheaConnection
         this.connection = connection;
     }
 
+    public void ChangeDatabase(string databaseName) 
+        => this.connection.ChangeDatabase(databaseName);
     public void Close()
     {
-        if (this.connection == null || this.State == ConnectionState.Closed) return;
-        this.OnClosing?.Invoke(new ConectionEventArgs
+        if (this.connection == null || this.State == ConnectionState.Closed)
+            return;
+        bool isSuccess = true;
+        Exception exception = null;
+        this.Interceptor?.ConnectionClosing(this);
+        try
         {
-            DbKey = this.DbKey,
-            ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString
-        });
-        this.connection.Close();
-        this.OnClosed?.Invoke(new ConectionEventArgs
+            this.connection.Close();
+        }
+        catch (Exception ex)
         {
-            DbKey = this.DbKey,
-            ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString
-        });
+            exception = ex;
+            isSuccess = false;
+        }
+        finally
+        {
+            this.Interceptor?.ConnectionClosed(this);
+        }
+        if (!isSuccess) throw exception;
     }
     public async Task CloseAsync()
     {

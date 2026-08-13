@@ -88,8 +88,8 @@ public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
     bool ThenInclude(Expression memberSelector, Expression filter = null);
     bool HasIncludeTables();
     bool BuildIncludeSql(Type targetType, object target, bool isMultiResult, out string sql);
-    void SetIncludeValues(Type targetType, object target, ITheaDataReader reader, bool isMultiResult);
-    Task SetIncludeValuesAsync(Type targetType, object target, ITheaDataReader reader, bool isMultiResult, CancellationToken cancellationToken);
+    void SetIncludeValues(Type targetType, object target, IDataReader reader, bool isMultiResult);
+    Task SetIncludeValuesAsync(Type targetType, object target, IDataReader reader, bool isMultiResult, CancellationToken cancellationToken);
 
     void AndBy(object whereObj);
     void AndById(object whereKey);

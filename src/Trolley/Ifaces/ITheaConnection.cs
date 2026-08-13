@@ -5,24 +5,19 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public interface ITheaConnection : IDisposable, IAsyncDisposable
+public interface ITheaConnection : IDbConnection, IAsyncDisposable
 {
     string DbKey { get; }
     string ConnectionId { get; }
-    IDbConnection BaseConnection { get; }
-    IDbInterceptor DbInterceptor { get; set; }
+    IDbConnection DbConnection { get; }
+    IDbInterceptor Interceptor { get; set; }
 
-    string ConnectionString { get; set; }
-    int ConnectionTimeout { get; }
-    string Database { get; }
-    ConnectionState State { get; }
     string ServerVersion { get; }
 
-    ITheaCommand CreateCommand(IDbCommand command);
-    void Open();
     Task OpenAsync(CancellationToken cancellationToken = default);
-    void Close();
     Task CloseAsync();
-    ITheaTransaction BeginTransaction();
+    new ITheaTransaction BeginTransaction();
+    new ITheaTransaction BeginTransaction(IsolationLevel il);
     ValueTask<ITheaTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
+    ValueTask<ITheaTransaction> BeginTransactionAsync(IsolationLevel il, CancellationToken cancellationToken = default);
 }

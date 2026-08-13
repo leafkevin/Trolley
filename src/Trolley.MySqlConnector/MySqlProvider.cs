@@ -182,6 +182,7 @@ public partial class MySqlProvider : BaseOrmProvider
     }
     public override Type MapDefaultType(MemberMap memberMappper)
     {
+
         //bit(n)，会映射为ulong类型，bit(1)映射为bool类型
         if (memberMappper.NativeDbType is MySqlDbType nativeDbType)
         {
@@ -441,7 +442,7 @@ public partial class MySqlProvider : BaseOrmProvider
                 {
                     cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo.GetGenericMethodDefinition());
                     //.Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key =>  (visitor, methodCallExpr, deferredOperations) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (ISqlVisitor  visitor,  MethodCallExpression methodCallExpr, deferredOperations) =>
                     {
                         var dialectVisitor = visitor as MySqlCreateVisitor;
                         if (args[1] is not MemberExpression memberExpr)
@@ -469,7 +470,7 @@ public partial class MySqlProvider : BaseOrmProvider
                 break;
             case "IsNull":
                 cacheKey = HashCode.Combine(typeof(Sql), methodInfo.GetGenericMethodDefinition());
-                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key =>  (visitor, methodCallExpr, deferredOperations) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
                     var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0], IsNullFields = true });
                     var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });

@@ -148,13 +148,17 @@ public class QueryBase : QueryInternal, IQueryBase
     {
         this.Visitor.SelectRaw(typeof(int), "1");
         this.Visitor.Take(1);
-        return this.DbContext.QueryExists(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor);
+        command.CommandText = this.BuildScalarSql(this.Visitor);
+        return this.Exists(isNeedClose, connection, command);
     }
     public virtual async Task<bool> ExistsAsync(CancellationToken cancellationToken = default)
     {
         this.Visitor.SelectRaw(typeof(int), "1");
         this.Visitor.Take(1);
-        return await this.DbContext.QueryExistsAsync(this.Visitor, cancellationToken);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor);
+        command.CommandText = this.BuildScalarSql(this.Visitor);
+        return await this.ExistsAsync(isNeedClose, connection, command, cancellationToken);
     }
     #endregion
 
@@ -172,22 +176,30 @@ public class QueryBase : QueryInternal, IQueryBase
     protected TTarget QueryScalar<TTarget>(string aggSql, string aggFunc)
     {
         this.Visitor.SelectRaw(typeof(TTarget), aggSql, aggFunc);
-        return this.DbContext.QueryScalar<TTarget>(this.Visitor);
-    }
-    protected TTarget QueryScalar<TTarget>(string aggSqlFormat, Expression fieldExpr)
-    {
-        this.Visitor.Select(aggSqlFormat, fieldExpr);
-        return this.DbContext.QueryScalar<TTarget>(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor);
+        command.CommandText = this.Visitor.BuildSql(true, out var readerFields);
+        return this.QueryScalar<TTarget>(isNeedClose, connection, command);
     }
     protected async Task<TTarget> QueryScalarAsync<TTarget>(string aggSql, string aggFunc, CancellationToken cancellationToken = default)
     {
         this.Visitor.SelectRaw(typeof(TTarget), aggSql, aggFunc);
-        return await this.DbContext.QueryScalarAsync<TTarget>(this.Visitor, cancellationToken);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor);
+        command.CommandText = this.Visitor.BuildSql(true, out var readerFields);
+        return await this.QueryScalarAsync<TTarget>(isNeedClose, connection, command, cancellationToken);
+    }
+    protected TTarget QueryScalar<TTarget>(string aggSqlFormat, Expression fieldExpr)
+    {
+        this.Visitor.Select(aggSqlFormat, fieldExpr);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor);
+        command.CommandText = this.Visitor.BuildSql(true, out var readerFields);
+        return this.QueryScalar<TTarget>(isNeedClose, connection, command);
     }
     protected async Task<TTarget> QueryScalarAsync<TTarget>(string aggSqlFormat, Expression fieldExpr, CancellationToken cancellationToken = default)
     {
         this.Visitor.Select(aggSqlFormat, fieldExpr);
-        return await this.DbContext.QueryScalarAsync<TTarget>(this.Visitor, cancellationToken);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor);
+        command.CommandText = this.Visitor.BuildSql(true, out var readerFields);
+        return await this.QueryScalarAsync<TTarget>(isNeedClose, connection, command, cancellationToken);
     }
     #endregion
 
@@ -659,53 +671,15 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region First/ToList/ToPageList/ToDictionary
-    public virtual T First()
-    {
-        return this.DbContext.QueryFrom<T, T>(this.Visitor, false, (entityType, reader, readerFields) =>
-        {
-            T result = default;
-            var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
-            if (reader.Read())
-                result = (T)deserializer.Invoke(reader, readerFields);
-            return result;
-        });
-    }
+    public virtual T First() => this.QuerySingle<T>(this.Visitor);
     public virtual async Task<T> FirstAsync(CancellationToken cancellationToken = default)
-    {
-        return await this.DbContext.QueryFromAsync<T, T>(this.Visitor, false, async (entityType, reader, readerFields, cancellationToken) =>
-        {
-            T result = default;
-            var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
-            if (await reader.ReadAsync(cancellationToken))
-                result = (T)deserializer.Invoke(reader, readerFields);
-            return result;
-        }, cancellationToken);
-    }
-    public virtual List<T> ToList()
-    {
-        return this.DbContext.QueryFrom<T, List<T>>(this.Visitor, true, (entityType, reader, readerFields) =>
-        {
-            var result = new List<T>();
-            var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
-            while (reader.Read())
-                result.Add((T)deserializer.Invoke(reader, readerFields));
-            return result;
-        });
-    }
+        => await this.QuerySingleAsync<T>(this.Visitor, cancellationToken);
+    public virtual List<T> ToList() => this.Query<T>(this.Visitor);
     public virtual async Task<List<T>> ToListAsync(CancellationToken cancellationToken = default)
-    {
-        return await this.DbContext.QueryFromAsync<T, List<T>>(this.Visitor, true, async (entityType, reader, readerFields, cancellationToken) =>
-        {
-            var result = new List<T>();
-            var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
-            while (await reader.ReadAsync(cancellationToken))
-                result.Add((T)deserializer.Invoke(reader, readerFields));
-            return result;
-        }, cancellationToken);
-    }
-    public virtual IPagedList<T> ToPageList() => this.DbContext.QueryPage<T>(this.Visitor);
+         => await this.QueryAsync<T>(this.Visitor, cancellationToken);
+    public virtual IPagedList<T> ToPageList() => this.QueryPage<T>(this.Visitor);
     public virtual async Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryPageAsync<T>(this.Visitor, cancellationToken);
+        => await this.QueryPageAsync<T>(this.Visitor, cancellationToken);
     public virtual Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector) where TKey : notnull
     {
         if (keySelector == null)
@@ -779,7 +753,7 @@ public class Query<T> : QueryBase, IQuery<T>
     {
         Expression<Func<T, T>> defaultExpr = f => f;
         this.Visitor.SelectDefault(defaultExpr);
-        (var sql, var readerFields) = this.DbContext.BuildSql(this.Visitor);
+        (var sql, _) = this.BuildSql(this.Visitor);
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         this.Visitor.Dispose();
         return sql;

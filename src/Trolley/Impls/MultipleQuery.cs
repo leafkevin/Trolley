@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Trolley;
 
-public class MultipleQuery : IMultipleQuery, ICommandContext
+public class MultipleQuery : DialectProvider, IMultipleQuery, ICommandContext
 {
     #region Fields
     protected StringBuilder sqlBuilder = new();
@@ -34,7 +34,7 @@ public class MultipleQuery : IMultipleQuery, ICommandContext
     #region GetShardingTableName
     public virtual IMultipleQuery GetShardingTableName<TEntity>(params object[] fieldValues)
     {
-        this.DbContext.GetShardingTable(typeof(TEntity), fieldValues);
+        this.GetShardingTable(typeof(TEntity), fieldValues);
         return this;
     }
     #endregion
@@ -286,7 +286,7 @@ public class MultipleQuery : IMultipleQuery, ICommandContext
         var whereObjType = parameters.GetType();
         if (!whereObjType.IsEntityType(out _))
             throw new NotSupportedException("不支持的参数类型，此方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
-        var commandInitializer = RepositoryHelper.BuildQueryRawSqlCommandInitializer(this.OrmProvider, rawSql, parameters);
+        var commandInitializer = RepositoryHelper.BuildRawSqlCommandInitializer(this.OrmProvider, rawSql, parameters);
         commandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, parameters);
         this.AddReader(targetType, rawSql, resultType, isExists);
     }
