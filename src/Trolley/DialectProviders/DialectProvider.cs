@@ -40,7 +40,13 @@ public class DialectProvider
             var connString = this.connectionString ?? this.database.Select();
             connection = this.CreateConnection(connString);
         }
-        command = commandContext?.Command ?? this.ormProvider.CreateCommand();
+        if (commandContext == null)
+        {
+            this.interceptor?.CommandCreating(connection);
+            command = this.ormProvider.CreateCommand();
+            this.interceptor?.CommandCreated(command);
+        }
+        else command = commandContext.Command;
         command.Connection = connection;
         command.CommandType = CommandType.Text;
         command.CommandTimeout = this.options.CommandTimeout;
@@ -61,7 +67,13 @@ public class DialectProvider
             var connString = this.connectionString ?? this.database.SelectSlave();
             connection = this.CreateConnection(connString);
         }
-        command = commandContext?.Command ?? this.ormProvider.CreateCommand();
+        if (commandContext == null)
+        {
+            this.interceptor?.CommandCreating(connection);
+            command = this.ormProvider.CreateCommand();
+            this.interceptor?.CommandCreated(command);
+        }
+        else command = commandContext.Command;
         command.Connection = connection;
         command.CommandType = CommandType.Text;
         command.CommandTimeout = this.options.CommandTimeout;
@@ -87,6 +99,8 @@ public class DialectProvider
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         command.CommandText = rawSql;
         command.CommandType = commandType;
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     public (bool, ITheaConnection, ITheaCommand) CreateQueryCommand(string rawSql, object parameters, CommandType commandType)
@@ -106,6 +120,8 @@ public class DialectProvider
         commandInitializer.Invoke(command.Parameters, this.ormProvider, parameters);
         command.CommandText = rawSql;
         command.CommandType = commandType;
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     public (bool, ITheaConnection, ITheaCommand) CreateQueryCommand(string rawSql, List<IDbDataParameter> parameters, CommandType commandType)
@@ -118,6 +134,8 @@ public class DialectProvider
         command.CommandText = rawSql;
         command.CommandType = commandType;
         parameters.ForEach(f => command.Parameters.Add(f));
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     public (bool, ITheaConnection, ITheaCommand) CreateQueryByCommand(Type entityType, object whereObjs, bool isUseKey, bool isBulk)
@@ -133,6 +151,8 @@ public class DialectProvider
             var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjs, 1, isUseKey, false, isBulk);
             command.CommandText = commandInitializer.Invoke(command.Parameters, this.DbContext, whereObjs);
         }
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     public (bool, ITheaConnection, ITheaCommand) CreateExistsCommand(Type entityType, object whereObjs, bool isUseKey, bool isBulk)
@@ -142,6 +162,8 @@ public class DialectProvider
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjs, 2, isUseKey, false, isBulk);
         command.CommandText = commandInitializer.Invoke(command.Parameters, this.DbContext, whereObjs);
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     #endregion
@@ -369,6 +391,8 @@ public class DialectProvider
         visitor.IsNeedPaging = true;
         (var sql, var readerFields) = this.BuildSql(visitor);
         command.CommandText = sql;
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
 
         connection.Open();
         var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
@@ -408,6 +432,8 @@ public class DialectProvider
         visitor.IsNeedPaging = true;
         (var sql, var readerFields) = this.BuildSql(visitor);
         command.CommandText = sql;
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
 
         await connection.OpenAsync(cancellationToken);
         var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
@@ -440,7 +466,6 @@ public class DialectProvider
         return result;
     }
     #endregion
-
 
     #region Exists
     public bool Exists(bool isNeedClose, ITheaConnection connection, ITheaCommand command)
@@ -618,6 +643,8 @@ public class DialectProvider
                 as Func<IDataParameterCollection, DbContext, object, string>;
             command.CommandText = commandInitializer.Invoke(command.Parameters, this.DbContext, insertObj);
         }
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     public (bool, ITheaConnection, ITheaCommand, string, Action<IDataParameterCollection, StringBuilder, DbContext, object, string>)
@@ -741,6 +768,8 @@ public class DialectProvider
             commandInitializer = (dbParameters, builder, dbContext, insertObj, suffix) =>
                 typedCommandInitializer.Invoke(dbParameters, builder, dbContext, "(", "),", insertObj, suffix);
         }
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command, headSql, commandInitializer);
     }
     public int CreateBulk<TEntity>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, IEnumerable insertObjs, int bulkCount,
@@ -758,6 +787,9 @@ public class DialectProvider
             {
                 builder.Remove(builder.Length - 1, 1);
                 command.CommandText = builder.ToString();
+                if (this.interceptor != null)
+                    command = this.interceptor.CommandInitialized(command);
+
                 result += command.ExecuteNonQuery();
                 builder.Clear();
                 command.Parameters.Clear();
@@ -769,6 +801,9 @@ public class DialectProvider
         {
             builder.Remove(builder.Length - 1, 1);
             command.CommandText = builder.ToString();
+            if (this.interceptor != null)
+                command = this.interceptor.CommandInitialized(command);
+
             result += command.ExecuteNonQuery();
             builder.Clear();
             command.Parameters.Clear();
@@ -793,6 +828,9 @@ public class DialectProvider
             {
                 builder.Remove(builder.Length - 1, 1);
                 command.CommandText = builder.ToString();
+                if (this.interceptor != null)
+                    command = this.interceptor.CommandInitialized(command);
+
                 result += await command.ExecuteNonQueryAsync(cancellationToken);
                 builder.Clear();
                 command.Parameters.Clear();
@@ -804,6 +842,9 @@ public class DialectProvider
         {
             builder.Remove(builder.Length - 1, 1);
             command.CommandText = builder.ToString();
+            if (this.interceptor != null)
+                command = this.interceptor.CommandInitialized(command);
+
             result += await command.ExecuteNonQueryAsync(cancellationToken);
             builder.Clear();
             command.Parameters.Clear();
@@ -872,6 +913,8 @@ public class DialectProvider
                 as Func<IDataParameterCollection, DbContext, object, string>;
             command.CommandText = commandInitializer.Invoke(command.Parameters, this.DbContext, updateObj);
         }
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     public (bool, ITheaConnection, ITheaCommand, Action<IDataParameterCollection, StringBuilder, DbContext, object, string>)
@@ -1028,6 +1071,9 @@ public class DialectProvider
             if (index >= bulkCount)
             {
                 command.CommandText = builder.ToString();
+                if (this.interceptor != null)
+                    command = this.interceptor.CommandInitialized(command);
+
                 result += command.ExecuteNonQuery();
                 builder.Clear();
                 command.Parameters.Clear();
@@ -1037,6 +1083,9 @@ public class DialectProvider
         if (index > 0)
         {
             command.CommandText = builder.ToString();
+            if (this.interceptor != null)
+                command = this.interceptor.CommandInitialized(command);
+
             result += command.ExecuteNonQuery();
             builder.Clear();
             command.Parameters.Clear();
@@ -1062,6 +1111,9 @@ public class DialectProvider
             if (index >= bulkCount)
             {
                 command.CommandText = builder.ToString();
+                if (this.interceptor != null)
+                    command = this.interceptor.CommandInitialized(command);
+
                 result += await command.ExecuteNonQueryAsync(cancellationToken);
                 builder.Clear();
                 command.Parameters.Clear();
@@ -1071,6 +1123,9 @@ public class DialectProvider
         if (index > 0)
         {
             command.CommandText = builder.ToString();
+            if (this.interceptor != null)
+                command = this.interceptor.CommandInitialized(command);
+
             result += await command.ExecuteNonQueryAsync(cancellationToken);
             builder.Clear();
             command.Parameters.Clear();
@@ -1090,6 +1145,8 @@ public class DialectProvider
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjs, 3, isUseKey, false, isBulk);
         command.CommandText = commandInitializer.Invoke(command.Parameters, this.DbContext, whereObjs);
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     #endregion
@@ -1102,6 +1159,8 @@ public class DialectProvider
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         command.CommandText = rawSql;
         command.CommandType = commandType;
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     public (bool, ITheaConnection, ITheaCommand) CreateExecuteCommand(string rawSql, object parameters, CommandType commandType)
@@ -1121,6 +1180,8 @@ public class DialectProvider
         commandInitializer.Invoke(command.Parameters, this.ormProvider, parameters);
         command.CommandText = rawSql;
         command.CommandType = commandType;
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     public (bool, ITheaConnection, ITheaCommand) CreateExecuteCommand(string rawSql, List<IDbDataParameter> parameters, CommandType commandType)
@@ -1133,6 +1194,8 @@ public class DialectProvider
         command.CommandText = rawSql;
         command.CommandType = commandType;
         parameters.ForEach(f => command.Parameters.Add(f));
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     #endregion

@@ -187,8 +187,12 @@ class MySqlTheaConnection : ITheaConnection
         }
         return transaction;
     }
-    public void Dispose() => this.connection.Dispose();
-
+    public void Dispose()
+    {
+        this.Interceptor?.ConnectionDisposing(this);
+        this.connection.Dispose();
+        this.Interceptor?.ConnectionDisposed(this);
+    }
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
     public ValueTask DisposeAsync()
     {
@@ -198,9 +202,11 @@ class MySqlTheaConnection : ITheaConnection
 #else
     public ValueTask DisposeAsync()
     {
+        this.Interceptor?.ConnectionDisposing(this);
         this.connection.Dispose();
+        this.Interceptor?.ConnectionDisposed(this);
         return default(ValueTask);
-    }   
+    }
 #endif
     IDbTransaction IDbConnection.BeginTransaction()
     {
