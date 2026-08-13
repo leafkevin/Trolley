@@ -6,7 +6,7 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-public interface IMultipleQuery : ICommandContext, IDisposable
+public interface IMultipleQuery : ICommandVisitor, IDisposable
 {
     #region Properties
     DbContext DbContext { get; }

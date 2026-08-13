@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Trolley;
 
-public interface IUpdateVisitor : ICommandContext, IDisposable
+public interface IUpdateVisitor : ICommandVisitor, ICommandVisitor, IDisposable
 {
     DbContext DbContext { get; }
     IOrmProvider OrmProvider { get; }
@@ -19,7 +19,6 @@ public interface IUpdateVisitor : ICommandContext, IDisposable
     ActionMode ActionMode { get; set; }
     List<TableSegment> ShardingTables { get; set; }
 
-    string BuildSql(ITheaCommand command, out List<ReaderField> readerFields);
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>, Action<IDataParameterCollection,
         StringBuilder, DbContext, string, object, string>, List<ReaderField>) BuildSetBulk(ITheaCommand command);
 

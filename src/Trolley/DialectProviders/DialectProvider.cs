@@ -27,7 +27,7 @@ public class DialectProvider
     #endregion
 
     #region UseMasterCommand/UseSlaveCommand
-    public (bool, ITheaConnection, ITheaCommand) UseMasterCommand(ICommandContext commandContext = null)
+    public (bool, ITheaConnection, ITheaCommand) UseMasterCommand(ICommandVisitor commandContext = null)
     {
         bool isNeedClose = false;
         ITheaConnection connection;
@@ -54,7 +54,7 @@ public class DialectProvider
         command.Interceptor = this.interceptor;
         return (isNeedClose, connection, command);
     }
-    public (bool, ITheaConnection, ITheaCommand) UseSlaveCommand(ICommandContext commandContext = null)
+    public (bool, ITheaConnection, ITheaCommand) UseSlaveCommand(ICommandVisitor commandContext = null)
     {
         bool isNeedClose = false;
         ITheaConnection connection;
@@ -377,6 +377,35 @@ public class DialectProvider
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         visitor.Dispose();
+        return result;
+    }
+
+    public List<TTarget> QuerySimple<TTarget>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, List<ReaderField> readerFields)
+    {
+        var entityType = typeof(TTarget);
+        connection.Open();
+        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+        var deserializer = reader.GetReaderDeserializer(entityType, this.DbContext, readerFields);
+        var result = new List<TTarget>();
+        while (reader.Read())
+            result.Add((TTarget)deserializer.Invoke(reader, readerFields));
+        reader.Dispose();
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public async Task<List<TTarget>> QuerySimpleAsync<TTarget>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, List<ReaderField> readerFields, CancellationToken cancellationToken = default)
+    {
+        var entityType = typeof(TTarget);
+        await  connection.OpenAsync(cancellationToken);
+        var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken); 
+        var deserializer = reader.GetReaderDeserializer(entityType, this.DbContext, readerFields);
+        var result = new List<TTarget>();
+        while (await reader.ReadAsync(cancellationToken))
+            result.Add((TTarget)deserializer.Invoke(reader, readerFields));
+        await reader.DisposeAsync();
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
         return result;
     }
     #endregion
@@ -925,7 +954,7 @@ public class DialectProvider
         if (this.interceptor != null)
             command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
-    }
+    }  
     public (bool, ITheaConnection, ITheaCommand, Action<IDataParameterCollection, StringBuilder, DbContext, object, string>)
         CreateUpdateBulkCommand(Type entityType, IEnumerable updateObjs, int bulkCount)
     {
@@ -1206,6 +1235,14 @@ public class DialectProvider
         if (this.interceptor != null)
             command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
+    }
+    public (bool, ITheaConnection, ITheaCommand, List<ReaderField>) CreateExecuteCommand(ICommandVisitor visitor)
+    {
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(visitor);
+        command.CommandText = visitor.BuildSql(command, out var readerFields);
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
+        return (isNeedClose, connection, command, readerFields);
     }
     #endregion
 

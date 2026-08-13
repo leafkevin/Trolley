@@ -15,7 +15,7 @@ public enum OperationType
     And,
     Or
 }
-public class SqlVisitor : ISqlVisitor, ICommandContext
+public class SqlVisitor : ISqlVisitor, ICommandVisitor
 {
     private bool isDisposed;
 

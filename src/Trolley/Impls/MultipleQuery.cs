@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Trolley;
 
-public class MultipleQuery : DialectProvider, IMultipleQuery, ICommandContext
+public class MultipleQuery : DialectProvider, IMultipleQuery, ICommandVisitor
 {
     #region Fields
     protected StringBuilder sqlBuilder = new();

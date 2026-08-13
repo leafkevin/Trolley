@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public interface IQueryVisitor : ICommandContext, ICloneable, IDisposable
+public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
 {
     DbContext DbContext { get; }
     IOrmProvider OrmProvider { get; }

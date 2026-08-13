@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-public interface IDeleteVisitor : ICommandContext, IDisposable
+public interface IDeleteVisitor : ICommandVisitor, ICommandVisitor, IDisposable
 {
     DbContext DbContext { get; }
     IOrmProvider OrmProvider { get; }
@@ -15,8 +15,6 @@ public interface IDeleteVisitor : ICommandContext, IDisposable
 
     bool HasWhere { get; }
     List<TableSegment> ShardingTables { get; }
-
-    string BuildSql(ITheaCommand command, out List<ReaderField> readerFields);
 
     void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
     void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);

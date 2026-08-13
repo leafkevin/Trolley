@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Trolley;
 
-public interface ICreateVisitor : ICommandContext, IDisposable
+public interface ICreateVisitor : ICommandVisitor, ICommandVisitor, IDisposable
 {
     DbContext DbContext { get; }
     IOrmProvider OrmProvider { get; }
@@ -25,7 +25,6 @@ public interface ICreateVisitor : ICommandContext, IDisposable
     string FromSql { get; set; }
     bool IsRecursive { get; set; }
 
-    string BuildSql(ITheaCommand command, out List<ReaderField> readerFields);
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<ReaderField>) BuildWithBulk(ITheaCommand command);
 

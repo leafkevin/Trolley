@@ -177,15 +177,9 @@ public class Deleted : DialectProvider, IDeleted
         if (!this.Visitor.HasWhere)
             throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
-        command.CommandText = this.Visitor.BuildSql(command, out _);
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
-
-        connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-        if (isNeedClose) connection.Close();
+        (var isNeedClose, var connection, var command, _) = this.CreateExecuteCommand(this.Visitor);
+        var result = this.Execute(isNeedClose, connection, command);
+        this.Visitor.Dispose();
         return result;
     }
     public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
@@ -193,15 +187,9 @@ public class Deleted : DialectProvider, IDeleted
         if (!this.Visitor.HasWhere)
             throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
-        command.CommandText = this.Visitor.BuildSql(command, out _);
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
-
-        await connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
+        (var isNeedClose, var connection, var command, _) = this.CreateExecuteCommand(this.Visitor);
+        var result = await this.ExecuteAsync(isNeedClose, connection, command, cancellationToken);
+        this.Visitor.Dispose();
         return result;
     }
     #endregion
@@ -358,10 +346,7 @@ public class ResultDeleted<TResult> : DialectProvider, IBulkResultCommand<TResul
             throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
         var result = new List<TResult>();
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
-        command.CommandText = this.Visitor.BuildSql(command, out var readerFields);
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
+        (var isNeedClose, var connection, var command, var readerFields) = this.CreateExecuteCommand(this.Visitor);
 
         connection.Open();
         using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
@@ -387,10 +372,7 @@ public class ResultDeleted<TResult> : DialectProvider, IBulkResultCommand<TResul
             throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
         var result = new List<TResult>();
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
-        command.CommandText = this.Visitor.BuildSql(command, out var readerFields);
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
+        (var isNeedClose, var connection, var command, var readerFields) = this.CreateExecuteCommand(this.Visitor);
 
         await connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);

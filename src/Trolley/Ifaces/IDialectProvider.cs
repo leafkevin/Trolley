@@ -12,8 +12,8 @@ public interface IDialectProvider
     DbContext DbContext { get; set; }
 
     #region UseMasterCommand/UseSlaveCommand
-    (bool, ITheaConnection, ITheaCommand) UseMasterCommand(ICommandContext commandContext = null);
-    (bool, ITheaConnection, ITheaCommand) UseSlaveCommand(ICommandContext commandContext = null);
+    (bool, ITheaConnection, ITheaCommand) UseMasterCommand(ICommandVisitor commandContext = null);
+    (bool, ITheaConnection, ITheaCommand) UseSlaveCommand(ICommandVisitor commandContext = null);
     #endregion
 
     #region QueryScalar

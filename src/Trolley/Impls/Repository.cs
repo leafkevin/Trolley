@@ -474,7 +474,7 @@ public class Repository : DialectProvider, IRepository
         return this;
     }
     //抛异常的时候，会走到析构函数，但是Transaction，没有提交也没有回滚
-    private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a', ICommandContext commandContext = null)
+    private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a', ICommandVisitor commandContext = null)
     {
         var command = commandContext?.Command ?? this.ormProvider.CreateCommand();
         return this.ormProvider.NewQueryVisitor(this.DbContext, tableAsStart, command);
