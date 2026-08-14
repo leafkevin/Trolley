@@ -9,6 +9,7 @@ namespace Trolley;
 public interface ITheaDataReader : IDataReader, IDisposable, IAsyncDisposable
 {
     IDataReader DbDataReader { get; }
+    IDbInterceptor Interceptor { get; set; }
 
     bool HasRows { get; }
     T GetFieldValue<T>(int ordinal);

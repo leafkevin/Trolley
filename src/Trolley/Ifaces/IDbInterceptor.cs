@@ -45,6 +45,15 @@ public interface IDbInterceptor
     DbCommandExecutingEventArgs CommandExecuting(ITheaCommand command);
     void CommandExecuted(DbCommandCompletedEventArgs eventArgs);
     void CommandFailed(DbCommandCompletedEventArgs eventArgs);
+    void CommandDisposing(ITheaCommand command);
+    void CommandDisposed(ITheaCommand command);
+
+    void DataReaderCreating(ITheaCommand command);
+    ITheaDataReader DataReaderCreated(ITheaDataReader reader);
+    void DataReaderClosing(ITheaDataReader reader);
+    void DataReaderClosed(ITheaDataReader reader);
+    void DataReaderDisposing(ITheaDataReader reader);
+    void DataReaderDisposed(ITheaDataReader reader);
 
     void TransactionCreating(ITheaConnection connection);
     ITheaTransaction TransactionCreated(ITheaTransaction transaction);

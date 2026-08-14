@@ -20,10 +20,16 @@ class MySqlTheaDataReader : ITheaDataReader
     public bool HasRows => this.reader.HasRows;
 
     public IDataReader DbDataReader => this.reader;
+    public IDbInterceptor Interceptor { get; set; }
+
 
     public MySqlTheaDataReader(MySqlDataReader reader) => this.reader = reader;
 
-    public void Close() => this.reader.Close();
+    public void Close()
+    {
+        this.In
+        this.reader.Close();
+    }
     public Task CloseAsync()
     {
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
@@ -34,19 +40,11 @@ class MySqlTheaDataReader : ITheaDataReader
 #endif
     }
     public void Dispose() => this.reader.Dispose();
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
     public ValueTask DisposeAsync()
     {
         this.reader.DisposeAsync();
         return default;
     }
-#else
-    public ValueTask DisposeAsync()
-    {
-        this.reader.Dispose();
-        return default;
-    }
-#endif
     public bool Read() => this.reader.Read();
     public Task<bool> ReadAsync(CancellationToken cancellationToken = default)
         => this.reader.ReadAsync(cancellationToken);

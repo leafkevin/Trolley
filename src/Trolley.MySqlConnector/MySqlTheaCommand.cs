@@ -55,10 +55,8 @@ class MySqlTheaCommand : ITheaCommand
             if (value is not MySqlTheaTransaction theaTransaction)
                 throw new NotSupportedException("不支持的事务类型，只支持MySqlTheaTransaction类型");
             this.transaction = theaTransaction;
-            if (string.IsNullOrEmpty(this.DbKey))
-                this.DbKey = theaTransaction.DbKey;
-            if (!ReferenceEquals(this.connection, this.transaction.Connection))
-                this.connection = this.transaction.Connection as MySqlTheaConnection;
+            this.DbKey = theaTransaction.DbKey;
+            this.connection = this.transaction.Connection as MySqlTheaConnection;
         }
     }
     public UpdateRowSource UpdatedRowSource
@@ -66,16 +64,6 @@ class MySqlTheaCommand : ITheaCommand
         get => this.command.UpdatedRowSource;
         set => this.command.UpdatedRowSource = value;
     }
-    IDbConnection IDbCommand.Connection
-    {
-        get => this.connection.DbConnection;
-        set
-        {
-            if(value is MySqlConnection dbConnection)
-            this.connection.DbConnection = value;
-        }
-    }
-    IDbTransaction IDbCommand.Transaction { get => Transaction; set => throw new NotImplementedException(); }
 
     public MySqlTheaCommand(MySqlCommand command, MySqlTheaConnection connection = null, MySqlTheaTransaction transaction = null)
     {
@@ -111,10 +99,7 @@ class MySqlTheaCommand : ITheaCommand
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            this.OnExecuted(isSuccess, evtData, exception);
-        }
+        this.OnExecuted(isSuccess, evtData, exception);
         if (!isSuccess)
         {
             this.Dispose();
@@ -138,14 +123,11 @@ class MySqlTheaCommand : ITheaCommand
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            this.OnExecuted(isSuccess, evtData, exception);
-        }
+        this.OnExecuted(isSuccess, evtData, exception);
         if (!isSuccess)
         {
-            this.Dispose();
-            if (this.IsNeedClose) this.connection.Close();
+            await this.DisposeAsync();
+            if (this.IsNeedClose) await this.connection.CloseAsync();
             throw exception;
         }
         return recordsAffected;
@@ -153,24 +135,24 @@ class MySqlTheaCommand : ITheaCommand
     public ITheaDataReader ExecuteReader() => this.ExecuteReader(CommandBehavior.Default);
     public ITheaDataReader ExecuteReader(CommandBehavior behavior)
     {
-        MySqlTheaDataReader reader = null;
+        ITheaDataReader reader = null;
         bool isSuccess = true;
         Exception exception = null;
         if (!this.OnExecuting(out var evtData)) return reader;
         try
         {
+            this.Interceptor?.DataReaderCreating(this);
             var dbReader = this.command.ExecuteReader(behavior);
-            reader = new MySqlTheaDataReader(dbReader);
+            reader = new MySqlTheaDataReader(dbReader) { Interceptor = this.Interceptor };
         }
         catch (Exception ex)
         {
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            this.OnExecuted(isSuccess, evtData, exception);
-        }
+        if (this.Interceptor != null)
+            reader = this.Interceptor.DataReaderCreated(reader);
+        this.OnExecuted(isSuccess, evtData, exception);
         if (!isSuccess)
         {
             this.Dispose();
@@ -183,28 +165,28 @@ class MySqlTheaCommand : ITheaCommand
         => await this.ExecuteReaderAsync(CommandBehavior.Default, cancellationToken);
     public async Task<ITheaDataReader> ExecuteReaderAsync(CommandBehavior behavior = default, CancellationToken cancellationToken = default)
     {
-        MySqlTheaDataReader reader = null;
+        ITheaDataReader reader = null;
         bool isSuccess = true;
         Exception exception = null;
         if (!this.OnExecuting(out var evtData)) return reader;
         try
         {
+            this.Interceptor?.DataReaderCreating(this);
             var dbReader = await this.command.ExecuteReaderAsync(behavior, cancellationToken);
-            reader = new MySqlTheaDataReader(dbReader);
+            reader = new MySqlTheaDataReader(dbReader) { Interceptor = this.Interceptor };
         }
         catch (Exception ex)
         {
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            this.OnExecuted(isSuccess, evtData, exception);
-        }
+        if (this.Interceptor != null)
+            reader = this.Interceptor.DataReaderCreated(reader);
+        this.OnExecuted(isSuccess, evtData, exception);
         if (!isSuccess)
         {
             await this.DisposeAsync();
-            if (this.IsNeedClose) this.connection.Close();
+            if (this.IsNeedClose) await this.connection.CloseAsync();
             throw exception;
         }
         return reader;
@@ -214,7 +196,7 @@ class MySqlTheaCommand : ITheaCommand
         object result = null;
         bool isSuccess = true;
         Exception exception = null;
-        if (!this.OnExecuting(out var evtData)) return 0;
+        if (!this.OnExecuting(out var evtData)) return result;
         try
         {
             result = this.command.ExecuteScalar();
@@ -224,10 +206,7 @@ class MySqlTheaCommand : ITheaCommand
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            this.OnExecuted(isSuccess, evtData, exception);
-        }
+        this.OnExecuted(isSuccess, evtData, exception);
         if (!isSuccess)
         {
             this.Dispose();
@@ -241,7 +220,7 @@ class MySqlTheaCommand : ITheaCommand
         object result = null;
         bool isSuccess = true;
         Exception exception = null;
-        if (!this.OnExecuting(out var evtData)) return 0;
+        if (!this.OnExecuting(out var evtData)) return result;
         try
         {
             result = await this.command.ExecuteScalarAsync(cancellationToken);
@@ -258,41 +237,24 @@ class MySqlTheaCommand : ITheaCommand
         if (!isSuccess)
         {
             await this.DisposeAsync();
-            if (this.IsNeedClose) this.connection.Close();
+            if (this.IsNeedClose) await this.connection.CloseAsync();
             throw exception;
         }
         return result;
     }
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
     public virtual async Task PrepareAsync(CancellationToken cancellationToken = default)
         => await this.command.PrepareAsync(cancellationToken);
-#else
-    public virtual Task PrepareAsync(CancellationToken cancellationToken = default)
-    {
-        this.command.Prepare();
-        return Task.CompletedTask;
-    }
-#endif
     public void Dispose()
     {
         this.command.Dispose();
         this.Parameters.Clear();
     }
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
     public ValueTask DisposeAsync()
     {
         this.command.DisposeAsync();
         this.Parameters.Clear();
         return default;
     }
-#else
-    public ValueTask DisposeAsync()
-    {
-        this.command.Dispose();
-        this.Parameters.Clear();
-        return default;
-    }
-#endif
     private bool OnExecuting(out object evtData)
     {
         if (this.Interceptor != null)
@@ -321,16 +283,45 @@ class MySqlTheaCommand : ITheaCommand
     }
     public object Clone()
     {
-        var dbCommand = this.connection.DbConnection.CreateCommand() as MySqlCommand;
-        var command = new MySqlTheaCommand(this.DbKey, dbCommand, this.connection, this.transaction)
-        {
-            CommandText = this.CommandText,
-            CommandType = this.CommandType
-        };
-        GC.SuppressFinalize(this);
-        return command;
+        var dbCommand = this.command.Clone();
+        return new MySqlTheaCommand(this.DbKey, dbCommand, this.connection, this.transaction);
     }
 
+    IDbConnection IDbCommand.Connection
+    {
+        get => this.connection.DbConnection;
+        set
+        {
+            if (value is MySqlTheaConnection theaConnection)
+            {
+                this.connection = theaConnection;
+                this.DbKey = theaConnection.DbKey;
+            }
+            else if (value is MySqlConnection dbConnection)
+                this.connection.DbConnection = value;
+            else throw new NotSupportedException("不支持的连接类型，只支持MySqlTheaConnection类型");
+        }
+    }
+    IDbTransaction IDbCommand.Transaction
+    {
+        get => this.transaction.DbTransaction;
+        set
+        {
+            if (value is MySqlTheaTransaction theaTransaction)
+            {
+                this.transaction = theaTransaction;
+                if (!ReferenceEquals(this.connection, theaTransaction.Connection)
+                    && theaTransaction.Connection is MySqlTheaConnection theaConnection)
+                {
+                    this.connection = theaConnection;
+                    this.DbKey = theaConnection.DbKey;
+                }
+            }
+            else if (value is MySqlTransaction dbTransaction)
+                this.transaction.DbTransaction = dbTransaction;
+            else throw new NotSupportedException("不支持的连接类型，只支持MySqlTheaConnection类型");
+        }
+    }
     IDataReader IDbCommand.ExecuteReader()
     {
         var reader = this.ExecuteReader();

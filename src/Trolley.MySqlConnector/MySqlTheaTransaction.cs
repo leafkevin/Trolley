@@ -9,12 +9,23 @@ namespace Trolley.MySqlConnector;
 class MySqlTheaTransaction : ITheaTransaction
 {
     private readonly MySqlTheaConnection connection;
-    private readonly MySqlTransaction transaction;
+    private MySqlTransaction transaction;
 
     public string DbKey { get; private set; }
     public string TransactionId { get; private set; }
     public ITheaConnection Connection => this.connection;
-    public IDbTransaction DbTransaction => this.transaction;
+    public IDbTransaction DbTransaction
+    {
+        get => this.transaction;
+        internal set
+        {
+            if (value is MySqlTheaTransaction theaTransaction)
+                this.transaction = theaTransaction.transaction;
+            else if (value is MySqlTransaction dbTransaction)
+                this.transaction = dbTransaction;
+            else throw new NotSupportedException("不支持的事务类型，只支持MySqlTheaTransaction或是MySqlTransaction类型");
+        }
+    }
     public IsolationLevel IsolationLevel => this.transaction.IsolationLevel;
     public IDbInterceptor Interceptor { get; set; }
     IDbConnection IDbTransaction.Connection => this.connection.DbConnection;
@@ -151,10 +162,6 @@ class MySqlTheaTransaction : ITheaTransaction
         return default;
     }
 #else
-    public ValueTask DisposeAsync()
-    {
-        this.transaction.Dispose();
-        return default;
-    }
+    public Task DisposeAsync() => this.transaction.DisposeAsync();
 #endif
 }

@@ -20,6 +20,7 @@ class PostgreSqlTheaDataReader : ITheaDataReader
     public bool HasRows => this.reader.HasRows;
 
     public IDataReader DbDataReader => this.reader;
+    public IDbInterceptor Interceptor { get; set; }
 
     public PostgreSqlTheaDataReader(NpgsqlDataReader reader) => this.reader = reader;
 

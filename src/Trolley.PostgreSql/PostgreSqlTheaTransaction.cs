@@ -8,117 +8,160 @@ namespace Trolley.PostgreSql;
 
 class PostgreSqlTheaTransaction : ITheaTransaction
 {
-    private readonly NpgsqlTransaction transaction;
-    private readonly DateTime createdAt;
+    private readonly PostgreSqlTheaConnection connection;
+    private NpgsqlTransaction transaction;
 
+    public string DbKey { get; private set; }
     public string TransactionId { get; private set; }
-    public ITheaConnection Connection { get; private set; }
-    public IDbTransaction BaseTransaction { get; private set; }
-
-    public Action<TransactionEventArgs> OnCreated { get; set; }
-    public Action<TransactionCompletedEventArgs> OnCompleted { get; set; }
-
-    public PostgreSqlTheaTransaction(ITheaConnection connection, NpgsqlTransaction transaction)
+    public ITheaConnection Connection => this.connection;
+    public IDbTransaction DbTransaction
     {
+        get => this.transaction;
+        internal set
+        {
+            if (value is PostgreSqlTheaTransaction theaTransaction)
+                this.transaction = theaTransaction.transaction;
+            else if (value is NpgsqlTransaction dbTransaction)
+                this.transaction = dbTransaction;
+            else throw new NotSupportedException("不支持的事务类型，只支持PostgreSqlTheaTransaction或是NpgsqlTransaction类型");
+        }
+    }
+    public IsolationLevel IsolationLevel => this.transaction.IsolationLevel;
+    public IDbInterceptor Interceptor { get; set; }
+    IDbConnection IDbTransaction.Connection => this.connection.DbConnection;
+
+    public PostgreSqlTheaTransaction(string dbKey, PostgreSqlTheaConnection connection, NpgsqlTransaction transaction)
+    {
+        this.DbKey = dbKey;
         this.TransactionId = Guid.NewGuid().ToString("N");
-        this.Connection = connection;
+        this.connection = connection;
         this.transaction = transaction;
-        this.BaseTransaction = transaction;
-        this.createdAt = DateTime.Now;
     }
 
     public void Commit()
     {
         bool isSuccess = true;
         Exception exception = null;
-        try { transaction.Commit(); }
+        var eventArgs = this.Interceptor.TransactionCommitting(this);
+        try { this.transaction.Commit(); }
         catch (Exception ex)
         {
             isSuccess = false;
             exception = ex;
         }
-        var elapsed = DateTime.Now.Subtract(this.createdAt).TotalMilliseconds;
-        this.OnCompleted?.Invoke(new TransactionCompletedEventArgs
+        finally
         {
-            DbKey = this.Connection.DbKey,
-            TransactionId = this.TransactionId,
-            ConnectionId = this.Connection.ConnectionId,
-            ConnectionString = this.Connection.ConnectionString,
-            IsSuccess = isSuccess,
-            Action = TransactionAction.Commit,
-            Elapsed = (int)elapsed,
-            Exception = exception
-        });
+            var completedEventArgs = new DbTransactionCompletedEventArgs
+            {
+                IsSuccess = isSuccess,
+                EventData = eventArgs.EventData,
+                Exception = exception,
+                Transaction = this
+            };
+            this.Interceptor.TransactionCommitted(completedEventArgs);
+            if (!isSuccess) this.Interceptor.TransactionFailed(completedEventArgs);
+        }
+        if (!isSuccess)
+        {
+            if (!isSuccess) this.connection.Close();
+            throw exception;
+        }
     }
     public async Task CommitAsync(CancellationToken cancellationToken = default)
     {
         bool isSuccess = true;
         Exception exception = null;
+        var eventArgs = this.Interceptor.TransactionCommitting(this);
         try { await this.transaction.CommitAsync(cancellationToken); }
         catch (Exception ex)
         {
             isSuccess = false;
             exception = ex;
         }
-        var elapsed = DateTime.Now.Subtract(this.createdAt).TotalMilliseconds;
-        this.OnCompleted?.Invoke(new TransactionCompletedEventArgs
+        finally
         {
-            DbKey = this.Connection.DbKey,
-            TransactionId = this.TransactionId,
-            ConnectionId = this.Connection.ConnectionId,
-            ConnectionString = this.Connection.ConnectionString,
-            IsSuccess = isSuccess,
-            Action = TransactionAction.Commit,
-            Elapsed = (int)elapsed,
-            Exception = exception
-        });
+            var completedEventArgs = new DbTransactionCompletedEventArgs
+            {
+                IsSuccess = isSuccess,
+                EventData = eventArgs.EventData,
+                Exception = exception,
+                Transaction = this
+            };
+            this.Interceptor.TransactionCommitted(completedEventArgs);
+            if (!isSuccess) this.Interceptor.TransactionFailed(completedEventArgs);
+        }
+        if (!isSuccess)
+        {
+            if (!isSuccess) this.connection.Close();
+            throw exception;
+        }
     }
     public void Rollback()
     {
         bool isSuccess = true;
         Exception exception = null;
+        var eventArgs = this.Interceptor.TransactionRollingBack(this);
         try { this.transaction.Rollback(); }
         catch (Exception ex)
         {
             isSuccess = false;
             exception = ex;
         }
-        var elapsed = DateTime.Now.Subtract(this.createdAt).TotalMilliseconds;
-        this.OnCompleted?.Invoke(new TransactionCompletedEventArgs
+        finally
         {
-            DbKey = this.Connection.DbKey,
-            TransactionId = this.TransactionId,
-            ConnectionId = this.Connection.ConnectionId,
-            ConnectionString = this.Connection.ConnectionString,
-            IsSuccess = isSuccess,
-            Action = TransactionAction.Rollback,
-            Elapsed = (int)elapsed,
-            Exception = exception
-        });
+            var completedEventArgs = new DbTransactionCompletedEventArgs
+            {
+                IsSuccess = isSuccess,
+                EventData = eventArgs.EventData,
+                Exception = exception,
+                Transaction = this
+            };
+            this.Interceptor.TransactionRolledBack(completedEventArgs);
+            if (!isSuccess) this.Interceptor.TransactionFailed(completedEventArgs);
+        }
+        if (!isSuccess)
+        {
+            if (!isSuccess) this.connection.Close();
+            throw exception;
+        }
     }
     public async Task RollbackAsync(CancellationToken cancellationToken = default)
     {
         bool isSuccess = true;
         Exception exception = null;
+        var eventArgs = this.Interceptor.TransactionRollingBack(this);
         try { await this.transaction.RollbackAsync(cancellationToken); }
         catch (Exception ex)
         {
             isSuccess = false;
             exception = ex;
         }
-        var elapsed = DateTime.Now.Subtract(this.createdAt).TotalMilliseconds;
-        this.OnCompleted?.Invoke(new TransactionCompletedEventArgs
+        finally
         {
-            DbKey = this.Connection.DbKey,
-            TransactionId = this.TransactionId,
-            ConnectionId = this.Connection.ConnectionId,
-            ConnectionString = this.Connection.ConnectionString,
-            IsSuccess = isSuccess,
-            Action = TransactionAction.Rollback,
-            Elapsed = (int)elapsed,
-            Exception = exception
-        });
+            var completedEventArgs = new DbTransactionCompletedEventArgs
+            {
+                IsSuccess = isSuccess,
+                EventData = eventArgs.EventData,
+                Exception = exception,
+                Transaction = this
+            };
+            this.Interceptor.TransactionRolledBack(completedEventArgs);
+            if (!isSuccess) this.Interceptor.TransactionFailed(completedEventArgs);
+        }
+        if (!isSuccess)
+        {
+            if (!isSuccess) this.connection.Close();
+            throw exception;
+        }
     }
     public void Dispose() => this.transaction.Dispose();
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
     public ValueTask DisposeAsync() => this.transaction.DisposeAsync();
+#else
+    public ValueTask DisposeAsync()
+    {
+        this.transaction.DisposeAsync();
+        return default;
+    }
+#endif
 }

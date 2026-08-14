@@ -792,7 +792,7 @@ public class ResultUpdated<TResult> : DialectProvider, IBulkResultCommand<TResul
         if (!this.Visitor.HasWhere)
             throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
-        (var isNeedClose, var connection, var command, var readerFields) = this.CreateUpdateCommand(this.Visitor);
+        (var isNeedClose, var connection, var command, var readerFields) = this.CreateExecuteCommand(this.Visitor);
         var result = await this.QuerySimpleAsync<TResult>(isNeedClose, connection, command, readerFields, cancellationToken);
         this.Visitor.Dispose();
         return result;

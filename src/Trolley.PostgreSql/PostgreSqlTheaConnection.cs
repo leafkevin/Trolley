@@ -8,18 +8,32 @@ namespace Trolley.PostgreSql;
 
 class PostgreSqlTheaConnection : ITheaConnection
 {
-    private readonly NpgsqlConnection connection;
+    private NpgsqlConnection connection;
 
     public string DbKey { get; private set; }
     public string ConnectionId { get; private set; }
-    public string ConnectionString { get; set; }
+    public string ConnectionString
+    {
+        get => this.connection.ConnectionString;
+        set => this.connection.ConnectionString = value;
+    }
     public int ConnectionTimeout => this.connection.ConnectionTimeout;
     public string Database => this.connection.Database;
     public string ServerVersion => this.connection.ServerVersion;
     public ConnectionState State => this.connection.State;
-    public IDbConnection BaseConnection => this.connection;
-
-
+    public IDbConnection DbConnection
+    {
+        get => this.connection;
+        internal set
+        {
+            if (value is PostgreSqlTheaConnection theaConnection)
+                this.connection = theaConnection.connection;
+            else if (value is NpgsqlConnection dbConnection)
+                this.connection = dbConnection;
+            else throw new NotSupportedException("不支持的连接类型，只支持PostgreSqlTheaConnection或是NpgsqlConnection类型");
+        }
+    }
+    public IDbInterceptor Interceptor { get; set; }
 
     public PostgreSqlTheaConnection(string dbKey, string connectionString)
         : this(dbKey, new NpgsqlConnection(connectionString)) { }
@@ -31,12 +45,18 @@ class PostgreSqlTheaConnection : ITheaConnection
         this.connection = connection;
     }
 
+    public ITheaCommand CreateCommand()
+    {
+        var dbCommand = this.connection.CreateCommand();
+        return new PostgreSqlTheaCommand(this.DbKey, dbCommand, this);
+    }
     public void ChangeDatabase(string databaseName)
         => this.connection.ChangeDatabase(databaseName);
     public void Close()
     {
         if (this.connection == null || this.State == ConnectionState.Closed)
             return;
+
         bool isSuccess = true;
         Exception exception = null;
         this.Interceptor?.ConnectionClosing(this);
@@ -57,145 +77,158 @@ class PostgreSqlTheaConnection : ITheaConnection
     }
     public async Task CloseAsync()
     {
-        if (this.connection == null || this.State == ConnectionState.Closed) return;
-        this.OnClosing?.Invoke(new ConectionEventArgs
+        if (this.connection == null || this.State == ConnectionState.Closed)
+            return;
+
+        bool isSuccess = true;
+        Exception exception = null;
+        this.Interceptor?.ConnectionClosing(this);
+        try
         {
-            DbKey = this.DbKey,
-            ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString
-        });
-        await this.connection.CloseAsync();
-        this.OnClosed?.Invoke(new ConectionEventArgs
+            await this.connection.CloseAsync();
+        }
+        catch (Exception ex)
         {
-            DbKey = this.DbKey,
-            ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString
-        });
+            exception = ex;
+            isSuccess = false;
+        }
+        finally
+        {
+            this.Interceptor?.ConnectionClosed(this);
+        }
+        if (!isSuccess) throw exception;
     }
     public void Open()
     {
-        if (this.connection == null || this.State == ConnectionState.Open) return;
-        if (this.State == ConnectionState.Broken)
-            this.Close();
-        if (this.State == ConnectionState.Closed)
+        if (this.connection == null || this.State == ConnectionState.Open)
+            return;
+
+        bool isSuccess = true;
+        Exception exception = null;
+        this.Interceptor?.ConnectionOpening(this);
+        try
         {
-            //关闭后，连接串被重置，需要重新设置
-            this.connection.ConnectionString = this.ConnectionString;
-            this.OnOpening?.Invoke(new ConectionEventArgs
-            {
-                DbKey = this.DbKey,
-                ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString
-            });
             this.connection.Open();
-            this.OnOpened?.Invoke(new ConectionEventArgs
-            {
-                DbKey = this.DbKey,
-                ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString
-            });
         }
+        catch (Exception ex)
+        {
+            exception = ex;
+            isSuccess = false;
+        }
+        finally
+        {
+            this.Interceptor?.ConnectionOpened(this);
+        }
+        if (!isSuccess) throw exception;
     }
     public async Task OpenAsync(CancellationToken cancellationToken = default)
     {
-        if (this.connection == null || this.State == ConnectionState.Open) return;
+        if (this.connection == null || this.State == ConnectionState.Open)
+            return;
         if (this.State == ConnectionState.Broken)
             await this.CloseAsync();
-        if (this.State == ConnectionState.Closed)
-        {
-            //关闭后，连接串被重置，需要重新设置
-            this.connection.ConnectionString = this.ConnectionString;
-            this.OnOpening?.Invoke(new ConectionEventArgs
-            {
-                DbKey = this.DbKey,
-                ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString
-            });
-            await this.connection.OpenAsync(cancellationToken);
-            this.OnOpened?.Invoke(new ConectionEventArgs
-            {
-                DbKey = this.DbKey,
-                ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString
-            });
-        }
-    }
-    public ITheaCommand CreateCommand()
-    {
-        var dbCommand = this.connection.CreateCommand();
-        return new PostgreSqlTheaCommand(this.DbKey, dbCommand, this);
-    }
-    IDbCommand IDbConnection.CreateCommand() => this.CreateCommand().DbCommand;
 
-    public ITheaTransaction BeginTransaction()
-    {
-        var transaction = this.connection.BeginTransaction();
-        var theaTransaction = new PostgreSqlTheaTransaction(this, transaction)
+        bool isSuccess = true;
+        Exception exception = null;
+        this.Interceptor?.ConnectionOpening(this);
+        try
         {
-            OnCreated = this.OnTransactionCreated,
-            OnCompleted = this.OnTransactionCompleted
-        };
-        this.OnTransactionCreated?.Invoke(new TransactionEventArgs
+            await this.connection.OpenAsync(cancellationToken);
+        }
+        catch (Exception ex)
         {
-            DbKey = this.DbKey,
-            TransactionId = theaTransaction.TransactionId,
-            ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString
-        });
-        return theaTransaction;
+            exception = ex;
+            isSuccess = false;
+        }
+        finally
+        {
+            this.Interceptor?.ConnectionOpened(this);
+        }
+        if (!isSuccess) throw exception;
     }
-#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
-    public async ValueTask<ITheaTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+    public ITheaTransaction BeginTransaction() => this.BeginTransaction(IsolationLevel.Unspecified);
+    public ITheaTransaction BeginTransaction(IsolationLevel il)
     {
-        var transaction = await this.connection.BeginTransactionAsync(cancellationToken);
-        var theaTransaction = new PostgreSqlTheaTransaction(this, transaction)
+        bool isSuccess = true;
+        Exception exception = null;
+        ITheaTransaction transaction = null;
+        this.Interceptor?.TransactionCreating(this);
+        try
         {
-            OnCreated = this.OnTransactionCreated,
-            OnCompleted = this.OnTransactionCompleted
-        };
-        this.OnTransactionCreated?.Invoke(new TransactionEventArgs
+            var dbTransaction = this.connection.BeginTransaction(il);
+            transaction = new PostgreSqlTheaTransaction(this.DbKey, this, dbTransaction);
+        }
+        catch (Exception ex)
         {
-            DbKey = this.DbKey,
-            TransactionId = theaTransaction.TransactionId,
-            ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString
-        });
-        return theaTransaction;
+            exception = ex;
+            isSuccess = false;
+        }
+        if (this.Interceptor != null)
+            transaction = this.Interceptor.TransactionCreated(transaction);
+        if (!isSuccess)
+        {
+            if (!isSuccess) this.Close();
+            throw exception;
+        }
+        return transaction;
+    }
+    public async ValueTask<ITheaTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+        => await this.BeginTransactionAsync(IsolationLevel.Unspecified, cancellationToken);
+    public async ValueTask<ITheaTransaction> BeginTransactionAsync(IsolationLevel il, CancellationToken cancellationToken = default)
+    {
+        bool isSuccess = true;
+        Exception exception = null;
+        ITheaTransaction transaction = null;
+        this.Interceptor?.TransactionCreating(this);
+        try
+        {
+            var dbTransaction = await this.connection.BeginTransactionAsync(il, cancellationToken);
+            transaction = new PostgreSqlTheaTransaction(this.DbKey, this, dbTransaction);
+        }
+        catch (Exception ex)
+        {
+            exception = ex;
+            isSuccess = false;
+        }
+        if (this.Interceptor != null)
+            transaction = this.Interceptor.TransactionCreated(transaction);
+        if (!isSuccess)
+        {
+            if (!isSuccess) await this.CloseAsync();
+            throw exception;
+        }
+        return transaction;
+    }
+    public void Dispose()
+    {
+        this.Interceptor?.ConnectionDisposing(this);
+        this.connection.Dispose();
+        this.Interceptor?.ConnectionDisposed(this);
+    }
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+    public ValueTask DisposeAsync()
+    {
+        this.connection.DisposeAsync();
+        return default;
     }
 #else
-    public ValueTask<ITheaTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+    public ValueTask DisposeAsync()
     {
-        ValueTask<ITheaTransaction> result = default;
-        if (cancellationToken.IsCancellationRequested)
-            result = new ValueTask<ITheaTransaction>(Task.FromCanceled<ITheaTransaction>(cancellationToken));
-        else
-        {
-            PostgreSqlTheaTransaction theaTransaction = null;
-            try
-            {
-                var transaction = this.connection.BeginTransaction();
-                theaTransaction = new PostgreSqlTheaTransaction(this, transaction)
-                {
-                    OnCreated = this.OnTransactionCreated,
-                    OnCompleted = this.OnTransactionCompleted
-                };
-                result = new ValueTask<ITheaTransaction>(theaTransaction);
-            }
-            catch (Exception e)
-            {
-                result = new ValueTask<ITheaTransaction>(Task.FromException<ITheaTransaction>(e));
-            }
-            this.OnTransactionCreated?.Invoke(new TransactionEventArgs
-            {
-                DbKey = this.DbKey,
-                TransactionId = theaTransaction.TransactionId,
-                ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString
-            });
-        }
-        return result;
+        this.Interceptor?.ConnectionDisposing(this);
+        this.connection.Dispose();
+        this.Interceptor?.ConnectionDisposed(this);
+        return default;
     }
 #endif
-    public void Dispose() => this.connection.Dispose();
-    public ValueTask DisposeAsync() => this.connection.DisposeAsync();
+    IDbCommand IDbConnection.CreateCommand() => this.CreateCommand().DbCommand;
+    IDbTransaction IDbConnection.BeginTransaction()
+    {
+        var transaction = this.BeginTransaction();
+        return transaction.DbTransaction;
+    }
+    IDbTransaction IDbConnection.BeginTransaction(IsolationLevel il)
+    {
+        var transaction = this.BeginTransaction(il);
+        return transaction.DbTransaction;
+    }
 }

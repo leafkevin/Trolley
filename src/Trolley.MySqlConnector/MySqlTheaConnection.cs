@@ -26,10 +26,11 @@ class MySqlTheaConnection : ITheaConnection
         get => this.connection;
         internal set
         {
-            if (value is MySqlConnection dbConnection)
-                this.connection = dbConnection;
             if (value is MySqlTheaConnection theaConnection)
                 this.connection = theaConnection.connection;
+            else if (value is MySqlConnection dbConnection)
+                this.connection = dbConnection;
+            else throw new NotSupportedException("不支持的连接类型，只支持MySqlTheaConnection或是MySqlConnection类型");
         }
     }
     public IDbInterceptor Interceptor { get; set; }
@@ -48,9 +49,9 @@ class MySqlTheaConnection : ITheaConnection
     {
         var dbCommand = this.connection.CreateCommand();
         return new MySqlTheaCommand(this.DbKey, dbCommand, this);
-    }   
+    }
     public void ChangeDatabase(string databaseName)
-        => this.connection.ChangeDatabaseAsync(databaseName);
+        => this.connection.ChangeDatabase(databaseName);
     public void Close()
     {
         if (this.connection == null || this.State == ConnectionState.Closed)
@@ -68,15 +69,13 @@ class MySqlTheaConnection : ITheaConnection
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            this.Interceptor?.ConnectionClosed(this);
-        }
+        this.Interceptor?.ConnectionClosed(this);
         if (!isSuccess) throw exception;
     }
     public async Task CloseAsync()
     {
-        if (this.connection == null || this.State == ConnectionState.Closed) return;
+        if (this.connection == null || this.State == ConnectionState.Closed)
+            return;
 
         bool isSuccess = true;
         Exception exception = null;
@@ -90,10 +89,7 @@ class MySqlTheaConnection : ITheaConnection
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            this.Interceptor?.ConnectionClosed(this);
-        }
+        this.Interceptor?.ConnectionClosed(this);
         if (!isSuccess) throw exception;
     }
     public void Open()
@@ -113,10 +109,7 @@ class MySqlTheaConnection : ITheaConnection
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            this.Interceptor?.ConnectionOpened(this);
-        }
+        this.Interceptor?.ConnectionOpened(this);
         if (!isSuccess) throw exception;
     }
     public async Task OpenAsync(CancellationToken cancellationToken = default)
@@ -138,10 +131,7 @@ class MySqlTheaConnection : ITheaConnection
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            this.Interceptor?.ConnectionOpened(this);
-        }
+        this.Interceptor?.ConnectionOpened(this);
         if (!isSuccess) throw exception;
     }
     public ITheaTransaction BeginTransaction() => this.BeginTransaction(IsolationLevel.Unspecified);
@@ -161,10 +151,8 @@ class MySqlTheaConnection : ITheaConnection
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            this.Interceptor?.ConnectionOpened(this);
-        }
+        if (this.Interceptor != null)
+            transaction = this.Interceptor.TransactionCreated(transaction);
         if (!isSuccess)
         {
             if (!isSuccess) this.Close();
@@ -190,13 +178,11 @@ class MySqlTheaConnection : ITheaConnection
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            this.Interceptor?.ConnectionOpened(this);
-        }
+        if (this.Interceptor != null)
+            transaction = this.Interceptor.TransactionCreated(transaction);
         if (!isSuccess)
         {
-            if (!isSuccess) this.Close();
+            if (!isSuccess) await this.CloseAsync();
             throw exception;
         }
         return transaction;
@@ -207,21 +193,12 @@ class MySqlTheaConnection : ITheaConnection
         this.connection.Dispose();
         this.Interceptor?.ConnectionDisposed(this);
     }
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-    public ValueTask DisposeAsync()
-    {
-        this.connection.DisposeAsync();
-        return default;
-    }
-#else
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         this.Interceptor?.ConnectionDisposing(this);
-        this.connection.Dispose();
+        await this.connection.DisposeAsync();
         this.Interceptor?.ConnectionDisposed(this);
-        return default;
     }
-#endif
     IDbCommand IDbConnection.CreateCommand() => this.CreateCommand().DbCommand;
     IDbTransaction IDbConnection.BeginTransaction()
     {
