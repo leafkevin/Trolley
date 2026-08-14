@@ -8,7 +8,7 @@ namespace Trolley.MySqlConnector;
 
 class MySqlTheaConnection : ITheaConnection
 {
-    private readonly MySqlConnection connection;
+    private MySqlConnection connection;
 
     public string DbKey { get; private set; }
     public string ConnectionId { get; private set; }
@@ -21,7 +21,17 @@ class MySqlTheaConnection : ITheaConnection
     public string Database => this.connection.Database;
     public string ServerVersion => this.connection.ServerVersion;
     public ConnectionState State => this.connection.State;
-    public IDbConnection DbConnection => this.connection;
+    public IDbConnection DbConnection
+    {
+        get => this.connection;
+        internal set
+        {
+            if (value is MySqlConnection dbConnection)
+                this.connection = dbConnection;
+            if (value is MySqlTheaConnection theaConnection)
+                this.connection = theaConnection.connection;
+        }
+    }
     public IDbInterceptor Interceptor { get; set; }
 
     public MySqlTheaConnection(string dbKey, string connectionString)
@@ -34,7 +44,11 @@ class MySqlTheaConnection : ITheaConnection
         this.connection = connection;
     }
 
-    public IDbCommand CreateCommand() => this.connection.CreateCommand();
+    public ITheaCommand CreateCommand()
+    {
+        var dbCommand = this.connection.CreateCommand();
+        return new MySqlTheaCommand(this.DbKey, dbCommand, this);
+    }   
     public void ChangeDatabase(string databaseName)
         => this.connection.ChangeDatabaseAsync(databaseName);
     public void Close()
@@ -208,6 +222,7 @@ class MySqlTheaConnection : ITheaConnection
         return default;
     }
 #endif
+    IDbCommand IDbConnection.CreateCommand() => this.CreateCommand().DbCommand;
     IDbTransaction IDbConnection.BeginTransaction()
     {
         var transaction = this.BeginTransaction();

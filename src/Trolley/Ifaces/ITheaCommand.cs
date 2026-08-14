@@ -9,6 +9,7 @@ public interface ITheaCommand : IDbCommand, ICloneable, IAsyncDisposable
 {
     string DbKey { get; }
     string CommandId { get; }
+    new ITheaConnection Connection { get; set; }
     IDbCommand DbCommand { get; }
     IDbInterceptor Interceptor { get; set; }
 

@@ -13,10 +13,11 @@ class MySqlTheaTransaction : ITheaTransaction
 
     public string DbKey { get; private set; }
     public string TransactionId { get; private set; }
-    public IDbConnection Connection => this.connection;
+    public ITheaConnection Connection => this.connection;
     public IDbTransaction DbTransaction => this.transaction;
     public IsolationLevel IsolationLevel => this.transaction.IsolationLevel;
     public IDbInterceptor Interceptor { get; set; }
+    IDbConnection IDbTransaction.Connection => this.connection.DbConnection;
 
     public MySqlTheaTransaction(string dbKey, MySqlTheaConnection connection, MySqlTransaction transaction)
     {

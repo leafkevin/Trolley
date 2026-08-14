@@ -9,27 +9,42 @@ namespace Trolley.PostgreSql;
 class PostgreSqlTheaCommand : ITheaCommand
 {
     private readonly NpgsqlCommand command;
-    private ITheaConnection connection;
-    private ITheaTransaction transaction;
-    private int index = -1;
+    private PostgreSqlTheaConnection connection;
+    private PostgreSqlTheaTransaction transaction;
 
-    public string DbKey => this.connection?.DbKey;
+    public string DbKey { get; private set; }
     public string CommandId { get; private set; }
-    public IDbCommand BaseCommand => this.command;
+    public IDbCommand DbCommand => this.command;
+    public IDbConnection DbConnection => this.connection.DbConnection;
+    public IDbTransaction DbTransaction => this.transaction.DbTransaction;
     public bool IsNeedClose => this.transaction == null;
+    public IDbInterceptor Interceptor { get; set; }
 
-    public string CommandText { get => this.command.CommandText; set => this.command.CommandText = value; }
-    public int CommandTimeout { get => this.command.CommandTimeout; set => this.command.CommandTimeout = value; }
-    public CommandType CommandType { get => this.command.CommandType; set => this.command.CommandType = value; }
+    public string CommandText
+    {
+        get => this.command.CommandText;
+        set => this.command.CommandText = value;
+    }
+    public int CommandTimeout
+    {
+        get => this.command.CommandTimeout;
+        set => this.command.CommandTimeout = value;
+    }
+    public CommandType CommandType
+    {
+        get => this.command.CommandType;
+        set => this.command.CommandType = value;
+    }
     public IDataParameterCollection Parameters => this.command.Parameters;
     public ITheaConnection Connection
     {
         get => this.connection;
         set
         {
-            this.connection = value;
-            if (value != null)
-                this.BaseCommand.Connection = value.BaseConnection;
+            if (value is not PostgreSqlTheaConnection theaConnection)
+                throw new NotSupportedException("不支持的连接类型，只支持PostgreSqlTheaConnection类型");
+            this.connection = theaConnection;
+            this.DbKey = theaConnection.DbKey;
         }
     }
     public ITheaTransaction Transaction
@@ -37,16 +52,35 @@ class PostgreSqlTheaCommand : ITheaCommand
         get => this.transaction;
         set
         {
-            this.transaction = value;
-            if (value != null)
-                this.BaseCommand.Transaction = value.BaseTransaction;
+            if (value is not MySqlTheaTransaction theaTransaction)
+                throw new NotSupportedException("不支持的事务类型，只支持MySqlTheaTransaction类型");
+            this.transaction = theaTransaction;
+            if (string.IsNullOrEmpty(this.DbKey))
+                this.DbKey = theaTransaction.DbKey;
+            if (!ReferenceEquals(this.connection, this.transaction.Connection))
+                this.connection = this.transaction.Connection as MySqlTheaConnection;
+        }
+    }
+    public UpdateRowSource UpdatedRowSource
+    {
+        get => this.command.UpdatedRowSource;
+        set => this.command.UpdatedRowSource = value;
+    }
+    IDbConnection IDbCommand.Connection
+    {
+        get => this.connection.DbConnection;
+        set
+        {
+            if(value is MySqlConnection dbConnection)
+            this.connection.DbConnection = value;
         }
     }
     public Action<CommandEventArgs> OnExecuting { get; set; }
     public Action<CommandCompletedEventArgs> OnExecuted { get; set; }
 
-    public PostgreSqlTheaCommand(NpgsqlCommand command, ITheaConnection connection, ITheaTransaction transaction)
+    public PostgreSqlTheaCommand(string dbKey, NpgsqlCommand command, ITheaConnection connection, ITheaTransaction transaction)
     {
+        this.DbKey = dbKey;
         this.CommandId = Guid.NewGuid().ToString("N");
         this.command = command;
         this.Connection = connection;

@@ -30,6 +30,6 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<ProjectReference Include="..\Trolley\Trolley.csproj" />
-		<PackageReference Include="Npgsql" Version="8.0.5" />
+		<PackageReference Include="Npgsql" Version="8.0.9" />
 	</ItemGroup>
 </Project>

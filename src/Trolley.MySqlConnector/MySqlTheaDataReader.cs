@@ -1,6 +1,7 @@
 ﻿using MySqlConnector;
 using System;
 using System.Data;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,7 +16,8 @@ class MySqlTheaDataReader : ITheaDataReader
     public int RecordsAffected => this.reader.RecordsAffected;
     public int FieldCount => this.reader.FieldCount;
     public object this[string name] => this.reader[name];
-    public object this[int i] => this.reader[i];
+    public object this[int ordinal] => this.reader[ordinal];
+    public bool HasRows => this.reader.HasRows;
 
     public IDataReader DbDataReader => this.reader;
 
@@ -45,45 +47,52 @@ class MySqlTheaDataReader : ITheaDataReader
         return default;
     }
 #endif
+    public bool Read() => this.reader.Read();
+    public Task<bool> ReadAsync(CancellationToken cancellationToken = default)
+        => this.reader.ReadAsync(cancellationToken);
+    public bool IsDBNull(int ordinal) => this.reader.IsDBNull(ordinal);
+    public Task<bool> IsDBNullAsync(int ordinal) => this.reader.IsDBNullAsync(ordinal);
+    public Task<bool> IsDBNullAsync(int ordinal, CancellationToken cancellationToken)
+        => this.reader.IsDBNullAsync(ordinal, cancellationToken);
+    public Type GetFieldType(int ordinal) => this.reader.GetFieldType(ordinal);
+    public string GetDataTypeName(int ordinal) => this.reader.GetDataTypeName(ordinal);
+    public IDataReader GetData(int ordinal) => this.reader.GetData(ordinal);
+
+    public string GetName(int ordinal) => this.reader.GetName(ordinal);
+    public int GetOrdinal(string name) => this.reader.GetOrdinal(name);
+    public int GetValues(object[] values) => this.reader.GetValues(values);
+
+    public object GetValue(int ordinal) => this.reader.GetValue(ordinal);
     public T GetFieldValue<T>(int ordinal) => this.reader.GetFieldValue<T>(ordinal);
     public Task<T> GetFieldValueAsync<T>(int ordinal)
         => this.reader.GetFieldValueAsync<T>(ordinal);
     public Task<T> GetFieldValueAsync<T>(int ordinal, CancellationToken cancellationToken)
         => this.reader.GetFieldValueAsync<T>(ordinal, cancellationToken);
-    public bool IsDBNull(int i) => this.reader.IsDBNull(i);
-    public Task<bool> IsDBNullAsync(int ordinal) => this.reader.IsDBNullAsync(ordinal);
-    public Task<bool> IsDBNullAsync(int ordinal, CancellationToken cancellationToken)
-        => this.reader.IsDBNullAsync(ordinal, cancellationToken);
-    public bool NextResult() => this.reader.NextResult();
-    public Task<bool> NextResultAsync(CancellationToken cancellationToken = default)
-        => this.reader.NextResultAsync(cancellationToken);
-    public bool Read() => this.reader.Read();
-    public Task<bool> ReadAsync(CancellationToken cancellationToken = default)
-        => this.reader.ReadAsync(cancellationToken);
+
+    public bool GetBoolean(int ordinal) => this.reader.GetBoolean(ordinal);
+    public byte GetByte(int ordinal) => this.reader.GetByte(ordinal);
+    public long GetBytes(int ordinal, long fieldOffset, byte[] buffer, int bufferoffset, int length)
+        => this.reader.GetBytes(ordinal, fieldOffset, buffer, bufferoffset, length);
+    public Stream GetStream(int ordinal) => this.reader.GetStream(ordinal);
+    public TextReader GetTextReader(int ordinal) => this.reader.GetTextReader(ordinal);
+    public char GetChar(int ordinal) => this.reader.GetChar(ordinal);
+    public long GetChars(int ordinal, long fieldoffset, char[] buffer, int bufferoffset, int length)
+        => this.reader.GetChars(ordinal, fieldoffset, buffer, bufferoffset, length);
+
+    public DateTime GetDateTime(int ordinal) => this.reader.GetDateTime(ordinal);
+    public TimeSpan GetTimeSpan(int ordinal) => this.reader.GetTimeSpan(ordinal);
+    public decimal GetDecimal(int ordinal) => this.reader.GetDecimal(ordinal);
+    public double GetDouble(int ordinal) => this.reader.GetFloat(ordinal);
+    public float GetFloat(int ordinal) => this.reader.GetFloat(ordinal);
+    public Guid GetGuid(int ordinal) => this.reader.GetGuid(ordinal);
+    public short GetInt16(int ordinal) => this.reader.GetInt16(ordinal);
+    public int GetInt32(int ordinal) => this.reader.GetInt32(ordinal);
+    public long GetInt64(int ordinal) => this.reader.GetInt64(ordinal);
+    public string GetString(int ordinal) => this.reader.GetString(ordinal);
 
     public DataTable GetSchemaTable() => this.reader.GetSchemaTable();
 
-    public bool GetBoolean(int i) => this.reader.GetBoolean(i);
-    public byte GetByte(int i) => this.reader.GetByte(i);
-    public long GetBytes(int i, long fieldOffset, byte[] buffer, int bufferoffset, int length)
-        => this.reader.GetBytes(i, fieldOffset, buffer, bufferoffset, length);
-    public char GetChar(int i) => this.reader.GetChar(i);
-    public long GetChars(int i, long fieldoffset, char[] buffer, int bufferoffset, int length)
-        => this.reader.GetChars(i, fieldoffset, buffer, bufferoffset, length);
-    public IDataReader GetData(int i) => this.reader.GetData(i);
-    public string GetDataTypeName(int i) => this.reader.GetDataTypeName(i);
-    public DateTime GetDateTime(int i) => this.reader.GetDateTime(i);
-    public decimal GetDecimal(int i) => this.reader.GetDecimal(i);
-    public double GetDouble(int i) => this.reader.GetFloat(i);
-    public Type GetFieldType(int i) => this.reader.GetFieldType(i);
-    public float GetFloat(int i) => this.reader.GetFloat(i);
-    public Guid GetGuid(int i) => this.reader.GetGuid(i);
-    public short GetInt16(int i) => this.reader.GetInt16(i);
-    public int GetInt32(int i) => this.reader.GetInt32(i);
-    public long GetInt64(int i) => this.reader.GetInt64(i);
-    public string GetName(int i) => this.reader.GetName(i);
-    public int GetOrdinal(string name) => this.reader.GetOrdinal(name);
-    public string GetString(int i) => this.reader.GetString(i);
-    public object GetValue(int i) => this.reader.GetValue(i);
-    public int GetValues(object[] values) => this.reader.GetValues(values);
+    public bool NextResult() => this.reader.NextResult();
+    public Task<bool> NextResultAsync(CancellationToken cancellationToken = default)
+        => this.reader.NextResultAsync(cancellationToken);
 }

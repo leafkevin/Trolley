@@ -19,7 +19,7 @@ class PostgreSqlTheaConnection : ITheaConnection
     public ConnectionState State => this.connection.State;
     public IDbConnection BaseConnection => this.connection;
 
-    Interceptor
+
 
     public PostgreSqlTheaConnection(string dbKey, string connectionString)
         : this(dbKey, new NpgsqlConnection(connectionString)) { }
@@ -31,7 +31,7 @@ class PostgreSqlTheaConnection : ITheaConnection
         this.connection = connection;
     }
 
-    public void ChangeDatabase(string databaseName) 
+    public void ChangeDatabase(string databaseName)
         => this.connection.ChangeDatabase(databaseName);
     public void Close()
     {
@@ -120,13 +120,12 @@ class PostgreSqlTheaConnection : ITheaConnection
             });
         }
     }
-    public ITheaCommand CreateCommand(IDbCommand command)
+    public ITheaCommand CreateCommand()
     {
-        if (command is not NpgsqlCommand myCommand)
-            return null;
-        myCommand.Connection = this.connection;
-        return new PostgreSqlTheaCommand(myCommand, this, null);
+        var dbCommand = this.connection.CreateCommand();
+        return new PostgreSqlTheaCommand(this.DbKey, dbCommand, this);
     }
+    IDbCommand IDbConnection.CreateCommand() => this.CreateCommand().DbCommand;
 
     public ITheaTransaction BeginTransaction()
     {

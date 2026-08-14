@@ -9,6 +9,7 @@ public interface ITheaTransaction : IDbTransaction, IAsyncDisposable
 {
     string DbKey { get; }
     string TransactionId { get; }
+    new ITheaConnection Connection { get; }
     IDbTransaction DbTransaction { get; }
     IDbInterceptor Interceptor { get; set; }
 

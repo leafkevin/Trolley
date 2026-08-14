@@ -27,7 +27,7 @@ public class DialectProvider
     #endregion
 
     #region UseMasterCommand/UseSlaveCommand
-    public (bool, ITheaConnection, ITheaCommand) UseMasterCommand(ICommandVisitor commandContext = null)
+    public (bool, ITheaConnection, ITheaCommand) UseMasterCommand(ICommandVisitor commandVisitor = null)
     {
         bool isNeedClose = false;
         ITheaConnection connection;
@@ -40,13 +40,13 @@ public class DialectProvider
             var connString = this.connectionString ?? this.database.Select();
             connection = this.CreateConnection(connString);
         }
-        if (commandContext == null)
+        if (commandVisitor == null)
         {
             this.interceptor?.CommandCreating(connection);
             command = this.ormProvider.CreateCommand();
             this.interceptor?.CommandCreated(command);
         }
-        else command = commandContext.Command;
+        else command = commandVisitor.Command;
         command.Connection = connection;
         command.CommandType = CommandType.Text;
         command.CommandTimeout = this.options.CommandTimeout;
