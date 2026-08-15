@@ -49,21 +49,18 @@ class MySqlTheaTransaction : ITheaTransaction
             isSuccess = false;
             exception = ex;
         }
-        finally
+        var completedEventArgs = new DbTransactionCompletedEventArgs
         {
-            var completedEventArgs = new DbTransactionCompletedEventArgs
-            {
-                IsSuccess = isSuccess,
-                EventData = eventArgs.EventData,
-                Exception = exception,
-                Transaction = this
-            };
-            this.Interceptor.TransactionCommitted(completedEventArgs);
-            if (!isSuccess) this.Interceptor.TransactionFailed(completedEventArgs);
-        }
+            IsSuccess = isSuccess,
+            EventData = eventArgs.EventData,
+            Exception = exception,
+            Transaction = this
+        };
+        this.Interceptor.TransactionCommitted(completedEventArgs);
         if (!isSuccess)
         {
-            if (!isSuccess) this.connection.Close();
+            this.Interceptor.TransactionFailed(completedEventArgs);
+            this.connection.Close();
             throw exception;
         }
     }
@@ -78,21 +75,18 @@ class MySqlTheaTransaction : ITheaTransaction
             isSuccess = false;
             exception = ex;
         }
-        finally
+        var completedEventArgs = new DbTransactionCompletedEventArgs
         {
-            var completedEventArgs = new DbTransactionCompletedEventArgs
-            {
-                IsSuccess = isSuccess,
-                EventData = eventArgs.EventData,
-                Exception = exception,
-                Transaction = this
-            };
-            this.Interceptor.TransactionCommitted(completedEventArgs);
-            if (!isSuccess) this.Interceptor.TransactionFailed(completedEventArgs);
-        }
+            IsSuccess = isSuccess,
+            EventData = eventArgs.EventData,
+            Exception = exception,
+            Transaction = this
+        };
+        this.Interceptor.TransactionCommitted(completedEventArgs);
         if (!isSuccess)
         {
-            if (!isSuccess) this.connection.Close();
+            this.Interceptor.TransactionFailed(completedEventArgs);
+            await this.connection.CloseAsync();
             throw exception;
         }
     }
@@ -107,21 +101,18 @@ class MySqlTheaTransaction : ITheaTransaction
             isSuccess = false;
             exception = ex;
         }
-        finally
+        var completedEventArgs = new DbTransactionCompletedEventArgs
         {
-            var completedEventArgs = new DbTransactionCompletedEventArgs
-            {
-                IsSuccess = isSuccess,
-                EventData = eventArgs.EventData,
-                Exception = exception,
-                Transaction = this
-            };
-            this.Interceptor.TransactionRolledBack(completedEventArgs);
-            if (!isSuccess) this.Interceptor.TransactionFailed(completedEventArgs);
-        }
+            IsSuccess = isSuccess,
+            EventData = eventArgs.EventData,
+            Exception = exception,
+            Transaction = this
+        };
+        this.Interceptor.TransactionRolledBack(completedEventArgs);
         if (!isSuccess)
         {
-            if (!isSuccess) this.connection.Close();
+            this.Interceptor.TransactionFailed(completedEventArgs);
+            this.connection.Close();
             throw exception;
         }
     }
@@ -136,21 +127,18 @@ class MySqlTheaTransaction : ITheaTransaction
             isSuccess = false;
             exception = ex;
         }
-        finally
+        var completedEventArgs = new DbTransactionCompletedEventArgs
         {
-            var completedEventArgs = new DbTransactionCompletedEventArgs
-            {
-                IsSuccess = isSuccess,
-                EventData = eventArgs.EventData,
-                Exception = exception,
-                Transaction = this
-            };
-            this.Interceptor.TransactionRolledBack(completedEventArgs);
-            if (!isSuccess) this.Interceptor.TransactionFailed(completedEventArgs);
-        }
+            IsSuccess = isSuccess,
+            EventData = eventArgs.EventData,
+            Exception = exception,
+            Transaction = this
+        };
+        this.Interceptor.TransactionRolledBack(completedEventArgs);
         if (!isSuccess)
         {
-            if (!isSuccess) this.connection.Close();
+            this.Interceptor.TransactionFailed(completedEventArgs);
+            await this.connection.CloseAsync();
             throw exception;
         }
     }

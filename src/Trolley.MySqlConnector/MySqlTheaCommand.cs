@@ -66,12 +66,7 @@ class MySqlTheaCommand : ITheaCommand
     }
 
     public MySqlTheaCommand(MySqlCommand command, MySqlTheaConnection connection = null, MySqlTheaTransaction transaction = null)
-    {
-        this.CommandId = Guid.NewGuid().ToString("N");
-        this.command = command;
-        this.Connection = connection;
-        this.transaction = transaction;
-    }
+        : this(null, command, connection, transaction) { }
     public MySqlTheaCommand(string dbKey, MySqlCommand command, MySqlTheaConnection connection = null, MySqlTheaTransaction transaction = null)
     {
         this.DbKey = dbKey;

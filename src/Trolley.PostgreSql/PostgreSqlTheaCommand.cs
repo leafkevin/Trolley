@@ -1,7 +1,6 @@
 ﻿using Npgsql;
 using System;
 using System.Data;
-using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -67,13 +66,8 @@ class PostgreSqlTheaCommand : ITheaCommand
     }
 
     public PostgreSqlTheaCommand(NpgsqlCommand command, PostgreSqlTheaConnection connection = null, PostgreSqlTheaTransaction transaction = null)
-    {
-        this.CommandId = Guid.NewGuid().ToString("N");
-        this.command = command;
-        this.Connection = connection;
-        this.transaction = transaction;
-    }
-    public PostgreSqlTheaCommand(string dbKey, NpgsqlCommand command, PostgreSqlTheaConnection connection, PostgreSqlTheaTransaction transaction)
+        : this(null, command, connection, transaction) { }
+    public PostgreSqlTheaCommand(string dbKey, NpgsqlCommand command, PostgreSqlTheaConnection connection = null, PostgreSqlTheaTransaction transaction = null)
     {
         this.DbKey = dbKey;
         this.CommandId = Guid.NewGuid().ToString("N");
@@ -249,16 +243,27 @@ class PostgreSqlTheaCommand : ITheaCommand
     {
         this.Interceptor?.CommandDisposing(this);
         this.command.Dispose();
-        this.Interceptor?.CommandDisposing(this);
+        this.Interceptor?.CommandDisposed(this);
         this.Parameters.Clear();
     }
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
     public async ValueTask DisposeAsync()
     {
         this.Interceptor?.CommandDisposing(this);
         await this.command.DisposeAsync();
-        this.Interceptor?.CommandDisposing(this);
+        this.Interceptor?.CommandDisposed(this);
         this.Parameters.Clear();
     }
+#else
+    public ValueTask DisposeAsync()
+    {
+        this.Interceptor?.CommandDisposing(this);
+        this.command.Dispose();
+        this.Interceptor?.CommandDisposed(this);
+        this.Parameters.Clear();
+        return default;
+    }
+#endif
     private bool OnExecuting(out object evtData)
     {
         if (this.Interceptor != null)

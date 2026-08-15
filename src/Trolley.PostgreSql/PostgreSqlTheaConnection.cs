@@ -174,6 +174,7 @@ class PostgreSqlTheaConnection : ITheaConnection
     }
     public async ValueTask<ITheaTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
         => await this.BeginTransactionAsync(IsolationLevel.Unspecified, cancellationToken);
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
     public async ValueTask<ITheaTransaction> BeginTransactionAsync(IsolationLevel il, CancellationToken cancellationToken = default)
     {
         bool isSuccess = true;
@@ -199,19 +200,37 @@ class PostgreSqlTheaConnection : ITheaConnection
         }
         return transaction;
     }
-    public void Dispose()
-    {
-        this.Interceptor?.ConnectionDisposing(this);
-        this.connection.Dispose();
-        this.Interceptor?.ConnectionDisposed(this);
-    }
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
     public ValueTask DisposeAsync()
     {
         this.connection.DisposeAsync();
         return default;
     }
 #else
+    public ValueTask<ITheaTransaction> BeginTransactionAsync(IsolationLevel il, CancellationToken cancellationToken = default)
+    {
+        bool isSuccess = true;
+        Exception exception = null;
+        ITheaTransaction transaction = null;
+        this.Interceptor?.TransactionCreating(this);
+        try
+        {
+            var dbTransaction = this.connection.BeginTransaction(il, cancellationToken);
+            transaction = new PostgreSqlTheaTransaction(this.DbKey, this, dbTransaction);
+        }
+        catch (Exception ex)
+        {
+            exception = ex;
+            isSuccess = false;
+        }
+        if (this.Interceptor != null)
+            transaction = this.Interceptor.TransactionCreated(transaction);
+        if (!isSuccess)
+        {
+            if (!isSuccess) await this.CloseAsync();
+            throw exception;
+        }
+        return ValueTask.FromResult(transaction);
+    }
     public ValueTask DisposeAsync()
     {
         this.Interceptor?.ConnectionDisposing(this);
@@ -220,6 +239,12 @@ class PostgreSqlTheaConnection : ITheaConnection
         return default;
     }
 #endif
+    public void Dispose()
+    {
+        this.Interceptor?.ConnectionDisposing(this);
+        this.connection.Dispose();
+        this.Interceptor?.ConnectionDisposed(this);
+    }
     IDbCommand IDbConnection.CreateCommand() => this.CreateCommand().DbCommand;
     IDbTransaction IDbConnection.BeginTransaction()
     {
