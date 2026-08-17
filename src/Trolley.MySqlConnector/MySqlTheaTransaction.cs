@@ -30,9 +30,9 @@ class MySqlTheaTransaction : ITheaTransaction
     public IDbInterceptor Interceptor { get; set; }
     IDbConnection IDbTransaction.Connection => this.connection.DbConnection;
 
-    public MySqlTheaTransaction(string dbKey, MySqlTheaConnection connection, MySqlTransaction transaction)
+    public MySqlTheaTransaction(MySqlTheaConnection connection, MySqlTransaction transaction)
     {
-        this.DbKey = dbKey;
+        this.DbKey = connection.DbKey;
         this.TransactionId = Guid.NewGuid().ToString("N");
         this.connection = connection;
         this.transaction = transaction;
@@ -42,24 +42,29 @@ class MySqlTheaTransaction : ITheaTransaction
     {
         bool isSuccess = true;
         Exception exception = null;
-        var eventArgs = this.Interceptor.TransactionCommitting(this);
+        DbTransactionExecutingEventArgs eventArgs = default;
+        if (this.Interceptor != null)
+            eventArgs = this.Interceptor.TransactionCommitting(this);
         try { this.transaction.Commit(); }
         catch (Exception ex)
         {
             isSuccess = false;
             exception = ex;
         }
-        var completedEventArgs = new DbTransactionCompletedEventArgs
+        if (this.Interceptor != null)
         {
-            IsSuccess = isSuccess,
-            EventData = eventArgs.EventData,
-            Exception = exception,
-            Transaction = this
-        };
-        this.Interceptor.TransactionCommitted(completedEventArgs);
+            var completedEventArgs = new DbTransactionCompletedEventArgs
+            {
+                IsSuccess = isSuccess,
+                EventData = eventArgs.EventData,
+                Exception = exception,
+                Transaction = this
+            };
+            this.Interceptor.TransactionCommitted(completedEventArgs);
+            if (!isSuccess) this.Interceptor.TransactionFailed(completedEventArgs);
+        }
         if (!isSuccess)
         {
-            this.Interceptor.TransactionFailed(completedEventArgs);
             this.connection.Close();
             throw exception;
         }
@@ -68,24 +73,29 @@ class MySqlTheaTransaction : ITheaTransaction
     {
         bool isSuccess = true;
         Exception exception = null;
-        var eventArgs = this.Interceptor.TransactionCommitting(this);
+        DbTransactionExecutingEventArgs eventArgs = default;
+        if (this.Interceptor != null)
+            eventArgs = this.Interceptor.TransactionCommitting(this);
         try { await this.transaction.CommitAsync(cancellationToken); }
         catch (Exception ex)
         {
             isSuccess = false;
             exception = ex;
         }
-        var completedEventArgs = new DbTransactionCompletedEventArgs
+        if (this.Interceptor != null)
         {
-            IsSuccess = isSuccess,
-            EventData = eventArgs.EventData,
-            Exception = exception,
-            Transaction = this
-        };
-        this.Interceptor.TransactionCommitted(completedEventArgs);
+            var completedEventArgs = new DbTransactionCompletedEventArgs
+            {
+                IsSuccess = isSuccess,
+                EventData = eventArgs.EventData,
+                Exception = exception,
+                Transaction = this
+            };
+            this.Interceptor.TransactionCommitted(completedEventArgs);
+            if (!isSuccess) this.Interceptor.TransactionFailed(completedEventArgs);
+        }
         if (!isSuccess)
         {
-            this.Interceptor.TransactionFailed(completedEventArgs);
             await this.connection.CloseAsync();
             throw exception;
         }
@@ -94,24 +104,29 @@ class MySqlTheaTransaction : ITheaTransaction
     {
         bool isSuccess = true;
         Exception exception = null;
-        var eventArgs = this.Interceptor.TransactionRollingBack(this);
+        DbTransactionExecutingEventArgs eventArgs = default;
+        if (this.Interceptor != null)
+            eventArgs = this.Interceptor.TransactionRollingBack(this);
         try { this.transaction.Rollback(); }
         catch (Exception ex)
         {
             isSuccess = false;
             exception = ex;
         }
-        var completedEventArgs = new DbTransactionCompletedEventArgs
+        if (this.Interceptor != null)
         {
-            IsSuccess = isSuccess,
-            EventData = eventArgs.EventData,
-            Exception = exception,
-            Transaction = this
-        };
-        this.Interceptor.TransactionRolledBack(completedEventArgs);
+            var completedEventArgs = new DbTransactionCompletedEventArgs
+            {
+                IsSuccess = isSuccess,
+                EventData = eventArgs.EventData,
+                Exception = exception,
+                Transaction = this
+            };
+            this.Interceptor.TransactionRolledBack(completedEventArgs);
+            if (!isSuccess) this.Interceptor.TransactionFailed(completedEventArgs);
+        }
         if (!isSuccess)
         {
-            this.Interceptor.TransactionFailed(completedEventArgs);
             this.connection.Close();
             throw exception;
         }
@@ -120,36 +135,43 @@ class MySqlTheaTransaction : ITheaTransaction
     {
         bool isSuccess = true;
         Exception exception = null;
-        var eventArgs = this.Interceptor.TransactionRollingBack(this);
+        DbTransactionExecutingEventArgs eventArgs = default;
+        if (this.Interceptor != null)
+            eventArgs = this.Interceptor.TransactionRollingBack(this);
         try { await this.transaction.RollbackAsync(cancellationToken); }
         catch (Exception ex)
         {
             isSuccess = false;
             exception = ex;
         }
-        var completedEventArgs = new DbTransactionCompletedEventArgs
+        if (this.Interceptor != null)
         {
-            IsSuccess = isSuccess,
-            EventData = eventArgs.EventData,
-            Exception = exception,
-            Transaction = this
-        };
-        this.Interceptor.TransactionRolledBack(completedEventArgs);
+            var completedEventArgs = new DbTransactionCompletedEventArgs
+            {
+                IsSuccess = isSuccess,
+                EventData = eventArgs.EventData,
+                Exception = exception,
+                Transaction = this
+            };
+            this.Interceptor.TransactionRolledBack(completedEventArgs);
+            if (!isSuccess) this.Interceptor.TransactionFailed(completedEventArgs);
+        }
         if (!isSuccess)
         {
-            this.Interceptor.TransactionFailed(completedEventArgs);
             await this.connection.CloseAsync();
             throw exception;
         }
     }
-    public void Dispose() => this.transaction.Dispose();
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-    public ValueTask DisposeAsync()
+    public void Dispose()
     {
-        this.transaction.DisposeAsync();
-        return default;
+        this.Interceptor?.TransactionDisposing(this);
+        this.transaction.Dispose();
+        this.Interceptor?.TransactionDisposed(this);
     }
-#else
-    public Task DisposeAsync() => this.transaction.DisposeAsync();
-#endif
+    public async ValueTask DisposeAsync()
+    {
+        this.Interceptor?.TransactionDisposing(this);
+        await this.transaction.DisposeAsync();
+        this.Interceptor?.TransactionDisposed(this);
+    }
 }

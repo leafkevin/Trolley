@@ -14,8 +14,7 @@ public class MySqlDeleteVisitor : DeleteVisitor
 
     public override void UseTableSchema(bool isIncludeMany, string tableSchema)
     {
-        var defaultSchemaName = this.dialectProvider.GetDefaultSchemaName(this.DbContext);
-        if (tableSchema == defaultSchemaName) return;
+        if (tableSchema == this.DbContext.DefaultTableSchema) return;
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         tableSegment.TableSchema = tableSchema;
     }

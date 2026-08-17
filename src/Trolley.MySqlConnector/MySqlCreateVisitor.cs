@@ -19,7 +19,7 @@ public class MySqlCreateVisitor : CreateVisitor
     public MySqlCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
         : base(entityType, dbContext, tableAsStart, command) { }
 
-    public override string BuildSql(ITheaCommand command, out List<SqlSegment> readerFields)
+    public override string BuildSql(ITheaCommand command, out List<ReaderField> readerFields)
     {
         string tailSql = null;
         readerFields = this.ReaderFields;
@@ -131,14 +131,13 @@ public class MySqlCreateVisitor : CreateVisitor
     }
     public override void UseTableSchema(bool isIncludeMany, string tableSchema)
     {
-        var defaultSchemaName = this.dialectProvider.GetDefaultSchemaName(this.DbContext);
-        if (tableSchema == defaultSchemaName) return;
+        if (tableSchema == this.DbContext.DefaultTableSchema) return;
 
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         tableSegment.TableSchema = tableSchema;
     }
     public override (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
-        Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlSegment>) BuildWithBulk(ITheaCommand command)
+        Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<ReaderField>) BuildWithBulk(ITheaCommand command)
     {
         (var insertObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
 

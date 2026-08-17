@@ -30,7 +30,7 @@ public class SqlServerDeleted<TEntity, TResult> : Deleted<TEntity>, ISqlServerDe
             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
 
         var result = new List<TResult>();
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         command.CommandText = this.Visitor.BuildSql(command, out var readerFields);
         connection.Open();
 
@@ -58,7 +58,7 @@ public class SqlServerDeleted<TEntity, TResult> : Deleted<TEntity>, ISqlServerDe
             await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
 
         var result = new List<TResult>();
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         command.CommandText = this.Visitor.BuildSql(command, out var readerFields);
         await connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Delete, CommandBehavior.SequentialAccess, cancellationToken);

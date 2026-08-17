@@ -27,7 +27,10 @@ class MySqlTheaConnection : ITheaConnection
         internal set
         {
             if (value is MySqlTheaConnection theaConnection)
+            {
                 this.connection = theaConnection.connection;
+                this.DbKey = theaConnection.DbKey;
+            }
             else if (value is MySqlConnection dbConnection)
                 this.connection = dbConnection;
             else throw new NotSupportedException("不支持的连接类型，只支持MySqlTheaConnection或是MySqlConnection类型");
@@ -96,6 +99,8 @@ class MySqlTheaConnection : ITheaConnection
     {
         if (this.connection == null || this.State == ConnectionState.Open)
             return;
+        if (this.State == ConnectionState.Broken)
+            this.Close();
 
         bool isSuccess = true;
         Exception exception = null;
@@ -144,7 +149,7 @@ class MySqlTheaConnection : ITheaConnection
         try
         {
             var dbTransaction = this.connection.BeginTransaction(il);
-            transaction = new MySqlTheaTransaction(this.DbKey, this, dbTransaction);
+            transaction = new MySqlTheaTransaction(this, dbTransaction);
         }
         catch (Exception ex)
         {
@@ -171,7 +176,7 @@ class MySqlTheaConnection : ITheaConnection
         try
         {
             var dbTransaction = await this.connection.BeginTransactionAsync(il);
-            transaction = new MySqlTheaTransaction(this.DbKey, this, dbTransaction);
+            transaction = new MySqlTheaTransaction(this, dbTransaction);
         }
         catch (Exception ex)
         {
@@ -201,13 +206,7 @@ class MySqlTheaConnection : ITheaConnection
     }
     IDbCommand IDbConnection.CreateCommand() => this.CreateCommand().DbCommand;
     IDbTransaction IDbConnection.BeginTransaction()
-    {
-        var transaction = this.BeginTransaction();
-        return transaction.DbTransaction;
-    }
+        => this.BeginTransaction().DbTransaction;
     IDbTransaction IDbConnection.BeginTransaction(IsolationLevel il)
-    {
-        var transaction = this.BeginTransaction(il);
-        return transaction.DbTransaction;
-    }
+        => this.BeginTransaction(il).DbTransaction;
 }

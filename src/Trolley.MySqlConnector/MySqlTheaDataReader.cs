@@ -25,31 +25,25 @@ class MySqlTheaDataReader : ITheaDataReader
 
     public MySqlTheaDataReader(MySqlDataReader reader)
     {
+        this.ReaderId = Guid.NewGuid().ToString("N");
         this.reader = reader;
     }
-
     public void Close()
     {
         this.Interceptor?.DataReaderClosing(this);
         this.reader.Close();
         this.Interceptor?.DataReaderClosed(this);
     }
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
     public async Task CloseAsync()
     {
         this.Interceptor?.DataReaderClosing(this);
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         await this.reader.CloseAsync();
-        this.Interceptor?.DataReaderClosed(this);
-    }
 #else
-    public Task CloseAsync()
-    {
-        this.Interceptor?.DataReaderClosing(this);
-        this.reader.Close();
-        this.Interceptor?.DataReaderClosed(this);
-        return Task.CompletedTask;
-    }
+        await this.reader.DisposeAsync();
 #endif
+        this.Interceptor?.DataReaderClosed(this);
+    }
     public void Dispose()
     {
         this.Interceptor?.DataReaderDisposing(this);
@@ -90,6 +84,7 @@ class MySqlTheaDataReader : ITheaDataReader
         => this.reader.GetBytes(ordinal, fieldOffset, buffer, bufferoffset, length);
     public Stream GetStream(int ordinal) => this.reader.GetStream(ordinal);
     public TextReader GetTextReader(int ordinal) => this.reader.GetTextReader(ordinal);
+
     public char GetChar(int ordinal) => this.reader.GetChar(ordinal);
     public long GetChars(int ordinal, long fieldoffset, char[] buffer, int bufferoffset, int length)
         => this.reader.GetChars(ordinal, fieldoffset, buffer, bufferoffset, length);

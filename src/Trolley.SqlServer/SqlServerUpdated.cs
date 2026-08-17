@@ -27,7 +27,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.BulkCopy:
@@ -189,7 +189,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.BulkCopy:
@@ -433,7 +433,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>
                 builder.Append(this.Visitor.BuildTableShardingsSql());
                 builder.Append(';');
             }
-            (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+            (var isNeedClose, var connection, var command) = this.UseMasterCommand();
             sql = this.Visitor.BuildSql(command, out _);
             if (this.Visitor.IsNeedFetchShardingTables)
             {
@@ -468,7 +468,7 @@ public class SqlServerUpdated<TEntity, TResult> : Updated<TEntity>, ISqlServerUp
     public new List<TResult> Execute()
     {
         var result = new List<TResult>();
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
 
         Action<CommandSqlType, string, List<SqlSegment>> readerExecuter = (sqlType, sql, readerFields) =>
         {
@@ -555,7 +555,7 @@ public class SqlServerUpdated<TEntity, TResult> : Updated<TEntity>, ISqlServerUp
     public new async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         var result = new List<TResult>();
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
 
         Func<CommandSqlType, string, List<SqlSegment>, Task> readerExecuter = async (sqlType, sql, readerFields) =>
         {
@@ -724,7 +724,7 @@ public class SqlServerUpdated<TEntity, TResult> : Updated<TEntity>, ISqlServerUp
                 builder.Append(this.Visitor.BuildTableShardingsSql());
                 builder.Append(';');
             }
-            (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+            (var isNeedClose, var connection, var command) = this.UseMasterCommand();
             sql = this.Visitor.BuildSql(command, out _);
             if (this.Visitor.IsNeedFetchShardingTables)
             {

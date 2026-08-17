@@ -28,7 +28,7 @@ public class PostgreSqlUpdated : Updated
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.BulkCopy:
@@ -216,7 +216,7 @@ public class PostgreSqlUpdated : Updated
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.BulkCopy:
@@ -484,7 +484,7 @@ public class PostgreSqlUpdated : Updated
                 builder.Append(this.Visitor.BuildTableShardingsSql());
                 builder.Append(';');
             }
-            (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+            (var isNeedClose, var connection, var command) = this.UseMasterCommand();
             sql = this.Visitor.BuildSql(command, out _);
             if (this.Visitor.IsNeedFetchShardingTables)
             {
@@ -523,7 +523,7 @@ public class PostgreSqlResultUpdated<TResult> : IBulkResultCommand<TResult>
     public List<TResult> Execute()
     {
         var result = new List<TResult>();
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
 
         Func<ITheaDataReader, object> readerDeserializer = null;
         Action<CommandSqlType, string, List<SqlSegment>> readerExecuter = (sqlType, sql, readerFields) =>
@@ -611,7 +611,7 @@ public class PostgreSqlResultUpdated<TResult> : IBulkResultCommand<TResult>
     public async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         var result = new List<TResult>();
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
 
         Func<ITheaDataReader, object> readerDeserializer = null;
         Func<CommandSqlType, string, List<SqlSegment>, Task> readerExecuter = async (sqlType, sql, readerFields) =>
@@ -710,7 +710,7 @@ public class PostgreSqlResultUpdated<TResult> : IBulkResultCommand<TResult>
             builder.Append(this.Visitor.BuildTableShardingsSql());
             builder.Append(';');
         }
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         sql = this.Visitor.BuildSql(command, out _);
         if (this.Visitor.IsNeedFetchShardingTables)
         {

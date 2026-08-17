@@ -147,6 +147,8 @@ public partial class MySqlProvider : BaseOrmProvider
         castTos[typeof(TimeOnly?)] = "TIME";
 #endif
     }
+    public override string GetDefaultSchema(string connectionString)
+        => this.GetSchemaName(connectionString);
     public override ITheaConnection CreateConnection(string dbKey, string connectionString)
         => new MySqlTheaConnection(dbKey, connectionString);
     public override ITheaCommand CreateCommand() => new MySqlTheaCommand(new MySqlCommand());
@@ -422,13 +424,8 @@ public partial class MySqlProvider : BaseOrmProvider
     }
     public virtual string GetSchemaName(string connectionString)
     {
-        using var connection = new MySqlConnection(connectionString);
-        return connection.Database;
-    }
-    public virtual string GetDefaultSchemaName(DbContext dbContext)
-    {
-        var connectionString = dbContext.Database.ConnectionStrings.First();
-        return this.GetSchemaName(connectionString);
+        var builder = new MySqlConnectionStringBuilder(connectionString);
+        return builder.Database;
     }
     public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
     {
@@ -442,7 +439,7 @@ public partial class MySqlProvider : BaseOrmProvider
                 {
                     cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo.GetGenericMethodDefinition());
                     //.Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (ISqlVisitor  visitor,  MethodCallExpression methodCallExpr, deferredOperations) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (ISqlVisitor visitor, MethodCallExpression methodCallExpr, deferredOperations) =>
                     {
                         var dialectVisitor = visitor as MySqlCreateVisitor;
                         if (args[1] is not MemberExpression memberExpr)

@@ -11,6 +11,7 @@ class SqlServerTheaDataReader : ITheaDataReader
 {
     private readonly SqlDataReader reader;
 
+    public string ReaderId { get; private set; }
     public int Depth => this.reader.Depth;
     public bool IsClosed => this.reader.IsClosed;
     public int RecordsAffected => this.reader.RecordsAffected;
@@ -20,29 +21,37 @@ class SqlServerTheaDataReader : ITheaDataReader
     public bool HasRows => this.reader.HasRows;
 
     public IDataReader DbDataReader => this.reader;
+    public IDbInterceptor Interceptor { get; set; }
 
-    public SqlServerTheaDataReader(SqlDataReader reader) => this.reader = reader;
-
-    public void Close() => this.reader.Close();
-    public Task CloseAsync()
+    public SqlServerTheaDataReader(SqlDataReader reader)
     {
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        return this.reader.CloseAsync();
-#else
+        this.ReaderId = Guid.NewGuid().ToString("N");
+        this.reader = reader;
+    }
+    public void Close()
+    {
+        this.Interceptor?.DataReaderClosing(this);
         this.reader.Close();
-        return Task.CompletedTask;
-#endif
+        this.Interceptor?.DataReaderClosed(this);
     }
-    public void Dispose() => this.reader.Dispose();
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-    public ValueTask DisposeAsync() => this.reader.DisposeAsync();
-#else
-    public ValueTask DisposeAsync()
+    public async Task CloseAsync()
     {
-        this.reader.Dispose();
-        return default;
+        this.Interceptor?.DataReaderClosing(this);
+        await this.reader.CloseAsync();
+        this.Interceptor?.DataReaderClosed(this);
     }
-#endif
+    public void Dispose()
+    {
+        this.Interceptor?.DataReaderDisposing(this);
+        this.reader.Dispose();
+        this.Interceptor?.DataReaderDisposed(this);
+    }
+    public async ValueTask DisposeAsync()
+    {
+        this.Interceptor?.DataReaderDisposing(this);
+        await this.reader.DisposeAsync();
+        this.Interceptor?.DataReaderDisposed(this);
+    }
     public bool Read() => this.reader.Read();
     public Task<bool> ReadAsync(CancellationToken cancellationToken = default)
         => this.reader.ReadAsync(cancellationToken);
@@ -69,9 +78,9 @@ class SqlServerTheaDataReader : ITheaDataReader
     public byte GetByte(int ordinal) => this.reader.GetByte(ordinal);
     public long GetBytes(int ordinal, long fieldOffset, byte[] buffer, int bufferoffset, int length)
         => this.reader.GetBytes(ordinal, fieldOffset, buffer, bufferoffset, length);
-    public Stream GetStream(int ordinal) => this.reader.GetStream(ordinal); 
+    public Stream GetStream(int ordinal) => this.reader.GetStream(ordinal);
     public TextReader GetTextReader(int ordinal) => this.reader.GetTextReader(ordinal);
-    public TextReader GetTextReadera(int ordinal) => this.reader.GetTextReader(ordinal);
+
     public char GetChar(int ordinal) => this.reader.GetChar(ordinal);
     public long GetChars(int ordinal, long fieldoffset, char[] buffer, int bufferoffset, int length)
         => this.reader.GetChars(ordinal, fieldoffset, buffer, bufferoffset, length);
@@ -87,7 +96,7 @@ class SqlServerTheaDataReader : ITheaDataReader
     public long GetInt64(int ordinal) => this.reader.GetInt64(ordinal);
     public string GetString(int ordinal) => this.reader.GetString(ordinal);
 
-    public DataTable GetSchemaTable() => this.reader.GetSchemaTable(); 
+    public DataTable GetSchemaTable() => this.reader.GetSchemaTable();
 
     public bool NextResult() => this.reader.NextResult();
     public Task<bool> NextResultAsync(CancellationToken cancellationToken = default)

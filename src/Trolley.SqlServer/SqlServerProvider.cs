@@ -20,7 +20,6 @@ public partial class SqlServerProvider : BaseOrmProvider
 
     public override OrmProviderType OrmProviderType => OrmProviderType.SqlServer;
     public override Type NativeDbTypeType => typeof(SqlDbType);
-    public override string DefaultTableSchema => "dbo";
 
     static SqlServerProvider()
     {
@@ -143,9 +142,11 @@ public partial class SqlServerProvider : BaseOrmProvider
 #endif
         castTos[typeof(Guid?)] = "UNIQUEIDENTIFIER";
     }
+
+    public override string GetDefaultSchema(string connectionString) => "dbo";
     public override ITheaConnection CreateConnection(string dbKey, string connectionString)
         => new SqlServerTheaConnection(dbKey, connectionString);
-    public override IDbCommand CreateCommand() => new SqlCommand();
+    //public override IDbCommand CreateCommand() => new SqlCommand();
     public override IDbDataParameter CreateParameter(string parameterName, object value)
         => new SqlParameter(parameterName, value);
     public override IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value)
@@ -497,7 +498,7 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
                     {
                         cacheKey = RepositoryHelper.GetCacheKey(typeof(ISqlServerOutput<>), methodInfo.GetGenericMethodDefinition());
                         //.Output(f => new { TotalAmount = f.TotalAmount + x.Inserted(f.TotalAmount) }) ... )
-                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key =>  (visitor, methodCallExpr, deferredOperations) =>
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                         {
                             var myVisitor = visitor as SqlServerUpdateVisitor;
                             var lambdaExpr = args[0] as LambdaExpression;
@@ -540,7 +541,7 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
                     {
                         cacheKey = RepositoryHelper.GetCacheKey(typeof(ISqlServerOutput<>), methodInfo.GetGenericMethodDefinition());
                         //.Output(f => new { TotalAmount = f.TotalAmount + x.Deleted(f.TotalAmount) }) ... )
-                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key =>  (visitor, methodCallExpr, deferredOperations) =>
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                         {
                             var myVisitor = visitor as SqlServerUpdateVisitor;
                             var lambdaExpr = args[0] as LambdaExpression;
@@ -578,7 +579,7 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
                 break;
             case "IsNull":
                 cacheKey = RepositoryHelper.GetCacheKey(typeof(Sql), methodInfo.GetGenericMethodDefinition());
-                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key =>  (visitor, methodCallExpr, deferredOperations) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
                     var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });

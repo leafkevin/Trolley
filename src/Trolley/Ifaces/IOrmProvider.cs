@@ -23,6 +23,7 @@ public interface IOrmProvider
     Type NativeDbTypeType { get; }
     string DefaultTableSchema { get; }
     ICollection<ITypeHandler> TypeHandlers { get; }
+    string GetDefaultSchema(string connectionString);
     ITheaConnection CreateConnection(string dbKey, string connectionString);
     //ITheaCommand CreateCommand();
     IDbDataParameter CreateParameter(string parameterName, object value);

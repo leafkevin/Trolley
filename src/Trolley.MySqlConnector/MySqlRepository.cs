@@ -24,7 +24,7 @@ public class MySqlRepository : Repository
         if (!this.MapProvider.TryGetEntityMap(entityType, out var entityMapper))
             throw new Exception($"未找到{entityType.FullName}实体映射");
 
-        fromTableSchema ??= this.dialectProvider.GetDefaultSchemaName(this.DbContext);
+        fromTableSchema ??= this.DbContext.DefaultTableSchema;
         var orgTableName = entityMapper.TableName;
         var shardingPart = tableName.Substring(orgTableName.Length);
         using var reader = this.QueryMultiple(f =>
@@ -111,7 +111,7 @@ information_schema.referential_constraints b on a.table_schema=b.constraint_sche
         if (!this.MapProvider.TryGetEntityMap(entityType, out var entityMapper))
             throw new Exception($"未找到{entityType.FullName}实体映射");
 
-        fromTableSchema ??= this.dialectProvider.GetDefaultSchemaName(this.DbContext);
+        fromTableSchema ??= this.DbContext.DefaultTableSchema;
         var orgTableName = entityMapper.TableName;
         var shardingPart = tableName.Substring(orgTableName.Length);
         using var reader = await this.QueryMultipleAsync(f =>

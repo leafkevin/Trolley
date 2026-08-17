@@ -23,7 +23,7 @@ public class MySqlCreated : Created
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -31,9 +31,9 @@ public class MySqlCreated : Created
                 {
                     (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
                         var memberMappers, var valueGetters) = this.dialectVisitor.BuildWithBulkCopy();
-                    var dialectOrmProvider = this.OrmProvider as MySqlProvider;
-                    var mySqlConnection = connection.BaseConnection as MySqlConnection;
-                    var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;
+                    var dialectOrmProvider = this.ormProvider as MySqlProvider;
+                    var mySqlConnection = connection.DbConnection as MySqlConnection;
+                    var mySqlTransaction = this.DbContext.Transaction?.DbTransaction as MySqlTransaction;
                     var bulkCopyObj = new MySqlBulkCopy(mySqlConnection, mySqlTransaction);
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
@@ -73,7 +73,7 @@ public class MySqlCreated : Created
                             {
                                 builder.Remove(builder.Length - 1, 1);
                                 command.CommandText = builder.ToString();
-                                result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                                result += command.ExecuteNonQuery();
                                 builder.Clear();
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
@@ -102,7 +102,7 @@ public class MySqlCreated : Created
                     {
                         builder.Remove(builder.Length - 1, 1);
                         command.CommandText = builder.ToString();
-                        result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                        result += command.ExecuteNonQuery();
                     }
                     builder.Clear();
                     break;
@@ -110,7 +110,7 @@ public class MySqlCreated : Created
             default:
                 command.CommandText = this.Visitor.BuildSql(command, out _);
                 connection.Open();
-                result = command.ExecuteNonQuery(CommandSqlType.Insert);
+                result = command.ExecuteNonQuery();
                 break;
         }
 
@@ -123,7 +123,7 @@ public class MySqlCreated : Created
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -131,9 +131,9 @@ public class MySqlCreated : Created
                 {
                     (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
                         var memberMappers, var valueGetters) = this.dialectVisitor.BuildWithBulkCopy();
-                    var dialectOrmProvider = this.OrmProvider as MySqlProvider;
-                    var mySqlConnection = connection.BaseConnection as MySqlConnection;
-                    var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;
+                    var dialectOrmProvider = this.ormProvider as MySqlProvider;
+                    var mySqlConnection = connection.DbConnection as MySqlConnection;
+                    var mySqlTransaction = this.DbContext.Transaction?.DbTransaction as MySqlTransaction;
                     var bulkCopyObj = new MySqlBulkCopy(mySqlConnection, mySqlTransaction);
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
@@ -173,7 +173,7 @@ public class MySqlCreated : Created
                             {
                                 builder.Remove(builder.Length - 1, 1);
                                 command.CommandText = builder.ToString();
-                                result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                                result += await command.ExecuteNonQueryAsync(cancellationToken);
                                 builder.Clear();
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
@@ -201,7 +201,7 @@ public class MySqlCreated : Created
                     {
                         builder.Remove(builder.Length - 1, 1);
                         command.CommandText = builder.ToString();
-                        result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                        result += await command.ExecuteNonQueryAsync(cancellationToken);
                     }
                     builder.Clear();
                     break;
@@ -209,7 +209,7 @@ public class MySqlCreated : Created
             default:
                 command.CommandText = this.Visitor.BuildSql(command, out _);
                 await connection.OpenAsync(cancellationToken);
-                result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
+                result = await command.ExecuteNonQueryAsync(cancellationToken);
                 break;
         }
 
@@ -237,7 +237,7 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -337,7 +337,7 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -452,7 +452,7 @@ public class MySqlContinuedCreate : ContinuedCreate
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -552,7 +552,7 @@ public class MySqlContinuedCreate : ContinuedCreate
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -666,7 +666,7 @@ public class MySqlBulkContinuedCreate : BulkContinuedCreate
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -771,7 +771,7 @@ public class MySqlBulkContinuedCreate : BulkContinuedCreate
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -890,7 +890,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -995,7 +995,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -1114,7 +1114,7 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -1219,7 +1219,7 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {

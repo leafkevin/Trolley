@@ -26,7 +26,7 @@ public class SqlServerCreated<TEntity> : Created<TEntity>
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         var entityType = typeof(TEntity);
         switch (this.Visitor.ActionMode)
         {
@@ -124,7 +124,7 @@ public class SqlServerCreated<TEntity> : Created<TEntity>
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         var entityType = typeof(TEntity);
         switch (this.Visitor.ActionMode)
         {
@@ -274,7 +274,7 @@ public class SqlServerBulkCreated<TEntity, TResult> : Created<TEntity>, ISqlServ
     public new List<TResult> Execute()
     {
         var result = new List<TResult>();
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         var dialectVisitor = this.Visitor as SqlServerCreateVisitor;
         if (!string.IsNullOrEmpty(dialectVisitor.FromSql))
         {
@@ -360,7 +360,7 @@ public class SqlServerBulkCreated<TEntity, TResult> : Created<TEntity>, ISqlServ
     public new async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken)
     {
         var result = new List<TResult>();
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         var dialectVisitor = this.Visitor as SqlServerCreateVisitor;
         if (!string.IsNullOrEmpty(dialectVisitor.FromSql))
         {

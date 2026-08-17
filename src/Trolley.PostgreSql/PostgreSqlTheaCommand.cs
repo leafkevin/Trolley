@@ -77,6 +77,8 @@ class PostgreSqlTheaCommand : ITheaCommand
     }
 
     public void Prepare() => this.command.Prepare();
+    public virtual async Task PrepareAsync(CancellationToken cancellationToken = default)
+        => await this.command.PrepareAsync(cancellationToken);
     public void Cancel() => this.command.Cancel();
     public IDbDataParameter CreateParameter() => this.command.CreateParameter();
     public int ExecuteNonQuery()
@@ -84,7 +86,7 @@ class PostgreSqlTheaCommand : ITheaCommand
         int recordsAffected = 0;
         bool isSuccess = true;
         Exception exception = null;
-        if (!this.OnExecuting(out var evtData)) return 0;
+        if (!this.OnExecuting(out var evtData)) return recordsAffected;
         try
         {
             recordsAffected = this.command.ExecuteNonQuery();
@@ -108,7 +110,7 @@ class PostgreSqlTheaCommand : ITheaCommand
         int recordsAffected = 0;
         bool isSuccess = true;
         Exception exception = null;
-        if (!this.OnExecuting(out var evtData)) return 0;
+        if (!this.OnExecuting(out var evtData)) return recordsAffected;
         try
         {
             recordsAffected = await this.command.ExecuteNonQueryAsync(cancellationToken);
@@ -225,10 +227,7 @@ class PostgreSqlTheaCommand : ITheaCommand
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            this.OnExecuted(isSuccess, evtData, exception);
-        }
+        this.OnExecuted(isSuccess, evtData, exception);
         if (!isSuccess)
         {
             await this.DisposeAsync();
@@ -237,8 +236,6 @@ class PostgreSqlTheaCommand : ITheaCommand
         }
         return result;
     }
-    public virtual async Task PrepareAsync(CancellationToken cancellationToken = default)
-        => await this.command.PrepareAsync(cancellationToken);
     public void Dispose()
     {
         this.Interceptor?.CommandDisposing(this);
@@ -308,7 +305,7 @@ class PostgreSqlTheaCommand : ITheaCommand
             }
             else if (value is NpgsqlConnection dbConnection)
                 this.connection.DbConnection = value;
-            else throw new NotSupportedException("不支持的连接类型，只支持PostgreSqlTheaConnection类型");
+            else throw new NotSupportedException("不支持的连接类型，只支持PostgreSqlTheaConnection或是NpgsqlConnection类型");
         }
     }
     IDbTransaction IDbCommand.Transaction
@@ -319,26 +316,16 @@ class PostgreSqlTheaCommand : ITheaCommand
             if (value is PostgreSqlTheaTransaction theaTransaction)
             {
                 this.transaction = theaTransaction;
-                if (!ReferenceEquals(this.connection, theaTransaction.Connection)
-                    && theaTransaction.Connection is PostgreSqlTheaConnection theaConnection)
-                {
+                this.DbKey = theaTransaction.DbKey;
+                if (theaTransaction.Connection is PostgreSqlTheaConnection theaConnection)
                     this.connection = theaConnection;
-                    this.DbKey = theaConnection.DbKey;
-                }
             }
             else if (value is NpgsqlTransaction dbTransaction)
                 this.transaction.DbTransaction = dbTransaction;
-            else throw new NotSupportedException("不支持的连接类型，只支持PostgreSqlTheaConnection类型");
+            else throw new NotSupportedException("不支持的事务类型，只支持PostgreSqlTheaTransaction或是NpgsqlTransaction类型");
         }
     }
-    IDataReader IDbCommand.ExecuteReader()
-    {
-        var reader = this.ExecuteReader();
-        return reader.DbDataReader;
-    }
+    IDataReader IDbCommand.ExecuteReader() => this.ExecuteReader().DbDataReader;
     IDataReader IDbCommand.ExecuteReader(CommandBehavior behavior)
-    {
-        var reader = this.ExecuteReader(behavior);
-        return reader.DbDataReader;
-    }
+        => this.ExecuteReader(behavior).DbDataReader;
 }

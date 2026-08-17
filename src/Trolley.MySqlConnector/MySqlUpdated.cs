@@ -29,7 +29,7 @@ public class MySqlUpdated : Updated
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.BulkCopy:
@@ -222,7 +222,7 @@ public class MySqlUpdated : Updated
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.BulkCopy:
@@ -420,7 +420,7 @@ public class MySqlUpdated : Updated
         string sql;
         dbParameters = null;
         var builder = new StringBuilder();
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         if (this.Visitor.ActionMode == ActionMode.BulkCopy)
         {
             (var shardingType, var shardingTables, var updateObjs, var timeoutSeconds,

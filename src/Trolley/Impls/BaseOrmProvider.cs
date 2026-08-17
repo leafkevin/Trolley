@@ -27,10 +27,10 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     public virtual OrmProviderType OrmProviderType => OrmProviderType.Basic;
     public virtual string ParameterPrefix => "@";
     public abstract Type NativeDbTypeType { get; }
-    public virtual string DefaultTableSchema { get; }
     public virtual ICollection<ITypeHandler> TypeHandlers => typeHandlers.Values;
+    public abstract string GetDefaultSchema(string connectionString);
     public abstract ITheaConnection CreateConnection(string dbKey, string connectionString);
-    public abstract ITheaCommand CreateCommand();
+    //public abstract ITheaCommand CreateCommand();
     public abstract IDbDataParameter CreateParameter(string parameterName, object value);
     public abstract IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
     public abstract void ChangeParameter(object dbParameter, Type targetType, object value);

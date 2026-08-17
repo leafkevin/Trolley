@@ -91,7 +91,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.BulkCopy:
@@ -253,7 +253,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.BulkCopy:
@@ -498,7 +498,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
                 builder.Append(this.Visitor.BuildTableShardingsSql());
                 builder.Append(';');
             }
-            (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+            (var isNeedClose, var connection, var command) = this.UseMasterCommand();
             sql = this.Visitor.BuildSql(command, out _);
             if (this.Visitor.IsNeedFetchShardingTables)
             {
@@ -585,7 +585,7 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.BulkCopy:
@@ -748,7 +748,7 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.BulkCopy:
@@ -994,7 +994,7 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
                 builder.Append(this.Visitor.BuildTableShardingsSql());
                 builder.Append(';');
             }
-            (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+            (var isNeedClose, var connection, var command) = this.UseMasterCommand();
             sql = this.Visitor.BuildSql(command, out _);
             if (this.Visitor.IsNeedFetchShardingTables)
             {

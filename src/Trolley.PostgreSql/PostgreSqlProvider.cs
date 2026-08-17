@@ -36,7 +36,6 @@ public partial class PostgreSqlProvider : BaseOrmProvider
 
     public override OrmProviderType OrmProviderType => OrmProviderType.PostgreSql;
     public override Type NativeDbTypeType => typeof(NpgsqlDbType);
-    public override string DefaultTableSchema => "public";
     static PostgreSqlProvider()
     {
         defaultMapTypes[NpgsqlDbType.Bit] = typeof(BitArray);
@@ -287,9 +286,10 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
     }
 
+    public override string GetDefaultSchema(string connectionString) => "public";
     public override ITheaConnection CreateConnection(string dbKey, string connectionString)
         => new PostgreSqlTheaConnection(dbKey, connectionString);
-    public override IDbCommand CreateCommand() => new NpgsqlCommand();
+    //public override IDbCommand CreateCommand() => new NpgsqlCommand();
     public override IDbDataParameter CreateParameter(string parameterName, object value)
         => new NpgsqlParameter(parameterName, value);
     public override IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value)
@@ -2494,7 +2494,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                 {
                     cacheKey = HashCode.Combine(typeof(IPostgreSqlCreateConflictDoUpdate<>), methodInfo.GetGenericMethodDefinition());
                     //.OnConflict(x => x.UseKeys().Set(f => new { TotalAmount = f.TotalAmount + x.Excluded(f.TotalAmount) }) ... )
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key =>  (visitor, methodCallExpr, deferredOperations) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                     {
                         var myVisitor = visitor as PostgreSqlCreateVisitor;
                         if (args[0] is not MemberExpression memberExpr)
@@ -2519,7 +2519,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                 break;
             case "IsNull":
                 cacheKey = HashCode.Combine(typeof(Sql), methodInfo.GetGenericMethodDefinition());
-                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key =>  (visitor, methodCallExpr, deferredOperations) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
                     var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0], IsNullFields = true });
                     var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });

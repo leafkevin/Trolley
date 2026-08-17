@@ -9,27 +9,42 @@ namespace Trolley.SqlServer;
 class SqlServerTheaCommand : ITheaCommand
 {
     private readonly SqlCommand command;
-    private ITheaConnection connection;
-    private ITheaTransaction transaction;
-    private int index = -1;
+    private SqlServerTheaConnection connection;
+    private SqlServerTheaTransaction transaction;
 
-    public string DbKey => this.connection?.DbKey;
+    public string DbKey { get; private set; }
     public string CommandId { get; private set; }
-    public IDbCommand BaseCommand => this.command;
+    public IDbCommand DbCommand => this.command;
+    public IDbConnection DbConnection => this.connection.DbConnection;
+    public IDbTransaction DbTransaction => this.transaction.DbTransaction;
     public bool IsNeedClose => this.transaction == null;
+    public IDbInterceptor Interceptor { get; set; }
 
-    public string CommandText { get => this.command.CommandText; set => this.command.CommandText = value; }
-    public int CommandTimeout { get => this.command.CommandTimeout; set => this.command.CommandTimeout = value; }
-    public CommandType CommandType { get => this.command.CommandType; set => this.command.CommandType = value; }
+    public string CommandText
+    {
+        get => this.command.CommandText;
+        set => this.command.CommandText = value;
+    }
+    public int CommandTimeout
+    {
+        get => this.command.CommandTimeout;
+        set => this.command.CommandTimeout = value;
+    }
+    public CommandType CommandType
+    {
+        get => this.command.CommandType;
+        set => this.command.CommandType = value;
+    }
     public IDataParameterCollection Parameters => this.command.Parameters;
     public ITheaConnection Connection
     {
         get => this.connection;
         set
         {
-            this.connection = value;
-            if (value != null)
-                this.BaseCommand.Connection = value.BaseConnection;
+            if (value is not SqlServerTheaConnection theaConnection)
+                throw new NotSupportedException("不支持的连接类型，只支持SqlServerTheaConnection类型");
+            this.connection = theaConnection;
+            this.DbKey = theaConnection.DbKey;
         }
     }
     public ITheaTransaction Transaction
@@ -37,42 +52,41 @@ class SqlServerTheaCommand : ITheaCommand
         get => this.transaction;
         set
         {
-            this.transaction = value;
-            if (value != null)
-                this.BaseCommand.Transaction = value.BaseTransaction;
+            if (value is not SqlServerTheaTransaction theaTransaction)
+                throw new NotSupportedException("不支持的事务类型，只支持SqlServerTheaTransaction类型");
+            this.transaction = theaTransaction;
+            this.DbKey = theaTransaction.DbKey;
+            this.connection = this.transaction.Connection as SqlServerTheaConnection;
         }
     }
-
-    public Action<CommandEventArgs> OnExecuting { get; set; }
-    public Action<CommandCompletedEventArgs> OnExecuted { get; set; }
-
-    public SqlServerTheaCommand(SqlCommand command, ITheaConnection connection, ITheaTransaction transaction)
+    public UpdateRowSource UpdatedRowSource
     {
+        get => this.command.UpdatedRowSource;
+        set => this.command.UpdatedRowSource = value;
+    }
+
+    public SqlServerTheaCommand(SqlCommand command, SqlServerTheaConnection connection = null, SqlServerTheaTransaction transaction = null)
+        : this(null, command, connection, transaction) { }
+    public SqlServerTheaCommand(string dbKey, SqlCommand command, SqlServerTheaConnection connection = null, SqlServerTheaTransaction transaction = null)
+    {
+        this.DbKey = dbKey;
         this.CommandId = Guid.NewGuid().ToString("N");
         this.command = command;
         this.Connection = connection;
         this.transaction = transaction;
     }
 
-    public int ExecuteNonQuery(CommandSqlType sqlType)
+    public void Prepare() => this.command.Prepare();
+    public virtual async Task PrepareAsync(CancellationToken cancellationToken = default)
+        => await this.command.PrepareAsync(cancellationToken);
+    public void Cancel() => this.command.Cancel();
+    public IDbDataParameter CreateParameter() => this.command.CreateParameter();
+    public int ExecuteNonQuery()
     {
-        this.index++;
-        var createdAt = DateTime.Now;
-        this.OnExecuting?.Invoke(new CommandEventArgs
-        {
-            DbKey = this.DbKey,
-            CommandId = this.CommandId,
-            ConnectionId = this.connection.ConnectionId,
-            TransactionId = this.transaction?.TransactionId,
-            ConnectionString = this.Connection.ConnectionString,
-            Sql = this.CommandText,
-            DbParameters = this.Parameters,
-            Index = this.index,
-            SqlType = sqlType
-        });
         int recordsAffected = 0;
         bool isSuccess = true;
         Exception exception = null;
+        if (!this.OnExecuting(out var evtData)) return recordsAffected;
         try
         {
             recordsAffected = this.command.ExecuteNonQuery();
@@ -82,25 +96,7 @@ class SqlServerTheaCommand : ITheaCommand
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
-            this.OnExecuted?.Invoke(new CommandCompletedEventArgs
-            {
-                DbKey = this.DbKey,
-                CommandId = this.CommandId,
-                ConnectionId = this.connection.ConnectionId,
-                TransactionId = this.transaction?.TransactionId,
-                ConnectionString = this.Connection.ConnectionString,
-                Sql = this.CommandText,
-                DbParameters = this.Parameters,
-                Index = this.index,
-                SqlType = sqlType,
-                IsSuccess = isSuccess,
-                Exception = exception,
-                Elapsed = (int)elapsed
-            });
-        }
+        this.OnExecuted(isSuccess, evtData, exception);
         if (!isSuccess)
         {
             this.Dispose();
@@ -109,25 +105,12 @@ class SqlServerTheaCommand : ITheaCommand
         }
         return recordsAffected;
     }
-    public async Task<int> ExecuteNonQueryAsync(CommandSqlType sqlType, CancellationToken cancellationToken = default)
+    public async Task<int> ExecuteNonQueryAsync(CancellationToken cancellationToken = default)
     {
-        this.index++;
-        var createdAt = DateTime.Now;
-        this.OnExecuting?.Invoke(new CommandEventArgs
-        {
-            DbKey = this.DbKey,
-            CommandId = this.CommandId,
-            ConnectionId = this.connection.ConnectionId,
-            TransactionId = this.transaction?.TransactionId,
-            ConnectionString = this.Connection.ConnectionString,
-            Sql = this.CommandText,
-            DbParameters = this.Parameters,
-            Index = this.index,
-            SqlType = sqlType
-        });
         int recordsAffected = 0;
         bool isSuccess = true;
         Exception exception = null;
+        if (!this.OnExecuting(out var evtData)) return recordsAffected;
         try
         {
             recordsAffected = await this.command.ExecuteNonQueryAsync(cancellationToken);
@@ -137,25 +120,7 @@ class SqlServerTheaCommand : ITheaCommand
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
-            this.OnExecuted?.Invoke(new CommandCompletedEventArgs
-            {
-                DbKey = this.DbKey,
-                CommandId = this.CommandId,
-                ConnectionId = this.connection.ConnectionId,
-                TransactionId = this.transaction?.TransactionId,
-                ConnectionString = this.Connection.ConnectionString,
-                Sql = this.CommandText,
-                DbParameters = this.Parameters,
-                Index = this.index,
-                SqlType = sqlType,
-                IsSuccess = isSuccess,
-                Exception = exception,
-                Elapsed = (int)elapsed
-            });
-        }
+        this.OnExecuted(isSuccess, evtData, exception);
         if (!isSuccess)
         {
             await this.DisposeAsync();
@@ -164,136 +129,71 @@ class SqlServerTheaCommand : ITheaCommand
         }
         return recordsAffected;
     }
-    public ITheaDataReader ExecuteReader(CommandSqlType sqlType, CommandBehavior behavior = default)
+    public ITheaDataReader ExecuteReader() => this.ExecuteReader(CommandBehavior.Default);
+    public ITheaDataReader ExecuteReader(CommandBehavior behavior)
     {
-        this.index++;
-        bool isNeedClose = this.IsNeedClose;
-        var createdAt = DateTime.Now;
-        this.OnExecuting?.Invoke(new CommandEventArgs
-        {
-            DbKey = this.DbKey,
-            CommandId = this.CommandId,
-            ConnectionId = this.connection.ConnectionId,
-            TransactionId = this.transaction?.TransactionId,
-            ConnectionString = this.Connection.ConnectionString,
-            Sql = this.CommandText,
-            DbParameters = this.Parameters,
-            Index = this.index,
-            SqlType = sqlType
-        });
-        SqlDataReader reader = null;
+        ITheaDataReader reader = null;
         bool isSuccess = true;
         Exception exception = null;
+        if (!this.OnExecuting(out var evtData)) return reader;
         try
         {
-            reader = this.command.ExecuteReader(behavior);
+            this.Interceptor?.DataReaderCreating(this);
+            var dbReader = this.command.ExecuteReader(behavior);
+            reader = new SqlServerTheaDataReader(dbReader) { Interceptor = this.Interceptor };
         }
         catch (Exception ex)
         {
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
-            this.OnExecuted?.Invoke(new CommandCompletedEventArgs
-            {
-                DbKey = this.DbKey,
-                CommandId = this.CommandId,
-                ConnectionId = this.connection.ConnectionId,
-                TransactionId = this.transaction?.TransactionId,
-                ConnectionString = this.Connection.ConnectionString,
-                Sql = this.CommandText,
-                DbParameters = this.Parameters,
-                Index = this.index,
-                SqlType = sqlType,
-                IsSuccess = isSuccess,
-                Exception = exception,
-                Elapsed = (int)elapsed
-            });
-        }
+        if (this.Interceptor != null)
+            reader = this.Interceptor.DataReaderCreated(reader);
+        this.OnExecuted(isSuccess, evtData, exception);
         if (!isSuccess)
         {
             this.Dispose();
             if (this.IsNeedClose) this.connection.Close();
             throw exception;
         }
-        return new SqlServerTheaDataReader(reader);
+        return reader;
     }
-    public async Task<ITheaDataReader> ExecuteReaderAsync(CommandSqlType sqlType, CommandBehavior behavior = default, CancellationToken cancellationToken = default)
+    public async Task<ITheaDataReader> ExecuteReaderAsync(CancellationToken cancellationToken = default)
+        => await this.ExecuteReaderAsync(CommandBehavior.Default, cancellationToken);
+    public async Task<ITheaDataReader> ExecuteReaderAsync(CommandBehavior behavior = default, CancellationToken cancellationToken = default)
     {
-        this.index++;
-        var createdAt = DateTime.Now;
-        this.OnExecuting?.Invoke(new CommandEventArgs
-        {
-            DbKey = this.DbKey,
-            CommandId = this.CommandId,
-            ConnectionId = this.connection.ConnectionId,
-            TransactionId = this.transaction?.TransactionId,
-            ConnectionString = this.Connection.ConnectionString,
-            Sql = this.CommandText,
-            DbParameters = this.Parameters,
-            Index = this.index,
-            SqlType = sqlType
-        });
-        SqlDataReader reader = null;
+        ITheaDataReader reader = null;
         bool isSuccess = true;
         Exception exception = null;
+        if (!this.OnExecuting(out var evtData)) return reader;
         try
         {
-            reader = await this.command.ExecuteReaderAsync(behavior, cancellationToken);
+            this.Interceptor?.DataReaderCreating(this);
+            var dbReader = await this.command.ExecuteReaderAsync(behavior, cancellationToken);
+            reader = new SqlServerTheaDataReader(dbReader) { Interceptor = this.Interceptor };
         }
         catch (Exception ex)
         {
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
-            this.OnExecuted?.Invoke(new CommandCompletedEventArgs
-            {
-                DbKey = this.DbKey,
-                CommandId = this.CommandId,
-                ConnectionId = this.connection.ConnectionId,
-                TransactionId = this.transaction?.TransactionId,
-                ConnectionString = this.Connection.ConnectionString,
-                Sql = this.CommandText,
-                DbParameters = this.Parameters,
-                Index = this.index,
-                SqlType = sqlType,
-                IsSuccess = isSuccess,
-                Exception = exception,
-                Elapsed = (int)elapsed
-            });
-        }
+        if (this.Interceptor != null)
+            reader = this.Interceptor.DataReaderCreated(reader);
+        this.OnExecuted(isSuccess, evtData, exception);
         if (!isSuccess)
         {
             await this.DisposeAsync();
             if (this.IsNeedClose) await this.connection.CloseAsync();
             throw exception;
         }
-        return new SqlServerTheaDataReader(reader);
+        return reader;
     }
-    public object ExecuteScalar(CommandSqlType sqlType)
+    public object ExecuteScalar()
     {
-        this.index++;
-        var createdAt = DateTime.Now;
-        this.OnExecuting?.Invoke(new CommandEventArgs
-        {
-            DbKey = this.DbKey,
-            CommandId = this.CommandId,
-            ConnectionId = this.connection.ConnectionId,
-            TransactionId = this.transaction?.TransactionId,
-            ConnectionString = this.Connection.ConnectionString,
-            Sql = this.CommandText,
-            DbParameters = this.Parameters,
-            Index = this.index,
-            SqlType = sqlType
-        });
         object result = null;
         bool isSuccess = true;
         Exception exception = null;
+        if (!this.OnExecuting(out var evtData)) return result;
         try
         {
             result = this.command.ExecuteScalar();
@@ -303,25 +203,7 @@ class SqlServerTheaCommand : ITheaCommand
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
-            this.OnExecuted?.Invoke(new CommandCompletedEventArgs
-            {
-                DbKey = this.DbKey,
-                CommandId = this.CommandId,
-                ConnectionId = this.connection.ConnectionId,
-                TransactionId = this.transaction?.TransactionId,
-                ConnectionString = this.Connection.ConnectionString,
-                Sql = this.CommandText,
-                DbParameters = this.Parameters,
-                Index = this.index,
-                SqlType = sqlType,
-                IsSuccess = isSuccess,
-                Exception = exception,
-                Elapsed = (int)elapsed
-            });
-        }
+        this.OnExecuted(isSuccess, evtData, exception);
         if (!isSuccess)
         {
             this.Dispose();
@@ -330,25 +212,12 @@ class SqlServerTheaCommand : ITheaCommand
         }
         return result;
     }
-    public async Task<object> ExecuteScalarAsync(CommandSqlType sqlType, CancellationToken cancellationToken = default)
+    public async Task<object> ExecuteScalarAsync(CancellationToken cancellationToken = default)
     {
-        this.index++;
-        var createdAt = DateTime.Now;
-        this.OnExecuting?.Invoke(new CommandEventArgs
-        {
-            DbKey = this.DbKey,
-            CommandId = this.CommandId,
-            ConnectionId = this.connection.ConnectionId,
-            TransactionId = this.transaction?.TransactionId,
-            ConnectionString = this.Connection.ConnectionString,
-            Sql = this.CommandText,
-            DbParameters = this.Parameters,
-            Index = this.index,
-            SqlType = sqlType
-        });
         object result = null;
         bool isSuccess = true;
         Exception exception = null;
+        if (!this.OnExecuting(out var evtData)) return result;
         try
         {
             result = await this.command.ExecuteScalarAsync(cancellationToken);
@@ -358,25 +227,7 @@ class SqlServerTheaCommand : ITheaCommand
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
-            this.OnExecuted?.Invoke(new CommandCompletedEventArgs
-            {
-                DbKey = this.DbKey,
-                CommandId = this.CommandId,
-                ConnectionId = this.connection.ConnectionId,
-                TransactionId = this.transaction?.TransactionId,
-                ConnectionString = this.Connection.ConnectionString,
-                Sql = this.CommandText,
-                DbParameters = this.Parameters,
-                Index = this.index,
-                SqlType = sqlType,
-                IsSuccess = isSuccess,
-                Exception = exception,
-                Elapsed = (int)elapsed
-            });
-        }
+        this.OnExecuted(isSuccess, evtData, exception);
         if (!isSuccess)
         {
             await this.DisposeAsync();
@@ -387,19 +238,94 @@ class SqlServerTheaCommand : ITheaCommand
     }
     public void Dispose()
     {
+        this.Interceptor?.CommandDisposing(this);
         this.command.Dispose();
+        this.Interceptor?.CommandDisposed(this);
         this.Parameters.Clear();
     }
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
     public async ValueTask DisposeAsync()
     {
+        this.Interceptor?.CommandDisposing(this);
         await this.command.DisposeAsync();
+        this.Interceptor?.CommandDisposed(this);
         this.Parameters.Clear();
+    }
 #else
     public ValueTask DisposeAsync()
     {
+        this.Interceptor?.CommandDisposing(this);
         this.command.Dispose();
+        this.Interceptor?.CommandDisposed(this);
+        this.Parameters.Clear();
         return default;
-#endif
     }
+#endif   
+    private bool OnExecuting(out object evtData)
+    {
+        if (this.Interceptor != null)
+        {
+            var evtArgs = this.Interceptor.CommandExecuting(this);
+            evtData = evtArgs.EventData;
+            return evtArgs.IsCanExecuting;
+        }
+        evtData = null;
+        return true;
+    }
+    private void OnExecuted(bool isSuccess, object evtData, Exception exception)
+    {
+        if (this.Interceptor != null)
+        {
+            var evtAgs = new DbCommandCompletedEventArgs
+            {
+                Command = this,
+                IsSuccess = isSuccess,
+                EventData = evtData,
+                Exception = exception
+            };
+            this.Interceptor.CommandExecuted(evtAgs);
+            if (!isSuccess) this.Interceptor.CommandFailed(evtAgs);
+        }
+    }
+    public object Clone()
+    {
+        var dbCommand = this.command.Clone();
+        return new MySqlTheaCommand(this.DbKey, dbCommand, this.connection, this.transaction);
+    }
+
+    IDbConnection IDbCommand.Connection
+    {
+        get => this.connection.DbConnection;
+        set
+        {
+            if (value is MySqlTheaConnection theaConnection)
+            {
+                this.connection = theaConnection;
+                this.DbKey = theaConnection.DbKey;
+            }
+            else if (value is MySqlConnection dbConnection)
+                this.connection.DbConnection = value;
+            else throw new NotSupportedException("不支持的连接类型，只支持MySqlTheaConnection或是MySqlConnection类型");
+        }
+    }
+    IDbTransaction IDbCommand.Transaction
+    {
+        get => this.transaction.DbTransaction;
+        set
+        {
+            if (value is MySqlTheaTransaction theaTransaction)
+            {
+                this.transaction = theaTransaction;
+                this.DbKey = theaTransaction.DbKey;
+                if (theaTransaction.Connection is MySqlTheaConnection theaConnection)
+                    this.connection = theaConnection;
+            }
+            else if (value is MySqlTransaction dbTransaction)
+                this.transaction.DbTransaction = dbTransaction;
+            else throw new NotSupportedException("不支持的事务类型，只支持MySqlTheaTransaction或是MySqlTransaction类型");
+        }
+    }
+    IDataReader IDbCommand.ExecuteReader() => this.ExecuteReader().DbDataReader;
+    IDataReader IDbCommand.ExecuteReader(CommandBehavior behavior)
+        => this.ExecuteReader(behavior).DbDataReader;
 }

@@ -30,9 +30,9 @@ class PostgreSqlTheaTransaction : ITheaTransaction
     public IDbInterceptor Interceptor { get; set; }
     IDbConnection IDbTransaction.Connection => this.connection.DbConnection;
 
-    public PostgreSqlTheaTransaction(string dbKey, PostgreSqlTheaConnection connection, NpgsqlTransaction transaction)
+    public PostgreSqlTheaTransaction(PostgreSqlTheaConnection connection, NpgsqlTransaction transaction)
     {
-        this.DbKey = dbKey;
+        this.DbKey = connection.DbKey;
         this.TransactionId = Guid.NewGuid().ToString("N");
         this.connection = connection;
         this.transaction = transaction;
@@ -42,14 +42,16 @@ class PostgreSqlTheaTransaction : ITheaTransaction
     {
         bool isSuccess = true;
         Exception exception = null;
-        var eventArgs = this.Interceptor.TransactionCommitting(this);
+        DbTransactionExecutingEventArgs eventArgs = default;
+        if (this.Interceptor != null)
+            eventArgs = this.Interceptor.TransactionCommitting(this);
         try { this.transaction.Commit(); }
         catch (Exception ex)
         {
             isSuccess = false;
             exception = ex;
         }
-        finally
+        if (this.Interceptor != null)
         {
             var completedEventArgs = new DbTransactionCompletedEventArgs
             {
@@ -63,7 +65,7 @@ class PostgreSqlTheaTransaction : ITheaTransaction
         }
         if (!isSuccess)
         {
-            if (!isSuccess) this.connection.Close();
+            this.connection.Close();
             throw exception;
         }
     }
@@ -71,14 +73,16 @@ class PostgreSqlTheaTransaction : ITheaTransaction
     {
         bool isSuccess = true;
         Exception exception = null;
-        var eventArgs = this.Interceptor.TransactionCommitting(this);
+        DbTransactionExecutingEventArgs eventArgs = default;
+        if (this.Interceptor != null)
+            eventArgs = this.Interceptor.TransactionCommitting(this);
         try { await this.transaction.CommitAsync(cancellationToken); }
         catch (Exception ex)
         {
             isSuccess = false;
             exception = ex;
         }
-        finally
+        if (this.Interceptor != null)
         {
             var completedEventArgs = new DbTransactionCompletedEventArgs
             {
@@ -92,7 +96,7 @@ class PostgreSqlTheaTransaction : ITheaTransaction
         }
         if (!isSuccess)
         {
-            if (!isSuccess) this.connection.Close();
+            await this.connection.CloseAsync();
             throw exception;
         }
     }
@@ -100,14 +104,16 @@ class PostgreSqlTheaTransaction : ITheaTransaction
     {
         bool isSuccess = true;
         Exception exception = null;
-        var eventArgs = this.Interceptor.TransactionRollingBack(this);
+        DbTransactionExecutingEventArgs eventArgs = default;
+        if (this.Interceptor != null)
+            eventArgs = this.Interceptor.TransactionRollingBack(this);
         try { this.transaction.Rollback(); }
         catch (Exception ex)
         {
             isSuccess = false;
             exception = ex;
         }
-        finally
+        if (this.Interceptor != null)
         {
             var completedEventArgs = new DbTransactionCompletedEventArgs
             {
@@ -121,7 +127,7 @@ class PostgreSqlTheaTransaction : ITheaTransaction
         }
         if (!isSuccess)
         {
-            if (!isSuccess) this.connection.Close();
+            this.connection.Close();
             throw exception;
         }
     }
@@ -129,14 +135,16 @@ class PostgreSqlTheaTransaction : ITheaTransaction
     {
         bool isSuccess = true;
         Exception exception = null;
-        var eventArgs = this.Interceptor.TransactionRollingBack(this);
+        DbTransactionExecutingEventArgs eventArgs = default;
+        if (this.Interceptor != null)
+            eventArgs = this.Interceptor.TransactionRollingBack(this);
         try { await this.transaction.RollbackAsync(cancellationToken); }
         catch (Exception ex)
         {
             isSuccess = false;
             exception = ex;
         }
-        finally
+        if (this.Interceptor != null)
         {
             var completedEventArgs = new DbTransactionCompletedEventArgs
             {
@@ -150,18 +158,20 @@ class PostgreSqlTheaTransaction : ITheaTransaction
         }
         if (!isSuccess)
         {
-            if (!isSuccess) this.connection.Close();
+            await this.connection.CloseAsync();
             throw exception;
         }
     }
-    public void Dispose() => this.transaction.Dispose();
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-    public ValueTask DisposeAsync() => this.transaction.DisposeAsync();
-#else
-    public ValueTask DisposeAsync()
+    public void Dispose()
     {
-        this.transaction.DisposeAsync();
-        return default;
+        this.Interceptor?.TransactionDisposing(this);
+        this.transaction.Dispose();
+        this.Interceptor?.TransactionDisposed(this);
     }
-#endif
+    public async ValueTask DisposeAsync()
+    {
+        this.Interceptor?.TransactionDisposing(this);
+        await this.transaction.DisposeAsync();
+        this.Interceptor?.TransactionDisposed(this);
+    }
 }

@@ -22,7 +22,7 @@ public class PostgreSqlCreated : Created
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -115,7 +115,7 @@ public class PostgreSqlCreated : Created
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -222,7 +222,7 @@ public class PostgreSqlIdentitiedCreated : IdentitiedCreated
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -315,7 +315,7 @@ public class PostgreSqlIdentitiedCreated : IdentitiedCreated
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {

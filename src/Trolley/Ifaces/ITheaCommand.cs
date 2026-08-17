@@ -13,6 +13,7 @@ public interface ITheaCommand : IDbCommand, ICloneable, IAsyncDisposable
     IDbCommand DbCommand { get; }
     IDbInterceptor Interceptor { get; set; }
 
+    Task PrepareAsync(CancellationToken cancellationToken = default);
     new ITheaDataReader ExecuteReader();
     new ITheaDataReader ExecuteReader(CommandBehavior behavior);
 

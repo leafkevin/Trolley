@@ -27,7 +27,10 @@ class PostgreSqlTheaConnection : ITheaConnection
         internal set
         {
             if (value is PostgreSqlTheaConnection theaConnection)
+            {
                 this.connection = theaConnection.connection;
+                this.DbKey = theaConnection.DbKey;
+            }
             else if (value is NpgsqlConnection dbConnection)
                 this.connection = dbConnection;
             else throw new NotSupportedException("不支持的连接类型，只支持PostgreSqlTheaConnection或是NpgsqlConnection类型");
@@ -69,10 +72,7 @@ class PostgreSqlTheaConnection : ITheaConnection
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            this.Interceptor?.ConnectionClosed(this);
-        }
+        this.Interceptor?.ConnectionClosed(this);
         if (!isSuccess) throw exception;
     }
     public async Task CloseAsync()
@@ -92,16 +92,15 @@ class PostgreSqlTheaConnection : ITheaConnection
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            this.Interceptor?.ConnectionClosed(this);
-        }
+        this.Interceptor?.ConnectionClosed(this);
         if (!isSuccess) throw exception;
     }
     public void Open()
     {
         if (this.connection == null || this.State == ConnectionState.Open)
             return;
+        if (this.State == ConnectionState.Broken)
+            this.Close();
 
         bool isSuccess = true;
         Exception exception = null;
@@ -115,10 +114,7 @@ class PostgreSqlTheaConnection : ITheaConnection
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            this.Interceptor?.ConnectionOpened(this);
-        }
+        this.Interceptor?.ConnectionOpened(this);
         if (!isSuccess) throw exception;
     }
     public async Task OpenAsync(CancellationToken cancellationToken = default)
@@ -140,10 +136,7 @@ class PostgreSqlTheaConnection : ITheaConnection
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            this.Interceptor?.ConnectionOpened(this);
-        }
+        this.Interceptor?.ConnectionOpened(this);
         if (!isSuccess) throw exception;
     }
     public ITheaTransaction BeginTransaction() => this.BeginTransaction(IsolationLevel.Unspecified);
@@ -156,7 +149,7 @@ class PostgreSqlTheaConnection : ITheaConnection
         try
         {
             var dbTransaction = this.connection.BeginTransaction(il);
-            transaction = new PostgreSqlTheaTransaction(this.DbKey, this, dbTransaction);
+            transaction = new PostgreSqlTheaTransaction(this, dbTransaction);
         }
         catch (Exception ex)
         {
@@ -184,7 +177,7 @@ class PostgreSqlTheaConnection : ITheaConnection
         try
         {
             var dbTransaction = await this.connection.BeginTransactionAsync(il, cancellationToken);
-            transaction = new PostgreSqlTheaTransaction(this.DbKey, this, dbTransaction);
+            transaction = new PostgreSqlTheaTransaction(this, dbTransaction);
         }
         catch (Exception ex)
         {
@@ -199,12 +192,7 @@ class PostgreSqlTheaConnection : ITheaConnection
             throw exception;
         }
         return transaction;
-    }
-    public ValueTask DisposeAsync()
-    {
-        this.connection.DisposeAsync();
-        return default;
-    }
+    }   
 #else
     public ValueTask<ITheaTransaction> BeginTransactionAsync(IsolationLevel il, CancellationToken cancellationToken = default)
     {
@@ -215,7 +203,7 @@ class PostgreSqlTheaConnection : ITheaConnection
         try
         {
             var dbTransaction = this.connection.BeginTransaction(il, cancellationToken);
-            transaction = new PostgreSqlTheaTransaction(this.DbKey, this, dbTransaction);
+            transaction = new PostgreSqlTheaTransaction(this, dbTransaction);
         }
         catch (Exception ex)
         {
@@ -231,13 +219,6 @@ class PostgreSqlTheaConnection : ITheaConnection
         }
         return ValueTask.FromResult(transaction);
     }
-    public ValueTask DisposeAsync()
-    {
-        this.Interceptor?.ConnectionDisposing(this);
-        this.connection.Dispose();
-        this.Interceptor?.ConnectionDisposed(this);
-        return default;
-    }
 #endif
     public void Dispose()
     {
@@ -245,15 +226,15 @@ class PostgreSqlTheaConnection : ITheaConnection
         this.connection.Dispose();
         this.Interceptor?.ConnectionDisposed(this);
     }
+    public async ValueTask DisposeAsync()
+    {
+        this.Interceptor?.ConnectionDisposing(this);
+        await this.connection.DisposeAsync();
+        this.Interceptor?.ConnectionDisposed(this);
+    }
     IDbCommand IDbConnection.CreateCommand() => this.CreateCommand().DbCommand;
     IDbTransaction IDbConnection.BeginTransaction()
-    {
-        var transaction = this.BeginTransaction();
-        return transaction.DbTransaction;
-    }
+        => this.BeginTransaction().DbTransaction;
     IDbTransaction IDbConnection.BeginTransaction(IsolationLevel il)
-    {
-        var transaction = this.BeginTransaction(il);
-        return transaction.DbTransaction;
-    }
+        => this.BeginTransaction(il).DbTransaction;
 }

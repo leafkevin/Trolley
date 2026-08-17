@@ -317,7 +317,7 @@ public class FromCommand<TEntity, T> : FromCommand, IFromCommand<TEntity, T>
     #region Execute
     public virtual int Execute()
     {
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         command.CommandText = this.Visitor.BuildCommandSql(true, out var dbParameters);
         dbParameters.CopyTo(command.Parameters);
         connection.Open();
@@ -328,7 +328,7 @@ public class FromCommand<TEntity, T> : FromCommand, IFromCommand<TEntity, T>
     }
     public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         command.CommandText = this.Visitor.BuildCommandSql(true, out var dbParameters);
         dbParameters.CopyTo(command.Parameters);
         await connection.OpenAsync(cancellationToken);

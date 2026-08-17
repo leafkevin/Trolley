@@ -77,6 +77,8 @@ class MySqlTheaCommand : ITheaCommand
     }
 
     public void Prepare() => this.command.Prepare();
+    public virtual async Task PrepareAsync(CancellationToken cancellationToken = default)
+        => await this.command.PrepareAsync(cancellationToken);
     public void Cancel() => this.command.Cancel();
     public IDbDataParameter CreateParameter() => this.command.CreateParameter();
     public int ExecuteNonQuery()
@@ -84,7 +86,7 @@ class MySqlTheaCommand : ITheaCommand
         int recordsAffected = 0;
         bool isSuccess = true;
         Exception exception = null;
-        if (!this.OnExecuting(out var evtData)) return 0;
+        if (!this.OnExecuting(out var evtData)) return recordsAffected;
         try
         {
             recordsAffected = this.command.ExecuteNonQuery();
@@ -108,7 +110,7 @@ class MySqlTheaCommand : ITheaCommand
         int recordsAffected = 0;
         bool isSuccess = true;
         Exception exception = null;
-        if (!this.OnExecuting(out var evtData)) return 0;
+        if (!this.OnExecuting(out var evtData)) return recordsAffected;
         try
         {
             recordsAffected = await this.command.ExecuteNonQueryAsync(cancellationToken);
@@ -225,10 +227,7 @@ class MySqlTheaCommand : ITheaCommand
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            this.OnExecuted(isSuccess, evtData, exception);
-        }
+        this.OnExecuted(isSuccess, evtData, exception);
         if (!isSuccess)
         {
             await this.DisposeAsync();
@@ -237,18 +236,19 @@ class MySqlTheaCommand : ITheaCommand
         }
         return result;
     }
-    public virtual async Task PrepareAsync(CancellationToken cancellationToken = default)
-        => await this.command.PrepareAsync(cancellationToken);
     public void Dispose()
     {
+        this.Interceptor?.CommandDisposing(this);
         this.command.Dispose();
+        this.Interceptor?.CommandDisposed(this);
         this.Parameters.Clear();
     }
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        this.command.DisposeAsync();
+        this.Interceptor?.CommandDisposing(this);
+        await this.command.DisposeAsync();
+        this.Interceptor?.CommandDisposed(this);
         this.Parameters.Clear();
-        return default;
     }
     private bool OnExecuting(out object evtData)
     {
@@ -294,7 +294,7 @@ class MySqlTheaCommand : ITheaCommand
             }
             else if (value is MySqlConnection dbConnection)
                 this.connection.DbConnection = value;
-            else throw new NotSupportedException("不支持的连接类型，只支持MySqlTheaConnection类型");
+            else throw new NotSupportedException("不支持的连接类型，只支持MySqlTheaConnection或是MySqlConnection类型");
         }
     }
     IDbTransaction IDbCommand.Transaction
@@ -305,26 +305,16 @@ class MySqlTheaCommand : ITheaCommand
             if (value is MySqlTheaTransaction theaTransaction)
             {
                 this.transaction = theaTransaction;
-                if (!ReferenceEquals(this.connection, theaTransaction.Connection)
-                    && theaTransaction.Connection is MySqlTheaConnection theaConnection)
-                {
+                this.DbKey = theaTransaction.DbKey;
+                if (theaTransaction.Connection is MySqlTheaConnection theaConnection)
                     this.connection = theaConnection;
-                    this.DbKey = theaConnection.DbKey;
-                }
             }
             else if (value is MySqlTransaction dbTransaction)
                 this.transaction.DbTransaction = dbTransaction;
-            else throw new NotSupportedException("不支持的连接类型，只支持MySqlTheaConnection类型");
+            else throw new NotSupportedException("不支持的事务类型，只支持MySqlTheaTransaction或是MySqlTransaction类型");
         }
     }
-    IDataReader IDbCommand.ExecuteReader()
-    {
-        var reader = this.ExecuteReader();
-        return reader.DbDataReader;
-    }
+    IDataReader IDbCommand.ExecuteReader() => this.ExecuteReader().DbDataReader;
     IDataReader IDbCommand.ExecuteReader(CommandBehavior behavior)
-    {
-        var reader = this.ExecuteReader(behavior);
-        return reader.DbDataReader;
-    }
+        => this.ExecuteReader(behavior).DbDataReader;
 }

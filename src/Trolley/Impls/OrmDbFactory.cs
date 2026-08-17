@@ -139,12 +139,13 @@ public sealed class OrmDbFactory : IOrmDbFactory
             dbKey = this.defaultDatabase.DbKey;
         }
         var database = this.GetDatabase(dbKey);
+        var defaultSchema = database.OrmProvider.GetDefaultSchema(database.ConnectionStrings.First());
         var dbContext = new DbContext
         {
             DbKey = dbKey,
             Database = database,
             //mysql默认Schema是数据库名，暂时此处为null,pgsql的默认Schema是public，sqlserver的默认Schema是dbo
-            DefaultTableSchema = database.OrmProvider.DefaultTableSchema,
+            DefaultTableSchema = defaultSchema,
             Interceptor = this.interceptor,
             Options = this.Options.Clone() as OrmDbFactoryOptions
         };

@@ -62,4 +62,6 @@ public interface IDbInterceptor
     DbTransactionExecutingEventArgs TransactionRollingBack(ITheaTransaction transaction);
     void TransactionRolledBack(DbTransactionCompletedEventArgs eventArgs);
     void TransactionFailed(DbTransactionCompletedEventArgs eventArgs);
+    void TransactionDisposing(ITheaTransaction transaction);
+    void TransactionDisposed(ITheaTransaction transaction);
 }

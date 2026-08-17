@@ -127,7 +127,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
     public virtual int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.Bulk:
@@ -198,7 +198,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
     public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.Bulk:
@@ -282,7 +282,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         var sql = this.Visitor.BuildSql(command,  out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();

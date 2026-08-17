@@ -11,6 +11,7 @@ class PostgreSqlTheaDataReader : ITheaDataReader
 {
     private readonly NpgsqlDataReader reader;
 
+    public string ReaderId { get; private set; }
     public int Depth => this.reader.Depth;
     public bool IsClosed => this.reader.IsClosed;
     public int RecordsAffected => this.reader.RecordsAffected;
@@ -22,28 +23,36 @@ class PostgreSqlTheaDataReader : ITheaDataReader
     public IDataReader DbDataReader => this.reader;
     public IDbInterceptor Interceptor { get; set; }
 
-    public PostgreSqlTheaDataReader(NpgsqlDataReader reader) => this.reader = reader;
+    public PostgreSqlTheaDataReader(NpgsqlDataReader reader)
+    {
+        this.ReaderId = Guid.NewGuid().ToString("N");
+        this.reader = reader;
+    }
 
-    public void Close() => this.reader.Close();
-    public Task CloseAsync()
+    public void Close()
     {
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        return this.reader.CloseAsync();
-#else
+        this.Interceptor?.DataReaderClosing(this);
         this.reader.Close();
-        return Task.CompletedTask;
-#endif
+        this.Interceptor?.DataReaderClosed(this);
     }
-    public void Dispose() => this.reader.Dispose();
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-    public ValueTask DisposeAsync() => this.reader.DisposeAsync();
-#else
-    public ValueTask DisposeAsync()
+    public async Task CloseAsync()
     {
-        this.reader.Dispose();
-        return default;
+        this.Interceptor?.DataReaderClosing(this);
+        await this.reader.CloseAsync();
+        this.Interceptor?.DataReaderClosed(this);
     }
-#endif
+    public void Dispose()
+    {
+        this.Interceptor?.DataReaderDisposing(this);
+        this.reader.Dispose();
+        this.Interceptor?.DataReaderDisposed(this);
+    }
+    public async ValueTask DisposeAsync()
+    {
+        this.Interceptor?.DataReaderDisposing(this);
+        await this.reader.DisposeAsync();
+        this.Interceptor?.DataReaderDisposed(this);
+    }
     public bool Read() => this.reader.Read();
     public Task<bool> ReadAsync(CancellationToken cancellationToken = default)
         => this.reader.ReadAsync(cancellationToken);
