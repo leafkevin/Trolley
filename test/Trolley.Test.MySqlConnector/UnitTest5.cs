@@ -35,7 +35,9 @@ public class UnitTest5 : UnitTestBase
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create();
-        using var reader = await repository.QueryMultipleAsync(f => f
+        using var reader = await repository.QueryMultipleAsync(f =>
+        {
+            f
             .QueryById<User>(new { Id = 1 })
             .Exists<Order>(f => f.BuyerId.IsNull())
             .From<Order>()
@@ -62,7 +64,8 @@ public class UnitTest5 : UnitTestBase
                 .First()
              .From<Brand>()
                 .Include(f => f.Products)
-                .ToList());
+                .ToList();
+        });
         var sql = reader.ToSql(out var dbParameters);
         var userInfo = await reader.ReadFirstAsync<User>();
         var isExists = await reader.ReadFirstAsync<bool>();

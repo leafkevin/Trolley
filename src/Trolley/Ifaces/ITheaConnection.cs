@@ -14,6 +14,7 @@ public interface ITheaConnection : IDbConnection, IAsyncDisposable
 
     string ServerVersion { get; }
 
+    new ITheaCommand CreateCommand();
     Task OpenAsync(CancellationToken cancellationToken = default);
     Task CloseAsync();
     new ITheaTransaction BeginTransaction();

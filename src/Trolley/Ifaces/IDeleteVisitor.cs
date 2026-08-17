@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-public interface IDeleteVisitor : ICommandVisitor, ICommandVisitor, IDisposable
+public interface IDeleteVisitor : ICommandVisitor, IDisposable
 {
     DbContext DbContext { get; }
     IOrmProvider OrmProvider { get; }

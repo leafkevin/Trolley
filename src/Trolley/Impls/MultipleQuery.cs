@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Trolley;
 
-public class MultipleQuery : DialectProvider, IMultipleQuery, ICommandVisitor
+public class MultipleQuery : DialectProvider, IMultipleQuery
 {
     #region Fields
     protected StringBuilder sqlBuilder = new();
@@ -17,6 +17,7 @@ public class MultipleQuery : DialectProvider, IMultipleQuery, ICommandVisitor
     public ITheaCommand Command { get; set; }
     public IDataParameterCollection DbParameters { get; set; }
     public List<ReaderAfter> ReaderAfters { get; private set; }
+    public bool IsNeedClose { get; private set; }
     #endregion
 
     #region Constructor
@@ -24,7 +25,9 @@ public class MultipleQuery : DialectProvider, IMultipleQuery, ICommandVisitor
     {
         this.DbContext = dbContext;
         this.ReaderAfters = new();
-        this.Command = dbContext.OrmProvider.CreateCommand();
+        (this.IsNeedClose, var connection, var command) = this.UseSlaveCommand();
+        this.DbContext.Connection = connection;
+        this.Command = command;
         this.DbParameters = this.Command.Parameters;
     }
     #endregion

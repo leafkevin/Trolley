@@ -2,7 +2,7 @@
 
 namespace Trolley;
 
-public class OrmDbFactoryOptions
+public class OrmDbFactoryOptions : ICloneable
 {
     /// <summary>
     /// 获取或设置命令超时时间，单位是秒，默认是30秒
@@ -29,15 +29,5 @@ public class OrmDbFactoryOptions
     /// </summary>
     public DateTimeKind DefaultDateTimeKind { get; set; } = DateTimeKind.Local;
 
-    internal void CopyTo(OrmDbFactoryOptions target)
-    {
-        if (target == null) throw new ArgumentNullException(nameof(target));
-
-        this.CommandTimeout = target.CommandTimeout;
-        this.UserParameterPrefix = target.UserParameterPrefix;
-        this.IsConstantParameterized = target.IsConstantParameterized;
-        this.IsAutoMapJsonTypeHandler = target.IsAutoMapJsonTypeHandler;
-        this.DefaultEnumMapDbType = target.DefaultEnumMapDbType;
-        this.DefaultDateTimeKind = target.DefaultDateTimeKind;
-    }
+    public object Clone() => this.MemberwiseClone();
 }

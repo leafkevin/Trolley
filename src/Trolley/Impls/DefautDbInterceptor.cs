@@ -21,6 +21,15 @@ public class DefautDbInterceptor : IDbInterceptor
         => new DbCommandExecutingEventArgs { IsCanExecuting = true, Command = command, EventData = DateTime.UtcNow };
     public virtual void CommandExecuted(DbCommandCompletedEventArgs eventArgs) { }
     public virtual void CommandFailed(DbCommandCompletedEventArgs eventArgs) { }
+    public virtual void CommandDisposing(ITheaCommand command) { }
+    public virtual void CommandDisposed(ITheaCommand command) { }
+
+    public void DataReaderCreating(ITheaCommand command) { }
+    public ITheaDataReader DataReaderCreated(ITheaDataReader reader) => reader;
+    public void DataReaderClosing(ITheaDataReader reader) { }
+    public void DataReaderClosed(ITheaDataReader reader) { }
+    public void DataReaderDisposing(ITheaDataReader reader) { }
+    public void DataReaderDisposed(ITheaDataReader reader) { }
 
     public virtual void TransactionCreating(ITheaConnection connection) { }
     public virtual ITheaTransaction TransactionCreated(ITheaTransaction transaction) => transaction;

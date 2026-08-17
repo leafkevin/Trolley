@@ -43,7 +43,7 @@ public class DialectProvider
         if (commandVisitor == null)
         {
             this.interceptor?.CommandCreating(connection);
-            command = this.ormProvider.CreateCommand();
+            command = connection.CreateCommand();
             this.interceptor?.CommandCreated(command);
         }
         else command = commandVisitor.Command;
@@ -70,7 +70,7 @@ public class DialectProvider
         if (commandContext == null)
         {
             this.interceptor?.CommandCreating(connection);
-            command = this.ormProvider.CreateCommand();
+            command = connection.CreateCommand();
             this.interceptor?.CommandCreated(command);
         }
         else command = commandContext.Command;
@@ -397,8 +397,8 @@ public class DialectProvider
     public async Task<List<TTarget>> QuerySimpleAsync<TTarget>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, List<ReaderField> readerFields, CancellationToken cancellationToken = default)
     {
         var entityType = typeof(TTarget);
-        await  connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken); 
+        await connection.OpenAsync(cancellationToken);
+        var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
         var deserializer = reader.GetReaderDeserializer(entityType, this.DbContext, readerFields);
         var result = new List<TTarget>();
         while (await reader.ReadAsync(cancellationToken))
@@ -954,7 +954,7 @@ public class DialectProvider
         if (this.interceptor != null)
             command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
-    }  
+    }
     public (bool, ITheaConnection, ITheaCommand, Action<IDataParameterCollection, StringBuilder, DbContext, object, string>)
         CreateUpdateBulkCommand(Type entityType, IEnumerable updateObjs, int bulkCount)
     {

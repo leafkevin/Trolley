@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Trolley;
 
-public interface ICreateVisitor : ICommandVisitor, ICommandVisitor, IDisposable
+public interface ICreateVisitor : ICommandVisitor, IDisposable
 {
     DbContext DbContext { get; }
     IOrmProvider OrmProvider { get; }

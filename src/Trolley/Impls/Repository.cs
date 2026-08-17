@@ -438,7 +438,7 @@ public class Repository : DialectProvider, IRepository
 
         using var multiQuery = this.ormProvider.NewMultipleQuery(this.DbContext);
         subQueries.Invoke(multiQuery);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(multiQuery);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand( );
         command.CommandText = multiQuery.BuildSql(out var readerAfters);
         connection.Open();
         var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);

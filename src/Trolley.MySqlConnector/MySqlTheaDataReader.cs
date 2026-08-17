@@ -11,6 +11,7 @@ class MySqlTheaDataReader : ITheaDataReader
 {
     private readonly MySqlDataReader reader;
 
+    public string ReaderId { get; private set; }
     public int Depth => this.reader.Depth;
     public bool IsClosed => this.reader.IsClosed;
     public int RecordsAffected => this.reader.RecordsAffected;
@@ -22,28 +23,44 @@ class MySqlTheaDataReader : ITheaDataReader
     public IDataReader DbDataReader => this.reader;
     public IDbInterceptor Interceptor { get; set; }
 
-
-    public MySqlTheaDataReader(MySqlDataReader reader) => this.reader = reader;
+    public MySqlTheaDataReader(MySqlDataReader reader)
+    {
+        this.reader = reader;
+    }
 
     public void Close()
     {
-        this.In
+        this.Interceptor?.DataReaderClosing(this);
         this.reader.Close();
+        this.Interceptor?.DataReaderClosed(this);
     }
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+    public async Task CloseAsync()
+    {
+        this.Interceptor?.DataReaderClosing(this);
+        await this.reader.CloseAsync();
+        this.Interceptor?.DataReaderClosed(this);
+    }
+#else
     public Task CloseAsync()
     {
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        return this.reader.CloseAsync();
-#else
+        this.Interceptor?.DataReaderClosing(this);
         this.reader.Close();
+        this.Interceptor?.DataReaderClosed(this);
         return Task.CompletedTask;
-#endif
     }
-    public void Dispose() => this.reader.Dispose();
-    public ValueTask DisposeAsync()
+#endif
+    public void Dispose()
     {
-        this.reader.DisposeAsync();
-        return default;
+        this.Interceptor?.DataReaderDisposing(this);
+        this.reader.Dispose();
+        this.Interceptor?.DataReaderDisposed(this);
+    }
+    public async ValueTask DisposeAsync()
+    {
+        this.Interceptor?.DataReaderDisposing(this);
+        await this.reader.DisposeAsync();
+        this.Interceptor?.DataReaderDisposed(this);
     }
     public bool Read() => this.reader.Read();
     public Task<bool> ReadAsync(CancellationToken cancellationToken = default)

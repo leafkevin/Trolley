@@ -145,9 +145,9 @@ public sealed class OrmDbFactory : IOrmDbFactory
             Database = database,
             //mysql默认Schema是数据库名，暂时此处为null,pgsql的默认Schema是public，sqlserver的默认Schema是dbo
             DefaultTableSchema = database.OrmProvider.DefaultTableSchema,
-            Interceptor = this.interceptor
+            Interceptor = this.interceptor,
+            Options = this.Options.Clone() as OrmDbFactoryOptions
         };
-        this.options.CopyTo(dbContext.Options);
         return database.OrmProvider.CreateRepository(dbContext);
     }
     public void Build()

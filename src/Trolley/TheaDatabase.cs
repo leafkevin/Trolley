@@ -4,7 +4,7 @@ using System.Threading;
 
 namespace Trolley;
 
-public class TheaDatabase
+public sealed class TheaDatabase
 {
     private int masterRoundRobin;
     private int slaveRoundRobin;
