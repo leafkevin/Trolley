@@ -70,7 +70,7 @@ partial class BaseOrmProvider
     //public virtual IGroupingCommand<T1, T2, T3, T4, T5, TGrouping> NewGroupCommand<T1, T2, T3, T4, T5, TGrouping>(DbContext dbContext, IQueryVisitor visitor) => new GroupingCommand<T1, T2, T3, T4, T5, TGrouping>(dbContext, visitor);
     //public virtual IGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> NewGroupCommand<T1, T2, T3, T4, T5, T6, TGrouping>(DbContext dbContext, IQueryVisitor visitor) => new GroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping>(dbContext, visitor);
 
-    public virtual IMultipleQuery NewMultipleQuery(DbContext dbContext) => new MultipleQuery(dbContext);
+    public virtual IMultipleQuery NewMultipleQuery(DbContext dbContext, ITheaCommand command) => new MultipleQuery(dbContext, command);
 
     public virtual IMultiQuery<T> NewMultiQuery<T>(IMultipleQuery multiQuery, IQueryVisitor visitor) => new MultiQuery<T>(multiQuery, visitor);
     public virtual IMultiQuery<T1, T2> NewMultiQuery<T1, T2>(IMultipleQuery multiQuery, IQueryVisitor visitor) => new MultiQuery<T1, T2>(multiQuery, visitor);

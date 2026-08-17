@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
+public interface IQueryVisitor : ICloneable, IDisposable
 {
     DbContext DbContext { get; }
     IOrmProvider OrmProvider { get; }
@@ -16,6 +16,9 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     List<TableSegment> Tables { get; set; }
     ITableShardingProvider ShardingProvider { get; }
 
+    ITheaConnection Connection { get; set; }
+    ITheaCommand Command { get; set; }
+    IDataParameterCollection DbParameters { get; set; }
     /// <summary>
     /// IncludeMany表，第二次执行时的参数列表，通常是Filter中使用的参数
     /// </summary>
@@ -55,6 +58,7 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     string ShardingTableJointMark { get; set; }
     bool IsNeedPaging { get; set; }
 
+    (bool, ITheaConnection, ITheaCommand) UseCommand();
     string BuildSql(bool isBuildCteSql, out List<ReaderField> readerFields);
     string BuildCommandSql(Type entityType, out IDataParameterCollection dbParameters);
     string BuildShardingSql(string formatSql);
@@ -88,8 +92,8 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     bool ThenInclude(Expression memberSelector, Expression filter = null);
     bool HasIncludeTables();
     bool BuildIncludeSql(Type targetType, object target, bool isMultiResult, out string sql);
-    void SetIncludeValues(Type targetType, object target, IDataReader reader, bool isMultiResult);
-    Task SetIncludeValuesAsync(Type targetType, object target, IDataReader reader, bool isMultiResult, CancellationToken cancellationToken);
+    void SetIncludeValues(Type targetType, object target, ITheaDataReader reader, bool isMultiResult);
+    Task SetIncludeValuesAsync(Type targetType, object target, ITheaDataReader reader, bool isMultiResult, CancellationToken cancellationToken);
 
     void AndBy(object whereObj);
     void AndById(object whereKey);

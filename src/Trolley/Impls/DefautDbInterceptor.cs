@@ -40,4 +40,6 @@ public class DefautDbInterceptor : IDbInterceptor
         => new DbTransactionExecutingEventArgs { EventData = DateTime.UtcNow, Transaction = transaction };
     public virtual void TransactionRolledBack(DbTransactionCompletedEventArgs eventArgs) { }
     public virtual void TransactionFailed(DbTransactionCompletedEventArgs eventArgs) { }
+    public virtual void TransactionDisposing(ITheaTransaction transaction) { }
+    public virtual void TransactionDisposed(ITheaTransaction transaction) { }
 }

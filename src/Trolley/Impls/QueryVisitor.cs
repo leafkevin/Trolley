@@ -26,6 +26,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     protected string HavingSql { get; set; }
     protected bool IsDistinct { get; set; }
 
+
     public List<ReaderField> IncludeReaderFields { get; set; }
     public TableSegment LastIncludeSegment { get; set; }
     public List<ReaderField> GroupByFields { get; set; }
@@ -41,9 +42,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.DbContext = dbContext;
         this.TableAliasStart = tableAliasStart;
         this.Command = command;
-        this.DbParameters = this.Command?.Parameters;
+        if (command != null)
+        {
+            this.Connection = command.Connection;
+            this.DbParameters = this.Command.Parameters;
+        }
         this.IsNeedTableAlias = true;
-    }
+    }  
     public virtual string BuildSql(bool isBuildCteSql, out List<ReaderField> readerFields)
     {
         var builder = new StringBuilder();
@@ -250,7 +255,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
         }
 
-        if (this.IsManyShardingTables && (hasGroupBy || hasOrderBy || this.offset.HasValue || this.limit.HasValue) )
+        if (this.IsManyShardingTables && (hasGroupBy || hasOrderBy || this.offset.HasValue || this.limit.HasValue))
             this.IsNeedChangeUnionShardingTables = true;
 
         //UNION的子查询中有OrderBy/Offset/Limit，就需要包装一下SELECT * FROM，否则数据结果不正确

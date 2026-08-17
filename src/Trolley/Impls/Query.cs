@@ -148,8 +148,7 @@ public class QueryBase : QueryInternal, IQueryBase
     {
         this.Visitor.SelectRaw(typeof(int), "1");
         this.Visitor.Take(1);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor);
-        command.CommandText = this.BuildScalarSql(this.Visitor);
+        this.Visitor.Command.CommandText = this.BuildScalarSql(this.Visitor);
         return this.Exists(isNeedClose, connection, command);
     }
     public virtual async Task<bool> ExistsAsync(CancellationToken cancellationToken = default)

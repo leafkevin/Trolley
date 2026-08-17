@@ -19,6 +19,9 @@ public interface IUpdateVisitor : ICommandVisitor, IDisposable
     ActionMode ActionMode { get; set; }
     List<TableSegment> ShardingTables { get; set; }
 
+
+    (bool, ITheaConnection, ITheaCommand) UseCommand();
+
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>, Action<IDataParameterCollection,
         StringBuilder, DbContext, string, object, string>, List<ReaderField>) BuildSetBulk(ITheaCommand command);
 

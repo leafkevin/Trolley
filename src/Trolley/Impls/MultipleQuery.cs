@@ -21,11 +21,10 @@ public class MultipleQuery : DialectProvider, IMultipleQuery
     #endregion
 
     #region Constructor
-    public MultipleQuery(DbContext dbContext)
+    public MultipleQuery(DbContext dbContext, ITheaCommand command)
     {
         this.DbContext = dbContext;
         this.ReaderAfters = new();
-        (this.IsNeedClose, var connection, var command) = this.UseSlaveCommand();
         this.DbContext.Connection = connection;
         this.Command = command;
         this.DbParameters = this.Command.Parameters;

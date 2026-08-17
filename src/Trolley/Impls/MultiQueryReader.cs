@@ -16,6 +16,7 @@ class MultiQueryReader : IMultiQueryReader
     private ITheaCommand command;
     private ITheaDataReader reader;
     private List<ReaderAfter> readerAfters;
+    private IDbInterceptor interceptor;
 
     private int readerIndex = 0;
     private List<NextReaderAfter> nextAfters;
@@ -27,6 +28,7 @@ class MultiQueryReader : IMultiQueryReader
         this.reader = reader;
         this.readerAfters = readerAfters;
         this.isNeedClose = isNeedClose;
+        this.interceptor = dbContext.Interceptor;
     }
     public T ReadFirst<T>()
     {
@@ -34,28 +36,53 @@ class MultiQueryReader : IMultiQueryReader
         if (this.reader.Read())
         {
             var readerAfter = this.readerAfters[this.readerIndex];
-            if (readerAfter.ResultType == ReaderResultType.Value)
-            {
-                object readerValue = this.reader.GetValue(0);
-                if (readerAfter.IsExists)
-                    readerValue = readerValue != null && readerValue is not DBNull;
-                else this.reader.ToValue<T>(this.dbContext);
-                result = (T)readerValue;
-            }
-            else
-            {
-                var deserializer = reader.GetReaderDeserializer(readerAfter.TargetType, this.dbContext, readerAfter.Visitor.ReaderFields);
-                result = (T)deserializer.Invoke(this.reader);
-            }
+            result = this.ReadValue<T>(readerAfter);
             this.NextReader(readerAfter, result);
         }
         else this.NextReader();
+        return result;
+    }
+    public async Task<T> ReadFirstAsync<T>(CancellationToken cancellationToken = default)
+    {
+        T result = default;
+        if (await this.reader.ReadAsync(cancellationToken))
+        {
+            var readerAfter = this.readerAfters[this.readerIndex];
+            result = this.ReadValue<T>(readerAfter);
+            await this.NextReaderAsync(readerAfter, result, cancellationToken);
+        }
+        else await this.NextReaderAsync(cancellationToken);
+        return result;
+    }
+    private TTarget ReadValue<TTarget>(ReaderAfter readerAfter)
+    {
+        TTarget result = default;
+        if (readerAfter.ResultType == ReaderResultType.Value)
+        {
+            object readerValue = this.reader.GetValue(0);
+            if (readerAfter.IsExists)
+                readerValue = readerValue != null && readerValue is not DBNull;
+            else this.reader.ToValue<TTarget>(this.dbContext);
+            result = (TTarget)readerValue;
+        }
+        else
+        {
+            var readerFields = readerAfter.Visitor.ReaderFields;
+            var deserializer = reader.GetReaderDeserializer(readerAfter.TargetType, this.dbContext, readerFields);
+            result = (TTarget)deserializer.Invoke(this.reader, readerFields);
+        }
         return result;
     }
     public List<T> Read<T>()
     {
         var result = new List<T>();
         this.ReadList(result, false);
+        return result;
+    }
+    public async Task<List<T>> ReadAsync<T>(CancellationToken cancellationToken = default)
+    {
+        var result = new List<T>();
+        await this.ReadListAsync(result, false, cancellationToken);
         return result;
     }
     public IPagedList<T> ReadPageList<T>()
@@ -65,7 +92,7 @@ class MultiQueryReader : IMultiQueryReader
             totalCount = reader.GetFieldValue<int>(0);
         this.reader.NextResult();
         var dataList = new List<T>();
-        (var pageNumber, var pageSize) = this.ReadList<T>(dataList, true);
+        (var pageNumber, var pageSize) = this.ReadList(dataList, true);
         return new PagedList<T>
         {
             Data = dataList,
@@ -74,36 +101,6 @@ class MultiQueryReader : IMultiQueryReader
             PageNumber = pageNumber,
             PageSize = pageSize
         };
-    }
-    public async Task<T> ReadFirstAsync<T>(CancellationToken cancellationToken = default)
-    {
-        T result = default;
-        if (await this.reader.ReadAsync(cancellationToken))
-        {
-            var readerAfter = this.readerAfters[this.readerIndex];
-            if (readerAfter.ResultType == ReaderResultType.Value)
-            {
-                object readerValue = this.reader.GetValue(0);
-                if (readerAfter.IsExists)
-                    readerValue = readerValue != null && readerValue is not DBNull;
-                else this.reader.ToValue<T>(this.dbContext);
-                result = (T)readerValue;
-            }
-            else
-            {
-                var deserializer = reader.GetReaderDeserializer(readerAfter.TargetType, this.dbContext, readerAfter.Visitor.ReaderFields);
-                result = (T)deserializer.Invoke(this.reader);
-            }
-            await this.NextReaderAsync(readerAfter, result, cancellationToken);
-        }
-        else await this.NextReaderAsync(cancellationToken);
-        return result;
-    }
-    public async Task<List<T>> ReadAsync<T>(CancellationToken cancellationToken = default)
-    {
-        var result = new List<T>();
-        await this.ReadListAsync(result, false, cancellationToken);
-        return result;
     }
     public async Task<IPagedList<T>> ReadPageListAsync<T>(CancellationToken cancellationToken = default)
     {
@@ -135,10 +132,11 @@ class MultiQueryReader : IMultiQueryReader
         int pageIndex = 0;
         int pageSize = 0;
         var readerAfter = this.readerAfters[this.readerIndex];
-        var deserializer = reader.GetReaderDeserializer(readerAfter.TargetType, this.dbContext, readerAfter.Visitor.ReaderFields);
+        var readerFields = readerAfter.Visitor.ReaderFields;
+        var deserializer = reader.GetReaderDeserializer(readerAfter.TargetType, this.dbContext, readerFields);
 
         while (this.reader.Read())
-            dataList.Add((T)deserializer.Invoke(this.reader));
+            dataList.Add((T)deserializer.Invoke(this.reader, readerFields));
         if (isPaged)
         {
             pageIndex = readerAfter.Visitor.PageNumber;
@@ -152,7 +150,8 @@ class MultiQueryReader : IMultiQueryReader
         int pageIndex = 0;
         int pageSize = 0;
         var readerAfter = this.readerAfters[this.readerIndex];
-        var deserializer = reader.GetReaderDeserializer(readerAfter.TargetType, this.dbContext, readerAfter.Visitor.ReaderFields);
+        var readerFields = readerAfter.Visitor.ReaderFields;
+        var deserializer = reader.GetReaderDeserializer(readerAfter.TargetType, this.dbContext, readerFields);
 
         var index = 0;
         while (index < this.reader.FieldCount)
@@ -161,7 +160,7 @@ class MultiQueryReader : IMultiQueryReader
             this.reader.GetValue(index);
         }
         while (await this.reader.ReadAsync(cancellationToken))
-            dataList.Add((T)deserializer.Invoke(this.reader));
+            dataList.Add((T)deserializer.Invoke(this.reader, readerFields));
         if (isPaged)
         {
             pageIndex = readerAfter.Visitor.PageNumber;
@@ -247,11 +246,12 @@ class MultiQueryReader : IMultiQueryReader
                 }
                 //先关闭reader，才能继续查询
                 this.reader.Dispose();
-
                 this.command.CommandText = builder.ToString();
+                this.interceptor?.CommandInitialized(this.command);
+
                 this.command.Parameters.Clear();
                 visitor.NextDbParameters.CopyTo(this.command.Parameters);
-                using var includeReader = command.ExecuteReader(CommandSqlType.Select, CommandBehavior.SequentialAccess);
+                using var includeReader = command.ExecuteReader(CommandBehavior.SequentialAccess);
                 foreach (var nextAfter in this.nextAfters)
                 {
                     nextAfter.Visitor.SetIncludeValues(nextAfter.TargetType, nextAfter.Target, includeReader, nextAfter.ResultType == ReaderResultType.List);
@@ -298,12 +298,13 @@ class MultiQueryReader : IMultiQueryReader
                 }
                 //先关闭reader，才能继续查询
                 await this.reader.DisposeAsync();
-
                 this.command.CommandText = builder.ToString();
+                this.interceptor?.CommandInitialized(this.command);
+
                 this.command.Parameters.Clear();
                 visitor.NextDbParameters.CopyTo(this.command.Parameters);
 
-                using var includeReader = await this.command.ExecuteReaderAsync(CommandSqlType.Select, CommandBehavior.SequentialAccess, cancellationToken);
+                using var includeReader = await this.command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
                 foreach (var nextAfter in this.nextAfters)
                 {
                     nextAfter.Visitor.SetIncludeValues(nextAfter.TargetType, nextAfter.Target, includeReader, nextAfter.ResultType == ReaderResultType.List);

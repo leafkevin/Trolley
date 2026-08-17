@@ -15,7 +15,7 @@ public enum OperationType
     And,
     Or
 }
-public class SqlVisitor : ISqlVisitor, ICommandVisitor
+public class SqlVisitor : ISqlVisitor
 {
     private bool isDisposed;
 
@@ -28,6 +28,7 @@ public class SqlVisitor : ISqlVisitor, ICommandVisitor
     public bool IsConstantParameterized => this.DbContext.Options.IsConstantParameterized;
     public string UserParameterPrefix => this.DbContext.Options.UserParameterPrefix;
 
+    public ITheaConnection Connection { get; set; }
     public ITheaCommand Command { get; set; }
     public IDataParameterCollection DbParameters { get; set; }
     public IDataParameterCollection NextDbParameters { get; set; }
@@ -92,6 +93,12 @@ public class SqlVisitor : ISqlVisitor, ICommandVisitor
     public string HeadRawSql { get; set; }
     public string TailRawSql { get; set; }
 
+
+    public (bool, ITheaConnection, ITheaCommand) UseCommand()
+    {
+        var isNeedClose = this.DbContext.Transaction == null;
+        return (isNeedClose, this.Connection, this.Command);
+    }
     public void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames)
     {
         if (tableNames == null || tableNames.Length == 0)

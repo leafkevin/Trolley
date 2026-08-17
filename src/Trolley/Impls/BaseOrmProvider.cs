@@ -2328,8 +2328,8 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                     {
                         var builder = new StringBuilder();
-                        var elementSegment = visitor.Visit(new SqlSegment { Expression = args[0] });
-                        var targetSegment = visitor.Visit(new SqlSegment { Expression = target });
+                        var elementSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                        var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
 
                         var enumerable = targetSegment.Value as IEnumerable;
                         foreach (var item in enumerable)
@@ -2341,7 +2341,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         }
                         if (builder.Length > 0)
                         {
-                            string elementArgument = visitor.GetQuotedValue(elementSegment);
+                            string elementArgument = visitor.WrapSql(elementSegment);
                             var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
                             return elementSegment.Merge(targetSegment, $"{elementArgument} {notString}IN ({builder})");
                         }
@@ -2368,13 +2368,4 @@ public abstract partial class BaseOrmProvider : IOrmProvider
         return result;
     }
     public abstract bool TryGetMathMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
-    public (string, string) GetFullTableName(string tableName)
-    {
-        if (tableName.Contains('.'))
-        {
-            var myTableNames = tableName.Split('.');
-            return (myTableNames[0], myTableNames[1]);
-        }
-        return (this.DefaultTableSchema, tableName);
-    }
 }

@@ -21,7 +21,6 @@ public interface IOrmProvider
     OrmProviderType OrmProviderType { get; }
     string ParameterPrefix { get; }
     Type NativeDbTypeType { get; }
-    string DefaultTableSchema { get; }
     ICollection<ITypeHandler> TypeHandlers { get; }
     string GetDefaultSchema(string connectionString);
     ITheaConnection CreateConnection(string dbKey, string connectionString);
@@ -95,7 +94,7 @@ public interface IOrmProvider
     //IGroupingCommand<T1, T2, T3, T4, T5, TGrouping> NewGroupCommand<T1, T2, T3, T4, T5, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
     //IGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> NewGroupCommand<T1, T2, T3, T4, T5, T6, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
 
-    IMultipleQuery NewMultipleQuery(DbContext dbContext);
+    IMultipleQuery NewMultipleQuery(DbContext dbContext, ITheaCommand command);
 
     IMultiQuery<T> NewMultiQuery<T>(IMultipleQuery multiQuery, IQueryVisitor visitor);
     IMultiQuery<T1, T2> NewMultiQuery<T1, T2>(IMultipleQuery multiQuery, IQueryVisitor visitor);

@@ -197,7 +197,7 @@ public class Deleted : DialectProvider, IDeleted
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (_, _, var command) = this.UseMasterCommand(this.Visitor);
+        (_, _, var command) = this.UseMasterCommand(this.Visitor.Command);
         var sql = this.Visitor.BuildSql(command, out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
@@ -397,7 +397,7 @@ public class ResultDeleted<TResult> : DialectProvider, IBulkResultCommand<TResul
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (_, _, var command) = this.UseMasterCommand(this.Visitor);
+        (_, _, var command) = this.UseMasterCommand(this.Visitor.Command);
         var sql = this.Visitor.BuildSql(command, out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();

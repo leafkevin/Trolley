@@ -111,7 +111,7 @@ public class Repository : DialectProvider, IRepository
     #region FromQuery
     public virtual IQuery<T> FromQuery<T>(IQuery<T> subQuery)
     {
-        var visitor = this.CreateQueryVisitor('a', subQuery.Visitor);
+        var visitor = this.CreateQueryVisitor('a', subQuery.Visitor.Command);
         visitor.UseQuery(typeof(T), subQuery, true);
         return this.ormProvider.NewQuery<T>(this.DbContext, visitor);
     }
@@ -301,6 +301,43 @@ public class Repository : DialectProvider, IRepository
     }
     #endregion
 
+    #region QueryMultiple
+    public virtual IMultiQueryReader QueryMultiple(Action<IMultipleQuery> subQueries)
+    {
+        if (subQueries == null)
+            throw new ArgumentNullException(nameof(subQueries));
+
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        using var multiQuery = this.ormProvider.NewMultipleQuery(this.DbContext, command);
+        subQueries.Invoke(multiQuery);
+        command.CommandText = multiQuery.BuildSql(out var readerAfters);
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
+
+        connection.Open();
+        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+        //多语句查询，在最后reader读取后，自动关闭
+        return new MultiQueryReader(this.DbContext, connection, command, reader, readerAfters, isNeedClose);
+    }
+    public virtual async Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default)
+    {
+        if (subQueries == null)
+            throw new ArgumentNullException(nameof(subQueries));
+
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        using var multiQuery = this.ormProvider.NewMultipleQuery(this.DbContext, command);
+        subQueries.Invoke(multiQuery);
+        command.CommandText = multiQuery.BuildSql(out var readerAfters);
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
+
+        await connection.OpenAsync(cancellationToken);
+        var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
+        //多语句查询，在最后reader读取后，自动关闭
+        return new MultiQueryReader(this.DbContext, connection, command, reader, readerAfters, isNeedClose);
+    }
+    #endregion
+
     #region Create
     public virtual ICreate Create(Type entityType) => this.ormProvider.NewCreate(entityType, this.DbContext);
     public virtual ICreate<TEntity> Create<TEntity>() => this.ormProvider.NewCreate<TEntity>(this.DbContext);
@@ -430,37 +467,6 @@ public class Repository : DialectProvider, IRepository
     }
     #endregion
 
-    #region QueryMultiple
-    public virtual IMultiQueryReader QueryMultiple(Action<IMultipleQuery> subQueries)
-    {
-        if (subQueries == null)
-            throw new ArgumentNullException(nameof(subQueries));
-
-        using var multiQuery = this.ormProvider.NewMultipleQuery(this.DbContext);
-        subQueries.Invoke(multiQuery);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand( );
-        command.CommandText = multiQuery.BuildSql(out var readerAfters);
-        connection.Open();
-        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-        //多语句查询，在最后reader读取后，自动关闭
-        return new MultiQueryReader(this.DbContext, connection, command, reader, readerAfters, isNeedClose);
-    }
-    public virtual async Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default)
-    {
-        if (subQueries == null)
-            throw new ArgumentNullException(nameof(subQueries));
-
-        using var multiQuery = this.ormProvider.NewMultipleQuery(this.DbContext);
-        subQueries.Invoke(multiQuery);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(multiQuery);
-        command.CommandText = multiQuery.BuildSql(out var readerAfters);
-        await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
-        //多语句查询，在最后reader读取后，自动关闭
-        return new MultiQueryReader(this.DbContext, connection, command, reader, readerAfters, isNeedClose);
-    }
-    #endregion
-
     #region Others
     public virtual IRepository WithTimeout(int seconds)
     {
@@ -474,10 +480,5 @@ public class Repository : DialectProvider, IRepository
         return this;
     }
     //抛异常的时候，会走到析构函数，但是Transaction，没有提交也没有回滚
-    private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a', ICommandVisitor commandContext = null)
-    {
-        var command = commandContext?.Command ?? this.ormProvider.CreateCommand();
-        return this.ormProvider.NewQueryVisitor(this.DbContext, tableAsStart, command);
-    }
     #endregion
 }

@@ -16,70 +16,107 @@ public class DialectProvider
     protected internal TheaDatabase database => this.DbContext.Database;
     protected internal ITheaConnection connection => this.DbContext.Connection;
     protected internal ITheaTransaction transaction => this.DbContext.Transaction;
-    protected IOrmProvider ormProvider => this.DbContext.OrmProvider;
-    protected IEntityMapProvider entityMapProvider => this.DbContext.EntityMapProvider;
+    protected internal IOrmProvider ormProvider => this.DbContext.OrmProvider;
+    protected internal IEntityMapProvider entityMapProvider => this.DbContext.EntityMapProvider;
     protected internal ITableShardingProvider tableShardingProvider => this.database.TableShardingProvider;
     protected internal IDbInterceptor interceptor => this.DbContext.Interceptor;
     protected internal OrmDbFactoryOptions options => this.DbContext.Options;
+    protected internal bool isNeedClose => this.transaction == null;
 
     #region Properties
     public DbContext DbContext { get; set; }
     #endregion
 
     #region UseMasterCommand/UseSlaveCommand
-    public (bool, ITheaConnection, ITheaCommand) UseMasterCommand(ICommandVisitor commandVisitor = null)
+    public (bool, ITheaConnection, ITheaCommand) UseMasterCommand()
     {
-        bool isNeedClose = false;
         ITheaConnection connection;
         ITheaCommand command;
         if (this.transaction != null)
             connection = this.connection;
         else
         {
-            isNeedClose = true;
             var connString = this.connectionString ?? this.database.Select();
             connection = this.CreateConnection(connString);
         }
-        if (commandVisitor == null)
-        {
-            this.interceptor?.CommandCreating(connection);
-            command = connection.CreateCommand();
-            this.interceptor?.CommandCreated(command);
-        }
-        else command = commandVisitor.Command;
-        command.Connection = connection;
+        this.interceptor?.CommandCreating(connection);
+        command = connection.CreateCommand();
+        this.interceptor?.CommandCreated(command);
         command.CommandType = CommandType.Text;
         command.CommandTimeout = this.options.CommandTimeout;
         command.Transaction = this.transaction;
         command.Interceptor = this.interceptor;
-        return (isNeedClose, connection, command);
+        return (this.isNeedClose, connection, command);
     }
-    public (bool, ITheaConnection, ITheaCommand) UseSlaveCommand(ICommandVisitor commandContext = null)
+    public (bool, ITheaConnection, ITheaCommand) UseMasterCommand(ITheaCommand command)
     {
-        bool isNeedClose = false;
+        ITheaConnection connection;
+        if (this.transaction != null)
+        {
+            connection = this.connection;
+            command.Connection = connection;
+        }
+        else
+        {
+            if (command.Connection != null)
+                connection = command.Connection;
+            else
+            {
+                var connString = this.connectionString ?? this.database.Select();
+                connection = this.CreateConnection(connString);
+                command.Connection = connection;
+            }
+        }
+        command.CommandType = CommandType.Text;
+        command.CommandTimeout = this.options.CommandTimeout;
+        command.Transaction = this.transaction;
+        command.Interceptor = this.interceptor;
+        return (this.isNeedClose, connection, command);
+    }
+    public (bool, ITheaConnection, ITheaCommand) UseSlaveCommand()
+    {
         ITheaConnection connection;
         ITheaCommand command;
         if (this.transaction != null)
             connection = this.connection;
         else
         {
-            isNeedClose = true;
             var connString = this.connectionString ?? this.database.SelectSlave();
             connection = this.CreateConnection(connString);
         }
-        if (commandContext == null)
-        {
-            this.interceptor?.CommandCreating(connection);
-            command = connection.CreateCommand();
-            this.interceptor?.CommandCreated(command);
-        }
-        else command = commandContext.Command;
-        command.Connection = connection;
+        this.interceptor?.CommandCreating(connection);
+        command = connection.CreateCommand();
+        this.interceptor?.CommandCreated(command);
         command.CommandType = CommandType.Text;
         command.CommandTimeout = this.options.CommandTimeout;
         command.Transaction = this.transaction;
         command.Interceptor = this.interceptor;
-        return (isNeedClose, connection, command);
+        return (this.isNeedClose, connection, command);
+    }
+    public (bool, ITheaConnection, ITheaCommand) UseSlaveCommand(ITheaCommand command)
+    {
+        ITheaConnection connection;
+        if (this.transaction != null)
+        {
+            connection = this.connection;
+            command.Connection = connection;
+        }
+        else
+        {
+            if (command.Connection != null)
+                connection = command.Connection;
+            else
+            {
+                var connString = this.connectionString ?? this.database.SelectSlave();
+                connection = this.CreateConnection(connString);
+                command.Connection = connection;
+            }
+        }
+        command.CommandType = CommandType.Text;
+        command.CommandTimeout = this.options.CommandTimeout;
+        command.Transaction = this.transaction;
+        command.Interceptor = this.interceptor;
+        return (this.isNeedClose, connection, command);
     }
     private ITheaConnection CreateConnection(string connectionString)
     {
@@ -88,6 +125,19 @@ public class DialectProvider
         connection = this.interceptor?.ConnectionCreated(connection);
         connection.Interceptor = this.interceptor;
         return connection;
+    }
+    #endregion
+
+    #region CreateQueryVisitor
+    public IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a')
+    {
+        (_, _, var command) = this.UseSlaveCommand();
+        return this.ormProvider.NewQueryVisitor(this.DbContext, tableAsStart, command);
+    }
+    public IQueryVisitor CreateQueryVisitor(char tableAsStart, ITheaCommand command)
+    {
+        if (command == null) (_, _, command) = this.UseSlaveCommand();
+        return this.ormProvider.NewQueryVisitor(this.DbContext, tableAsStart, command);
     }
     #endregion
 
@@ -227,11 +277,13 @@ public class DialectProvider
     public TTarget QuerySingle<TTarget>(IQueryVisitor visitor)
     {
         var entityType = typeof(TTarget);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor);
+        (var isNeedClose, var connection, var command) = visitor.UseCommand();
         Expression<Func<TTarget, TTarget>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         (var sql, var readerFields) = this.BuildSql(visitor);
         command.CommandText = sql;
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
@@ -258,7 +310,7 @@ public class DialectProvider
     public async Task<TTarget> QuerySingleAsync<TTarget>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
         var entityType = typeof(TTarget);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor);
+        (var isNeedClose, var connection, var command) = visitor.UseCommand();
         Expression<Func<TTarget, TTarget>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         (var sql, var readerFields) = this.BuildSql(visitor);
@@ -318,7 +370,7 @@ public class DialectProvider
     public List<TTarget> Query<TTarget>(IQueryVisitor visitor)
     {
         var entityType = typeof(TTarget);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor);
+        (var isNeedClose, var connection, var command) = visitor.UseCommand();
         Expression<Func<TTarget, TTarget>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         (var sql, var readerFields) = this.BuildSql(visitor);
@@ -350,7 +402,7 @@ public class DialectProvider
     public async Task<List<TTarget>> QueryAsync<TTarget>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
         var entityType = typeof(TTarget);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor);
+        (var isNeedClose, var connection, var command) = visitor.UseCommand();
         Expression<Func<TTarget, TTarget>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         (var sql, var readerFields) = this.BuildSql(visitor);
@@ -414,7 +466,7 @@ public class DialectProvider
     public IPagedList<TTarget> QueryPage<TTarget>(IQueryVisitor visitor)
     {
         var result = new PagedList<TTarget> { Data = new List<TTarget>() };
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor);
+        (var isNeedClose, var connection, var command) = visitor.UseCommand();
         Expression<Func<TTarget, TTarget>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         visitor.IsNeedPaging = true;
@@ -454,7 +506,7 @@ public class DialectProvider
     public async Task<IPagedList<TResult>> QueryPageAsync<TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
         var result = new PagedList<TResult> { Data = new List<TResult>() };
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor);
+        (var isNeedClose, var connection, var command) = visitor.UseCommand();
 
         Expression<Func<TResult, TResult>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
