@@ -23,7 +23,7 @@ public class MySqlCreated : Created
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -123,7 +123,7 @@ public class MySqlCreated : Created
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -237,7 +237,7 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -337,7 +337,7 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -452,7 +452,7 @@ public class MySqlContinuedCreate : ContinuedCreate
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -552,7 +552,7 @@ public class MySqlContinuedCreate : ContinuedCreate
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -666,7 +666,7 @@ public class MySqlBulkContinuedCreate : BulkContinuedCreate
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -771,7 +771,7 @@ public class MySqlBulkContinuedCreate : BulkContinuedCreate
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -890,7 +890,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -995,7 +995,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -1114,7 +1114,7 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -1219,7 +1219,7 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {

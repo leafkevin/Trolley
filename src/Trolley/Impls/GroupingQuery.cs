@@ -24,9 +24,11 @@ public class GroupingQueryBase<TGrouping> : QueryInternal, IGroupingQueryBase<TG
     #region Exists
     public virtual bool Exists()
     {
-        this.Visitor.Select("1");
+        this.Visitor.SelectRaw(typeof(int), "1");
         this.Visitor.Take(1);
-        return this.DbContext.QueryExists(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        command.CommandText = this.BuildScalarSql(this.Visitor);
+        return this.Exists(isNeedClose, connection, command);
     }
     #endregion
 }

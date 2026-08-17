@@ -299,6 +299,57 @@ public class Repository : DialectProvider, IRepository
         (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereKeys, true, true);
         return await this.ExistsAsync(isNeedClose, connection, command, cancellationToken);
     }
+    /// <summary>
+    /// 判断TEntity表是否存在满足wherePredicate条件的记录，存在返回true，否则返回false，不支持分表
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="wherePredicate">where条件表达式，可以为null</param>
+    /// <returns>返回是否存在</returns>
+    public bool Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null)
+    {
+        var entityType = typeof(TEntity);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        if (wherePredicate != null)
+        {
+            using var queryVisitor = this.CreateQueryVisitor('a', command);
+            queryVisitor.From('a', entityType);
+            queryVisitor.And(wherePredicate);
+            queryVisitor.SelectRaw(typeof(int), "1");
+            queryVisitor.Take(1);
+            command.CommandText = this.BuildScalarSql(queryVisitor);
+            return this.Exists(isNeedClose, connection, command);
+        }
+        var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(entityType);
+        var tableName = this.DbContext.OrmProvider.GetTableName(entityMapper.TableName);
+        command.CommandText = $"SELECT 1 FROM {tableName} LIMIT 1";
+        return this.Exists(isNeedClose, connection, command);
+    }
+    /// <summary>
+    /// 判断TEntity表是否存在满足wherePredicate条件的记录，存在返回true，否则返回false，不支持分表
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="wherePredicate">where条件表达式，可以为null</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回是否存在，布尔值</returns>
+    public async Task<bool> ExistsAsync<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null, CancellationToken cancellationToken = default)
+    {
+        var entityType = typeof(TEntity);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        if (wherePredicate != null)
+        {
+            using var queryVisitor = this.CreateQueryVisitor('a', command);
+            queryVisitor.From('a', entityType);
+            queryVisitor.And(wherePredicate);
+            queryVisitor.SelectRaw(typeof(int), "1");
+            queryVisitor.Take(1);
+            command.CommandText = this.BuildScalarSql(queryVisitor);
+            return await this.ExistsAsync(isNeedClose, connection, command, cancellationToken);
+        }
+        var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(entityType);
+        var tableName = this.DbContext.OrmProvider.GetTableName(entityMapper.TableName);
+        command.CommandText = $"SELECT 1 FROM {tableName} LIMIT 1";
+        return await this.ExistsAsync(isNeedClose, connection, command, cancellationToken);
+    }
     #endregion
 
     #region QueryMultiple

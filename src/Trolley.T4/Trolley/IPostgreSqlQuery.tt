@@ -199,7 +199,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    new IPostgreSqlQuery<T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
@@ -210,7 +210,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    new IPostgreSqlQuery<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -735,7 +735,7 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<<#=tables#>, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    new IPostgreSqlQuery<<#=tables#>, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
@@ -746,7 +746,7 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<<#=tables#>, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    new IPostgreSqlQuery<<#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
 <#      }#>

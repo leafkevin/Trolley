@@ -148,14 +148,15 @@ public class QueryBase : QueryInternal, IQueryBase
     {
         this.Visitor.SelectRaw(typeof(int), "1");
         this.Visitor.Take(1);
-        this.Visitor.Command.CommandText = this.BuildScalarSql(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        command.CommandText = this.BuildScalarSql(this.Visitor);
         return this.Exists(isNeedClose, connection, command);
     }
     public virtual async Task<bool> ExistsAsync(CancellationToken cancellationToken = default)
     {
         this.Visitor.SelectRaw(typeof(int), "1");
         this.Visitor.Take(1);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
         command.CommandText = this.BuildScalarSql(this.Visitor);
         return await this.ExistsAsync(isNeedClose, connection, command, cancellationToken);
     }
@@ -175,29 +176,29 @@ public class QueryBase : QueryInternal, IQueryBase
     protected TTarget QueryScalar<TTarget>(string aggSql, string aggFunc)
     {
         this.Visitor.SelectRaw(typeof(TTarget), aggSql, aggFunc);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor);
-        command.CommandText = this.Visitor.BuildSql(true, out var readerFields);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        command.CommandText = this.BuildScalarSql(this.Visitor);
         return this.QueryScalar<TTarget>(isNeedClose, connection, command);
     }
     protected async Task<TTarget> QueryScalarAsync<TTarget>(string aggSql, string aggFunc, CancellationToken cancellationToken = default)
     {
         this.Visitor.SelectRaw(typeof(TTarget), aggSql, aggFunc);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor);
-        command.CommandText = this.Visitor.BuildSql(true, out var readerFields);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        command.CommandText = this.BuildScalarSql(this.Visitor);
         return await this.QueryScalarAsync<TTarget>(isNeedClose, connection, command, cancellationToken);
     }
     protected TTarget QueryScalar<TTarget>(string aggSqlFormat, Expression fieldExpr)
     {
         this.Visitor.Select(aggSqlFormat, fieldExpr);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor);
-        command.CommandText = this.Visitor.BuildSql(true, out var readerFields);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        command.CommandText = this.BuildScalarSql(this.Visitor);
         return this.QueryScalar<TTarget>(isNeedClose, connection, command);
     }
     protected async Task<TTarget> QueryScalarAsync<TTarget>(string aggSqlFormat, Expression fieldExpr, CancellationToken cancellationToken = default)
     {
         this.Visitor.Select(aggSqlFormat, fieldExpr);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor);
-        command.CommandText = this.Visitor.BuildSql(true, out var readerFields);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        command.CommandText = this.BuildScalarSql(this.Visitor);
         return await this.QueryScalarAsync<TTarget>(isNeedClose, connection, command, cancellationToken);
     }
     #endregion
@@ -205,8 +206,7 @@ public class QueryBase : QueryInternal, IQueryBase
     #region NewCreateVisitor
     public virtual ICreateVisitor NewCreateVisitor(Type entityType)
     {
-        var createVisiter = this.OrmProvider.NewCreateVisitor(entityType,
-            this.DbContext, this.Visitor.TableAliasStart, this.Visitor.Command);
+        var createVisiter = this.OrmProvider.NewCreateVisitor(entityType, this.DbContext, 'a', this.Visitor.Command);
         createVisiter.Tables = this.Visitor.Tables;
         createVisiter.RefQueries = this.Visitor.RefQueries;
         createVisiter.ShardingTables = this.Visitor.ShardingTables;

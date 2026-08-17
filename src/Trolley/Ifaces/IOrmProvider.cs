@@ -184,7 +184,7 @@ public interface IOrmProvider
 
     IDelete NewDelete(Type entityType, DbContext dbContext);
     IDelete<TEntity> NewDelete<TEntity>(DbContext dbContext);
-    IDeleted NewDeleted(DbContext dbContext, IDeleteVisitor visitor);
+    IDeleted NewDeleted(Type entityType, DbContext dbContext);
     IBulkResultCommand<TResult> NewResultDeleted<TResult>(DbContext dbContext, IDeleteVisitor visitor);
 
     IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null);

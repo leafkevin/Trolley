@@ -20,7 +20,8 @@ public class Update : DialectProvider, IUpdate
     public Update(Type entityType, DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.Visitor = this.DbContext.OrmProvider.NewUpdateVisitor(entityType, dbContext);
+        (_, _, var command) = this.UseMasterCommand();
+        this.Visitor = this.DbContext.OrmProvider.NewUpdateVisitor(entityType, dbContext, 'a', command);
     }
     #endregion
 
@@ -147,7 +148,7 @@ public class Updated : DialectProvider, IUpdated
     public virtual int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.Bulk:
@@ -248,7 +249,7 @@ public class Updated : DialectProvider, IUpdated
     public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
 
         switch (this.Visitor.ActionMode)
         {
@@ -352,7 +353,7 @@ public class Updated : DialectProvider, IUpdated
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
         var sql = this.Visitor.BuildSql(command, out _);
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();

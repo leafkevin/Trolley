@@ -54,9 +54,9 @@ public class MySqlFromCommand<TEntity, T> : FromCommand<TEntity, T>, IMySqlFromC
     #endregion
 
     #region WithTable
-    public new IMySqlFromCommand<TEntity, T, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public new IMySqlFromCommand<TEntity, T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
         => base.WithTable(subQuery) as IMySqlFromCommand<TEntity, T, TOther>;
-    public new IMySqlFromCommand<TEntity, T, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public new IMySqlFromCommand<TEntity, T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
         => base.WithTable(subQueryExpr) as IMySqlFromCommand<TEntity, T, TOther>;
     #endregion
 
@@ -252,9 +252,9 @@ public class MySqlFromCommand<TEntity, <#=tables#>> : FromCommand<TEntity, <#=ta
     #endregion
 
     #region WithTable
-    public new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
         => base.WithTable(subQuery) as IMySqlFromCommand<TEntity, <#=tables#>, TOther>;
-    public new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
         => base.WithTable(subQueryExpr) as IMySqlFromCommand<TEntity, <#=tables#>, TOther>;
     #endregion
 

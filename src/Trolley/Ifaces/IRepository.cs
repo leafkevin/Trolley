@@ -512,6 +512,21 @@ public interface IRepository
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回是否存在</returns>
     Task<bool> ExistsByIdsAsync<TEntity>(IEnumerable whereKeys, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 判断TEntity表是否存在满足wherePredicate条件的记录，存在返回true，否则返回false，不支持分表
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="wherePredicate">where条件表达式，可以为null</param>
+    /// <returns>返回是否存在</returns>
+    bool Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null);
+    /// <summary>
+    /// 判断TEntity表是否存在满足wherePredicate条件的记录，存在返回true，否则返回false，不支持分表
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="wherePredicate">where条件表达式，可以为null</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回是否存在，布尔值</returns>
+    Task<bool> ExistsAsync<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null, CancellationToken cancellationToken = default);
     #endregion
 
     #region Create

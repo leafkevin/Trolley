@@ -35,21 +35,21 @@ public class MultiQueryBase : QueryInternal, IMultiQueryBase
     public virtual IMultipleQuery Count() => this.QueryScalar<int>("COUNT(1)", "COUNT_VALUE");
     public virtual IMultipleQuery LongCount() => this.QueryScalar<long>("COUNT(1)", "COUNT_VALUE");
     protected IMultipleQuery CountInternal(Expression fieldExpr)
-        => this.QueryScalar<int>("COUNT({0})", "COUNT_VALUE", fieldExpr);
+        => this.QueryScalar<int>("COUNT({0})", fieldExpr);
     protected IMultipleQuery CountDistinctInternal(Expression fieldExpr)
-        => this.QueryScalar<int>("COUNT(DISTINCT {0})", "COUNT_VALUE", fieldExpr);
+        => this.QueryScalar<int>("COUNT(DISTINCT {0})", fieldExpr);
     protected IMultipleQuery LongCountInternal(Expression fieldExpr)
-        => this.QueryScalar<long>("COUNT({0})", "COUNT_VALUE", fieldExpr);
+        => this.QueryScalar<long>("COUNT({0})", fieldExpr);
     protected IMultipleQuery LongCountDistinctInternal(Expression fieldExpr)
-        => this.QueryScalar<long>("COUNT(DISTINCT {0})", "COUNT_VALUE", fieldExpr);
+        => this.QueryScalar<long>("COUNT(DISTINCT {0})", fieldExpr);
     protected IMultipleQuery SumInternal<TField>(Expression fieldExpr)
-        => this.QueryScalar<TField>("SUM({0})", "SUM_VALUE", fieldExpr);
+        => this.QueryScalar<TField>("SUM({0})", fieldExpr);
     protected IMultipleQuery AvgInternal<TField>(Expression fieldExpr)
-        => this.QueryScalar<TField>("AVG({0})", "AVG_VALUE", fieldExpr);
+        => this.QueryScalar<TField>("AVG({0})", fieldExpr);
     protected IMultipleQuery MaxInternal<TField>(Expression fieldExpr)
-        => this.QueryScalar<TField>("MAX({0})", "MAX_VALUE", fieldExpr);
+        => this.QueryScalar<TField>("MAX({0})", fieldExpr);
     protected IMultipleQuery MinInternal<TField>(Expression fieldExpr)
-        => this.QueryScalar<TField>("MIN({0})", "MIN_VALUE", fieldExpr);
+        => this.QueryScalar<TField>("MIN({0})", fieldExpr);
     #endregion
 
     #region ToSql
@@ -67,27 +67,20 @@ public class MultiQueryBase : QueryInternal, IMultiQueryBase
         this.MultipleQuery.AddReader(typeof(TTarget), sql, ReaderResultType.Value);
         return this.MultipleQuery;
     }
-    protected IMultipleQuery QueryScalar<TTarget>(string sqlFormat, string shardingFieldAlias)
+    protected IMultipleQuery QueryScalar<TTarget>(string aggSql, string aggFunc)
     {
-        if (string.IsNullOrEmpty(sqlFormat))
-            throw new ArgumentNullException(nameof(sqlFormat));
-
-        this.Visitor.AggFieldAlias = shardingFieldAlias;
-        this.Visitor.Select(sqlFormat, null);
-        var sql = this.Visitor.BuildSql(true, out _);
+        this.Visitor.SelectRaw(typeof(TTarget), aggSql, aggFunc);
+        var sql = this.BuildScalarSql(this.Visitor);
         this.MultipleQuery.AddReader(typeof(TTarget), sql, ReaderResultType.Value);
         return this.MultipleQuery;
     }
-    protected IMultipleQuery QueryScalar<TTarget>(string sqlFormat, string shardingFieldAlias, Expression fieldExpr)
+    protected IMultipleQuery QueryScalar<TTarget>(string aggSqlFormat, Expression fieldExpr)
     {
-        if (string.IsNullOrEmpty(sqlFormat))
-            throw new ArgumentNullException(nameof(sqlFormat));
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
-        this.Visitor.AggFieldAlias = shardingFieldAlias;
-        this.Visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.Visitor.BuildSql(true, out _);
+        this.Visitor.Select(aggSqlFormat, fieldExpr);
+        var sql = this.BuildScalarSql(this.Visitor);
         this.MultipleQuery.AddReader(typeof(TTarget), sql, ReaderResultType.Value);
         return this.MultipleQuery;
     }
@@ -165,12 +158,12 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         base.UnionAllInternal(subQueryExpr);
         return this;
     }
-    public virtual IMultiQuery<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
+    public virtual IMultiQuery<T> UnionRecursive(Expression<Func<IFromQuery, ICteQuery<T>, IQuery<T>>> subQueryExpr)
     {
         base.UnionRecursiveInternal(subQueryExpr);
         return this;
     }
-    public virtual IMultiQuery<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
+    public virtual IMultiQuery<T> UnionAllRecursive(Expression<Func<IFromQuery, ICteQuery<T>, IQuery<T>>> subQueryExpr)
     {
         base.UnionAllRecursiveInternal(subQueryExpr);
         return this;
@@ -186,14 +179,14 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #endregion
 
     #region WithTable
-    public virtual IMultiQuery<T, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public virtual IMultiQuery<T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<T, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IMultiQuery<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithTableInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion

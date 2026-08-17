@@ -55,15 +55,15 @@ public class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
     }
     #endregion
 
-    #region WithTable
-    public virtual IMultiQuery<T1, T2, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    #region WithQuery
+    public virtual IMultiQuery<T1, T2, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewMultiQuery<T1, T2, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<T1, T2, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IMultiQuery<T1, T2, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithTableInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewMultiQuery<T1, T2, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -340,14 +340,14 @@ public class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
     #endregion
 
     #region WithTable
-    public virtual IMultiQuery<T1, T2, T3, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public virtual IMultiQuery<T1, T2, T3, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<T1, T2, T3, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IMultiQuery<T1, T2, T3, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithTableInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -624,14 +624,14 @@ public class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3
     #endregion
 
     #region WithTable
-    public virtual IMultiQuery<T1, T2, T3, T4, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public virtual IMultiQuery<T1, T2, T3, T4, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IMultiQuery<T1, T2, T3, T4, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithTableInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -908,14 +908,14 @@ public class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2
     #endregion
 
     #region WithTable
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithTableInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -1192,14 +1192,14 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1
     #endregion
 
     #region WithTable
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithTableInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -1476,14 +1476,14 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuer
     #endregion
 
     #region WithTable
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithTableInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -1760,14 +1760,14 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMulti
     #endregion
 
     #region WithTable
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithTableInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -2044,14 +2044,14 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IM
     #endregion
 
     #region WithTable
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithTableInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -2328,14 +2328,14 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBas
     #endregion
 
     #region WithTable
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithTableInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -2612,14 +2612,14 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQue
     #endregion
 
     #region WithTable
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithTableInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -2896,14 +2896,14 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : Mul
     #endregion
 
     #region WithTable
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithTableInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -3180,14 +3180,14 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     #endregion
 
     #region WithTable
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithTableInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -3464,14 +3464,14 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     #endregion
 
     #region WithTable
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithTableInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -3748,14 +3748,14 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     #endregion
 
     #region WithTable
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithTableInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion

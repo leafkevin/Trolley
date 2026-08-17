@@ -20,8 +20,8 @@ public class Create : DialectProvider, ICreate
     public Create(Type entityType, DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.UseMasterCommand();
-        this.Visitor = this.DbContext.OrmProvider.NewCreateVisitor(entityType, dbContext);
+        (_, _, var command) = this.UseMasterCommand();
+        this.Visitor = this.DbContext.OrmProvider.NewCreateVisitor(entityType, dbContext, 'a', command);
     }
     #endregion
 
@@ -133,7 +133,7 @@ public class Created : DialectProvider, ICreated
     public virtual int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.Bulk:
@@ -210,7 +210,7 @@ public class Created : DialectProvider, ICreated
     public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.Bulk:
@@ -326,7 +326,8 @@ public class IdentitiedCreated : Created, IIdentitiedCreated
     #region ExecuteIdentity
     public virtual int ExecuteIdentity()
     {
-        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(this.Visitor, true);
+        this.Visitor.IsReturnIdentity = true;
+        (var isNeedClose, var connection, var command, _) = this.CreateExecuteCommand(this.Visitor);
         var result = this.QueryScalar<int>(isNeedClose, connection, command);
         this.Visitor.Dispose();
         this.Visitor = null;
@@ -334,7 +335,8 @@ public class IdentitiedCreated : Created, IIdentitiedCreated
     }
     public virtual async Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default)
     {
-        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(this.Visitor, true);
+        this.Visitor.IsReturnIdentity = true;
+        (var isNeedClose, var connection, var command, _) = this.CreateExecuteCommand(this.Visitor);
         var result = await this.QueryScalarAsync<int>(isNeedClose, connection, command, cancellationToken);
         this.Visitor.Dispose();
         this.Visitor = null;
@@ -342,7 +344,8 @@ public class IdentitiedCreated : Created, IIdentitiedCreated
     }
     public virtual long ExecuteIdentityLong()
     {
-        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(this.Visitor, true);
+        this.Visitor.IsReturnIdentity = true;
+        (var isNeedClose, var connection, var command, _) = this.CreateExecuteCommand(this.Visitor);
         var result = this.QueryScalar<long>(isNeedClose, connection, command);
         this.Visitor.Dispose();
         this.Visitor = null;
@@ -350,7 +353,8 @@ public class IdentitiedCreated : Created, IIdentitiedCreated
     }
     public virtual async Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
     {
-        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(this.Visitor, true);
+        this.Visitor.IsReturnIdentity = true;
+        (var isNeedClose, var connection, var command, _) = this.CreateExecuteCommand(this.Visitor);
         var result = await this.QueryScalarAsync<long>(isNeedClose, connection, command, cancellationToken);
         this.Visitor.Dispose();
         this.Visitor = null;
@@ -441,7 +445,7 @@ public class ResultCreated<TResult> : DialectProvider, IResultCommand<TResult>
     #region Execute
     public TResult Execute()
     {
-        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(this.Visitor, false);
+        (var isNeedClose, var connection, var command, _) = this.CreateExecuteCommand(this.Visitor);
         var result = this.QuerySingle<TResult>(isNeedClose, connection, command);
         this.Visitor.Dispose();
         this.Visitor = null;
@@ -449,7 +453,7 @@ public class ResultCreated<TResult> : DialectProvider, IResultCommand<TResult>
     }
     public async Task<TResult> ExecuteAsync(CancellationToken cancellationToken)
     {
-        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(this.Visitor, false);
+        (var isNeedClose, var connection, var command, _) = this.CreateExecuteCommand(this.Visitor);
         var result = await this.QuerySingleAsync<TResult>(isNeedClose, connection, command, cancellationToken);
         this.Visitor.Dispose();
         this.Visitor = null;

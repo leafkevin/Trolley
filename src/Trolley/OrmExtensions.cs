@@ -51,56 +51,6 @@ public static class OrmExtensions
             => await repository.From<TEntity>().Where(wherePredicate).ToListAsync(cancellationToken);
         #endregion
 
-        #region Exists
-        /// <summary>
-        /// 判断TEntity表是否存在满足wherePredicate条件的记录，存在返回true，否则返回false，不支持分表
-        /// </summary>
-        /// <typeparam name="TEntity">实体类型</typeparam>
-        /// <param name="wherePredicate">where条件表达式，可以为null</param>
-        /// <returns>返回是否存在</returns>
-        public bool Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null)
-        {
-            var entityType = typeof(TEntity);
-            var dbContext = repository.DbContext;
-            var entityMapper = dbContext.EntityMapProvider.GetEntityMap(entityType);
-            var body = dbContext.OrmProvider.GetTableName(entityMapper.TableName);
-            if (wherePredicate != null)
-            {
-                using var queryVisitor = dbContext.OrmProvider.NewQueryVisitor(dbContext);
-                queryVisitor.From('a', entityType);
-                queryVisitor.And(wherePredicate);
-                var whereSql = queryVisitor.WhereBuilder.ToString();
-                body += $" a WHERE {whereSql}";
-            }
-            var sql = $"SELECT 1 FROM {body} LIMIT 1";
-            return repository.DbContext.QueryScalar<int>(sql) > 0;
-        }
-        /// <summary>
-        /// 判断TEntity表是否存在满足wherePredicate条件的记录，存在返回true，否则返回false，不支持分表
-        /// </summary>
-        /// <typeparam name="TEntity">实体类型</typeparam>
-        /// <param name="wherePredicate">where条件表达式，可以为null</param>
-        /// <param name="cancellationToken">取消Token</param>
-        /// <returns>返回是否存在，布尔值</returns>
-        public async Task<bool> ExistsAsync<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null, CancellationToken cancellationToken = default)
-        {
-            var entityType = typeof(TEntity);
-            var dbContext = repository.DbContext;
-            var entityMapper = dbContext.EntityMapProvider.GetEntityMap(entityType);
-            var body = dbContext.OrmProvider.GetTableName(entityMapper.TableName);
-            if (wherePredicate != null)
-            {
-                using var queryVisitor = dbContext.OrmProvider.NewQueryVisitor(dbContext);
-                queryVisitor.From('a', entityType);
-                queryVisitor.And(wherePredicate);
-                var whereSql = queryVisitor.WhereBuilder.ToString();
-                body += $" a WHERE {whereSql}";
-            }
-            var sql = $"SELECT 1 FROM {body} LIMIT 1";
-            return await repository.DbContext.QueryScalarAsync<int>(sql, cancellationToken: cancellationToken) > 0;
-        }
-        #endregion
-
         #region Update
         /// <summary>
         /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如：

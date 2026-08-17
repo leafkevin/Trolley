@@ -180,7 +180,7 @@ public interface IMySqlFromCommand<TEntity, T> : IFromCommand<TEntity, T>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<TEntity, T, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    new IMySqlFromCommand<TEntity, T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
@@ -190,7 +190,7 @@ public interface IMySqlFromCommand<TEntity, T> : IFromCommand<TEntity, T>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<TEntity, T, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    new IMySqlFromCommand<TEntity, T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region InnerJoin
@@ -655,7 +655,7 @@ public interface IMySqlFromCommand<TEntity, <#=tables#>> : IFromCommand<TEntity,
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加subQueryExpr子查询，方便后面做JOIN关联，如：
     /// <code>
@@ -666,7 +666,7 @@ public interface IMySqlFromCommand<TEntity, <#=tables#>> : IFromCommand<TEntity,
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    new IMySqlFromCommand<TEntity, <#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
 <#      }#>

@@ -26,8 +26,6 @@ public interface ICreateVisitor : ICommandVisitor, IDisposable
     bool IsRecursive { get; set; }
 
 
-    (bool, ITheaConnection, ITheaCommand) UseCommand();
-
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<ReaderField>) BuildWithBulk(ITheaCommand command);
 

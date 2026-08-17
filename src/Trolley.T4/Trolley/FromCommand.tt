@@ -119,14 +119,14 @@ public class FromCommand<TEntity, T> : FromCommand, IFromCommand<TEntity, T>
     #endregion
 
     #region WithTable
-    public virtual IFromCommand<TEntity, T, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public virtual IFromCommand<TEntity, T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithTableInternal(subQuery);
         return this.OrmProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IFromCommand<TEntity, T, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IFromCommand<TEntity, T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithTableInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -404,14 +404,14 @@ public class FromCommand<TEntity, <#=tables#>> : FromCommand, IFromCommand<TEnti
     #endregion
 
     #region WithTable
-    public virtual IFromCommand<TEntity, <#=tables#>, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public virtual IFromCommand<TEntity, <#=tables#>, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithTableInternal(subQuery);
         return this.OrmProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IFromCommand<TEntity, <#=tables#>, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IFromCommand<TEntity, <#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithTableInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
 

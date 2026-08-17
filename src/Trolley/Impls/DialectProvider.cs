@@ -136,7 +136,7 @@ public class DialectProvider
     }
     public IQueryVisitor CreateQueryVisitor(char tableAsStart, ITheaCommand command)
     {
-        if (command == null) (_, _, command) = this.UseSlaveCommand();
+        if (command == null) return this.CreateQueryVisitor(tableAsStart);
         return this.ormProvider.NewQueryVisitor(this.DbContext, tableAsStart, command);
     }
     #endregion
@@ -728,15 +728,6 @@ public class DialectProvider
             command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
-    public (bool, ITheaConnection, ITheaCommand) CreateInsertCommand(ICreateVisitor visitor, bool hasIdentity)
-    {
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(visitor);
-        visitor.IsReturnIdentity = hasIdentity;
-        command.CommandText = visitor.BuildSql(command, out _);
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
-        return (isNeedClose, connection, command);
-    }
     public (bool, ITheaConnection, ITheaCommand, string, Action<IDataParameterCollection, StringBuilder, DbContext, object, string>)
         CreateInsertBulkCommand(Type entityType, IEnumerable insertObjs, int bulkCount)
     {
@@ -1290,7 +1281,7 @@ public class DialectProvider
     }
     public (bool, ITheaConnection, ITheaCommand, List<ReaderField>) CreateExecuteCommand(ICommandVisitor visitor)
     {
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand(visitor);
+        (var isNeedClose, var connection, var command) = visitor.UseCommand();
         command.CommandText = visitor.BuildSql(command, out var readerFields);
         if (this.interceptor != null)
             command = this.interceptor.CommandInitialized(command);

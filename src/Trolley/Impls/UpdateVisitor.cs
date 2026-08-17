@@ -29,8 +29,12 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     {
         this.DbContext = dbContext;
         this.TableAliasStart = tableAsStart;
-        this.Command = command ?? dbContext.OrmProvider.CreateCommand();
-        this.DbParameters = this.Command.Parameters;
+        this.Command = command;
+        if (command != null)
+        {
+            this.Connection = command.Connection;
+            this.DbParameters = command.Parameters;
+        }
         this.Tables = new()
         {
             new TableSegment

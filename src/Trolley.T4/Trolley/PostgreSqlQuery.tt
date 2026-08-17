@@ -80,9 +80,9 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
     #endregion
 
     #region WithTable
-    public new IPostgreSqlQuery<T, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public new IPostgreSqlQuery<T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
         => base.WithTable(subQuery) as IPostgreSqlQuery<T, TOther>;
-    public new IPostgreSqlQuery<T, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public new IPostgreSqlQuery<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
         => base.WithTable(subQueryExpr) as IPostgreSqlQuery<T, TOther>;
     #endregion
 
@@ -245,9 +245,9 @@ public class PostgreSqlQuery<<#=tables#>> : Query<<#=tables#>>, IPostgreSqlQuery
     #endregion
 
     #region WithTable
-    public new IPostgreSqlQuery<<#=tables#>, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public new IPostgreSqlQuery<<#=tables#>, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
         => base.WithTable(subQuery) as IPostgreSqlQuery<<#=tables#>, TOther>;
-    public new IPostgreSqlQuery<<#=tables#>, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public new IPostgreSqlQuery<<#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
         => base.WithTable(subQueryExpr) as IPostgreSqlQuery<<#=tables#>, TOther>;
     #endregion
 

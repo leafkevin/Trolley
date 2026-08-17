@@ -12,10 +12,8 @@ namespace Trolley;
 public class Delete : Deleted, IDelete
 {
     #region Constructor
-    public Delete(Type entityType, DbContext dbContext) : base(dbContext)
-    {
-        this.Visitor = this.DbContext.OrmProvider.NewDeleteVisitor(entityType, dbContext);
-    }
+    public Delete(Type entityType, DbContext dbContext)
+        : base(entityType, dbContext) { }
     #endregion
 
     #region Sharding
@@ -152,9 +150,11 @@ public class Deleted : DialectProvider, IDeleted
     #endregion
 
     #region Constructor
-    public Deleted(DbContext dbContext)
+    public Deleted(Type entityType, DbContext dbContext)
     {
         this.DbContext = dbContext;
+        (_, _, var command) = this.UseMasterCommand();
+        this.Visitor = this.DbContext.OrmProvider.NewDeleteVisitor(entityType, dbContext, 'a', command);
     }
     #endregion
 

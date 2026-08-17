@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Data;
 
 namespace Trolley;
 
@@ -158,7 +157,7 @@ partial class BaseOrmProvider
 
     public virtual IDelete NewDelete(Type entityType, DbContext dbContext) => new Delete(entityType, dbContext);
     public virtual IDelete<TEntity> NewDelete<TEntity>(DbContext dbContext) => new Delete<TEntity>(dbContext);
-    public virtual IDeleted NewDeleted(DbContext dbContext, IDeleteVisitor visitor) => new Deleted(dbContext);
+    public virtual IDeleted NewDeleted(Type entityType, DbContext dbContext) => new Deleted(entityType, dbContext);
     public virtual IBulkResultCommand<TResult> NewResultDeleted<TResult>(DbContext dbContext, IDeleteVisitor visitor) => new ResultDeleted<TResult>(dbContext, visitor);
 
     public virtual IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null) => new QueryVisitor(dbContext, tableAsStart, command);

@@ -156,7 +156,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <param name="subQueryExpr">子查询表达式，需要有Select语句，如：<code>f.From&lt;Menu&gt;().Where(x =&gt; ... ).Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
+    IMultiQuery<T> UnionRecursive(Expression<Func<IFromQuery, ICteQuery<T>, IQuery<T>>> subQueryExpr);
     /// <summary>
     /// 递归CTE子查询中的UnionAll操作，表达式subQueryExpr中的第二参数是CTE自身引用，如：
     /// <code>
@@ -175,7 +175,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <param name="subQueryExpr">子查询表达式，需要有Select语句，如：<code>f.From&lt;Menu&gt;() .Where(x =&gt; ... ) .Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
+    IMultiQuery<T> UnionAllRecursive(Expression<Func<IFromQuery, ICteQuery<T>, IQuery<T>>> subQueryExpr);
     #endregion
 
     #region WithTable
@@ -198,7 +198,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    IMultiQuery<T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
@@ -208,7 +208,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    IMultiQuery<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -848,7 +848,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    IMultiQuery<T1, T2, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
@@ -859,7 +859,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    IMultiQuery<T1, T2, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -1357,7 +1357,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    IMultiQuery<T1, T2, T3, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
@@ -1368,7 +1368,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    IMultiQuery<T1, T2, T3, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -1867,7 +1867,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    IMultiQuery<T1, T2, T3, T4, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
@@ -1878,7 +1878,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    IMultiQuery<T1, T2, T3, T4, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -2378,7 +2378,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
@@ -2389,7 +2389,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    IMultiQuery<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -2890,7 +2890,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
@@ -2901,7 +2901,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -3403,7 +3403,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
@@ -3414,7 +3414,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -3914,7 +3914,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
@@ -3925,7 +3925,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -4429,7 +4429,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
@@ -4440,7 +4440,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -4945,7 +4945,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
@@ -4956,7 +4956,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -5462,7 +5462,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
@@ -5473,7 +5473,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -5980,7 +5980,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
@@ -5991,7 +5991,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -6499,7 +6499,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
@@ -6510,7 +6510,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -7019,7 +7019,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
@@ -7030,7 +7030,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -7540,7 +7540,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
@@ -7551,7 +7551,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQueryExpr">子查询表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
