@@ -583,9 +583,9 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
                 {
                     var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                     var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
-                    var targetArgument = visitor.GetQuotedValue(targetSegment);
-                    var rightArgument = visitor.GetQuotedValue(rightSegment);
-                    return targetSegment.Merge(rightSegment, $"ISNULL({targetArgument},{rightArgument})", SqlType.MethodCall);
+                    var targetArgument = visitor.WrapSql(targetSegment);
+                    var rightArgument = visitor.WrapSql(rightSegment);
+                    return targetSegment.Change($"ISNULL({targetArgument},{rightArgument})", SqlType.MethodCall);
                 });
                 return true;
         }

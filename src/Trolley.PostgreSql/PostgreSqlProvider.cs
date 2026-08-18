@@ -2523,9 +2523,9 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                 {
                     var targetSegment = visitor.Visit(new SqlSegment { Expression = args[0], IsNullFields = true });
                     var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
-                    var targetArgument = visitor.GetQuotedValue(targetSegment);
-                    var rightArgument = visitor.GetQuotedValue(rightSegment);
-                    return targetSegment.Merge(rightSegment, $"COALESCE({targetArgument},{rightArgument})", SqlType.MethodCall);
+                    var targetArgument = visitor.WrapSql(targetSegment);
+                    var rightArgument = visitor.WrapSql(rightSegment);
+                    return targetSegment.Change($"COALESCE({targetArgument},{rightArgument})", SqlType.MethodCall);
                 });
                 return true;
         }

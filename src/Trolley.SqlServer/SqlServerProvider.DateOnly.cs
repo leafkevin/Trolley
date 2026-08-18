@@ -22,11 +22,11 @@ partial class SqlServerProvider
             {
                 //静态成员访问，理论上没有target对象，为了不再创建sqlSegment对象，外层直接把对象传了进来
                 case "MinValue":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.ChangeValue(DateOnly.MinValue, true));
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.ChangeValue(DateOnly.MinValue, true));
                     result = true;
                     break;
                 case "MaxValue":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.ChangeValue(DateOnly.MaxValue, true));
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.ChangeValue(DateOnly.MaxValue, true));
                     result = true;
                     break;
             }
@@ -36,7 +36,7 @@ partial class SqlServerProvider
             switch (memberInfo.Name)
             {
                 case "Day":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) =>
                     {
                         SqlSegment targetSegment = default;
                         if (target.Expression is MethodCallExpression callExpr && callExpr.Object == null
@@ -52,7 +52,7 @@ partial class SqlServerProvider
                     result = true;
                     break;
                 case "DayOfWeek":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) =>
                     {
                         SqlSegment targetSegment = default;
                         if (target.Expression is MethodCallExpression callExpr && callExpr.Object == null
@@ -68,7 +68,7 @@ partial class SqlServerProvider
                     result = true;
                     break;
                 case "DayOfYear":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) =>
                     {
                         SqlSegment targetSegment = default;
                         if (target.Expression is MethodCallExpression callExpr && callExpr.Object == null
@@ -84,7 +84,7 @@ partial class SqlServerProvider
                     result = true;
                     break;
                 case "Month":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) =>
                     {
                         SqlSegment targetSegment = default;
                         if (target.Expression is MethodCallExpression callExpr && callExpr.Object == null
@@ -100,7 +100,7 @@ partial class SqlServerProvider
                     result = true;
                     break;
                 case "Year":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) =>
                     {
                         SqlSegment targetSegment = default;
                         if (target.Expression is MethodCallExpression callExpr && callExpr.Object == null
@@ -116,7 +116,7 @@ partial class SqlServerProvider
                     result = true;
                     break;
                 case "DayNumber":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) =>
                     {
                         SqlSegment targetSegment = default;
                         if (target.Expression is MethodCallExpression callExpr && callExpr.Object == null
@@ -180,9 +180,9 @@ partial class SqlServerProvider
                             var providerSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
                             var styleSegment = visitor.Visit(new SqlSegment { Expression = args[2] });
 
-                            if ((valueSegment.IsConstant || valueSegment.IsVariable)
+                            if (valueSegment.IsValue
                                 && providerSegment.IsValue
-                                && (styleSegment.IsConstant || styleSegment.IsVariable))
+                                &&styleSegment.IsValue)
                                 return valueSegment.Change(DateOnly.Parse(valueSegment.Value.ToString(), (IFormatProvider)providerSegment.Value, (DateTimeStyles)styleSegment.Value));
 
                             return valueSegment.Change($"CAST({valueSegment.Value} AS DATE)", SqlType.MethodCall);
@@ -195,7 +195,7 @@ partial class SqlServerProvider
                             var valueSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                             var providerSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
 
-                            if ((valueSegment.IsConstant || valueSegment.IsVariable)
+                            if (valueSegment.IsValue
                                 && providerSegment.IsValue)
                                 return valueSegment.Change(DateOnly.Parse(valueSegment.Value.ToString(), (IFormatProvider)providerSegment.Value));
 
@@ -225,15 +225,15 @@ partial class SqlServerProvider
                         var formatSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
                         var providerSegment = visitor.Visit(new SqlSegment { Expression = args[2] });
 
-                        if ((valueSegment.IsConstant || valueSegment.IsVariable)
+                        if (valueSegment.IsValue
                             && formatSegment.IsValue
                             && providerSegment.IsValue)
-                            return valueSegment.MergeValue(formatSegment, DateOnly.ParseExact(valueSegment.Value.ToString(), formatSegment.Value.ToString(), (IFormatProvider)providerSegment.Value));
+                            return valueSegment.Change(DateOnly.ParseExact(valueSegment.Value.ToString(), formatSegment.Value.ToString(), (IFormatProvider)providerSegment.Value));
 
                         if (!formatSegment.IsValue)
                             throw new NotSupportedException($"方法DateOnly.{methodInfo.Name}格式化字符串，暂时不支持非常量、变量的解析");
 
-                        var valueArgument = visitor.GetQuotedValue(valueSegment);
+                        var valueArgument = visitor.WrapSql(valueSegment);
                         var format = formatSegment.Value.ToString();
                         string formatValue = null;
                         switch (format)
@@ -250,7 +250,7 @@ partial class SqlServerProvider
                             case "yyyymmdd": formatValue = $"CONVERT(DATE,{valueArgument},112)"; break;
                             default: formatValue = $"CAST({valueArgument} AS DATE)"; break;
                         }
-                        return valueSegment.Merge(formatSegment, formatValue, false, true);
+                        return valueSegment.Change(formatValue, false, true);
                     });
                     result = true;
                     if (methodInfo.IsStatic && parameterInfos.Length >= 1 && parameterInfos[0].ParameterType == typeof(ReadOnlySpan<char>))
@@ -262,9 +262,9 @@ partial class SqlServerProvider
                         var leftSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
 
-                        var leftArgument = visitor.GetQuotedValue(leftSegment);
-                        var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return leftSegment.Merge(rightSegment, $"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END");
+                        var leftArgument = visitor.WrapSql(leftSegment);
+                        var rightArgument = visitor.WrapSql(rightSegment);
+                        return leftSegment.Change($"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END");
                     });
                     result = true;
                     break;
@@ -279,13 +279,13 @@ partial class SqlServerProvider
                     {
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                        if ((targetSegment.IsValue)
+                        if (targetSegment.IsValue
                             && (rightSegment.IsValue))
-                            return targetSegment.MergeValue(rightSegment, ((DateOnly)targetSegment.Value).AddDays(Convert.ToInt32(rightSegment.Value)));
+                            return targetSegment.Change(((DateOnly)targetSegment.Value).AddDays(Convert.ToInt32(rightSegment.Value)));
 
-                        var targetArgument = visitor.GetQuotedValue(targetSegment);
-                        var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"DATEADD(DAY,{rightArgument},{targetArgument})", SqlType.MethodCall);
+                        var targetArgument = visitor.WrapSql(targetSegment);
+                        var rightArgument = visitor.WrapSql(rightSegment);
+                        return targetSegment.Change($"DATEADD(DAY,{rightArgument},{targetArgument})", SqlType.MethodCall);
                     });
                     result = true;
                     break;
@@ -294,13 +294,13 @@ partial class SqlServerProvider
                     {
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                        if ((targetSegment.IsValue)
+                        if (targetSegment.IsValue
                             && (rightSegment.IsValue))
-                            return targetSegment.MergeValue(rightSegment, ((DateOnly)targetSegment.Value).AddMonths(Convert.ToInt32(rightSegment.Value)));
+                            return targetSegment.Change(((DateOnly)targetSegment.Value).AddMonths(Convert.ToInt32(rightSegment.Value)));
 
-                        var targetArgument = visitor.GetQuotedValue(targetSegment);
-                        var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"DATEADD(MONTH,{rightArgument},{targetArgument})", SqlType.MethodCall);
+                        var targetArgument = visitor.WrapSql(targetSegment);
+                        var rightArgument = visitor.WrapSql(rightSegment);
+                        return targetSegment.Change($"DATEADD(MONTH,{rightArgument},{targetArgument})", SqlType.MethodCall);
                     });
                     result = true;
                     break;
@@ -309,13 +309,13 @@ partial class SqlServerProvider
                     {
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                        if ((targetSegment.IsValue)
+                        if (targetSegment.IsValue
                             && (rightSegment.IsValue))
-                            return targetSegment.MergeValue(rightSegment, ((DateOnly)targetSegment.Value).AddDays(Convert.ToInt32(rightSegment.Value)));
+                            return targetSegment.Change(((DateOnly)targetSegment.Value).AddDays(Convert.ToInt32(rightSegment.Value)));
 
-                        var targetArgument = visitor.GetQuotedValue(targetSegment);
-                        var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"DATEADD(YEAR,{rightArgument},{targetArgument})", SqlType.MethodCall);
+                        var targetArgument = visitor.WrapSql(targetSegment);
+                        var rightArgument = visitor.WrapSql(rightSegment);
+                        return targetSegment.Change($"DATEADD(YEAR,{rightArgument},{targetArgument})", SqlType.MethodCall);
                     });
                     result = true;
                     break;
@@ -325,9 +325,9 @@ partial class SqlServerProvider
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
 
-                        var targetArgument = visitor.GetQuotedValue(targetSegment);
-                        var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"{targetArgument}={rightArgument}");
+                        var targetArgument = visitor.WrapSql(targetSegment);
+                        var rightArgument = visitor.WrapSql(rightSegment);
+                        return targetSegment.Change($"{targetArgument}={rightArgument}");
                     });
                     result = true;
                     break;
@@ -337,9 +337,9 @@ partial class SqlServerProvider
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
 
-                        var targetArgument = visitor.GetQuotedValue(targetSegment);
-                        var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END");
+                        var targetArgument = visitor.WrapSql(targetSegment);
+                        var rightArgument = visitor.WrapSql(rightSegment);
+                        return targetSegment.Change($"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END");
                     });
                     result = true;
                     break;
@@ -391,15 +391,15 @@ partial class SqlServerProvider
                                 else if (formatArgument.Contains("d"))
                                     formatArgument = formatArgument.Replace("d", "FMDD");
                             }
-                            else formatArgument = visitor.GetQuotedValue(formatSegment);
+                            else formatArgument = visitor.WrapSql(formatSegment);
 
-                            if ((targetSegment.IsValue)
+                            if (targetSegment.IsValue
                                 && formatSegment.IsValue)
-                                return targetSegment.MergeValue(formatSegment, ((DateOnly)targetSegment.Value).ToString(formatSegment.Value.ToString()));
+                                return targetSegment.Change(((DateOnly)targetSegment.Value).ToString(formatSegment.Value.ToString()));
 
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var targetArgument = visitor.WrapSql(targetSegment);
                             if formatSegment.IsValue
-                                return targetSegment.Merge(formatSegment, $"FORMAT({targetArgument},{formatArgument})", SqlType.MethodCall);
+                                return targetSegment.Change($"FORMAT({targetArgument},{formatArgument})", SqlType.MethodCall);
 
                             throw new NotSupportedException("DateOnly类型暂时不支持非常量的格式化字符串");
                         });
@@ -417,9 +417,9 @@ partial class SqlServerProvider
                             if (!kindSegment.IsConstant && !kindSegment.IsVariable)
                                 throw new NotSupportedException($"DateOnly.{methodInfo.Name}方法暂时仅支持第二个参数是常量或是变量的解析");
 
-                            if ((targetSegment.IsValue)
-                                && (valueSegment.IsConstant || valueSegment.IsVariable))
-                                return targetSegment.MergeValue(valueSegment, ((DateOnly)targetSegment.Value).ToDateTime((TimeOnly)valueSegment.Value, (DateTimeKind)kindSegment.Value));
+                            if (targetSegment.IsValue
+                                && valueSegment.IsValue)
+                                return targetSegment.Change(((DateOnly)targetSegment.Value).ToDateTime((TimeOnly)valueSegment.Value, (DateTimeKind)kindSegment.Value));
 
                             throw new NotSupportedException("DateOnly类型ToDateTime方法暂时不支持非常量的参数解析");
                         });
@@ -430,9 +430,9 @@ partial class SqlServerProvider
                         {
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var valueSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                            if ((targetSegment.IsValue)
-                                && (valueSegment.IsConstant || valueSegment.IsVariable))
-                                return targetSegment.MergeValue(valueSegment, ((DateOnly)targetSegment.Value).ToDateTime((TimeOnly)valueSegment.Value));
+                            if (targetSegment.IsValue
+                                && valueSegment.IsValue)
+                                return targetSegment.Change(((DateOnly)targetSegment.Value).ToDateTime((TimeOnly)valueSegment.Value));
 
                             throw new NotSupportedException("DateOnly类型ToDateTime方法暂时不支持非常量的参数解析");
                         });

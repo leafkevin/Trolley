@@ -20,7 +20,7 @@ partial class PostgreSqlProvider
             {
                 //静态成员访问，理论上没有target对象，为了不再创建sqlSegment对象，外层直接把对象传了进来
                 case "Empty":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.Change("''", true));
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.Change("''", true));
                     result = true;
                     break;
             }
@@ -29,7 +29,7 @@ partial class PostgreSqlProvider
         switch (memberInfo.Name)
         {
             case "Length":
-                formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
+                formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) =>
                 {
                     var targetSegment = visitor.Visit(target);
                     if (targetSegment.IsValue)
@@ -69,7 +69,7 @@ partial class PostgreSqlProvider
                             var builder = new StringBuilder();
                             var constBuilder = new StringBuilder();
                             var concatExprs = visitor.SplitConcatList(args);
-                            SqlSegment resultSegment = null;
+                            SqlSegment resultSegment = default;
 
                             bool isDeferredFields = false;
                             var sqlSegments = new List<SqlSegment>();
@@ -118,7 +118,7 @@ partial class PostgreSqlProvider
                                 if (builder.Length > 0)
                                     builder.Append(',');
 
-                                string body = visitor.GetQuotedValue(sqlSegment);
+                                string body = visitor.WrapSql(sqlSegment);
                                 if (sqlSegment.SegmentType != typeof(string))
                                 {
                                     if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
@@ -157,7 +157,7 @@ partial class PostgreSqlProvider
                             var constBuilder = new StringBuilder();
                             //已经被分割成了多个SqlSegment
                             var concatExprs = visitor.ConvertFormatToConcatList(args);
-                            SqlSegment resultSegment = null;
+                            SqlSegment resultSegment = default;
 
                             //123_{0}_345_{1}{2}_etr_{3}_fdr, 111,@p1,@p2,e4re
                             bool isDeferredFields = false;
@@ -205,7 +205,7 @@ partial class PostgreSqlProvider
                                 if (builder.Length > 0)
                                     builder.Append(',');
 
-                                string body = visitor.GetQuotedValue(sqlSegment);
+                                string body = visitor.WrapSql(sqlSegment);
                                 if (sqlSegment.SegmentType != typeof(string))
                                 {
                                     if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
@@ -244,9 +244,9 @@ partial class PostgreSqlProvider
                         {
                             var leftSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                             var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
-                            var leftArgument = visitor.GetQuotedValue(leftSegment);
-                            var rightArgument = visitor.GetQuotedValue(rightSegment);
-                            return leftSegment.Merge(rightSegment, $"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END");
+                            var leftArgument = visitor.WrapSql(leftSegment);
+                            var rightArgument = visitor.WrapSql(rightSegment);
+                            return leftSegment.Change($"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END");
                         });
                         result = true;
                     }
@@ -257,7 +257,7 @@ partial class PostgreSqlProvider
                         formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                         {
                             var valueSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                            var valueArgument = visitor.GetQuotedValue(valueSegment, true);
+                            var valueArgument = visitor.WrapSql(valueSegment, true);
                             return valueSegment.Change($"({valueArgument} IS NULL OR {valueArgument}='')", SqlType.MethodCall);
                         });
                         result = true;
@@ -269,7 +269,7 @@ partial class PostgreSqlProvider
                         formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                         {
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                            var targetArgument = visitor.GetQuotedValue(targetSegment, true);
+                            var targetArgument = visitor.WrapSql(targetSegment, true);
                             return targetSegment.Change($"({targetArgument} IS NULL OR {targetArgument}='' OR TRIM({targetArgument})='')", SqlType.MethodCall);
                         });
                         result = true;
@@ -314,7 +314,7 @@ partial class PostgreSqlProvider
                                     }
                                     builder.Append(',');
 
-                                    string body = visitor.GetQuotedValue(elementSegment);
+                                    string body = visitor.WrapSql(elementSegment);
                                     if (elementSegment.SegmentType != typeof(string))
                                     {
                                         if (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall)
@@ -388,7 +388,7 @@ partial class PostgreSqlProvider
                                     }
                                     builder.Append(',');
 
-                                    string body = visitor.GetQuotedValue(elementSegment);
+                                    string body = visitor.WrapSql(elementSegment);
                                     if (elementSegment.SegmentType != typeof(string))
                                     {
                                         if (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall)
@@ -425,11 +425,11 @@ partial class PostgreSqlProvider
                             var leftSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                             var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
 
-                            var leftArgument = visitor.GetQuotedValue(leftSegment);
-                            var rightArgument = visitor.GetQuotedValue(rightSegment);
+                            var leftArgument = visitor.WrapSql(leftSegment);
+                            var rightArgument = visitor.WrapSql(rightSegment);
 
                             string equalsString = deferExprs.IsDeferredNot() ? "<>" : "=";
-                            return leftSegment.Merge(rightSegment, $"{leftArgument}{equalsString}{rightArgument}");
+                            return leftSegment.Change($"{leftArgument}{equalsString}{rightArgument}");
                         });
                         result = true;
                     }
@@ -452,23 +452,23 @@ partial class PostgreSqlProvider
                         {
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var targetArgument = visitor.WrapSql(targetSegment);
                             string body = null;
                             if (visitor.IsSelect)
                             {
                                 var notString = deferExprs.IsDeferredNot() ? "<0" : ">0";
                                 if (rightSegment.IsConstant)
                                     body = $"POSITION('{rightSegment.Value}' IN {targetArgument}){notString}";
-                                else body = $"POSITION({visitor.GetQuotedValue(rightSegment)} IN {targetArgument}){notString}";
+                                else body = $"POSITION({visitor.WrapSql(rightSegment)} IN {targetArgument}){notString}";
                             }
                             else
                             {
                                 var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
                                 if (rightSegment.IsConstant)
                                     body = $"{targetArgument}{notString} LIKE '%{rightSegment.Value}%'";
-                                else body = $"{targetArgument}{notString} LIKE CONCAT('%',{visitor.GetQuotedValue(rightSegment)},'%')";
+                                else body = $"{targetArgument}{notString} LIKE CONCAT('%',{visitor.WrapSql(rightSegment)},'%')";
                             }
-                            return targetSegment.Merge(rightSegment, body);
+                            return targetSegment.Change(body);
                         });
                         result = true;
                     }
@@ -484,9 +484,9 @@ partial class PostgreSqlProvider
                     {
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                        var targetArgument = visitor.GetQuotedValue(targetSegment);
-                        var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END");
+                        var targetArgument = visitor.WrapSql(targetSegment);
+                        var rightArgument = visitor.WrapSql(rightSegment);
+                        return targetSegment.Change($"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END");
                     });
                     result = true;
                     break;
@@ -509,13 +509,13 @@ partial class PostgreSqlProvider
                         {
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                            if ((targetSegment.IsValue)
+                            if (targetSegment.IsValue
                                 && (rightSegment.IsValue))
-                                return targetSegment.MergeValue(rightSegment, ((string)targetSegment.Value).Trim((char)rightSegment.Value));
+                                return targetSegment.Change(((string)targetSegment.Value).Trim((char)rightSegment.Value));
 
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            var rightArgument = visitor.GetQuotedValue(rightSegment);
-                            return targetSegment.Merge(rightSegment, $"TRIM(BOTH {rightArgument} FROM {targetArgument})", SqlType.MethodCall);
+                            var targetArgument = visitor.WrapSql(targetSegment);
+                            var rightArgument = visitor.WrapSql(rightSegment);
+                            return targetSegment.Change($"TRIM(BOTH {rightArgument} FROM {targetArgument})", SqlType.MethodCall);
                         });
                         result = true;
                     }
@@ -525,9 +525,9 @@ partial class PostgreSqlProvider
                         {
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                            if ((targetSegment.IsValue)
+                            if (targetSegment.IsValue
                                 && (rightSegment.IsValue))
-                                return targetSegment.MergeValue(rightSegment, ((string)targetSegment.Value).Trim((char[])rightSegment.Value));
+                                return targetSegment.Change(((string)targetSegment.Value).Trim((char[])rightSegment.Value));
 
                             throw new NotSupportedException("暂时只支持Trim方法的参数是常量或变量的表达式解析");
                         });
@@ -553,13 +553,13 @@ partial class PostgreSqlProvider
                         {
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                            if ((targetSegment.IsValue)
+                            if (targetSegment.IsValue
                                 && (rightSegment.IsValue))
-                                return targetSegment.MergeValue(rightSegment, ((string)targetSegment.Value).TrimStart((char)rightSegment.Value));
+                                return targetSegment.Change(((string)targetSegment.Value).TrimStart((char)rightSegment.Value));
 
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            var rightArgument = visitor.GetQuotedValue(rightSegment);
-                            return targetSegment.Merge(rightSegment, $"TRIM(LEADING {rightArgument} FROM {targetArgument})", SqlType.MethodCall);
+                            var targetArgument = visitor.WrapSql(targetSegment);
+                            var rightArgument = visitor.WrapSql(rightSegment);
+                            return targetSegment.Change($"TRIM(LEADING {rightArgument} FROM {targetArgument})", SqlType.MethodCall);
                         });
                         result = true;
                     }
@@ -569,13 +569,13 @@ partial class PostgreSqlProvider
                         {
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                            if ((targetSegment.IsValue)
+                            if (targetSegment.IsValue
                                 && (rightSegment.IsValue))
                             {
                                 //.NET Standard 2.0 framework场景会走到这里
                                 if (rightSegment.Value is List<object> charArray && charArray.Count == 0)
-                                    return targetSegment.MergeValue(rightSegment, ((string)targetSegment.Value).TrimStart());
-                                return targetSegment.MergeValue(rightSegment, ((string)targetSegment.Value).TrimStart((char[])rightSegment.Value));
+                                    return targetSegment.Change(((string)targetSegment.Value).TrimStart());
+                                return targetSegment.Change(((string)targetSegment.Value).TrimStart((char[])rightSegment.Value));
                             }
                             //.NET Standard 2.0 framework场景会走到这里
                             else if (rightSegment.Value is List<object> charArray && charArray.Count == 0)
@@ -604,13 +604,13 @@ partial class PostgreSqlProvider
                         {
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                            if ((targetSegment.IsValue)
+                            if (targetSegment.IsValue
                                 && (rightSegment.IsValue))
-                                return targetSegment.MergeValue(rightSegment, ((string)targetSegment.Value).TrimEnd((char)rightSegment.Value));
+                                return targetSegment.Change(((string)targetSegment.Value).TrimEnd((char)rightSegment.Value));
 
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            var rightArgument = visitor.GetQuotedValue(rightSegment);
-                            return targetSegment.Merge(rightSegment, $"TRIM(TRAILING {rightArgument} FROM {targetArgument})", SqlType.MethodCall);
+                            var targetArgument = visitor.WrapSql(targetSegment);
+                            var rightArgument = visitor.WrapSql(rightSegment);
+                            return targetSegment.Change($"TRIM(TRAILING {rightArgument} FROM {targetArgument})", SqlType.MethodCall);
                         });
                         result = true;
                     }
@@ -620,13 +620,13 @@ partial class PostgreSqlProvider
                         {
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                            if ((targetSegment.IsValue)
+                            if (targetSegment.IsValue
                                 && (rightSegment.IsValue))
                             {
                                 //.NET Standard 2.0 framework场景会走到这里
                                 if (rightSegment.Value is List<object> charArray && charArray.Count == 0)
-                                    return targetSegment.MergeValue(rightSegment, ((string)targetSegment.Value).TrimEnd());
-                                return targetSegment.MergeValue(rightSegment, ((string)targetSegment.Value).TrimEnd((char[])rightSegment.Value));
+                                    return targetSegment.Change(((string)targetSegment.Value).TrimEnd());
+                                return targetSegment.Change(((string)targetSegment.Value).TrimEnd((char[])rightSegment.Value));
                             }
                             //.NET Standard 2.0 framework场景会走到这里
                             else if (rightSegment.Value is List<object> charArray && charArray.Count == 0)
@@ -675,11 +675,11 @@ partial class PostgreSqlProvider
                     {
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                        var targetArgument = visitor.GetQuotedValue(targetSegment);
-                        var rightArgument = visitor.GetQuotedValue(rightSegment);
+                        var targetArgument = visitor.WrapSql(targetSegment);
+                        var rightArgument = visitor.WrapSql(rightSegment);
 
                         var equalsString = deferExprs.IsDeferredNot() ? "<>" : "=";
-                        return targetSegment.Merge(rightSegment, $"{targetArgument}{equalsString}{rightArgument}");
+                        return targetSegment.Change($"{targetArgument}{equalsString}{rightArgument}");
                     });
                     result = true;
                     break;
@@ -690,15 +690,15 @@ partial class PostgreSqlProvider
                         {
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var targetArgument = visitor.WrapSql(targetSegment);
 
                             string rightArgument = null;
                             if (rightSegment.IsConstant)
                                 rightArgument = $"'{rightSegment.Value}%'";
-                            else rightArgument = $"CONCAT({visitor.GetQuotedValue(rightSegment)},'%')";
+                            else rightArgument = $"CONCAT({visitor.WrapSql(rightSegment)},'%')";
 
                             var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
-                            return targetSegment.Merge(rightSegment, $"{targetArgument}{notString} LIKE {rightArgument}");
+                            return targetSegment.Change($"{targetArgument}{notString} LIKE {rightArgument}");
                         });
                         result = true;
                     }
@@ -710,15 +710,15 @@ partial class PostgreSqlProvider
                         {
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var targetArgument = visitor.WrapSql(targetSegment);
 
                             string rightArgument = null;
                             if (rightSegment.IsConstant)
                                 rightArgument = $"'%{rightSegment.Value}'";
-                            else rightArgument = $"CONCAT('%',{visitor.GetQuotedValue(rightSegment)})";
+                            else rightArgument = $"CONCAT('%',{visitor.WrapSql(rightSegment)})";
 
                             var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
-                            return targetSegment.Merge(rightSegment, $"{targetArgument}{notString} LIKE {rightArgument}");
+                            return targetSegment.Change($"{targetArgument}{notString} LIKE {rightArgument}");
                         });
                         result = true;
                     }
@@ -732,16 +732,16 @@ partial class PostgreSqlProvider
                             var indexSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                             var lengthSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
 
-                            if ((targetSegment.IsValue)
-                                && (indexSegment.IsConstant || indexSegment.IsVariable)
-                                && (lengthSegment.IsConstant || lengthSegment.IsVariable))
-                                return targetSegment.MergeValue(indexSegment, lengthSegment, targetSegment.Value.ToString().Substring(Convert.ToInt32(indexSegment.Value), Convert.ToInt32(lengthSegment.Value)));
+                            if (targetSegment.IsValue
+                                && indexSegment.IsValue
+                                && lengthSegment.IsValue)
+                                return targetSegment.Change( targetSegment.Value.ToString().Substring(Convert.ToInt32(indexSegment.Value), Convert.ToInt32(lengthSegment.Value)));
 
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var targetArgument = visitor.WrapSql(targetSegment);
                             indexSegment.Value = visitor.GetQuotedValue<int>(indexSegment) + 1;
-                            var indexArgument = visitor.GetQuotedValue(indexSegment);
-                            var lengthArgument = visitor.GetQuotedValue(lengthSegment);
-                            return targetSegment.Merge(indexSegment, lengthSegment, $"SUBSTRING({targetArgument},{indexArgument},{lengthArgument})", SqlType.MethodCall);
+                            var indexArgument = visitor.WrapSql(indexSegment);
+                            var lengthArgument = visitor.WrapSql(lengthSegment);
+                            return targetSegment.Change( $"SUBSTRING({targetArgument},{indexArgument},{lengthArgument})", SqlType.MethodCall);
                         });
                         result = true;
                     }
@@ -752,14 +752,14 @@ partial class PostgreSqlProvider
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var indexSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
 
-                            if ((targetSegment.IsValue)
-                                && (indexSegment.IsConstant || indexSegment.IsVariable))
-                                return targetSegment.MergeValue(indexSegment, targetSegment.Value.ToString().Substring(Convert.ToInt32(indexSegment.Value)));
+                            if (targetSegment.IsValue
+                                && indexSegment.IsValue)
+                                return targetSegment.Change(targetSegment.Value.ToString().Substring(Convert.ToInt32(indexSegment.Value)));
 
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var targetArgument = visitor.WrapSql(targetSegment);
                             indexSegment.Value = visitor.GetQuotedValue<int>(indexSegment) + 1;
-                            var indexArgument = visitor.GetQuotedValue(indexSegment);
-                            return targetSegment.Merge(indexSegment, $"SUBSTRING({targetArgument},{indexArgument})", SqlType.MethodCall);
+                            var indexArgument = visitor.WrapSql(indexSegment);
+                            return targetSegment.Change( $"SUBSTRING({targetArgument},{indexArgument})", SqlType.MethodCall);
                         });
                         result = true;
                     }
@@ -797,13 +797,13 @@ partial class PostgreSqlProvider
                         {
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var valueSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                            if ((targetSegment.IsValue)
-                                && (valueSegment.IsConstant || valueSegment.IsVariable))
-                                return targetSegment.MergeValue(valueSegment, methodInfo.Invoke(targetSegment.Value, new object[] { valueSegment.Value }));
+                            if (targetSegment.IsValue
+                                && valueSegment.IsValue)
+                                return targetSegment.Change(methodInfo.Invoke(targetSegment.Value, new object[] { valueSegment.Value }));
 
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            var valueArgument = visitor.GetQuotedValue(valueSegment);
-                            return targetSegment.Merge(valueSegment, $"POSITION({valueArgument} IN {targetArgument})-1");
+                            var targetArgument = visitor.WrapSql(targetSegment);
+                            var valueArgument = visitor.WrapSql(valueSegment);
+                            return targetSegment.Change($"POSITION({valueArgument} IN {targetArgument})-1");
                         });
                         result = true;
                     }
@@ -814,18 +814,18 @@ partial class PostgreSqlProvider
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var valueSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                             var startIndexSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
-                            if ((targetSegment.IsValue)
-                                && (valueSegment.IsConstant || valueSegment.IsVariable)
+                            if (targetSegment.IsValue
+                                && valueSegment.IsValue
                                 && (startIndexSegment.IsConstant || startIndexSegment.IsVariable))
-                                return targetSegment.MergeValue(valueSegment, startIndexSegment, methodInfo.Invoke(targetSegment.Value, new object[] { valueSegment.Value, startIndexSegment.Value }));
+                                return targetSegment.Change(startIndexSegment, methodInfo.Invoke(targetSegment.Value, new object[] { valueSegment.Value, startIndexSegment.Value }));
 
                             string indexArgument = null;
                             if (startIndexSegment.IsConstant)
                                 indexArgument = $"{(int)startIndexSegment.Value + 1}";
-                            else indexArgument = $"{visitor.GetQuotedValue(startIndexSegment)}+1";
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            var valueArgument = visitor.GetQuotedValue(valueSegment);
-                            return targetSegment.Merge(valueSegment, startIndexSegment, $"POSITION({valueArgument} IN SUBSTRING({targetArgument},{indexArgument}))-1");
+                            else indexArgument = $"{visitor.WrapSql(startIndexSegment)}+1";
+                            var targetArgument = visitor.WrapSql(targetSegment);
+                            var valueArgument = visitor.WrapSql(valueSegment);
+                            return targetSegment.Change(startIndexSegment, $"POSITION({valueArgument} IN SUBSTRING({targetArgument},{indexArgument}))-1");
                         });
                         result = true;
                     }
@@ -837,13 +837,13 @@ partial class PostgreSqlProvider
                         {
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var widthSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                            if ((targetSegment.IsValue)
-                                && (widthSegment.IsConstant || widthSegment.IsVariable))
-                                return targetSegment.MergeValue(widthSegment, ((string)targetSegment.Value).PadLeft((int)widthSegment.Value));
+                            if (targetSegment.IsValue
+                                && widthSegment.IsValue)
+                                return targetSegment.Change(((string)targetSegment.Value).PadLeft((int)widthSegment.Value));
 
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            var widthArgument = visitor.GetQuotedValue(widthSegment);
-                            return targetSegment.Merge(widthSegment, $"LPAD({targetArgument},{widthArgument})", SqlType.MethodCall);
+                            var targetArgument = visitor.WrapSql(targetSegment);
+                            var widthArgument = visitor.WrapSql(widthSegment);
+                            return targetSegment.Change($"LPAD({targetArgument},{widthArgument})", SqlType.MethodCall);
                         });
                         result = true;
                     }
@@ -854,15 +854,15 @@ partial class PostgreSqlProvider
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var widthSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                             var paddingSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
-                            if ((targetSegment.IsValue)
-                                && (widthSegment.IsConstant || widthSegment.IsVariable)
-                                && (paddingSegment.IsConstant || paddingSegment.IsVariable))
-                                return targetSegment.MergeValue(widthSegment, paddingSegment, ((string)targetSegment.Value).PadLeft((int)widthSegment.Value, (char)paddingSegment.Value));
+                            if (targetSegment.IsValue
+                                && widthSegment.IsValue
+                                && paddingSegment.IsValue)
+                                return targetSegment.Change( ((string)targetSegment.Value).PadLeft((int)widthSegment.Value, (char)paddingSegment.Value));
 
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            var widthArgument = visitor.GetQuotedValue(widthSegment);
-                            var paddingArgument = visitor.GetQuotedValue(paddingSegment);
-                            return targetSegment.Merge(widthSegment, paddingSegment, $"LPAD({targetArgument},{widthArgument},{paddingArgument})", SqlType.MethodCall);
+                            var targetArgument = visitor.WrapSql(targetSegment);
+                            var widthArgument = visitor.WrapSql(widthSegment);
+                            var paddingArgument = visitor.WrapSql(paddingSegment);
+                            return targetSegment.Change( $"LPAD({targetArgument},{widthArgument},{paddingArgument})", SqlType.MethodCall);
                         });
                         result = true;
                     }
@@ -874,13 +874,13 @@ partial class PostgreSqlProvider
                         {
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var widthSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                            if ((targetSegment.IsValue)
-                                && (widthSegment.IsConstant || widthSegment.IsVariable))
-                                return targetSegment.MergeValue(widthSegment, ((string)targetSegment.Value).PadRight((int)widthSegment.Value));
+                            if (targetSegment.IsValue
+                                && widthSegment.IsValue)
+                                return targetSegment.Change(((string)targetSegment.Value).PadRight((int)widthSegment.Value));
 
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            var widthArgument = visitor.GetQuotedValue(widthSegment);
-                            return targetSegment.Merge(widthSegment, $"RPAD({targetArgument},{widthArgument})", SqlType.MethodCall);
+                            var targetArgument = visitor.WrapSql(targetSegment);
+                            var widthArgument = visitor.WrapSql(widthSegment);
+                            return targetSegment.Change($"RPAD({targetArgument},{widthArgument})", SqlType.MethodCall);
                         });
                         result = true;
                     }
@@ -891,15 +891,15 @@ partial class PostgreSqlProvider
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var widthSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                             var paddingSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
-                            if ((targetSegment.IsValue)
-                                && (widthSegment.IsConstant || widthSegment.IsVariable)
-                                && (paddingSegment.IsConstant || paddingSegment.IsVariable))
-                                return targetSegment.MergeValue(widthSegment, paddingSegment, ((string)targetSegment.Value).PadRight((int)widthSegment.Value, (char)paddingSegment.Value));
+                            if (targetSegment.IsValue
+                                && widthSegment.IsValue
+                                && paddingSegment.IsValue)
+                                return targetSegment.Change( ((string)targetSegment.Value).PadRight((int)widthSegment.Value, (char)paddingSegment.Value));
 
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            var widthArgument = visitor.GetQuotedValue(widthSegment);
-                            var paddingArgument = visitor.GetQuotedValue(paddingSegment);
-                            return targetSegment.Merge(widthSegment, paddingSegment, $"RPAD({targetArgument},{widthArgument},{paddingArgument})", SqlType.MethodCall);
+                            var targetArgument = visitor.WrapSql(targetSegment);
+                            var widthArgument = visitor.WrapSql(widthSegment);
+                            var paddingArgument = visitor.WrapSql(paddingSegment);
+                            return targetSegment.Change( $"RPAD({targetArgument},{widthArgument},{paddingArgument})", SqlType.MethodCall);
                         });
                         result = true;
                     }
@@ -912,15 +912,15 @@ partial class PostgreSqlProvider
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var oldSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                             var newSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
-                            if ((targetSegment.IsValue)
-                                && (oldSegment.IsConstant || oldSegment.IsVariable)
-                                && (newSegment.IsConstant || newSegment.IsVariable))
-                                return targetSegment.MergeValue(oldSegment, newSegment, ((string)targetSegment.Value).Replace((char)oldSegment.Value, (char)newSegment.Value));
+                            if (targetSegment.IsValue
+                                && oldSegment.IsValue
+                                && newSegment.IsValue)
+                                return targetSegment.Change(((string)targetSegment.Value).Replace((char)oldSegment.Value, (char)newSegment.Value));
 
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            var oldArgument = visitor.GetQuotedValue(oldSegment);
-                            var newArgument = visitor.GetQuotedValue(newSegment);
-                            return targetSegment.Merge(oldSegment, newSegment, $"REPLACE({targetArgument},{oldArgument},{newArgument})", SqlType.MethodCall);
+                            var targetArgument = visitor.WrapSql(targetSegment);
+                            var oldArgument = visitor.WrapSql(oldSegment);
+                            var newArgument = visitor.WrapSql(newSegment);
+                            return targetSegment.Change( $"REPLACE({targetArgument},{oldArgument},{newArgument})", SqlType.MethodCall);
                         });
                         result = true;
                     }
@@ -931,15 +931,15 @@ partial class PostgreSqlProvider
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var oldSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                             var newSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
-                            if ((targetSegment.IsValue)
-                                && (oldSegment.IsConstant || oldSegment.IsVariable)
-                                && (newSegment.IsConstant || newSegment.IsVariable))
-                                return targetSegment.MergeValue(oldSegment, newSegment, ((string)targetSegment.Value).Replace((string)oldSegment.Value, (string)newSegment.Value));
+                            if (targetSegment.IsValue
+                                && oldSegment.IsValue
+                                && newSegment.IsValue)
+                                return targetSegment.Change(((string)targetSegment.Value).Replace((string)oldSegment.Value, (string)newSegment.Value));
 
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            var oldArgument = visitor.GetQuotedValue(oldSegment);
-                            var newArgument = visitor.GetQuotedValue(newSegment);
-                            return targetSegment.Merge(oldSegment, newSegment, $"REPLACE({targetArgument},{oldArgument},{newArgument})", SqlType.MethodCall);
+                            var targetArgument = visitor.WrapSql(targetSegment);
+                            var oldArgument = visitor.WrapSql(oldSegment);
+                            var newArgument = visitor.WrapSql(newSegment);
+                            return targetSegment.Change( $"REPLACE({targetArgument},{oldArgument},{newArgument})", SqlType.MethodCall);
                         });
                         result = true;
                     }

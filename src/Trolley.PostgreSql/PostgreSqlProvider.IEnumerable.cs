@@ -36,13 +36,13 @@ partial class PostgreSqlProvider
                             {
                                 if (builder.Length > 0)
                                     builder.Append(',');
-                                var sqlArgument = visitor.GetQuotedValue(item, arraySegment, elementSegment);
+                                var sqlArgument = visitor.WrapSql(item, arraySegment, elementSegment);
                                 builder.Append(sqlArgument);
                             }
                             if (builder.Length > 0)
                             {
                                 var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
-                                var elementArgument = visitor.GetQuotedValue(elementSegment);
+                                var elementArgument = visitor.WrapSql(elementSegment);
                                 return elementSegment.Merge(arraySegment, $"{elementArgument} {notString}IN ({builder})");
                             }
                             else return elementSegment.Change("1=0");
@@ -51,7 +51,7 @@ partial class PostgreSqlProvider
                         {
                             if (deferExprs.IsDeferredNot())
                                 throw new NotSupportedException("数组查询不支持非！操作");
-                            var elementArgument = visitor.GetQuotedValue(elementSegment);
+                            var elementArgument = visitor.WrapSql(elementSegment);
                             return arraySegment.Merge(elementSegment, $"{arraySegment.Value} @> ARRAY[{elementArgument}]");
                         }
                         else throw new NotSupportedException("不支持的查询操作");
@@ -77,12 +77,12 @@ partial class PostgreSqlProvider
                             {
                                 if (builder.Length > 0)
                                     builder.Append(',');
-                                var sqlArgument = visitor.GetQuotedValue(item, targetSegment, elementSegment);
+                                var sqlArgument = visitor.WrapSql(item, targetSegment, elementSegment);
                                 builder.Append(sqlArgument);
                             }
                             if (builder.Length > 0)
                             {
-                                string elementArgument = visitor.GetQuotedValue(elementSegment);
+                                string elementArgument = visitor.WrapSql(elementSegment);
                                 var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
                                 return elementSegment.Merge(targetSegment, $"{elementArgument} {notString}IN ({builder})");
                             }
@@ -92,7 +92,7 @@ partial class PostgreSqlProvider
                         {
                             if (deferExprs.IsDeferredNot())
                                 throw new NotSupportedException("数组查询不支持非！操作");
-                            var elementArgument = visitor.GetQuotedValue(elementSegment);
+                            var elementArgument = visitor.WrapSql(elementSegment);
                             return targetSegment.Merge(elementSegment, $"{targetSegment.Value} @> ARRAY[{elementArgument}]");
                         }
                         else throw new NotSupportedException("不支持的查询操作");

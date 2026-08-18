@@ -18,7 +18,7 @@ partial class SqlServerProvider
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
                     var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                    return args0Segment.Change($"ABS({visitor.GetQuotedValue(args0Segment)})", SqlType.MethodCall);
+                    return args0Segment.Change($"ABS({visitor.WrapSql(args0Segment)})", SqlType.MethodCall);
                 });
                 result = true;
                 break;
@@ -26,7 +26,7 @@ partial class SqlServerProvider
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
                     var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                    return args0Segment.Change($"SIGN({visitor.GetQuotedValue(args0Segment)})", SqlType.MethodCall);
+                    return args0Segment.Change($"SIGN({visitor.WrapSql(args0Segment)})", SqlType.MethodCall);
                 });
                 result = true;
                 break;
@@ -34,7 +34,7 @@ partial class SqlServerProvider
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
                     var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                    return args0Segment.Change($"FLOOR({visitor.GetQuotedValue(args0Segment)})", SqlType.MethodCall);
+                    return args0Segment.Change($"FLOOR({visitor.WrapSql(args0Segment)})", SqlType.MethodCall);
                 });
                 result = true;
                 break;
@@ -42,7 +42,7 @@ partial class SqlServerProvider
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
                     var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                    return args0Segment.Change($"CEILING({visitor.GetQuotedValue(args0Segment)})", SqlType.MethodCall);
+                    return args0Segment.Change($"CEILING({visitor.WrapSql(args0Segment)})", SqlType.MethodCall);
                 });
                 result = true;
                 break;
@@ -53,9 +53,9 @@ partial class SqlServerProvider
                     {
                         var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                         var args1Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
-                        var args0Argument = visitor.GetQuotedValue(args0Segment);
-                        var args1Argument = visitor.GetQuotedValue(args1Segment);
-                        return args0Segment.Merge(args1Segment, $"ROUND({args0Argument},{args1Argument})", SqlType.MethodCall);
+                        var args0Argument = visitor.WrapSql(args0Segment);
+                        var args1Argument = visitor.WrapSql(args1Segment);
+                        return args0Segment.Change($"ROUND({args0Argument},{args1Argument})", SqlType.MethodCall);
                     });
                     result = true;
                 }
@@ -64,7 +64,7 @@ partial class SqlServerProvider
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                     {
                         var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                        return args0Segment.Change($"ROUND({visitor.GetQuotedValue(args0Segment)})", SqlType.MethodCall);
+                        return args0Segment.Change($"ROUND({visitor.WrapSql(args0Segment)})", SqlType.MethodCall);
                     });
                     result = true;
                 }
@@ -73,7 +73,7 @@ partial class SqlServerProvider
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
                     var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                    return args0Segment.Change($"EXP({visitor.GetQuotedValue(args0Segment)})", SqlType.MethodCall);
+                    return args0Segment.Change($"EXP({visitor.WrapSql(args0Segment)})", SqlType.MethodCall);
                 });
                 result = true;
                 break;
@@ -81,7 +81,7 @@ partial class SqlServerProvider
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
                     var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                    return args0Segment.Change($"LOG({visitor.GetQuotedValue(args0Segment)})", SqlType.MethodCall);
+                    return args0Segment.Change($"LOG({visitor.WrapSql(args0Segment)})", SqlType.MethodCall);
                 });
                 result = true;
                 break;
@@ -89,7 +89,7 @@ partial class SqlServerProvider
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
                     var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                    return args0Segment.Change($"LOG10({visitor.GetQuotedValue(args0Segment)})", SqlType.MethodCall);
+                    return args0Segment.Change($"LOG10({visitor.WrapSql(args0Segment)})", SqlType.MethodCall);
                 });
                 result = true;
                 break;
@@ -98,9 +98,9 @@ partial class SqlServerProvider
                 {
                     var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                     var args1Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
-                    var args0Argument = visitor.GetQuotedValue(args0Segment);
-                    var args1Argument = visitor.GetQuotedValue(args1Segment);
-                    return args0Segment.Merge(args1Segment, $"POW({args0Argument},{args1Argument})", SqlType.MethodCall);
+                    var args0Argument = visitor.WrapSql(args0Segment);
+                    var args1Argument = visitor.WrapSql(args1Segment);
+                    return args0Segment.Change($"POW({args0Argument},{args1Argument})", SqlType.MethodCall);
                 });
                 result = true;
                 break;
@@ -108,7 +108,7 @@ partial class SqlServerProvider
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
                     var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                    return args0Segment.Change($"SQRT({visitor.GetQuotedValue(args0Segment)})", SqlType.MethodCall);
+                    return args0Segment.Change($"SQRT({visitor.WrapSql(args0Segment)})", SqlType.MethodCall);
                 });
                 result = true;
                 break;
@@ -116,7 +116,7 @@ partial class SqlServerProvider
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
                     var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                    return args0Segment.Change($"COS({visitor.GetQuotedValue(args0Segment)})", SqlType.MethodCall);
+                    return args0Segment.Change($"COS({visitor.WrapSql(args0Segment)})", SqlType.MethodCall);
                 });
                 result = true;
                 break;
@@ -124,7 +124,7 @@ partial class SqlServerProvider
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
                     var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                    return args0Segment.Change($"SIN({visitor.GetQuotedValue(args0Segment)})", SqlType.MethodCall);
+                    return args0Segment.Change($"SIN({visitor.WrapSql(args0Segment)})", SqlType.MethodCall);
                 });
                 result = true;
                 break;
@@ -132,7 +132,7 @@ partial class SqlServerProvider
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
                     var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                    return args0Segment.Change($"TAN({visitor.GetQuotedValue(args0Segment)})", SqlType.MethodCall);
+                    return args0Segment.Change($"TAN({visitor.WrapSql(args0Segment)})", SqlType.MethodCall);
                 });
                 result = true;
                 break;
@@ -140,7 +140,7 @@ partial class SqlServerProvider
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
                     var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                    return args0Segment.Change($"ACOS({visitor.GetQuotedValue(args0Segment)})", SqlType.MethodCall);
+                    return args0Segment.Change($"ACOS({visitor.WrapSql(args0Segment)})", SqlType.MethodCall);
                 });
                 result = true;
                 break;
@@ -148,7 +148,7 @@ partial class SqlServerProvider
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
                     var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                    return args0Segment.Change($"ASIN({visitor.GetQuotedValue(args0Segment)})", SqlType.MethodCall);
+                    return args0Segment.Change($"ASIN({visitor.WrapSql(args0Segment)})", SqlType.MethodCall);
                 });
                 result = true;
                 break;
@@ -156,7 +156,7 @@ partial class SqlServerProvider
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
                     var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                    return args0Segment.Change($"ATAN({visitor.GetQuotedValue(args0Segment)})", SqlType.MethodCall);
+                    return args0Segment.Change($"ATAN({visitor.WrapSql(args0Segment)})", SqlType.MethodCall);
                 });
                 result = true;
                 break;
@@ -165,9 +165,9 @@ partial class SqlServerProvider
                 {
                     var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                     var args1Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
-                    var args0Argument = visitor.GetQuotedValue(args0Segment);
-                    var args1Argument = visitor.GetQuotedValue(args1Segment);
-                    return args0Segment.Merge(args1Segment, $"ATAN2({args0Argument},{args1Argument})", SqlType.MethodCall);
+                    var args0Argument = visitor.WrapSql(args0Segment);
+                    var args1Argument = visitor.WrapSql(args1Segment);
+                    return args0Segment.Change($"ATAN2({args0Argument},{args1Argument})", SqlType.MethodCall);
                 });
                 result = true;
                 break;
@@ -175,7 +175,7 @@ partial class SqlServerProvider
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
                     var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                    return args0Segment.Change($"TRUNCATE({visitor.GetQuotedValue(args0Segment)},0)", SqlType.MethodCall);
+                    return args0Segment.Change($"TRUNCATE({visitor.WrapSql(args0Segment)},0)", SqlType.MethodCall);
                 });
                 result = true;
                 break;

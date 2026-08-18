@@ -19,11 +19,11 @@ partial class MySqlProvider
             switch (memberInfo.Name)
             {
                 case "MinValue":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.ChangeValue(TimeOnly.MinValue, true));
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.ChangeValue(TimeOnly.MinValue, true));
                     result = true;
                     break;
                 case "MaxValue":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.ChangeValue(TimeOnly.MaxValue, true));
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.ChangeValue(TimeOnly.MaxValue, true));
                     result = true;
                     break;
             }
@@ -33,7 +33,7 @@ partial class MySqlProvider
             switch (memberInfo.Name)
             {
                 case "Ticks":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) =>
                     {
                         var targetSegment = visitor.Visit(target);
                         if (targetSegment.IsValue)
@@ -44,7 +44,7 @@ partial class MySqlProvider
                     result = true;
                     break;
                 case "Hour":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) =>
                     {
                         var targetSegment = visitor.Visit(target);
                         if (targetSegment.IsValue)
@@ -55,7 +55,7 @@ partial class MySqlProvider
                     result = true;
                     break;
                 case "Millisecond":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) =>
                     {
                         var targetSegment = visitor.Visit(target);
                         if (targetSegment.IsValue)
@@ -66,7 +66,7 @@ partial class MySqlProvider
                     result = true;
                     break;
                 case "Minute":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) =>
                     {
                         var targetSegment = visitor.Visit(target);
                         if (targetSegment.IsValue)
@@ -77,7 +77,7 @@ partial class MySqlProvider
                     result = true;
                     break;
                 case "Second":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) =>
                     {
                         var targetSegment = visitor.Visit(target);
                         if (targetSegment.IsValue)
@@ -149,12 +149,12 @@ partial class MySqlProvider
                         {
                             var valueSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                             var formatSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
-                            if ((valueSegment.IsConstant || valueSegment.IsVariable)
+                            if (valueSegment.IsValue
                                 && formatSegment.IsValue)
-                                return valueSegment.MergeValue(formatSegment, TimeOnly.ParseExact(valueSegment.Value.ToString(), formatSegment.Value.ToString()));
+                                return valueSegment.Change(TimeOnly.ParseExact(valueSegment.Value.ToString(), formatSegment.Value.ToString()));
 
-                            var valueArgument = visitor.GetQuotedValue(valueSegment);
-                            return valueSegment.Merge(formatSegment, $"TIME({valueArgument})", SqlType.MethodCall);
+                            var valueArgument = visitor.WrapSql(valueSegment);
+                            return valueSegment.Change($"TIME({valueArgument})", SqlType.MethodCall);
                         });
                         result = true;
                     }
@@ -170,13 +170,13 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                        if ((targetSegment.IsValue)
+                        if (targetSegment.IsValue
                             && (rightSegment.IsValue))
-                            return targetSegment.MergeValue(rightSegment, ((TimeOnly)targetSegment.Value).Add((TimeSpan)rightSegment.Value));
+                            return targetSegment.Change(((TimeOnly)targetSegment.Value).Add((TimeSpan)rightSegment.Value));
 
-                        var targetArgument = visitor.GetQuotedValue(targetSegment);
-                        var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"ADDTIME({targetArgument},{rightArgument})", SqlType.MethodCall);
+                        var targetArgument = visitor.WrapSql(targetSegment);
+                        var rightArgument = visitor.WrapSql(rightSegment);
+                        return targetSegment.Change($"ADDTIME({targetArgument},{rightArgument})", SqlType.MethodCall);
                     });
                     result = true;
                     break;
@@ -185,13 +185,13 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                        if ((targetSegment.IsValue)
+                        if (targetSegment.IsValue
                             && (rightSegment.IsValue))
-                            return targetSegment.MergeValue(rightSegment, ((TimeOnly)targetSegment.Value).AddHours((double)rightSegment.Value));
+                            return targetSegment.Change(((TimeOnly)targetSegment.Value).AddHours((double)rightSegment.Value));
 
-                        var targetArgument = visitor.GetQuotedValue(targetSegment);
-                        var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"TIME_ADD({targetArgument},INTERVAL {rightArgument} HOUR)", SqlType.MethodCall);
+                        var targetArgument = visitor.WrapSql(targetSegment);
+                        var rightArgument = visitor.WrapSql(rightSegment);
+                        return targetSegment.Change($"TIME_ADD({targetArgument},INTERVAL {rightArgument} HOUR)", SqlType.MethodCall);
                     });
                     result = true;
                     break;
@@ -200,13 +200,13 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                        if ((targetSegment.IsValue)
+                        if (targetSegment.IsValue
                             && (rightSegment.IsValue))
-                            return targetSegment.MergeValue(rightSegment, ((TimeOnly)targetSegment.Value).AddMinutes((double)rightSegment.Value));
+                            return targetSegment.Change(((TimeOnly)targetSegment.Value).AddMinutes((double)rightSegment.Value));
 
-                        var targetArgument = visitor.GetQuotedValue(targetSegment);
-                        var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"TIME_ADD({targetArgument},INTERVAL {rightArgument} MINUTE)", SqlType.MethodCall);
+                        var targetArgument = visitor.WrapSql(targetSegment);
+                        var rightArgument = visitor.WrapSql(rightSegment);
+                        return targetSegment.Change($"TIME_ADD({targetArgument},INTERVAL {rightArgument} MINUTE)", SqlType.MethodCall);
                     });
                     result = true;
                     break;
@@ -216,9 +216,9 @@ partial class MySqlProvider
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
 
-                        var targetArgument = visitor.GetQuotedValue(targetSegment);
-                        var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"CASE WHEN ({targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END");
+                        var targetArgument = visitor.WrapSql(targetSegment);
+                        var rightArgument = visitor.WrapSql(rightSegment);
+                        return targetSegment.Change($"CASE WHEN ({targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END");
                     });
                     result = true;
                     break;
@@ -228,9 +228,9 @@ partial class MySqlProvider
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
 
-                        var targetArgument = visitor.GetQuotedValue(targetSegment);
-                        var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"{targetArgument}={rightArgument}");
+                        var targetArgument = visitor.WrapSql(targetSegment);
+                        var rightArgument = visitor.WrapSql(rightSegment);
+                        return targetSegment.Change($"{targetArgument}={rightArgument}");
                     });
                     result = true;
                     break;

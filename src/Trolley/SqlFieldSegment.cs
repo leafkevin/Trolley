@@ -52,6 +52,8 @@ public struct SqlSegment
     public MemberInfo TargetMember { get; set; }
     public List<ReaderField> Fields { get; set; }
     public bool IsRawSqlFields { get; set; }
+    public bool IsConstant => this.SqlType == SqlType.Constant;
+    public bool IsVariable => this.SqlType == SqlType.Variable;
     public bool IsValue => this.SqlType == SqlType.Constant || this.SqlType == SqlType.Variable;
     public bool HasField => this.SqlType > SqlType.Variable;
     public bool IsFixedValue => this.SqlType == SqlType.FixedValue;

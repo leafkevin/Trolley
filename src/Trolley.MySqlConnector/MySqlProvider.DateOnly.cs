@@ -1,9 +1,7 @@
-﻿//#if NET6_0_OR_GREATER
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-//#endif
+
 using System.Linq.Expressions;
 
 namespace Trolley.MySqlConnector;
@@ -14,7 +12,7 @@ partial class MySqlProvider
     {
         bool result = false;
         formatter = null;
-        //#if NET6_0_OR_GREATER
+#if NET6_0_OR_GREATER
         var memberInfo = memberExpr.Member;
         var cacheKey = HashCode.Combine(memberInfo.DeclaringType, memberInfo);
         if (memberExpr.Expression == null)
@@ -69,7 +67,7 @@ partial class MySqlProvider
                     result = true;
                     break;
                 case "DayOfYear":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) =>
                     {
                         SqlSegment targetSegment = default;
                         if (target.Expression is MethodCallExpression callExpr && callExpr.Object == null
@@ -85,7 +83,7 @@ partial class MySqlProvider
                     result = true;
                     break;
                 case "Month":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) =>
                     {
                         SqlSegment targetSegment = default;
                         if (target.Expression is MethodCallExpression callExpr && callExpr.Object == null
@@ -101,7 +99,7 @@ partial class MySqlProvider
                     result = true;
                     break;
                 case "Year":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) =>
                     {
                         SqlSegment targetSegment = default;
                         if (target.Expression is MethodCallExpression callExpr && callExpr.Object == null
@@ -117,7 +115,7 @@ partial class MySqlProvider
                     result = true;
                     break;
                 case "DayNumber":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) =>
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) =>
                     {
                         SqlSegment targetSegment = default;
                         if (target.Expression is MethodCallExpression callExpr && callExpr.Object == null
@@ -134,14 +132,14 @@ partial class MySqlProvider
                     break;
             }
         }
-        //#endif
+#endif
         return result;
     }
     public override bool TryGetDateOnlyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out Func<ISqlVisitor, MethodCallExpression, Stack<DeferredOperation>, SqlSegment> formatter)
     {
         var result = false;
         formatter = null;
-        //#if NET6_0_OR_GREATER
+#if NET6_0_OR_GREATER
         var methodInfo = methodCallExpr.Method;
         var parameterInfos = methodInfo.GetParameters();
         var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
@@ -194,8 +192,7 @@ partial class MySqlProvider
                             var valueSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                             var providerSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
 
-                            if ((valueSegment.IsValue)
-                                && providerSegment.IsValue)
+                            if (valueSegment.IsValue && providerSegment.IsValue)
                                 return valueSegment.Change(DateOnly.Parse(valueSegment.Value.ToString(), (IFormatProvider)providerSegment.Value));
 
                             return valueSegment.Change($"CAST({valueSegment.Value} AS DATE)", SqlType.MethodCall);
@@ -225,10 +222,10 @@ partial class MySqlProvider
                         var providerSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[2] });
 
                         if (valueSegment.IsValue && formatSegment.IsValue && providerSegment.IsValue)
-                            return valueSegment.MergeValue(formatSegment, DateOnly.ParseExact(valueSegment.Value.ToString(), formatSegment.Value.ToString(), (IFormatProvider)providerSegment.Value));
+                            return valueSegment.Change(DateOnly.ParseExact(valueSegment.Value.ToString(), formatSegment.Value.ToString(), (IFormatProvider)providerSegment.Value));
 
                         string formatArgument = null;
-                        if (formatSegment.IsConstant)
+                        if (formatSegment.IsValue)
                         {
                             formatArgument = $"'{formatSegment.Value}'";
 
@@ -261,9 +258,9 @@ partial class MySqlProvider
                             else if (formatArgument.Contains("d"))
                                 formatArgument = formatArgument.Replace("d", "%e");
                         }
-                        else formatArgument = visitor.GetQuotedValue(formatSegment);
-                        var valueArgument = visitor.GetQuotedValue(valueSegment);
-                        return valueSegment.Merge(formatSegment, $"STR_TO_DATE({valueArgument},{formatArgument})", SqlType.MethodCall);
+                        else formatArgument = visitor.WrapSql(formatSegment);
+                        var valueArgument = visitor.WrapSql(valueSegment);
+                        return valueSegment.Change($"STR_TO_DATE({valueArgument},{formatArgument})", SqlType.MethodCall);
                     });
                     result = true;
                     if (methodInfo.IsStatic && parameterInfos.Length >= 1 && parameterInfos[0].ParameterType == typeof(ReadOnlySpan<char>))
@@ -275,9 +272,9 @@ partial class MySqlProvider
                         var leftSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
 
-                        var leftArgument = visitor.GetQuotedValue(leftSegment);
-                        var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return leftSegment.Merge(rightSegment, $"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END");
+                        var leftArgument = visitor.WrapSql(leftSegment);
+                        var rightArgument = visitor.WrapSql(rightSegment);
+                        return leftSegment.Change($"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END");
                     });
                     result = true;
                     break;
@@ -293,11 +290,11 @@ partial class MySqlProvider
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                         if (targetSegment.IsValue && rightSegment.IsValue)
-                            return targetSegment.MergeValue(rightSegment, ((DateOnly)targetSegment.Value).AddDays(Convert.ToInt32(rightSegment.Value)));
+                            return targetSegment.Change(((DateOnly)targetSegment.Value).AddDays(Convert.ToInt32(rightSegment.Value)));
 
-                        var targetArgument = visitor.GetQuotedValue(targetSegment);
-                        var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument} DAY)", SqlType.MethodCall);
+                        var targetArgument = visitor.WrapSql(targetSegment);
+                        var rightArgument = visitor.WrapSql(rightSegment);
+                        return targetSegment.Change($"DATE_ADD({targetArgument},INTERVAL {rightArgument} DAY)", SqlType.MethodCall);
                     });
                     result = true;
                     break;
@@ -307,11 +304,11 @@ partial class MySqlProvider
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                         if (targetSegment.IsValue && rightSegment.IsValue)
-                            return targetSegment.MergeValue(rightSegment, ((DateOnly)targetSegment.Value).AddMonths(Convert.ToInt32(rightSegment.Value)));
+                            return targetSegment.Change(((DateOnly)targetSegment.Value).AddMonths(Convert.ToInt32(rightSegment.Value)));
 
-                        var targetArgument = visitor.GetQuotedValue(targetSegment);
-                        var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument} MONTH)", SqlType.MethodCall);
+                        var targetArgument = visitor.WrapSql(targetSegment);
+                        var rightArgument = visitor.WrapSql(rightSegment);
+                        return targetSegment.Change($"DATE_ADD({targetArgument},INTERVAL {rightArgument} MONTH)", SqlType.MethodCall);
                     });
                     result = true;
                     break;
@@ -321,11 +318,11 @@ partial class MySqlProvider
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                         if (targetSegment.IsValue && rightSegment.IsValue)
-                            return targetSegment.MergeValue(rightSegment, ((DateOnly)targetSegment.Value).AddDays(Convert.ToInt32(rightSegment.Value)));
+                            return targetSegment.Change(((DateOnly)targetSegment.Value).AddDays(Convert.ToInt32(rightSegment.Value)));
 
-                        var targetArgument = visitor.GetQuotedValue(targetSegment);
-                        var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument} YEAR)", SqlType.MethodCall);
+                        var targetArgument = visitor.WrapSql(targetSegment);
+                        var rightArgument = visitor.WrapSql(rightSegment);
+                        return targetSegment.Change($"DATE_ADD({targetArgument},INTERVAL {rightArgument} YEAR)", SqlType.MethodCall);
                     });
                     result = true;
                     break;
@@ -335,9 +332,9 @@ partial class MySqlProvider
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
 
-                        var targetArgument = visitor.GetQuotedValue(targetSegment);
-                        var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"{targetArgument}={rightArgument}");
+                        var targetArgument = visitor.WrapSql(targetSegment);
+                        var rightArgument = visitor.WrapSql(rightSegment);
+                        return targetSegment.Change($"{targetArgument}={rightArgument}");
                     });
                     result = true;
                     break;
@@ -347,9 +344,9 @@ partial class MySqlProvider
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
 
-                        var targetArgument = visitor.GetQuotedValue(targetSegment);
-                        var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END");
+                        var targetArgument = visitor.WrapSql(targetSegment);
+                        var rightArgument = visitor.WrapSql(rightSegment);
+                        return targetSegment.Change($"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END", SqlType.Expression);
                     });
                     result = true;
                     break;
@@ -374,7 +371,7 @@ partial class MySqlProvider
                             var formatSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
 
                             string formatArgument = null;
-                            if formatSegment.IsValue
+                            if (formatSegment.IsValue)
                             {
                                 formatArgument = $"'{formatSegment.Value}'";
 
@@ -401,14 +398,14 @@ partial class MySqlProvider
                                 else if (formatArgument.Contains("d"))
                                     formatArgument = formatArgument.Replace("d", "FMDD");
                             }
-                            else formatArgument = visitor.GetQuotedValue(formatSegment);
+                            else formatArgument = visitor.WrapSql(formatSegment);
 
-                            if ((targetSegment.IsValue)
+                            if (targetSegment.IsValue
                                 && formatSegment.IsValue)
-                                return targetSegment.MergeValue(formatSegment, ((DateOnly)targetSegment.Value).ToString(formatSegment.Value.ToString()));
+                                return targetSegment.Change(((DateOnly)targetSegment.Value).ToString(formatSegment.Value.ToString()));
 
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            return targetSegment.Merge(formatSegment, $"DATE_FORMAT({targetArgument},{formatArgument})", SqlType.MethodCall);
+                            var targetArgument = visitor.WrapSql(targetSegment);
+                            return targetSegment.Change($"DATE_FORMAT({targetArgument},{formatArgument})", SqlType.MethodCall);
                         });
                         result = true;
                     }
@@ -421,19 +418,18 @@ partial class MySqlProvider
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var valueSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                             var kindSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
-                            if (!kindSegment.IsConstant && !kindSegment.IsVariable)
+                            if (!kindSegment.IsValue)
                                 throw new NotSupportedException($"DateOnly.{methodInfo.Name}方法暂时仅支持第二个参数是常量或是变量的解析");
 
-                            if ((targetSegment.IsValue)
-                                && (valueSegment.IsValue))
-                                return targetSegment.MergeValue(valueSegment, ((DateOnly)targetSegment.Value).ToDateTime((TimeOnly)valueSegment.Value, (DateTimeKind)kindSegment.Value));
+                            if (targetSegment.IsValue && valueSegment.IsValue)
+                                return targetSegment.Change(((DateOnly)targetSegment.Value).ToDateTime((TimeOnly)valueSegment.Value, (DateTimeKind)kindSegment.Value));
 
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            var valueArgument = visitor.GetQuotedValue(valueSegment);
+                            var targetArgument = visitor.WrapSql(targetSegment);
+                            var valueArgument = visitor.WrapSql(valueSegment);
                             var timezone = $"TIMESTAMP({targetArgument},{valueArgument})";
                             if ((DateTimeKind)kindSegment.Value == DateTimeKind.Utc)
                                 timezone = $"CONVERT_TZ({timezone},'SYSTEM','UTC')";
-                            return targetSegment.Merge(valueSegment, timezone, false, true);
+                            return targetSegment.Change(timezone, SqlType.MethodCall);
                         });
                     }
                     else
@@ -442,20 +438,20 @@ partial class MySqlProvider
                         {
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var valueSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                            if ((targetSegment.IsValue)
+                            if (targetSegment.IsValue
                                 && (valueSegment.IsValue))
-                                return targetSegment.MergeValue(valueSegment, ((DateOnly)targetSegment.Value).ToDateTime((TimeOnly)valueSegment.Value));
+                                return targetSegment.Change(((DateOnly)targetSegment.Value).ToDateTime((TimeOnly)valueSegment.Value));
 
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            var valueArgument = visitor.GetQuotedValue(valueSegment);
-                            return targetSegment.Merge(valueSegment, $"TIMESTAMP({targetArgument},{valueArgument})", SqlType.MethodCall);
+                            var targetArgument = visitor.WrapSql(targetSegment);
+                            var valueArgument = visitor.WrapSql(valueSegment);
+                            return targetSegment.Change($"TIMESTAMP({targetArgument},{valueArgument})", SqlType.MethodCall);
                         });
                     }
                     result = true;
                     break;
             }
         }
-        //#endif
+#endif
         return result;
     }
 }
