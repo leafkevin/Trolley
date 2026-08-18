@@ -1,6 +1,5 @@
-﻿#if NET6_0_OR_GREATER
-using System;
-#endif
+﻿using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 
 namespace Trolley.MySqlConnector;
@@ -19,11 +18,11 @@ partial class MySqlProvider
             switch (memberInfo.Name)
             {
                 case "MinValue":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.ChangeValue(TimeOnly.MinValue, true));
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.Change(TimeOnly.MinValue, SqlType.Constant));
                     result = true;
                     break;
                 case "MaxValue":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.ChangeValue(TimeOnly.MaxValue, true));
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.Change(TimeOnly.MaxValue, SqlType.Constant));
                     result = true;
                     break;
             }
@@ -241,7 +240,7 @@ partial class MySqlProvider
                         if (targetSegment.IsConstant && targetSegment.IsVariable)
                             return targetSegment.Change(((TimeOnly)targetSegment.Value).ToTimeSpan());
 
-                        return targetSegment.Change(this.CastTo(typeof(TimeSpan), targetSegment.Value), false, true);
+                        return targetSegment.Change(this.CastTo(typeof(TimeSpan), targetSegment.Value), SqlType.MethodCall);
                     });
                     result = true;
                     break;

@@ -75,7 +75,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             else if (this.ActionMode == ActionMode.Single && tableSegment.ShardingTableGetter != null)
             {
                 var updateObj = this.deferredSegments[0].Value;
-                tableSegment.Value = tableSegment.ShardingTableGetter.Invoke(updateObj);
+                tableSegment.Body = tableSegment.ShardingTableGetter.Invoke(updateObj);
                 tableSegment.ShardingType = ShardingTableType.SingleTable;
                 tableSegment.IsSharding = true;
             }
@@ -345,7 +345,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             {
                 shardingTables = shardingType switch
                 {
-                    ShardingTableType.SingleTable => tableSegment.Value,
+                    ShardingTableType.SingleTable => tableSegment.Body,
                     ShardingTableType.MultiTable => tableSegment.TableNames,
                     _ => tableSegment.Mapper.TableName,
                 };

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -65,10 +66,11 @@ partial class MySqlProvider
                     if (parameterInfos.Length >= 1)
                     {
                         formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
+
                         {
                             var builder = new StringBuilder();
                             var constBuilder = new StringBuilder();
-                            var concatExprs = visitor.SplitConcatList(methodCallExpr.Arguments);
+                            var concatExprs = visitor.SplitConcatList(methodCallExpr.Arguments.ToArray());
                             SqlSegment resultSegment = default;
 
                             bool isDeferredFields = false;
@@ -77,17 +79,19 @@ partial class MySqlProvider
                             {
                                 //可能是一个sqlSegment，也可能是多个List<sqlSegment>
                                 var sqlSegment = visitor.Visit(new SqlSegment { Expression = concatExprs[i] });
-                                //获取枚举名称，根据数据库的字段类型来处理
-                                if (sqlSegment.IsEnum) visitor.ToEnumString(sqlSegment);
-
-                                //先不处理类型，都解析完毕后，最后处理类型，转换成字符串
-                                sqlSegments.Add(sqlSegment);
                                 if (sqlSegment.IsDeferredFields)
                                 {
                                     isDeferredFields = true;
                                     resultSegment = sqlSegment;
                                     break;
                                 }
+
+                                //获取枚举名称，根据数据库的字段类型来处理
+                                if (sqlSegment.IsEnum && sqlSegment.SqlType == SqlType.OnlyField)
+                                    visitor.ToEnumString(sqlSegment);
+                                //先不处理类型，都解析完毕后，最后处理类型，转换成字符串
+                                sqlSegments.Add(sqlSegment);
+
                             }
                             if (isDeferredFields)
                                 return visitor.VisitDeferredSqlSegment(new SqlSegment { Expression = methodCallExpr });
@@ -112,10 +116,10 @@ partial class MySqlProvider
                                 if (builder.Length > 0)
                                     builder.Append(',');
 
-                                string body = visitor.WrapSql(sqlSegment);
-                                if (sqlSegment.SegmentType != typeof(string))
+                                var body = visitor.WrapSql(sqlSegment);
+                                if (concatExprs[i].Type != typeof(string))
                                 {
-                                    if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                                    if (sqlSegment.HasField)
                                         body = this.CastTo(typeof(string), sqlSegment.Value);
                                     //变量场景
                                     else body = visitor.ChangeParameterValue(sqlSegment, typeof(string));
@@ -150,7 +154,7 @@ partial class MySqlProvider
                             var builder = new StringBuilder();
                             var constBuilder = new StringBuilder();
                             //已经被分割成了多个SqlSegment
-                            var concatExprs = visitor.ConvertFormatToConcatList(args);
+                            var concatExprs = visitor.ConvertFormatToConcatList(methodCallExpr.Arguments.ToArray());
                             SqlSegment resultSegment = default;
 
                             //123_{0}_345_{1}{2}_etr_{3}_fdr, 111,@p1,@p2,e4re
@@ -161,7 +165,7 @@ partial class MySqlProvider
                                 //可能是一个sqlSegment，也可能是多个List<sqlSegment>
                                 var sqlSegment = visitor.Visit(new SqlSegment { Expression = concatExprs[i] });
                                 //获取枚举名称，根据数据库的字段类型来处理
-                                if (sqlSegment.SegmentType.IsEnum && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall)
+                                if (concatExprs[i].Type.IsEnum && sqlSegment.SqlType == SqlType.OnlyField)
                                     visitor.ToEnumString(sqlSegment);
                                 sqlSegments.Add(sqlSegment);
                                 if (sqlSegment.IsDeferredFields)
@@ -195,9 +199,9 @@ partial class MySqlProvider
                                     builder.Append(',');
 
                                 string body = visitor.WrapSql(sqlSegment);
-                                if (sqlSegment.SegmentType != typeof(string))
+                                if (concatExprs[i].Type != typeof(string))
                                 {
-                                    if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                                    if (sqlSegment.HasField)
                                         body = this.CastTo(typeof(string), sqlSegment.Value);
                                     //变量场景
                                     else body = visitor.ChangeParameterValue(sqlSegment, typeof(string));
@@ -274,8 +278,8 @@ partial class MySqlProvider
 
                             if (!separatorSegment.IsConstant)
                                 throw new NotSupportedException("暂时不支持分隔符是非常量的表达式解析，可以考虑在表达式外Join后再进行查询");
-
-                            if (valuesSegment.IsConstant || valuesSegment.IsVariable)
+                      
+                            if (valuesSegment.IsValue)
                                 return valuesSegment.Change(string.Join(separatorSegment.Value.ToString(), valuesSegment.Value as IEnumerable));
 
                             var resultSegment = valuesSegment;
@@ -303,10 +307,10 @@ partial class MySqlProvider
                                     }
                                     builder.Append(',');
 
-                                    string body = visitor.WrapSql(elementSegment);
+                                    var body = visitor.WrapSql(elementSegment);
                                     if (elementSegment.SegmentType != typeof(string))
                                     {
-                                        if (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall)
+                                        if (elementSegment.HasField)
                                             body = this.CastTo(typeof(string), elementSegment.Value);
                                         //变量场景
                                         else body = visitor.ChangeParameterValue(elementSegment, typeof(string));
@@ -343,7 +347,7 @@ partial class MySqlProvider
                             if (!separatorSegment.IsConstant)
                                 throw new NotSupportedException("暂时不支持分隔符是非常量的表达式解析，可以考虑在表达式外Join后再进行查询");
 
-                            if (separatorSegment.SqlType == SqlType.Constant && valuesSegment.IsValue)
+                            if (separatorSegment.IsConstant && valuesSegment.IsValue)
                                 return valuesSegment.Change(string.Join(separatorSegment.Value.ToString(), valuesSegment.Value as List<SqlSegment>, startIndex, length));
 
                             var resultSegment = valuesSegment;
@@ -377,7 +381,7 @@ partial class MySqlProvider
                                     }
                                     builder.Append(',');
 
-                                    string body = visitor.WrapSql(elementSegment);
+                                    var body = visitor.WrapSql(elementSegment);
                                     if (elementSegment.SegmentType != typeof(string))
                                     {
                                         if (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall)
@@ -401,7 +405,7 @@ partial class MySqlProvider
                                 builder.Append(')');
                                 return resultSegment.Change(builder.ToString(), SqlType.MethodCall);
                             }
-                            return resultSegment.Change(constBuilder.ToString(), true);
+                            return resultSegment.Change(constBuilder.ToString(), SqlType.Constant);
                         });
                         result = true;
                     }
@@ -445,14 +449,14 @@ partial class MySqlProvider
                             string body = null;
                             if (visitor.IsSelect)
                             {
-                                var notString = deferExprs.IsDeferredNot() ? "<0" : ">0";
+                                var notString = deferredOperations.HasNotOperation(out _) ? "<0" : ">0";
                                 if (rightSegment.IsConstant)
                                     body = $"INSTR('{rightSegment.Value}',{targetArgument}){notString}";
                                 else body = $"INSTR({visitor.WrapSql(rightSegment)},{targetArgument}){notString}";
                             }
                             else
                             {
-                                var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
+                                var notString = deferredOperations.HasNotOperation(out _) ? "NOT " : "";
                                 if (rightSegment.IsConstant)
                                     body = $"{targetArgument}{notString} LIKE '%{rightSegment.Value}%'";
                                 else body = $"{targetArgument}{notString} LIKE CONCAT('%',{visitor.WrapSql(rightSegment)},'%')";
@@ -667,7 +671,7 @@ partial class MySqlProvider
                         var targetArgument = visitor.WrapSql(targetSegment);
                         var rightArgument = visitor.WrapSql(rightSegment);
 
-                        var equalsString = deferExprs.IsDeferredNot() ? "<>" : "=";
+                        var equalsString = deferredOperations.HasNotOperation(out _) ? "<>" : "=";
                         return targetSegment.Change($"{targetArgument}{equalsString}{rightArgument}");
                     });
                     result = true;
@@ -686,7 +690,7 @@ partial class MySqlProvider
                                 rightArgument = $"'{rightSegment.Value}%'";
                             else rightArgument = $"CONCAT({visitor.WrapSql(rightSegment)},'%')";
 
-                            var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
+                            var notString = deferredOperations.HasNotOperation(out _) ? "NOT " : "";
                             return targetSegment.Change($"{targetArgument}{notString} LIKE {rightArgument}");
                         });
                         result = true;
@@ -801,10 +805,8 @@ partial class MySqlProvider
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var valueSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                             var startIndexSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
-                            if (targetSegment.IsValue
-                                && valueSegment.IsValue
-                                && (startIndexSegment.IsConstant || startIndexSegment.IsVariable))
-                                return targetSegment.Change(startIndexSegment, methodInfo.Invoke(targetSegment.Value, new object[] { valueSegment.Value, startIndexSegment.Value }));
+                            if (targetSegment.IsValue && valueSegment.IsValue && startIndexSegment.IsValue)
+                                return targetSegment.Change(methodInfo.Invoke(targetSegment.Value, new object[] { valueSegment.Value, startIndexSegment.Value }));
 
                             string indexArgument = null;
                             if (startIndexSegment.IsConstant)
@@ -812,7 +814,7 @@ partial class MySqlProvider
                             else indexArgument = $"{visitor.WrapSql(startIndexSegment)}+1";
                             var targetArgument = visitor.WrapSql(targetSegment);
                             var valueArgument = visitor.WrapSql(valueSegment);
-                            return targetSegment.Change(startIndexSegment, $"LOCATE({valueArgument},{targetArgument},{indexArgument})-1");
+                            return targetSegment.Change($"LOCATE({valueArgument},{targetArgument},{indexArgument})-1", SqlType.Expression);
                         });
                         result = true;
                     }

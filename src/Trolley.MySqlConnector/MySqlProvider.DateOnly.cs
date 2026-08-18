@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-
 using System.Linq.Expressions;
 
 namespace Trolley.MySqlConnector;
@@ -438,8 +437,7 @@ partial class MySqlProvider
                         {
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var valueSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                            if (targetSegment.IsValue
-                                && (valueSegment.IsValue))
+                            if (targetSegment.IsValue && valueSegment.IsValue)
                                 return targetSegment.Change(((DateOnly)targetSegment.Value).ToDateTime((TimeOnly)valueSegment.Value));
 
                             var targetArgument = visitor.WrapSql(targetSegment);

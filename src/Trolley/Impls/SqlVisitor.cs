@@ -149,7 +149,7 @@ public class SqlVisitor : ISqlVisitor
             }
             else
             {
-                var sql = formatSql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origTableName}", tableSegment.Value);
+                var sql = formatSql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origTableName}", tableSegment.Body);
                 builder.Append(sql);
             }
         }
@@ -187,7 +187,7 @@ public class SqlVisitor : ISqlVisitor
         else
         {
             if (tableSegment.IsSharding) tableSegment.ShardingType = ShardingTableType.SingleTable;
-            tableSegment.Value = tableNames[0];
+            tableSegment.Body = tableNames[0];
         }
     }
     public void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues)
@@ -213,11 +213,11 @@ public class SqlVisitor : ISqlVisitor
             this.ShardingTables.Add(tableSegment);
         }
         tableSegment.TableNames ??= new();
-        if (!string.IsNullOrEmpty(tableSegment.Value)
-            && !tableSegment.TableNames.Contains(tableSegment.Value))
+        if (!string.IsNullOrEmpty(tableSegment.Body)
+            && !tableSegment.TableNames.Contains(tableSegment.Body))
         {
-            tableSegment.TableNames.Add(tableSegment.Value);
-            tableSegment.Value = null;
+            tableSegment.TableNames.Add(tableSegment.Body);
+            tableSegment.Body = null;
         }
         if (tableSegment.TableNames != null)
             tableSegment.TableNames.AddRange(tableNames);
@@ -261,9 +261,9 @@ public class SqlVisitor : ISqlVisitor
         var tableName = tableShardingInfo.Rule.Invoke(origTableName, fieldValues) as string;
 
         //单个分表，直接设置body表名，当作不分表处理
-        if (!string.IsNullOrEmpty(tableSegment.Value))
+        if (!string.IsNullOrEmpty(tableSegment.Body))
         {
-            if (tableName == tableSegment.Value)
+            if (tableName == tableSegment.Body)
                 return;
             if (tableSegment.TableNames == null)
             {
@@ -276,10 +276,10 @@ public class SqlVisitor : ISqlVisitor
         }
         if (tableSegment.TableNames != null)
         {
-            if (!string.IsNullOrEmpty(tableSegment.Value))
+            if (!string.IsNullOrEmpty(tableSegment.Body))
             {
-                tableSegment.TableNames.Add(tableSegment.Value);
-                tableSegment.Value = null;
+                tableSegment.TableNames.Add(tableSegment.Body);
+                tableSegment.Body = null;
             }
             if (!tableSegment.TableNames.Contains(tableName))
                 tableSegment.TableNames.Add(tableName);
@@ -288,7 +288,7 @@ public class SqlVisitor : ISqlVisitor
         else
         {
             tableSegment.ShardingType = ShardingTableType.SingleTable;
-            tableSegment.Value = tableName;
+            tableSegment.Body = tableName;
         }
     }
     /// <summary>
@@ -2304,9 +2304,9 @@ public class SqlVisitor : ISqlVisitor
                 && (tableSegment.TableType == TableType.Entity || tableSegment.TableType == TableType.Include))
                 tableName = $"__SHARDING_{tableSegment.ShardingId}_{tableSegment.Mapper.TableName}";
             //单个明确分表或是有分表的子查询
-            else tableName = tableSegment.Value;
+            else tableName = tableSegment.Body;
         }
-        else tableName = tableSegment.Value ?? tableSegment.Mapper.TableName;
+        else tableName = tableSegment.Body ?? tableSegment.Mapper.TableName;
         if (tableSegment.TableType != TableType.FromQuery)
         {
             if (!string.IsNullOrEmpty(tableSegment.TableSchema))
@@ -2463,6 +2463,7 @@ public class SqlVisitor : ISqlVisitor
     }
     public virtual SqlSegment ToEnumString(SqlSegment sqlSegment)
     {
+        //对有字段的成员访问有效
         if (sqlSegment.MappedTargetType == typeof(string))
             return sqlSegment;
 

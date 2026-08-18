@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Text;
@@ -19,15 +20,15 @@ partial class MySqlProvider
             {
                 //静态成员访问，理论上没有target对象，为了不再创建sqlSegment对象，外层直接把对象传了进来
                 case "MinValue":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.ChangeValue(TimeSpan.MinValue, true));
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.Change(TimeSpan.MinValue, SqlType.Constant));
                     result = true;
                     break;
                 case "MaxValue":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.ChangeValue(TimeSpan.MaxValue, true));
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.Change(TimeSpan.MaxValue, SqlType.Constant));
                     result = true;
                     break;
                 case "Zero":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.ChangeValue(TimeSpan.Zero, true));
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.Change(TimeSpan.Zero, SqlType.Constant));
                     result = true;
                     break;
             }
@@ -203,7 +204,7 @@ partial class MySqlProvider
                         if (valueSegment.IsValue)
                             return valueSegment.Change(TimeSpan.FromDays(Convert.ToDouble(valueSegment.Value)));
 
-                        return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({valueSegment.ToExprWrap()}*{24 * 3600}))", SqlType.MethodCall);
+                        return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({visitor.WrapSql(valueSegment)}*{24 * 3600}))", SqlType.MethodCall);
                     });
                     result = true;
                     break;
@@ -213,7 +214,7 @@ partial class MySqlProvider
                         var valueSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                         if (valueSegment.IsValue)
                             return valueSegment.Change(TimeSpan.FromHours(Convert.ToDouble(valueSegment.Value)));
-                        return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({valueSegment.ToExprWrap()}*3600))", SqlType.MethodCall);
+                        return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({visitor.WrapSql(valueSegment)}*3600))", SqlType.MethodCall);
                     });
                     result = true;
                     break;
@@ -223,7 +224,7 @@ partial class MySqlProvider
                         var valueSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                         if (valueSegment.IsValue)
                             return valueSegment.Change(TimeSpan.FromMilliseconds(Convert.ToDouble(valueSegment.Value)));
-                        return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({valueSegment.ToExprWrap()}/1000))", SqlType.MethodCall);
+                        return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({visitor.WrapSql(valueSegment)}/1000))", SqlType.MethodCall);
                     });
                     result = true;
                     break;
@@ -233,7 +234,7 @@ partial class MySqlProvider
                         var valueSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                         if (valueSegment.IsValue)
                             return valueSegment.Change(TimeSpan.FromMinutes(Convert.ToDouble(valueSegment.Value)));
-                        return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({valueSegment.ToExprWrap()}*60))", SqlType.MethodCall);
+                        return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({visitor.WrapSql(valueSegment)}*60))", SqlType.MethodCall);
                     });
                     result = true;
                     break;
@@ -243,7 +244,7 @@ partial class MySqlProvider
                         var valueSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                         if (valueSegment.IsValue)
                             return valueSegment.Change(TimeSpan.FromSeconds(Convert.ToDouble(valueSegment.Value)));
-                        return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({valueSegment.ToExprWrap()}))", SqlType.MethodCall);
+                        return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({visitor.WrapSql(valueSegment)}))", SqlType.MethodCall);
                     });
                     result = true;
                     break;
@@ -253,7 +254,7 @@ partial class MySqlProvider
                         var valueSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                         if (valueSegment.IsValue)
                             return valueSegment.Change(TimeSpan.FromTicks(Convert.ToInt64(valueSegment.Value)));
-                        return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({valueSegment.ToExprWrap()}/{TimeSpan.TicksPerSecond}))", SqlType.MethodCall);
+                        return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({visitor.WrapSql(valueSegment)}/{TimeSpan.TicksPerSecond}))", SqlType.MethodCall);
                     });
                     result = true;
                     break;
@@ -338,7 +339,7 @@ partial class MySqlProvider
                                 else builder.Append($"ADDTIME({targetArgument}");
                                 builder.Append($",{this.GetQuotedValue(timeSpan)})");
                             }
-                            return targetSegment.Change(builder.ToString(), false, true);
+                            return targetSegment.Change(builder.ToString(), SqlType.MethodCall);
                         }
 
                         var rightArgument = visitor.WrapSql(rightSegment);

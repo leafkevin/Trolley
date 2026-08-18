@@ -23,18 +23,18 @@ partial class MySqlProvider
             {
                 //静态成员访问，理论上没有target对象，为了不再创建sqlSegment对象，外层直接把对象传了进来
                 case "MinValue":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.Change(DateTime.MinValue, SqlType.Expression));
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.Change(DateTime.MinValue, SqlType.Constant));
                     result = true;
                     break;
                 case "MaxValue":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.Change(DateTime.MaxValue, SqlType.Expression));
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.Change(DateTime.MaxValue, SqlType.Constant));
                     result = true;
                     break;
                 case "UnixEpoch":
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.Change(DateTime.UnixEpoch, SqlType.Expression));       
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.Change(DateTime.UnixEpoch, SqlType.Constant));
 #else
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.Change(UnixEpoch, SqlType.Expression));
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, target) => target.Change(UnixEpoch, SqlType.Constant));
 #endif
                     result = true;
                     break;
@@ -300,7 +300,7 @@ partial class MySqlProvider
                         if (valueSegment.IsValue)
                             return valueSegment.Change(DateTime.IsLeapYear(Convert.ToInt32(valueSegment.Value)));
 
-                        var valueArgument = valueSegment.ToExprWrap();
+                        var valueArgument = visitor.WrapSql(valueSegment);
                         return valueSegment.Change($"({valueArgument}%4=0 AND {valueArgument}%100<>0 OR {valueArgument}%400=0)", SqlType.MethodCall);
                     });
                     result = true;
@@ -328,8 +328,7 @@ partial class MySqlProvider
                             var valueSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                             var providerSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
 
-                            if (valueSegment.IsValue
-                                && providerSegment.IsValue)
+                            if (valueSegment.IsValue && providerSegment.IsValue)
                                 return valueSegment.Change(DateTime.Parse(valueSegment.Value.ToString(), (IFormatProvider)providerSegment.Value));
 
                             return valueSegment.Change($"CAST({valueSegment.Value} AS DATETIME)", SqlType.MethodCall);
@@ -464,7 +463,7 @@ partial class MySqlProvider
                                 else builder.Append($"ADDTIME({targetArgument}");
                                 builder.Append($",{this.GetQuotedValue(timeSpan)})");
                             }
-                            return targetSegment.Change(builder.ToString(), false, true);
+                            return targetSegment.Change(builder.ToString(), SqlType.MethodCall);
                         }
                         //非常量、变量的，只能小于一天,数据库的Time类型映射成TimeSpan
                         var rightArgument = visitor.WrapSql(rightSegment);
@@ -629,7 +628,7 @@ partial class MySqlProvider
                                     else builder.Append($"SUBTIME({targetArgument}");
                                     builder.Append($",{this.GetQuotedValue(timeSpan)})");
                                 }
-                                return targetSegment.Change(builder.ToString(), false, true);
+                                return targetSegment.Change(builder.ToString(), SqlType.MethodCall);
                             }
                             //非常量、变量的，只能小于一天,数据库的Time类型映射成TimeSpan
                             var rightArgument = visitor.WrapSql(rightSegment);
@@ -736,8 +735,7 @@ partial class MySqlProvider
                             }
                             else formatArgument = visitor.WrapSql(formatSegment);
 
-                            if (targetSegment.IsValue
-                                && formatSegment.IsValue)
+                            if (targetSegment.IsValue && formatSegment.IsValue)
                                 return targetSegment.Change(((DateTime)targetSegment.Value).ToString(formatSegment.Value.ToString()));
 
                             var targetArgument = visitor.WrapSql(targetSegment);

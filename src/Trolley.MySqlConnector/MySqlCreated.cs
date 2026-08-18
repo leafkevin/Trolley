@@ -33,7 +33,7 @@ public class MySqlCreated : Created
                         var memberMappers, var valueGetters) = this.dialectVisitor.BuildWithBulkCopy();
                     var dialectOrmProvider = this.ormProvider as MySqlProvider;
                     var mySqlConnection = connection.DbConnection as MySqlConnection;
-                    var mySqlTransaction = this.DbContext.Transaction?.DbTransaction as MySqlTransaction;
+                    var mySqlTransaction = this.transaction?.DbTransaction as MySqlTransaction;
                     var bulkCopyObj = new MySqlBulkCopy(mySqlConnection, mySqlTransaction);
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
@@ -73,6 +73,9 @@ public class MySqlCreated : Created
                             {
                                 builder.Remove(builder.Length - 1, 1);
                                 command.CommandText = builder.ToString();
+                                if (this.interceptor != null)
+                                    command = this.interceptor.CommandInitialized(command);
+
                                 result += command.ExecuteNonQuery();
                                 builder.Clear();
                                 command.Parameters.Clear();
@@ -102,6 +105,9 @@ public class MySqlCreated : Created
                     {
                         builder.Remove(builder.Length - 1, 1);
                         command.CommandText = builder.ToString();
+                        if (this.interceptor != null)
+                            command = this.interceptor.CommandInitialized(command);
+
                         result += command.ExecuteNonQuery();
                     }
                     builder.Clear();
@@ -109,6 +115,9 @@ public class MySqlCreated : Created
                 }
             default:
                 command.CommandText = this.Visitor.BuildSql(command, out _);
+                if (this.interceptor != null)
+                    command = this.interceptor.CommandInitialized(command);
+
                 connection.Open();
                 result = command.ExecuteNonQuery();
                 break;
@@ -173,6 +182,9 @@ public class MySqlCreated : Created
                             {
                                 builder.Remove(builder.Length - 1, 1);
                                 command.CommandText = builder.ToString();
+                                if (this.interceptor != null)
+                                    command = this.interceptor.CommandInitialized(command);
+
                                 result += await command.ExecuteNonQueryAsync(cancellationToken);
                                 builder.Clear();
                                 command.Parameters.Clear();
@@ -201,6 +213,9 @@ public class MySqlCreated : Created
                     {
                         builder.Remove(builder.Length - 1, 1);
                         command.CommandText = builder.ToString();
+                        if (this.interceptor != null)
+                            command = this.interceptor.CommandInitialized(command);
+
                         result += await command.ExecuteNonQueryAsync(cancellationToken);
                     }
                     builder.Clear();
@@ -208,6 +223,9 @@ public class MySqlCreated : Created
                 }
             default:
                 command.CommandText = this.Visitor.BuildSql(command, out _);
+                if (this.interceptor != null)
+                    command = this.interceptor.CommandInitialized(command);
+
                 await connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(cancellationToken);
                 break;
@@ -245,9 +263,9 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
                 {
                     (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
                         var memberMappers, var valueGetters) = this.dialectVisitor.BuildWithBulkCopy();
-                    var dialectOrmProvider = this.OrmProvider as MySqlProvider;
-                    var mySqlConnection = connection.BaseConnection as MySqlConnection;
-                    var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;
+                    var dialectOrmProvider = this.ormProvider as MySqlProvider;
+                    var mySqlConnection = connection.DbConnection as MySqlConnection;
+                    var mySqlTransaction = this.transaction?.DbTransaction as MySqlTransaction;
                     var bulkCopyObj = new MySqlBulkCopy(mySqlConnection, mySqlTransaction);
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
@@ -287,7 +305,10 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
                             {
                                 builder.Remove(builder.Length - 1, 1);
                                 command.CommandText = builder.ToString();
-                                result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                                if (this.interceptor != null)
+                                    command = this.interceptor.CommandInitialized(command);
+
+                                result += command.ExecuteNonQuery();
                                 builder.Clear();
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
@@ -316,15 +337,21 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
                     {
                         builder.Remove(builder.Length - 1, 1);
                         command.CommandText = builder.ToString();
-                        result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                        if (this.interceptor != null)
+                            command = this.interceptor.CommandInitialized(command);
+
+                        result += command.ExecuteNonQuery();
                     }
                     builder.Clear();
                     break;
                 }
             default:
                 command.CommandText = this.Visitor.BuildSql(command, out _);
+                if (this.interceptor != null)
+                    command = this.interceptor.CommandInitialized(command);
+
                 connection.Open();
-                result = command.ExecuteNonQuery(CommandSqlType.Insert);
+                result = command.ExecuteNonQuery();
                 break;
         }
 
@@ -345,9 +372,9 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
                 {
                     (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
                         var memberMappers, var valueGetters) = this.dialectVisitor.BuildWithBulkCopy();
-                    var dialectOrmProvider = this.OrmProvider as MySqlProvider;
-                    var mySqlConnection = connection.BaseConnection as MySqlConnection;
-                    var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;
+                    var dialectOrmProvider = this.ormProvider as MySqlProvider;
+                    var mySqlConnection = connection.DbConnection as MySqlConnection;
+                    var mySqlTransaction = this.transaction?.DbTransaction as MySqlTransaction;
                     var bulkCopyObj = new MySqlBulkCopy(mySqlConnection, mySqlTransaction);
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
@@ -387,7 +414,10 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
                             {
                                 builder.Remove(builder.Length - 1, 1);
                                 command.CommandText = builder.ToString();
-                                result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                                if (this.interceptor != null)
+                                    command = this.interceptor.CommandInitialized(command);
+
+                                result += await command.ExecuteNonQueryAsync(cancellationToken);
                                 builder.Clear();
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
@@ -415,15 +445,21 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
                     {
                         builder.Remove(builder.Length - 1, 1);
                         command.CommandText = builder.ToString();
-                        result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                        if (this.interceptor != null)
+                            command = this.interceptor.CommandInitialized(command);
+
+                        result += await command.ExecuteNonQueryAsync(cancellationToken);
                     }
                     builder.Clear();
                     break;
                 }
             default:
                 command.CommandText = this.Visitor.BuildSql(command, out _);
+                if (this.interceptor != null)
+                    command = this.interceptor.CommandInitialized(command);
+
                 await connection.OpenAsync(cancellationToken);
-                result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
+                result = await command.ExecuteNonQueryAsync(cancellationToken);
                 break;
         }
 
@@ -460,9 +496,9 @@ public class MySqlContinuedCreate : ContinuedCreate
                 {
                     (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
                         var memberMappers, var valueGetters) = this.dialectVisitor.BuildWithBulkCopy();
-                    var dialectOrmProvider = this.OrmProvider as MySqlProvider;
-                    var mySqlConnection = connection.BaseConnection as MySqlConnection;
-                    var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;
+                    var dialectOrmProvider = this.ormProvider as MySqlProvider;
+                    var mySqlConnection = connection.DbConnection as MySqlConnection;
+                    var mySqlTransaction = this.transaction?.DbTransaction as MySqlTransaction;
                     var bulkCopyObj = new MySqlBulkCopy(mySqlConnection, mySqlTransaction);
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
@@ -488,7 +524,7 @@ public class MySqlContinuedCreate : ContinuedCreate
             case ActionMode.Bulk:
                 {
                     (var shardingType, var shardingTables, var insertObjs, var bulkCount, var firstSqlSetter,
-                    var loopSqlSetter, _, var readerFields) = this.Visitor.BuildWithBulk(command);
+                        var loopSqlSetter, _, var readerFields) = this.Visitor.BuildWithBulk(command);
 
                     int index = 0;
                     var builder = new StringBuilder();
@@ -502,7 +538,10 @@ public class MySqlContinuedCreate : ContinuedCreate
                             {
                                 builder.Remove(builder.Length - 1, 1);
                                 command.CommandText = builder.ToString();
-                                result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                                if (this.interceptor != null)
+                                    command = this.interceptor.CommandInitialized(command);
+
+                                result += command.ExecuteNonQuery();
                                 builder.Clear();
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
@@ -531,15 +570,18 @@ public class MySqlContinuedCreate : ContinuedCreate
                     {
                         builder.Remove(builder.Length - 1, 1);
                         command.CommandText = builder.ToString();
-                        result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                        result += command.ExecuteNonQuery();
                     }
                     builder.Clear();
                     break;
                 }
             default:
                 command.CommandText = this.Visitor.BuildSql(command, out _);
+                if (this.interceptor != null)
+                    command = this.interceptor.CommandInitialized(command);
+
                 connection.Open();
-                result = command.ExecuteNonQuery(CommandSqlType.Insert);
+                result = command.ExecuteNonQuery();
                 break;
         }
 
@@ -560,9 +602,9 @@ public class MySqlContinuedCreate : ContinuedCreate
                 {
                     (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
                          var memberMappers, var valueGetters) = this.dialectVisitor.BuildWithBulkCopy();
-                    var dialectOrmProvider = this.OrmProvider as MySqlProvider;
-                    var mySqlConnection = connection.BaseConnection as MySqlConnection;
-                    var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;
+                    var dialectOrmProvider = this.ormProvider as MySqlProvider;
+                    var mySqlConnection = connection.DbConnection as MySqlConnection;
+                    var mySqlTransaction = this.transaction?.DbTransaction as MySqlTransaction;
                     var bulkCopyObj = new MySqlBulkCopy(mySqlConnection, mySqlTransaction);
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
@@ -602,7 +644,10 @@ public class MySqlContinuedCreate : ContinuedCreate
                             {
                                 builder.Remove(builder.Length - 1, 1);
                                 command.CommandText = builder.ToString();
-                                result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                                if (this.interceptor != null)
+                                    command = this.interceptor.CommandInitialized(command);
+
+                                result += await command.ExecuteNonQueryAsync(cancellationToken);
                                 builder.Clear();
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
@@ -630,15 +675,21 @@ public class MySqlContinuedCreate : ContinuedCreate
                     {
                         builder.Remove(builder.Length - 1, 1);
                         command.CommandText = builder.ToString();
-                        result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                        if (this.interceptor != null)
+                            command = this.interceptor.CommandInitialized(command);
+
+                        result += await command.ExecuteNonQueryAsync(cancellationToken);
                     }
                     builder.Clear();
                     break;
                 }
             default:
                 command.CommandText = this.Visitor.BuildSql(command, out _);
+                if (this.interceptor != null)
+                    command = this.interceptor.CommandInitialized(command);
+
                 await connection.OpenAsync(cancellationToken);
-                result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
+                result = await command.ExecuteNonQueryAsync(cancellationToken);
                 break;
         }
 
@@ -674,9 +725,9 @@ public class MySqlBulkContinuedCreate : BulkContinuedCreate
                 {
                     (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
                         var memberMappers, var valueGetters) = this.dialectVisitor.BuildWithBulkCopy();
-                    var dialectOrmProvider = this.OrmProvider as MySqlProvider;
-                    var mySqlConnection = connection.BaseConnection as MySqlConnection;
-                    var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;
+                    var dialectOrmProvider = this.ormProvider as MySqlProvider;
+                    var mySqlConnection = connection.DbConnection as MySqlConnection;
+                    var mySqlTransaction = this.transaction?.DbTransaction as MySqlTransaction;
                     var bulkCopyObj = new MySqlBulkCopy(mySqlConnection, mySqlTransaction);
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
@@ -721,7 +772,10 @@ public class MySqlBulkContinuedCreate : BulkContinuedCreate
                             {
                                 builder.Remove(builder.Length - 1, 1);
                                 command.CommandText = builder.ToString();
-                                result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                                if (this.interceptor != null)
+                                    command = this.interceptor.CommandInitialized(command);
+
+                                result += command.ExecuteNonQuery();
                                 builder.Clear();
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
@@ -750,15 +804,21 @@ public class MySqlBulkContinuedCreate : BulkContinuedCreate
                     {
                         builder.Remove(builder.Length - 1, 1);
                         command.CommandText = builder.ToString();
-                        result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                        if (this.interceptor != null)
+                            command = this.interceptor.CommandInitialized(command);
+
+                        result += command.ExecuteNonQuery();
                     }
                     builder.Clear();
                     break;
                 }
             default:
                 command.CommandText = this.Visitor.BuildSql(command, out _);
+                if (this.interceptor != null)
+                    command = this.interceptor.CommandInitialized(command);
+
                 connection.Open();
-                result = command.ExecuteNonQuery(CommandSqlType.Insert);
+                result = command.ExecuteNonQuery();
                 break;
         }
 
@@ -779,9 +839,9 @@ public class MySqlBulkContinuedCreate : BulkContinuedCreate
                 {
                     (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
                          var memberMappers, var valueGetters) = this.dialectVisitor.BuildWithBulkCopy();
-                    var dialectOrmProvider = this.OrmProvider as MySqlProvider;
-                    var mySqlConnection = connection.BaseConnection as MySqlConnection;
-                    var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;
+                    var dialectOrmProvider = this.ormProvider as MySqlProvider;
+                    var mySqlConnection = connection.DbConnection as MySqlConnection;
+                    var mySqlTransaction = this.transaction?.DbTransaction as MySqlTransaction;
                     var bulkCopyObj = new MySqlBulkCopy(mySqlConnection, mySqlTransaction);
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
@@ -826,7 +886,10 @@ public class MySqlBulkContinuedCreate : BulkContinuedCreate
                             {
                                 builder.Remove(builder.Length - 1, 1);
                                 command.CommandText = builder.ToString();
-                                result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                                if (this.interceptor != null)
+                                    command = this.interceptor.CommandInitialized(command);
+
+                                result += await command.ExecuteNonQueryAsync(cancellationToken);
                                 builder.Clear();
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
@@ -854,15 +917,21 @@ public class MySqlBulkContinuedCreate : BulkContinuedCreate
                     {
                         builder.Remove(builder.Length - 1, 1);
                         command.CommandText = builder.ToString();
-                        result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                        if (this.interceptor != null)
+                            command = this.interceptor.CommandInitialized(command);
+
+                        result += await command.ExecuteNonQueryAsync(cancellationToken);
                     }
                     builder.Clear();
                     break;
                 }
             default:
                 command.CommandText = this.Visitor.BuildSql(command, out _);
+                if (this.interceptor != null)
+                    command = this.interceptor.CommandInitialized(command);
+
                 await connection.OpenAsync(cancellationToken);
-                result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
+                result = await command.ExecuteNonQueryAsync(cancellationToken);
                 break;
         }
 
@@ -898,9 +967,9 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>
                 {
                     (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
                         var memberMappers, var valueGetters) = this.dialectVisitor.BuildWithBulkCopy();
-                    var dialectOrmProvider = this.OrmProvider as MySqlProvider;
-                    var mySqlConnection = connection.BaseConnection as MySqlConnection;
-                    var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;
+                    var dialectOrmProvider = this.ormProvider as MySqlProvider;
+                    var mySqlConnection = connection.DbConnection as MySqlConnection;
+                    var mySqlTransaction = this.transaction?.DbTransaction as MySqlTransaction;
                     var bulkCopyObj = new MySqlBulkCopy(mySqlConnection, mySqlTransaction);
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
@@ -931,7 +1000,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>
             case ActionMode.Bulk:
                 {
                     (var shardingType, var shardingTables, var insertObjs, var bulkCount, var firstSqlSetter,
-                    var loopSqlSetter, _, var readerFields) = this.Visitor.BuildWithBulk(command);
+                        var loopSqlSetter, _, var readerFields) = this.Visitor.BuildWithBulk(command);
 
                     int index = 0;
                     var builder = new StringBuilder();
@@ -945,7 +1014,10 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>
                             {
                                 builder.Remove(builder.Length - 1, 1);
                                 command.CommandText = builder.ToString();
-                                result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                                if (this.interceptor != null)
+                                    command = this.interceptor.CommandInitialized(command);
+
+                                result += command.ExecuteNonQuery();
                                 builder.Clear();
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
@@ -974,15 +1046,20 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>
                     {
                         builder.Remove(builder.Length - 1, 1);
                         command.CommandText = builder.ToString();
-                        result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                        if (this.interceptor != null)
+                            command = this.interceptor.CommandInitialized(command);
+                        result += command.ExecuteNonQuery();
                     }
                     builder.Clear();
                     break;
                 }
             default:
                 command.CommandText = this.Visitor.BuildSql(command, out _);
+                if (this.interceptor != null)
+                    command = this.interceptor.CommandInitialized(command);
+
                 connection.Open();
-                result = command.ExecuteNonQuery(CommandSqlType.Insert);
+                result = command.ExecuteNonQuery();
                 break;
         }
 
@@ -1003,9 +1080,9 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>
                 {
                     (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
                          var memberMappers, var valueGetters) = this.dialectVisitor.BuildWithBulkCopy();
-                    var dialectOrmProvider = this.OrmProvider as MySqlProvider;
-                    var mySqlConnection = connection.BaseConnection as MySqlConnection;
-                    var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;
+                    var dialectOrmProvider = this.ormProvider as MySqlProvider;
+                    var mySqlConnection = connection.DbConnection as MySqlConnection;
+                    var mySqlTransaction = this.transaction?.DbTransaction as MySqlTransaction;
                     var bulkCopyObj = new MySqlBulkCopy(mySqlConnection, mySqlTransaction);
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
@@ -1050,7 +1127,10 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>
                             {
                                 builder.Remove(builder.Length - 1, 1);
                                 command.CommandText = builder.ToString();
-                                result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                                if (this.interceptor != null)
+                                    command = this.interceptor.CommandInitialized(command);
+
+                                result += await command.ExecuteNonQueryAsync(cancellationToken);
                                 builder.Clear();
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
@@ -1078,15 +1158,21 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>
                     {
                         builder.Remove(builder.Length - 1, 1);
                         command.CommandText = builder.ToString();
-                        result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                        if (this.interceptor != null)
+                            command = this.interceptor.CommandInitialized(command);
+
+                        result += await command.ExecuteNonQueryAsync(cancellationToken);
                     }
                     builder.Clear();
                     break;
                 }
             default:
                 command.CommandText = this.Visitor.BuildSql(command, out _);
+                if (this.interceptor != null)
+                    command = this.interceptor.CommandInitialized(command);
+
                 await connection.OpenAsync(cancellationToken);
-                result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
+                result = await command.ExecuteNonQueryAsync(cancellationToken);
                 break;
         }
 
@@ -1122,9 +1208,9 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
                 {
                     (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
                         var memberMappers, var valueGetters) = this.dialectVisitor.BuildWithBulkCopy();
-                    var dialectOrmProvider = this.OrmProvider as MySqlProvider;
-                    var mySqlConnection = connection.BaseConnection as MySqlConnection;
-                    var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;
+                    var dialectOrmProvider = this.ormProvider as MySqlProvider;
+                    var mySqlConnection = connection.DbConnection as MySqlConnection;
+                    var mySqlTransaction = this.transaction?.DbTransaction as MySqlTransaction;
                     var bulkCopyObj = new MySqlBulkCopy(mySqlConnection, mySqlTransaction);
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
@@ -1155,7 +1241,7 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
             case ActionMode.Bulk:
                 {
                     (var shardingType, var shardingTables, var insertObjs, var bulkCount, var firstSqlSetter,
-                    var loopSqlSetter, _, var readerFields) = this.Visitor.BuildWithBulk(command);
+                        var loopSqlSetter, _, var readerFields) = this.Visitor.BuildWithBulk(command);
 
                     int index = 0;
                     var builder = new StringBuilder();
@@ -1169,7 +1255,10 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
                             {
                                 builder.Remove(builder.Length - 1, 1);
                                 command.CommandText = builder.ToString();
-                                result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                                if (this.interceptor != null)
+                                    command = this.interceptor.CommandInitialized(command);
+
+                                result += command.ExecuteNonQuery();
                                 builder.Clear();
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
@@ -1198,15 +1287,21 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
                     {
                         builder.Remove(builder.Length - 1, 1);
                         command.CommandText = builder.ToString();
-                        result += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                        if (this.interceptor != null)
+                            command = this.interceptor.CommandInitialized(command);
+
+                        result += command.ExecuteNonQuery();
                     }
                     builder.Clear();
                     break;
                 }
             default:
                 command.CommandText = this.Visitor.BuildSql(command, out _);
+                if (this.interceptor != null)
+                    command = this.interceptor.CommandInitialized(command);
+
                 connection.Open();
-                result = command.ExecuteNonQuery(CommandSqlType.Insert);
+                result = command.ExecuteNonQuery();
                 break;
         }
 
@@ -1227,9 +1322,9 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
                 {
                     (var shardingType, var shardingTables, var insertObjs, var timeoutSeconds,
                          var memberMappers, var valueGetters) = this.dialectVisitor.BuildWithBulkCopy();
-                    var dialectOrmProvider = this.OrmProvider as MySqlProvider;
-                    var mySqlConnection = connection.BaseConnection as MySqlConnection;
-                    var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;
+                    var dialectOrmProvider = this.ormProvider as MySqlProvider;
+                    var mySqlConnection = connection.DbConnection as MySqlConnection;
+                    var mySqlTransaction = this.transaction?.DbTransaction as MySqlTransaction;
                     var bulkCopyObj = new MySqlBulkCopy(mySqlConnection, mySqlTransaction);
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
@@ -1274,7 +1369,10 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
                             {
                                 builder.Remove(builder.Length - 1, 1);
                                 command.CommandText = builder.ToString();
-                                result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                                if (this.interceptor != null)
+                                    command = this.interceptor.CommandInitialized(command);
+
+                                result += await command.ExecuteNonQueryAsync(cancellationToken);
                                 builder.Clear();
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
@@ -1302,15 +1400,21 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
                     {
                         builder.Remove(builder.Length - 1, 1);
                         command.CommandText = builder.ToString();
-                        result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                        if (this.interceptor != null)
+                            command = this.interceptor.CommandInitialized(command);
+
+                        result += await command.ExecuteNonQueryAsync(cancellationToken);
                     }
                     builder.Clear();
                     break;
                 }
             default:
                 command.CommandText = this.Visitor.BuildSql(command, out _);
+                if (this.interceptor != null)
+                    command = this.interceptor.CommandInitialized(command);
+
                 await connection.OpenAsync(cancellationToken);
-                result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
+                result = await command.ExecuteNonQueryAsync(cancellationToken);
                 break;
         }
 

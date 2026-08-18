@@ -30,25 +30,24 @@ public class MySqlDeleteVisitor : DeleteVisitor
             {
                 if (memberMapper.IsIgnore || memberMapper.IsNavigation)
                     continue;
-                this.ReaderFields.Add(new SqlSegment
+                this.ReaderFields.Add(new ReaderField
                 {
                     FieldType = ReaderFieldType.Field,
-                    FromMember = memberMapper.Member,
                     TargetMember = memberMapper.Member,
-                    SegmentType = memberMapper.MemberType,
-                    NativeDbType = memberMapper.NativeDbType,
+                    ReaderType = memberMapper.MemberType,
                     MappedTargetType = memberMapper.MappedTargetType,
                     TypeHandler = memberMapper.TypeHandler,
-                    Body = memberMapper.FieldName
+                    MemberName = memberMapper.MemberName,
+                    Value = memberMapper.FieldName
                 });
             }
         }
         else
         {
-            this.ReaderFields.Add(new SqlSegment
+            this.ReaderFields.Add(new ReaderField
             {
                 FieldType = ReaderFieldType.RawSql,
-                Body = fieldNames
+                Value = fieldNames
             });
         }
     }
@@ -63,15 +62,26 @@ public class MySqlDeleteVisitor : DeleteVisitor
             case ExpressionType.MemberAccess:
                 {
                     var memberExpr = fieldsSelector.Body as MemberExpression;
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberExpr });
-                    this.WrapSql(sqlSegment, true);
-                    sqlSegment.TargetMember = memberExpr.Member;
-                    sqlSegment.SegmentType = memberExpr.Type;
-                    builder.Append(sqlSegment.Value);
-                    if (sqlSegment.IsNeedAlias || sqlSegment.IsValue || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall
-                        || sqlSegment.FromMember != null && sqlSegment.FromMember.Name != sqlSegment.TargetMember.Name)
+                    var sqlSegment = this.Visit(new SqlSegment { Expression = memberExpr });
+                    var fieldName = this.WrapSql(sqlSegment);
+                    builder.Append(fieldName);
+                    var isNeedAlias = false;
+                    if (sqlSegment.MemberName != memberExpr.Member.Name)
+                    {
+                        isNeedAlias = true;
                         builder.Append($" AS {this.OrmProvider.GetFieldName(memberExpr.Member.Name)}");
-                    this.ReaderFields.Add(sqlSegment);
+                    }
+                    this.ReaderFields.Add(new ReaderField
+                    {
+                        FieldType = ReaderFieldType.Field,
+                        TargetMember = memberExpr.Member,
+                        ReaderType = memberExpr.Type,
+                        MappedTargetType = sqlSegment.MappedTargetType,
+                        TypeHandler = sqlSegment.TypeHandler,
+                        MemberName = memberExpr.Member.Name,
+                        Value = fieldName,
+                        IsNeedAlias = isNeedAlias
+                    });
                 }
                 break;
             case ExpressionType.New:
@@ -79,15 +89,28 @@ public class MySqlDeleteVisitor : DeleteVisitor
                 for (int i = 0; i < newExpr.Arguments.Count; i++)
                 {
                     var memberInfo = newExpr.Members[i];
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = newExpr.Arguments[i] });
-                    this.WrapSql(sqlSegment, true);
-                    sqlSegment.TargetMember = memberInfo;
-                    sqlSegment.SegmentType = memberInfo.GetMemberType();
+                    var sqlSegment = this.Visit(new SqlSegment { Expression = newExpr.Arguments[i] });
+                    var fieldName = this.WrapSql(sqlSegment);
                     if (i > 0) builder.Append(',');
-                    builder.Append(sqlSegment.Value);
-                    if (sqlSegment.IsNeedAlias || sqlSegment.IsValue || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                    builder.Append(fieldName);
+
+                    var isNeedAlias = false;
+                    if (sqlSegment.SqlType > SqlType.OnlyField || sqlSegment.IsVariable || sqlSegment.MemberName != memberInfo.Name)
+                    {
+                        isNeedAlias = true;
                         builder.Append($" AS {this.OrmProvider.GetFieldName(memberInfo.Name)}");
-                    this.ReaderFields.Add(sqlSegment);
+                    }
+                    this.ReaderFields.Add(new ReaderField
+                    {
+                        FieldType = ReaderFieldType.Field,
+                        TargetMember = memberInfo,
+                        ReaderType = memberInfo.GetMemberType(),
+                        MappedTargetType = sqlSegment.MappedTargetType,
+                        TypeHandler = sqlSegment.TypeHandler,
+                        MemberName = memberInfo.Name,
+                        Value = fieldName,
+                        IsNeedAlias = isNeedAlias
+                    });
                 }
                 break;
             case ExpressionType.MemberInit:
@@ -98,15 +121,64 @@ public class MySqlDeleteVisitor : DeleteVisitor
                         throw new NotSupportedException("暂时不支持除MemberBindingType.Assignment类型外的成员绑定表达式");
 
                     var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberAssignment.Expression });
-                    this.WrapSql(sqlSegment, true);
-                    sqlSegment.TargetMember = memberAssignment.Member;
-                    sqlSegment.SegmentType = memberAssignment.Member.GetMemberType();
+                    var sqlSegment = this.Visit(new SqlSegment { Expression = memberAssignment.Expression });
+                    var fieldName = this.WrapSql(sqlSegment);
                     if (i > 0) builder.Append(',');
-                    builder.Append(sqlSegment.Value);
-                    if (sqlSegment.IsNeedAlias || sqlSegment.IsValue || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                    builder.Append(fieldName);
+
+                    var isNeedAlias = false;
+                    if (sqlSegment.SqlType > SqlType.OnlyField || sqlSegment.IsVariable || sqlSegment.MemberName != memberAssignment.Member.Name)
+                    {
+                        isNeedAlias = true;
                         builder.Append($" AS {this.OrmProvider.GetFieldName(memberAssignment.Member.Name)}");
-                    this.ReaderFields.Add(sqlSegment);
+                    }
+                    this.ReaderFields.Add(new ReaderField
+                    {
+                        FieldType = ReaderFieldType.Field,
+                        TargetMember = memberAssignment.Member,
+                        ReaderType = memberAssignment.Member.GetMemberType(),
+                        MappedTargetType = sqlSegment.MappedTargetType,
+                        TypeHandler = sqlSegment.TypeHandler,
+                        MemberName = memberAssignment.Member.Name,
+                        Value = fieldName,
+                        IsNeedAlias = isNeedAlias
+                    });
+                }
+                break;
+            case ExpressionType.Parameter:
+                foreach (var memberMapper in entityMapper.MemberMaps)
+                {
+                    if (memberMapper.IsIgnore || memberMapper.IsNavigation)
+                        continue;
+
+                    this.ReaderFields.Add(new ReaderField
+                    {
+                        FieldType = ReaderFieldType.Field,
+                        TargetMember = memberMapper.Member,
+                        ReaderType = memberMapper.MemberType,
+                        MappedTargetType = memberMapper.MappedTargetType,
+                        TypeHandler = memberMapper.TypeHandler,
+                        MemberName = memberMapper.Member.Name,
+                        Value = memberMapper.FieldName
+                    });
+                }
+                builder.Append('*');
+                break;
+            default:
+                {
+                    var sqlSegment = this.Visit(new SqlSegment { Expression = fieldsSelector });
+                    for (int i = 0; i < this.ReaderFields.Count; i++)
+                    {
+                        var readerField = this.ReaderFields[i];
+                        if (i > 0) builder.Append(',');
+                        builder.Append(readerField.Value);
+                    }
+                    this.ReaderFields.Add(new ReaderField
+                    {
+                        FieldType = ReaderFieldType.Field,
+                        ReaderType = fieldsSelector.Type,
+                        Value = sqlSegment.Value
+                    });
                 }
                 break;
         }

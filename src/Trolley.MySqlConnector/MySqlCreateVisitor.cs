@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 
 namespace Trolley.MySqlConnector;
@@ -28,7 +29,7 @@ public class MySqlCreateVisitor : CreateVisitor
         {
             case ActionMode.Bulk:
                 (var shardingType, var shardingTables, var insertObjs, _, var firstSqlSetter,
-                   var loopSqlSetter, tailSql, readerFields) = this.BuildWithBulk(command);
+                    var loopSqlSetter, tailSql, readerFields) = this.BuildWithBulk(command);
 
                 int index = 0;
                 var builder = new StringBuilder();
@@ -266,7 +267,7 @@ public class MySqlCreateVisitor : CreateVisitor
             {
                 if (shardingType > ShardingTableType.SingleTable)
                     throw new NotSupportedException($"实体表{entityType.FullName}已设置分表，数据插入不能设置多个分表，原始表：{tableSegment.Mapper.TableName}");
-                shardingTables = tableSegment.Value;
+                shardingTables = tableSegment.Body;
             }
             else
             {
@@ -302,25 +303,24 @@ public class MySqlCreateVisitor : CreateVisitor
             {
                 if (memberMapper.IsIgnore || memberMapper.IsNavigation)
                     continue;
-                this.ReaderFields.Add(new SqlSegment
+                this.ReaderFields.Add(new ReaderField
                 {
                     FieldType = ReaderFieldType.Field,
-                    FromMember = memberMapper.Member,
                     TargetMember = memberMapper.Member,
-                    SegmentType = memberMapper.MemberType,
+                    ReaderType = memberMapper.MemberType,
                     NativeDbType = memberMapper.NativeDbType,
                     MappedTargetType = memberMapper.MappedTargetType,
                     TypeHandler = memberMapper.TypeHandler,
-                    Body = memberMapper.FieldName
+                    Value = memberMapper.FieldName
                 });
             }
         }
         else
         {
-            this.ReaderFields.Add(new SqlSegment
+            this.ReaderFields.Add(new ReaderField
             {
                 FieldType = ReaderFieldType.RawSql,
-                Body = fieldNames
+                Value = fieldNames
             });
         }
     }
@@ -335,15 +335,26 @@ public class MySqlCreateVisitor : CreateVisitor
             case ExpressionType.MemberAccess:
                 {
                     var memberExpr = fieldsSelector.Body as MemberExpression;
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberExpr });
-                    this.WrapSql(sqlSegment, true);
-                    sqlSegment.TargetMember = memberExpr.Member;
-                    sqlSegment.SegmentType = memberExpr.Type;
-                    builder.Append(sqlSegment.Value);
-                    if (sqlSegment.IsNeedAlias || sqlSegment.IsValue || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall
-                        || sqlSegment.FromMember != null && sqlSegment.FromMember.Name != sqlSegment.TargetMember.Name)
+                    var sqlSegment = this.Visit(new SqlSegment { Expression = memberExpr });
+                    var fieldName = this.WrapSql(sqlSegment);
+                    builder.Append(fieldName);
+                    var isNeedAlias = false;
+                    if (sqlSegment.MemberName != memberExpr.Member.Name)
+                    {
+                        isNeedAlias = true;
                         builder.Append($" AS {this.OrmProvider.GetFieldName(memberExpr.Member.Name)}");
-                    this.ReaderFields.Add(sqlSegment);
+                    }
+                    this.ReaderFields.Add(new ReaderField
+                    {
+                        FieldType = ReaderFieldType.Field,
+                        TargetMember = memberExpr.Member,
+                        ReaderType = memberExpr.Type,
+                        MappedTargetType = sqlSegment.MappedTargetType,
+                        TypeHandler = sqlSegment.TypeHandler,
+                        MemberName = memberExpr.Member.Name,
+                        Value = fieldName,
+                        IsNeedAlias = isNeedAlias
+                    });
                 }
                 break;
             case ExpressionType.New:
@@ -351,15 +362,28 @@ public class MySqlCreateVisitor : CreateVisitor
                 for (int i = 0; i < newExpr.Arguments.Count; i++)
                 {
                     var memberInfo = newExpr.Members[i];
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = newExpr.Arguments[i] });
-                    this.WrapSql(sqlSegment, true);
-                    sqlSegment.TargetMember = memberInfo;
-                    sqlSegment.SegmentType = memberInfo.GetMemberType();
+                    var sqlSegment = this.Visit(new SqlSegment { Expression = newExpr.Arguments[i] });
+                    var fieldName = this.WrapSql(sqlSegment);
                     if (i > 0) builder.Append(',');
-                    builder.Append(sqlSegment.Value);
-                    if (sqlSegment.IsNeedAlias || sqlSegment.IsValue || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                    builder.Append(fieldName);
+
+                    var isNeedAlias = false;
+                    if (sqlSegment.SqlType > SqlType.OnlyField || sqlSegment.IsVariable || sqlSegment.MemberName != memberInfo.Name)
+                    {
+                        isNeedAlias = true;
                         builder.Append($" AS {this.OrmProvider.GetFieldName(memberInfo.Name)}");
-                    this.ReaderFields.Add(sqlSegment);
+                    }
+                    this.ReaderFields.Add(new ReaderField
+                    {
+                        FieldType = ReaderFieldType.Field,
+                        TargetMember = memberInfo,
+                        ReaderType = memberInfo.GetMemberType(),
+                        MappedTargetType = sqlSegment.MappedTargetType,
+                        TypeHandler = sqlSegment.TypeHandler,
+                        MemberName = memberInfo.Name,
+                        Value = fieldName,
+                        IsNeedAlias = isNeedAlias
+                    });
                 }
                 break;
             case ExpressionType.MemberInit:
@@ -370,15 +394,28 @@ public class MySqlCreateVisitor : CreateVisitor
                         throw new NotSupportedException("暂时不支持除MemberBindingType.Assignment类型外的成员绑定表达式");
 
                     var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberAssignment.Expression });
-                    this.WrapSql(sqlSegment, true);
-                    sqlSegment.TargetMember = memberAssignment.Member;
-                    sqlSegment.SegmentType = memberAssignment.Member.GetMemberType();
+                    var sqlSegment = this.Visit(new SqlSegment { Expression = memberAssignment.Expression });
+                    var fieldName = this.WrapSql(sqlSegment);
                     if (i > 0) builder.Append(',');
-                    builder.Append(sqlSegment.Value);
-                    if (sqlSegment.IsNeedAlias || sqlSegment.IsValue || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                    builder.Append(fieldName);
+
+                    var isNeedAlias = false;
+                    if (sqlSegment.SqlType > SqlType.OnlyField || sqlSegment.IsVariable || sqlSegment.MemberName != memberAssignment.Member.Name)
+                    {
+                        isNeedAlias = true;
                         builder.Append($" AS {this.OrmProvider.GetFieldName(memberAssignment.Member.Name)}");
-                    this.ReaderFields.Add(sqlSegment);
+                    }
+                    this.ReaderFields.Add(new ReaderField
+                    {
+                        FieldType = ReaderFieldType.Field,
+                        TargetMember = memberAssignment.Member,
+                        ReaderType = memberAssignment.Member.GetMemberType(),
+                        MappedTargetType = sqlSegment.MappedTargetType,
+                        TypeHandler = sqlSegment.TypeHandler,
+                        MemberName = memberAssignment.Member.Name,
+                        Value = fieldName,
+                        IsNeedAlias = isNeedAlias
+                    });
                 }
                 break;
             case ExpressionType.Parameter:
@@ -386,29 +423,35 @@ public class MySqlCreateVisitor : CreateVisitor
                 {
                     if (memberMapper.IsIgnore || memberMapper.IsNavigation)
                         continue;
-                    this.ReaderFields.Add(new SqlSegment
+
+                    this.ReaderFields.Add(new ReaderField
                     {
                         FieldType = ReaderFieldType.Field,
-                        FromMember = memberMapper.Member,
                         TargetMember = memberMapper.Member,
-                        SegmentType = memberMapper.MemberType,
-                        NativeDbType = memberMapper.NativeDbType,
+                        ReaderType = memberMapper.MemberType,
                         MappedTargetType = memberMapper.MappedTargetType,
                         TypeHandler = memberMapper.TypeHandler,
-                        Body = memberMapper.FieldName
+                        MemberName = memberMapper.Member.Name,
+                        Value = memberMapper.FieldName
                     });
                 }
                 builder.Append('*');
                 break;
             default:
-                this.VisitAndDeferred(new SqlSegment { Expression = fieldsSelector });
-                for (int i = 0; i < this.ReaderFields.Count; i++)
                 {
-                    var readerField = this.ReaderFields[i];
-                    if (i > 0) builder.Append(',');
-                    builder.Append(readerField.Body);
-                    if (readerField.IsNeedAlias || readerField.IsConstant || readerField.IsVariable || readerField.HasParameter || readerField.IsExpression || readerField.IsMethodCall)
-                        builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
+                    var sqlSegment = this.Visit(new SqlSegment { Expression = fieldsSelector });
+                    for (int i = 0; i < this.ReaderFields.Count; i++)
+                    {
+                        var readerField = this.ReaderFields[i];
+                        if (i > 0) builder.Append(',');
+                        builder.Append(readerField.Value);
+                    }
+                    this.ReaderFields.Add(new ReaderField
+                    {
+                        FieldType = ReaderFieldType.Field,
+                        ReaderType = fieldsSelector.Type,
+                        Value = sqlSegment.Value
+                    });
                 }
                 break;
         }
@@ -433,8 +476,8 @@ public class MySqlCreateVisitor : CreateVisitor
         {
             if (tableSegment.IsSharding)
             {
-                if (!string.IsNullOrEmpty(tableSegment.Value))
-                    shardingTables = tableSegment.Value;
+                if (!string.IsNullOrEmpty(tableSegment.Body))
+                    shardingTables = tableSegment.Body;
                 else if (tableSegment.TableNames != null && tableSegment.TableNames.Count > 0)
                 {
                     var entityType = tableSegment.EntityType;
@@ -475,18 +518,11 @@ public class MySqlCreateVisitor : CreateVisitor
                 var memberInfo = newExpr.Members[i];
                 if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
                     continue;
-                sqlSegment = this.VisitAndDeferred(new SqlSegment
-                {
-                    Expression = newExpr.Arguments[i],
-                    NativeDbType = memberMapper.NativeDbType,
-                    MappedTargetType = memberMapper.MappedTargetType,
-                    TypeHandler = memberMapper.TypeHandler
-                });
-                this.AddMemberElement(sqlSegment, memberMapper);
+                this.AddMemberElement(newExpr.Arguments[i], memberMapper);
             }
             return sqlSegment;
         }
-        return this.Evaluate(sqlSegment);
+        return sqlSegment.Change(sqlSegment.Expression.Evaluate(), SqlType.Constant);
     }
     public override SqlSegment VisitMemberInit(SqlSegment sqlSegment)
     {
@@ -499,25 +535,18 @@ public class MySqlCreateVisitor : CreateVisitor
             var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
             if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out var memberMapper))
                 continue;
-            sqlSegment = this.VisitAndDeferred(new SqlSegment
-            {
-                Expression = memberAssignment.Expression,
-                NativeDbType = memberMapper.NativeDbType,
-                MappedTargetType = memberMapper.MappedTargetType,
-                TypeHandler = memberMapper.TypeHandler
-            });
-            this.AddMemberElement(sqlSegment, memberMapper);
+            this.AddMemberElement(memberAssignment.Expression, memberMapper);
         }
-        return this.Evaluate(sqlSegment);
+        return sqlSegment.Change(sqlSegment.Expression.Evaluate(), SqlType.Constant);
     }
     public override void VisitSetFieldExprs(object deferredSegmentValue)
     {
         (var fieldSelector, var valueGetter) = ((Expression, Expression))deferredSegmentValue;
         this.InitTableAlias(fieldSelector as LambdaExpression);
-        var fieldSegment = this.VisitAndDeferred(new SqlSegment { Expression = fieldSelector });
+        var fieldSegment = this.Visit(new SqlSegment { Expression = fieldSelector });
         this.IsSetValue = true;
         this.InitTableAlias(valueGetter as LambdaExpression);
-        var valueSegment = this.VisitAndDeferred(new SqlSegment { Expression = valueGetter });
+        var valueSegment = this.Visit(new SqlSegment { Expression = valueGetter });
         this.IsSetValue = false;
         if (this.UpdateIndex > 0) this.UpdateBuilder.Append(',');
         this.UpdateBuilder.Append($"{fieldSegment.Value}={valueSegment.Value}");
@@ -532,14 +561,15 @@ public class MySqlCreateVisitor : CreateVisitor
         queryVisitor.IncludeTables = this.IncludeTables;
         queryVisitor.IsRecursive = this.IsRecursive;
         queryVisitor.CteQueryObj = this.CteQueryObj;
-        queryVisitor.RefFrom = this;
+        //queryVisitor.RefFrom = this;
         queryVisitor.Tables = this.Tables;
 
         queryVisitor.IsUseIgnoreInto = this.IsUseIgnoreInto;
         return queryVisitor;
     }
-    public virtual void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper)
+    public virtual void AddMemberElement(Expression fieldExpr, MemberMap memberMapper)
     {
+        var sqlSegment = this.Visit(new SqlSegment { Expression = fieldExpr });
         if (this.UpdateIndex > 0) this.UpdateBuilder.Append(',');
         var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
 

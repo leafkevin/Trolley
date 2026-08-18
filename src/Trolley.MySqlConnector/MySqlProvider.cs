@@ -480,7 +480,7 @@ public partial class MySqlProvider : BaseOrmProvider
         formatter = null;
         return false;
     }
-    public int ExecuteBulkCopy(string tableName, MySqlBulkCopy bulkCopyObj, DbContext dbContext, ITheaConnection connection, IDataReader dataReader)
+    public int ExecuteBulkCopy(string tableName, MySqlBulkCopy bulkCopyObj, ITheaConnection connection, DbContext dbContext, IDataReader dataReader)
     {
         bulkCopyObj.DestinationTableName = tableName;
         int recordsAffected = 0;
@@ -503,7 +503,7 @@ public partial class MySqlProvider : BaseOrmProvider
         }
         return recordsAffected;
     }
-    public async Task<int> ExecuteBulkCopyAsync(string tableName, MySqlBulkCopy bulkCopyObj, DbContext dbContext, ITheaConnection connection, IDataReader dataReader, CancellationToken cancellationToken = default)
+    public async Task<int> ExecuteBulkCopyAsync(string tableName, MySqlBulkCopy bulkCopyObj, ITheaConnection connection, DbContext dbContext, IDataReader dataReader, CancellationToken cancellationToken = default)
     {
         var createdAt = DateTime.Now;
         bulkCopyObj.DestinationTableName = tableName;
