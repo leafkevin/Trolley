@@ -205,7 +205,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         var memberExpr = sqlSegment.Expression as MemberExpression;
         var memberInfo = memberExpr.Member;
 
-        MemberAccessSqlFormatter formatter = null;
+        Func<ISqlVisitor, SqlSegment, SqlSegment> formatter = null;
         if (memberExpr.Expression != null)
         {
             //Where(f=>... && !f.OrderId.HasValue && ...)

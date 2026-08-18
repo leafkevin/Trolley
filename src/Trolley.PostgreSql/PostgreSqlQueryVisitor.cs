@@ -419,7 +419,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                     if (builder.Length > 0)
                         builder.Append(',');
 
-                    var fieldName = sqlSegment.Body ?? sqlSegment.Value.ToString();
+                    var fieldName = sqlSegment.Value ?? sqlSegment.Value.ToString();
                     builder.Append(fieldName);
                     sqlSegment.TargetMember = memberInfo;
                     sqlSegment.SegmentType = memberInfo.GetMemberType();
@@ -433,7 +433,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                 {
                     var memberExpr = lambdaExpr.Body as MemberExpression;
                     var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberExpr });
-                    var fieldName = sqlSegment.Body ?? sqlSegment.Value.ToString();
+                    var fieldName = sqlSegment.Value ?? sqlSegment.Value.ToString();
                     var memberInfo = memberExpr.Member;
                     sqlSegment.TargetMember = memberInfo;
                     sqlSegment.SegmentType = memberInfo.GetMemberType();
@@ -541,7 +541,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                             var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
                             if (index > 0) builder.Append(',');
                             //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
-                            builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
+                            builder.Append(sqlSegment.Value ?? sqlSegment.Value.ToString());
                             var orderField = new OrderByField { Field = sqlSegment };
                             this.OrderByFields.Add(orderField);
                             if (orderType == "DESC")
@@ -620,7 +620,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                     {
                         var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberExpr });
                         //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
-                        builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
+                        builder.Append(sqlSegment.Value ?? sqlSegment.Value.ToString());
                         var orderField = new OrderByField { Field = sqlSegment };
                         this.OrderByFields.Add(orderField);
                         if (orderType == "DESC")
@@ -664,7 +664,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                     if (argumentSegment.HasField)
                     {
                         sqlSegment.HasField = true;
-                        var fieldName = argumentSegment.Body;
+                        var fieldName = argumentSegment.Value;
                         readerFields.Add(new SqlSegment
                         {
                             SegmentType = argsExpr.Type,
@@ -685,7 +685,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                 fields = "NULL";
             sqlSegment.IsDeferredFields = true;
             sqlSegment.FieldType = ReaderFieldType.DeferredFields;
-            sqlSegment.Body = fields;
+            sqlSegment.Value = fields;
             sqlSegment.OriginalExpression = memberExpr;
             sqlSegment.Fields = readerFields;
             sqlSegment.IsMethodCall = true;
@@ -860,7 +860,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                             sqlSegment.NativeDbType = memberMapper.NativeDbType;
                             sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
                             sqlSegment.TypeHandler = memberMapper.TypeHandler;
-                            sqlSegment.Body = fieldName;
+                            sqlSegment.Value = fieldName;
                         }
                     }
                     else
@@ -880,7 +880,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                         sqlSegment.NativeDbType = readerField.NativeDbType;
                         sqlSegment.MappedTargetType = readerField.MappedTargetType;
                         sqlSegment.TypeHandler = readerField.TypeHandler;
-                        sqlSegment.Body = readerField.Body;
+                        sqlSegment.Value = readerField.Body;
                         sqlSegment.Fields = readerField.Fields;
                     }
                 }
@@ -918,7 +918,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                         //设置是否是分组字段，以便后面分表添加分组字段处理
                         if (this.IsSelect && this.GroupByFields != null && this.GroupByFields.Count > 0)
                             sqlSegment.IsGroupByField = this.GroupByFields.Exists(f => f.FromMember == memberMapper.Member);
-                        sqlSegment.Body = fieldName;
+                        sqlSegment.Value = fieldName;
                     }
                     else
                     {
@@ -958,7 +958,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                             fieldName = this.OrmProvider.GetFieldName(memberExpr.Member.Name);
                             if (this.IsNeedTableAlias) fieldName = fromSegment.AliasName + "." + fieldName;
                         }
-                        sqlSegment.Body = fieldName;
+                        sqlSegment.Value = fieldName;
                         sqlSegment.Fields = readerField.Fields;
                     }
                 }

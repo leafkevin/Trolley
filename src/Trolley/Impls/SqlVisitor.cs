@@ -99,6 +99,64 @@ public class SqlVisitor : ISqlVisitor
         var isNeedClose = this.DbContext.Transaction == null;
         return (isNeedClose, this.Connection, this.Command);
     }
+    public string BuildShardingTablesSqlByFormat(string formatSql, string jointMark)
+    {
+        //查询，多分表时，都使用表名替换生成分表sql
+        var builder = new StringBuilder();
+        if (this.ShardingTables.Count > 1)
+        {
+            var masterTableSegment = this.ShardingTables[0];
+            var loopCount = masterTableSegment.TableNames.Count;
+            var origMasterName = masterTableSegment.Mapper.TableName;
+            for (int i = 0; i < loopCount; i++)
+            {
+                var masterTableName = masterTableSegment.TableNames[i];
+                var sql = formatSql.Replace($"__SHARDING_{masterTableSegment.ShardingId}_{origMasterName}", masterTableName);
+                for (int j = 1; j < this.ShardingTables.Count; j++)
+                {
+                    var tableSegment = this.ShardingTables[j];
+                    if (tableSegment.IsIncludeManySharding) continue;
+
+                    var origTableName = tableSegment.Mapper.TableName;
+                    //如果主表分表名不存在，直接忽略本次关联
+                    var tableName = tableSegment.ShardingMapGetter.Invoke(origMasterName, origTableName, masterTableName);
+                    sql = sql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origTableName}", tableName);
+                    //1:N include表，需要统计一下表名，后续会用到
+                    if (this.IncludeTables != null && this.IncludeTables.Contains(tableSegment))
+                    {
+                        tableSegment.TableNames ??= new();
+                        if (!tableSegment.TableNames.Contains(tableName))
+                            tableSegment.TableNames.Add(tableName);
+                    }
+                }
+                if (builder.Length > 0) builder.Append(jointMark);
+                builder.Append(sql);
+            }
+        }
+        else
+        {
+            var tableSegment = this.ShardingTables[0];
+            var origTableName = tableSegment.Mapper.TableName;
+            if (tableSegment.TableNames != null)
+            {
+                for (int i = 0; i < tableSegment.TableNames.Count; i++)
+                {
+                    if (i > 0) builder.Append(jointMark);
+                    var tableName = tableSegment.TableNames[i];
+                    var sql = formatSql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origTableName}", tableName);
+                    builder.Append(sql);
+                }
+            }
+            else
+            {
+                var sql = formatSql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origTableName}", tableSegment.Value);
+                builder.Append(sql);
+            }
+        }
+        var result = builder.ToString();
+        builder.Clear();
+        return result;
+    }
     public void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames)
     {
         if (tableNames == null || tableNames.Length == 0)
@@ -129,7 +187,7 @@ public class SqlVisitor : ISqlVisitor
         else
         {
             if (tableSegment.IsSharding) tableSegment.ShardingType = ShardingTableType.SingleTable;
-            tableSegment.Body = tableNames[0];
+            tableSegment.Value = tableNames[0];
         }
     }
     public void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues)
@@ -155,11 +213,11 @@ public class SqlVisitor : ISqlVisitor
             this.ShardingTables.Add(tableSegment);
         }
         tableSegment.TableNames ??= new();
-        if (!string.IsNullOrEmpty(tableSegment.Body)
-            && !tableSegment.TableNames.Contains(tableSegment.Body))
+        if (!string.IsNullOrEmpty(tableSegment.Value)
+            && !tableSegment.TableNames.Contains(tableSegment.Value))
         {
-            tableSegment.TableNames.Add(tableSegment.Body);
-            tableSegment.Body = null;
+            tableSegment.TableNames.Add(tableSegment.Value);
+            tableSegment.Value = null;
         }
         if (tableSegment.TableNames != null)
             tableSegment.TableNames.AddRange(tableNames);
@@ -203,9 +261,9 @@ public class SqlVisitor : ISqlVisitor
         var tableName = tableShardingInfo.Rule.Invoke(origTableName, fieldValues) as string;
 
         //单个分表，直接设置body表名，当作不分表处理
-        if (!string.IsNullOrEmpty(tableSegment.Body))
+        if (!string.IsNullOrEmpty(tableSegment.Value))
         {
-            if (tableName == tableSegment.Body)
+            if (tableName == tableSegment.Value)
                 return;
             if (tableSegment.TableNames == null)
             {
@@ -218,10 +276,10 @@ public class SqlVisitor : ISqlVisitor
         }
         if (tableSegment.TableNames != null)
         {
-            if (!string.IsNullOrEmpty(tableSegment.Body))
+            if (!string.IsNullOrEmpty(tableSegment.Value))
             {
-                tableSegment.TableNames.Add(tableSegment.Body);
-                tableSegment.Body = null;
+                tableSegment.TableNames.Add(tableSegment.Value);
+                tableSegment.Value = null;
             }
             if (!tableSegment.TableNames.Contains(tableName))
                 tableSegment.TableNames.Add(tableName);
@@ -230,7 +288,7 @@ public class SqlVisitor : ISqlVisitor
         else
         {
             tableSegment.ShardingType = ShardingTableType.SingleTable;
-            tableSegment.Body = tableName;
+            tableSegment.Value = tableName;
         }
     }
     /// <summary>
@@ -2246,9 +2304,9 @@ public class SqlVisitor : ISqlVisitor
                 && (tableSegment.TableType == TableType.Entity || tableSegment.TableType == TableType.Include))
                 tableName = $"__SHARDING_{tableSegment.ShardingId}_{tableSegment.Mapper.TableName}";
             //单个明确分表或是有分表的子查询
-            else tableName = tableSegment.Body;
+            else tableName = tableSegment.Value;
         }
-        else tableName = tableSegment.Body ?? tableSegment.Mapper.TableName;
+        else tableName = tableSegment.Value ?? tableSegment.Mapper.TableName;
         if (tableSegment.TableType != TableType.FromQuery)
         {
             if (!string.IsNullOrEmpty(tableSegment.TableSchema))

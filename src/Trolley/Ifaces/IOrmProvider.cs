@@ -5,9 +5,6 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-public delegate SqlSegment MemberAccessSqlFormatter(ISqlVisitor visitor, SqlSegment target);
-public delegate SqlSegment MethodCallSqlFormatter(ISqlVisitor visitor, MethodCallExpression methodCallExpr, Stack<DeferredOperation> deferredOperations);
-
 public enum OrmProviderType
 {
     Basic,
@@ -206,6 +203,6 @@ public interface IOrmProvider
     ITypeHandler GetTypeHandler(Type typeHandlerType);
     object MapNativeDbType(DbColumnInfo columnInfo);
     bool MapTables(string connectionString, IEntityMapProvider mapProvider, OrmDbFactoryOptions options);
-    bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
-    bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
+    bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out Func<ISqlVisitor, SqlSegment, SqlSegment> formatter);
+    bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out Func<ISqlVisitor, MethodCallExpression, Stack<DeferredOperation>, SqlSegment> formatter);
 }

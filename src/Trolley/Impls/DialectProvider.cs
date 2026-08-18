@@ -575,7 +575,7 @@ public class DialectProvider
         var sql = visitor.BuildSql(true, out var readerFields);
         if (visitor.IsManyShardingTables)
         {
-            sql = this.BuildShardingTablesSqlByFormat(visitor as SqlVisitor, sql, visitor.ShardingTableJointMark);
+            sql = visitor.BuildShardingTablesSqlByFormat(sql, visitor.ShardingTableJointMark);
             if (visitor.IsNeedChangeUnionShardingTables)
                 sql = visitor.BuildShardingSql(sql);
         }
@@ -586,68 +586,10 @@ public class DialectProvider
         var sql = visitor.BuildSql(true, out _);
         if (visitor.IsManyShardingTables)
         {
-            sql = this.BuildShardingTablesSqlByFormat(visitor as SqlVisitor, sql, visitor.ShardingTableJointMark);
+            sql = visitor.BuildShardingTablesSqlByFormat(sql, visitor.ShardingTableJointMark);
             sql = visitor.BuildShardingScalarSql(sql);
         }
         return sql;
-    }
-    public string BuildShardingTablesSqlByFormat(SqlVisitor visitor, string formatSql, string jointMark)
-    {
-        //查询，多分表时，都使用表名替换生成分表sql
-        var builder = new StringBuilder();
-        if (visitor.ShardingTables.Count > 1)
-        {
-            var masterTableSegment = visitor.ShardingTables[0];
-            var loopCount = masterTableSegment.TableNames.Count;
-            var origMasterName = masterTableSegment.Mapper.TableName;
-            for (int i = 0; i < loopCount; i++)
-            {
-                var masterTableName = masterTableSegment.TableNames[i];
-                var sql = formatSql.Replace($"__SHARDING_{masterTableSegment.ShardingId}_{origMasterName}", masterTableName);
-                for (int j = 1; j < visitor.ShardingTables.Count; j++)
-                {
-                    var tableSegment = visitor.ShardingTables[j];
-                    if (tableSegment.IsIncludeManySharding) continue;
-
-                    var origTableName = tableSegment.Mapper.TableName;
-                    //如果主表分表名不存在，直接忽略本次关联
-                    var tableName = tableSegment.ShardingMapGetter.Invoke(origMasterName, origTableName, masterTableName);
-                    sql = sql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origTableName}", tableName);
-                    //1:N include表，需要统计一下表名，后续会用到
-                    if (visitor.IncludeTables != null && visitor.IncludeTables.Contains(tableSegment))
-                    {
-                        tableSegment.TableNames ??= new();
-                        if (!tableSegment.TableNames.Contains(tableName))
-                            tableSegment.TableNames.Add(tableName);
-                    }
-                }
-                if (builder.Length > 0) builder.Append(jointMark);
-                builder.Append(sql);
-            }
-        }
-        else
-        {
-            var tableSegment = visitor.ShardingTables[0];
-            var origTableName = tableSegment.Mapper.TableName;
-            if (tableSegment.TableNames != null)
-            {
-                for (int i = 0; i < tableSegment.TableNames.Count; i++)
-                {
-                    if (i > 0) builder.Append(jointMark);
-                    var tableName = tableSegment.TableNames[i];
-                    var sql = formatSql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origTableName}", tableName);
-                    builder.Append(sql);
-                }
-            }
-            else
-            {
-                var sql = formatSql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origTableName}", tableSegment.Body);
-                builder.Append(sql);
-            }
-        }
-        var result = builder.ToString();
-        builder.Clear();
-        return result;
     }
     public string GetShardingTable(Type entityType, params object[] fieldValues)
     {
@@ -657,7 +599,7 @@ public class DialectProvider
             throw new InvalidOperationException($"实体表{entityType.FullName}没有配置分表，无需调用此方法");
         if (!this.entityMapProvider.TryGetEntityMap(entityType, out var entityMap))
             throw new InvalidOperationException($"实体表{entityType.FullName}没有配置映射关系，无法获取分表信息");
-        return shardingTableInfo.Rule.Invoke(entityMap.TableName, fieldValues) as string;
+        return shardingTableInfo.Rule.Invoke(entityMap.TableName, fieldValues);
     }
     #endregion
 

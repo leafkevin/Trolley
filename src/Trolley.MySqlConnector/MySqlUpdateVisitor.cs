@@ -154,7 +154,7 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             {
                 shardingTables = shardingType switch
                 {
-                    ShardingTableType.SingleTable => tableSegment.Body,
+                    ShardingTableType.SingleTable => tableSegment.Value,
                     ShardingTableType.MultiTable => tableSegment.TableNames,
                     _ => tableSegment.Mapper.TableName,
                 };
@@ -188,7 +188,7 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             {
                 shardingTables = shardingType switch
                 {
-                    ShardingTableType.SingleTable => tableSegment.Body,
+                    ShardingTableType.SingleTable => tableSegment.Value,
                     ShardingTableType.MultiTable => tableSegment.TableNames,
                     _ => tableSegment.Mapper.TableName,
                 };

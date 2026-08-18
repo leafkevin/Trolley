@@ -21,6 +21,7 @@ public interface ISqlVisitor : IDisposable
 
     SqlSegment Visit(SqlSegment sqlSegment);
     string WrapSql(SqlSegment sqlSegment, bool isNeedWrapExpr = false);
+    string WrapParameterSql(object value);
     SqlSegment VisitUnary(SqlSegment sqlSegment);
     SqlSegment VisitBinary(SqlSegment sqlSegment);
     SqlSegment VisitMemberAccess(SqlSegment sqlSegment);

@@ -75,7 +75,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             else if (this.ActionMode == ActionMode.Single && tableSegment.ShardingTableGetter != null)
             {
                 var updateObj = this.deferredSegments[0].Value;
-                tableSegment.Body = tableSegment.ShardingTableGetter.Invoke(updateObj);
+                tableSegment.Value = tableSegment.ShardingTableGetter.Invoke(updateObj);
                 tableSegment.ShardingType = ShardingTableType.SingleTable;
                 tableSegment.IsSharding = true;
             }
@@ -205,7 +205,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 }
                 sql = builder.ToString();
                 if (this.ShardingTables != null && this.ShardingTables.Count > 0)
-                    sql = this.DbContext.BuildShardingTablesSqlByFormat(this, sql, ";");
+                    sql = this.BuildShardingTablesSqlByFormat(sql, ";");
                 break;
         }
         builder.Clear();
@@ -345,7 +345,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             {
                 shardingTables = shardingType switch
                 {
-                    ShardingTableType.SingleTable => tableSegment.Body,
+                    ShardingTableType.SingleTable => tableSegment.Value,
                     ShardingTableType.MultiTable => tableSegment.TableNames,
                     _ => tableSegment.Mapper.TableName,
                 };
@@ -436,7 +436,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public virtual void IgnoreFields(Expression fieldsSelector)
     {
         this.IgnoreFieldNames ??= new();
-        this.VisitFields(fieldsSelector, f => this.IgnoreFieldNames.Add(f.FieldName.ToLower()));
+        this.VisitFieldsTo(fieldsSelector, f => this.IgnoreFieldNames.Add(f.FieldName.ToLower()));
     }
     public virtual void OnlyFields(string[] fieldNames)
     {
@@ -446,7 +446,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public virtual void OnlyFields(Expression fieldsSelector)
     {
         this.OnlyFieldNames ??= new();
-        this.VisitFields(fieldsSelector, f => this.OnlyFieldNames.Add(f.FieldName.ToLower()));
+        this.VisitFieldsTo(fieldsSelector, f => this.OnlyFieldNames.Add(f.FieldName.ToLower()));
     }
     public virtual void SetBulk(IEnumerable updateObjs, int bulkCount)
     {
@@ -536,7 +536,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var memberExpr = sqlSegment.Expression as MemberExpression;
         var memberInfo = memberExpr.Member;
 
-        MemberAccessSqlFormatter formatter = null;
+        Func<ISqlVisitor, SqlSegment, SqlSegment> formatter = null;
         if (memberExpr.Expression != null)
         {
             //Where(f=>... && !f.OrderId.HasValue && ...)
@@ -642,14 +642,15 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var sqlType = visitor.HasVariable ? SqlType.Variable : SqlType.Constant;
         return sqlSegment.Change(sqlSegment.Expression.Evaluate(), sqlType);
     }
-    public override SqlSegment VisitMethodCall(SqlSegment sqlSegment)
-    {
-        //把方法返回值当作常量处理
-        sqlSegment = base.VisitMethodCall(sqlSegment);
-        if (!sqlSegment.HasField && !sqlSegment.HasParameter && !sqlSegment.IsMethodCall)
-            sqlSegment.IsConstant = true;
-        return sqlSegment;
-    }
+    //TODO:
+    //public override SqlSegment VisitMethodCall(SqlSegment sqlSegment)
+    //{
+    //    //把方法返回值当作常量处理
+    //    sqlSegment = base.VisitMethodCall(sqlSegment);
+    //    if (!sqlSegment.HasField && !sqlSegment.HasParameter && !sqlSegment.IsMethodCall)
+    //        sqlSegment.IsConstant = true;
+    //    return sqlSegment;
+    //}
     public virtual void Clear()
     {
         this.Tables?.Clear();
@@ -776,17 +777,10 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         && argumentParameters.Exists(f => f.Type == typeof(IFromQuery)))
                     {
                         var newLambdaExpr = Expression.Lambda(argumentExpr, lambdaExpr.Parameters.ToList());
-                        (var sql, _, _) = this.VisitFromQuery(newLambdaExpr);
+                        (var sql, _) = this.VisitFromQuery(newLambdaExpr);
                         this.FieldsBuilder.Append($"{this.Tables[0].AliasName}.{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
                     }
-                    else
-                    {
-                        var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
-                        //只一个成员访问，没有设置语句，什么也不做，忽略
-                        if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberInfo.Name)
-                            continue;
-                        this.AddMemberElement(sqlSegment, memberMapper);
-                    }
+                    else this.AddMemberElement(argumentExpr, memberMapper);
                 }
                 break;
             case ExpressionType.MemberInit:
@@ -803,17 +797,10 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         && argumentParameters.Exists(f => f.Type == typeof(IFromQuery)))
                     {
                         var newLambdaExpr = Expression.Lambda(argumentExpr, lambdaExpr.Parameters.ToList());
-                        (var sql, _, _) = this.VisitFromQuery(newLambdaExpr);
+                        (var sql, _) = this.VisitFromQuery(newLambdaExpr);
                         this.FieldsBuilder.Append($"{this.Tables[0].AliasName}.{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
                     }
-                    else
-                    {
-                        var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
-                        //只一个成员访问，没有设置语句，什么也不做，忽略
-                        if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberAssignment.Member.Name)
-                            continue;
-                        this.AddMemberElement(sqlSegment, memberMapper);
-                    }
+                    else this.AddMemberElement(argumentExpr, memberMapper);
                 }
                 break;
         }
@@ -832,7 +819,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             throw new NotSupportedException($"当前字段{memberMapper.FieldName}不允许更新，IsRowVersion：{memberMapper.IsRowVersion}");
 
         this.InitTableAlias(valueSelector as LambdaExpression);
-        (var sql, _, _) = this.VisitFromQuery(valueSelector as LambdaExpression);
+        (var sql, _) = this.VisitFromQuery(valueSelector as LambdaExpression);
         this.FieldsBuilder.Append($"{this.Tables[0].AliasName}.{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
     }
     public virtual void VisitAnd(Expression whereExpr)
@@ -853,7 +840,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.IsWhere = false;
         this.VisitOrSql(whereSql, operationType);
     }
-    public virtual void VisitFields(Expression fieldsSelector, Action<MemberMap> fieldsAction)
+    public virtual void VisitFieldsTo(Expression fieldsSelector, Action<MemberMap> fieldsAction)
     {
         var lambdaExpr = fieldsSelector as LambdaExpression;
         var entityMapper = this.Tables[0].Mapper;
@@ -874,14 +861,14 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     if (!entityMapper.TryGetMemberMap(memberInfo.Name, out memberMapper))
                         continue;
 
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment
+                    var sqlSegment = this.Visit(new SqlSegment
                     {
                         Expression = newExpr.Arguments[i],
-                        NativeDbType = memberMapper.NativeDbType,
+                        MemberMapper = memberMapper,
                         MappedTargetType = memberMapper.MappedTargetType,
                         TypeHandler = memberMapper.TypeHandler
                     });
-                    if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberInfo.Name)
+                    if (sqlSegment.SqlType == SqlType.OnlyField && sqlSegment.MemberName == memberInfo.Name)
                         fieldsAction.Invoke(memberMapper);
                 }
                 break;
@@ -894,8 +881,14 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out memberMapper))
                         continue;
 
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberAssignment.Expression });
-                    if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberAssignment.Member.Name)
+                    var sqlSegment = this.Visit(new SqlSegment
+                    {
+                        Expression = memberAssignment.Expression,
+                        MemberMapper = memberMapper,
+                        MappedTargetType = memberMapper.MappedTargetType,
+                        TypeHandler = memberMapper.TypeHandler
+                    });
+                    if (sqlSegment.SqlType == SqlType.OnlyField && sqlSegment.MemberName == memberAssignment.Member.Name)
                         fieldsAction.Invoke(memberMapper);
                 }
                 break;
@@ -909,7 +902,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             this.FieldsBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=NULL");
             return;
         }
-        var fieldValue = isEntity ? memberMapper.Member.Evaluate(memberValue) : memberValue;
+        var fieldValue = isEntity ? ValueEvalutor.EvaluateAndCache(memberValue, memberMapper.Member) : memberValue;
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
         if (memberMapper.TypeHandler != null)
             fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
@@ -929,15 +922,20 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             this.ShardingValues[memberMapper.MemberName] = fieldValue;
         }
     }
-    public virtual void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper)
+    public virtual void AddMemberElement(Expression setExpr, MemberMap memberMapper)
     {
+        var sqlSegment = this.Visit(new SqlSegment { Expression = setExpr });
+        //只一个成员访问，没有设置语句，什么也不做，忽略
+        if (sqlSegment.SqlType == SqlType.OnlyField && sqlSegment.MemberName == memberMapper.MemberName)
+            return;
+
         if (this.FieldsBuilder.Length > 0) this.FieldsBuilder.Append(',');
-        if (sqlSegment == SqlSegment.Null)
+        if (sqlSegment.IsNull)
         {
             this.FieldsBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=NULL");
             return;
         }
-        if (sqlSegment.IsConstant || sqlSegment.IsVariable)
+        if (sqlSegment.IsValue)
         {
             var fieldValue = sqlSegment.Value;
             var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
@@ -946,7 +944,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             else
             {
                 var targetType = memberMapper.MappedTargetType;
-                var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, !memberMapper.IsRequired, this.DbContext.Options);
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(setExpr.Type, targetType, !memberMapper.IsRequired, this.DbContext.Options);
                 fieldValue = valueGetter.Invoke(fieldValue);
             }
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
@@ -1099,7 +1097,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         string tableName = null;
         if (tableSegment.TableShardingInfo != null)
         {
-            if (tableSegment.IsSharding) tableName = tableSegment.Body;
+            if (tableSegment.IsSharding) tableName = tableSegment.Value;
             else tableName = RepositoryHelper.GetShardingTableName(this.DbContext, tableSegment.TableShardingInfo, this.ShardingValues);
         }
         else tableName = tableSegment.Mapper.TableName;

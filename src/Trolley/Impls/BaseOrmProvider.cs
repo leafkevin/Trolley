@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -12,8 +13,8 @@ namespace Trolley;
 
 public abstract partial class BaseOrmProvider : IOrmProvider
 {
-    protected static readonly ConcurrentDictionary<int, MemberAccessSqlFormatter> memberAccessSqlFormatterCache = new();
-    protected static readonly ConcurrentDictionary<int, MethodCallSqlFormatter> methodCallSqlFormatterCache = new();
+    protected static readonly ConcurrentDictionary<int, Func<ISqlVisitor, SqlSegment, SqlSegment>> memberAccessSqlFormatterCache = new();
+    protected static readonly ConcurrentDictionary<int, Func<ISqlVisitor, MethodCallExpression, Stack<DeferredOperation>, SqlSegment>> methodCallSqlFormatterCache = new();
     protected static readonly ConcurrentDictionary<int, Delegate> methodCallCache = new();
     protected static readonly ConcurrentDictionary<Type, ITypeHandler> typeHandlers = new();
     protected static readonly ConcurrentDictionary<int, Func<object, object>> parameterValueGetters = new();
@@ -82,9 +83,9 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             //case Type factType when factType == typeof(SqlSegment):
             //    {
             //        var sqlSegment = value as SqlSegment;
-            //        if (sqlSegment.IsConstant || sqlSegment.IsVariable)
+            //        if (sqlSegment.IsValue)
             //            return this.GetQuotedValue(sqlSegment.Value);
-            //        return sqlSegment.Body;
+            //        return sqlSegment.Value;
             //    }
             default: return value.ToString();
         }
@@ -1932,7 +1933,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     }
     public abstract object MapNativeDbType(DbColumnInfo columnInfo);
     public abstract bool MapTables(string connectionString, IEntityMapProvider entityMapProvider, OrmDbFactoryOptions options);
-    public virtual bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter)
+    public virtual bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out Func<ISqlVisitor, SqlSegment, SqlSegment> formatter)
     {
         var memberInfo = memberExpr.Member;
         var cacheKey = HashCode.Combine(memberInfo.DeclaringType, memberInfo);
@@ -1958,12 +1959,12 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             return true;
         return false;
     }
-    public virtual bool TryGetMyMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter)
+    public virtual bool TryGetMyMemberAccessSqlFormatter(MemberExpression memberExpr, out Func<ISqlVisitor, SqlSegment, SqlSegment> formatter)
     {
         formatter = null;
         return false;
     }
-    public virtual bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
+    public virtual bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out Func<ISqlVisitor, MethodCallExpression, Stack<DeferredOperation>, SqlSegment> formatter)
     {
         var methodInfo = methodCallExpr.Method;
         var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
@@ -2208,22 +2209,22 @@ public abstract partial class BaseOrmProvider : IOrmProvider
         }
         return false;
     }
-    public virtual bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
+    public virtual bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out Func<ISqlVisitor, MethodCallExpression, Stack<DeferredOperation>, SqlSegment> formatter)
     {
         formatter = null;
         return false;
     }
-    public abstract bool TryGetStringMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
-    public abstract bool TryGetStringMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
-    public abstract bool TryGetDateTimeMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
-    public abstract bool TryGetDateTimeMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
-    public abstract bool TryGetTimeSpanMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
-    public abstract bool TryGetTimeSpanMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
-    public abstract bool TryGetDateOnlyMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
-    public abstract bool TryGetDateOnlyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
-    public abstract bool TryGetTimeOnlyMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
-    public abstract bool TryGetTimeOnlyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
-    public virtual bool TryGetConvertMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
+    public abstract bool TryGetStringMemberAccessSqlFormatter(MemberExpression memberExpr, out Func<ISqlVisitor, SqlSegment, SqlSegment> formatter);
+    public abstract bool TryGetStringMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out Func<ISqlVisitor, MethodCallExpression, Stack<DeferredOperation>, SqlSegment> formatter);
+    public abstract bool TryGetDateTimeMemberAccessSqlFormatter(MemberExpression memberExpr, out Func<ISqlVisitor, SqlSegment, SqlSegment> formatter);
+    public abstract bool TryGetDateTimeMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out Func<ISqlVisitor, MethodCallExpression, Stack<DeferredOperation>, SqlSegment> formatter);
+    public abstract bool TryGetTimeSpanMemberAccessSqlFormatter(MemberExpression memberExpr, out Func<ISqlVisitor, SqlSegment, SqlSegment> formatter);
+    public abstract bool TryGetTimeSpanMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out Func<ISqlVisitor, MethodCallExpression, Stack<DeferredOperation>, SqlSegment> formatter);
+    public abstract bool TryGetDateOnlyMemberAccessSqlFormatter(MemberExpression memberExpr, out Func<ISqlVisitor, SqlSegment, SqlSegment> formatter);
+    public abstract bool TryGetDateOnlyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out Func<ISqlVisitor, MethodCallExpression, Stack<DeferredOperation>, SqlSegment> formatter);
+    public abstract bool TryGetTimeOnlyMemberAccessSqlFormatter(MemberExpression memberExpr, out Func<ISqlVisitor, SqlSegment, SqlSegment> formatter);
+    public abstract bool TryGetTimeOnlyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out Func<ISqlVisitor, MethodCallExpression, Stack<DeferredOperation>, SqlSegment> formatter);
+    public virtual bool TryGetConvertMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out Func<ISqlVisitor, MethodCallExpression, Stack<DeferredOperation>, SqlSegment> formatter)
     {
         var result = false;
         formatter = null;
@@ -2261,7 +2262,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             case "ToString":
                 if (parameterInfos.Length == 1)
                 {
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, formatter = (visitor, methodCallExpr, deferredOperations) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                     {
                         var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                         if (args0Segment.IsValue)
@@ -2276,7 +2277,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
         }
         return result;
     }
-    public virtual bool TryGetIEnumerableMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
+    public virtual bool TryGetIEnumerableMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out Func<ISqlVisitor, MethodCallExpression, Stack<DeferredOperation>, SqlSegment> formatter)
     {
         var result = false;
         formatter = null;
@@ -2310,13 +2311,37 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     }
                     else
                     {
-                        //formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
-                        //{
-                        //    var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
-                        //    var elementArgument = visitor.GetQuotedValue(elementSegment);
-                        //    return elementSegment.Merge(arraySegment, $"{elementArgument} {notString}IN ({builder})");
-                        //}
-                        //else return elementSegment.Change("1=0");
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
+                        {
+                            var enumerableOrSapnSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                            var elementSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
+
+                            if (enumerableOrSapnSegment.IsValue && elementSegment.IsValue)
+                            {
+                                var isContains = (bool)methodInfo.Invoke(null, [enumerableOrSapnSegment.Value, elementSegment.Value]);
+                                var wrapSql = isContains && !deferredOperations.HasNotOperation(out _) ? "1=1" : "1=0";
+                                return enumerableOrSapnSegment.Change(wrapSql);
+                            }
+
+                            var enumerable = enumerableOrSapnSegment.Value as IEnumerable;
+                            Func<object, string> valueFormater = enumerableOrSapnSegment.SqlType == SqlType.Variable ?
+                                value => visitor.WrapParameterSql(value) : value => this.GetQuotedValue(value);
+                            var builder = new StringBuilder();
+                            foreach (var item in enumerable)
+                            {
+                                if (builder.Length > 0)
+                                    builder.Append(',');
+                                builder.Append(valueFormater(item));
+                            }
+
+                            if (builder.Length > 0)
+                            {
+                                string elementArgument = visitor.WrapSql(elementSegment);
+                                var notString = deferredOperations.HasNotOperation(out _) ? "NOT " : "";
+                                return elementSegment.Change($"{elementArgument} {notString}IN ({builder})", SqlType.Expression);
+                            }
+                            else return elementSegment.Change("1=0", SqlType.Expression);
+                        });
                     }
                     result = true;
                 }
@@ -2327,25 +2352,27 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                 {
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                     {
-                        var builder = new StringBuilder();
                         var elementSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
 
                         var enumerable = targetSegment.Value as IEnumerable;
+                        Func<object, string> valueFormater = targetSegment.SqlType == SqlType.Variable ?
+                            value => visitor.WrapParameterSql(value) : value => this.GetQuotedValue(value);
+                        var builder = new StringBuilder();
                         foreach (var item in enumerable)
                         {
                             if (builder.Length > 0)
                                 builder.Append(',');
-                            var sqlArgument = visitor.GetQuotedValue(item, targetSegment, elementSegment);
-                            builder.Append(sqlArgument);
+                            builder.Append(valueFormater(item));
                         }
+
                         if (builder.Length > 0)
                         {
                             string elementArgument = visitor.WrapSql(elementSegment);
-                            var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
-                            return elementSegment.Merge(targetSegment, $"{elementArgument} {notString}IN ({builder})");
+                            var notString = deferredOperations.HasNotOperation(out _) ? "NOT " : "";
+                            return elementSegment.Change($"{elementArgument} {notString}IN ({builder})", SqlType.Expression);
                         }
-                        else return elementSegment.Change("1=0");
+                        else return elementSegment.Change("1=0", SqlType.Expression);
                     });
                     return true;
                 }
@@ -2356,10 +2383,10 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                 {
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                     {
-                        var args0Segment = visitor.Visit(new SqlSegment { Expression = args[0] });
-                        if (args0Segment.IsConstant || args0Segment.IsVariable)
-                            return args0Segment.ChangeValue(methodInfo.Invoke(args0Segment.Value, null));
-                        return args0Segment.Change($"REVERSE({args0Segment.Body})", false, true);
+                        var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                        if (args0Segment.IsValue)
+                            return args0Segment.Change(methodInfo.Invoke(args0Segment.Value, null));
+                        return args0Segment.Change($"REVERSE({args0Segment.Value})", SqlType.MethodCall);
                     });
                     result = true;
                 }
@@ -2367,5 +2394,14 @@ public abstract partial class BaseOrmProvider : IOrmProvider
         }
         return result;
     }
-    public abstract bool TryGetMathMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
+    public abstract bool TryGetMathMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out Func<ISqlVisitor, MethodCallExpression, Stack<DeferredOperation>, SqlSegment> formatter);
+    public (string, string) GetFullTableName(string tableName)
+    {
+        if (tableName.Contains('.'))
+        {
+            var myTableNames = tableName.Split('.');
+            return (myTableNames[0], myTableNames[1]);
+        }
+        return (null, tableName);
+    }
 }

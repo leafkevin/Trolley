@@ -365,7 +365,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             {
                 if (shardingType > ShardingTableType.SingleTable)
                     throw new NotSupportedException($"实体表{entityType.FullName}已设置分表，数据插入不能设置多个分表，原始表：{tableSegment.Mapper.TableName}");
-                shardingTables = tableSegment.Body;
+                shardingTables = tableSegment.Value;
             }
             else
             {
@@ -434,7 +434,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
 
         if (this.ActionMode == ActionMode.Single && tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter != null)
         {
-            tableSegment.Body = tableSegment.ShardingTableGetter.Invoke(insertObj);
+            tableSegment.Value = tableSegment.ShardingTableGetter.Invoke(insertObj);
             tableSegment.ShardingType = ShardingTableType.SingleTable;
             tableSegment.IsSharding = true;
         }
@@ -766,7 +766,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         string tableName = null;
         if (tableSegment.TableShardingInfo != null)
         {
-            if (tableSegment.IsSharding) tableName = tableSegment.Body;
+            if (tableSegment.IsSharding) tableName = tableSegment.Value;
             else tableName = RepositoryHelper.GetShardingTableName(this.DbContext, tableSegment.TableShardingInfo, this.ShardingValues);
         }
         else tableName = tableSegment.Mapper.TableName;

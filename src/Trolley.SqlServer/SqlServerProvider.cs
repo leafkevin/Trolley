@@ -239,9 +239,9 @@ public partial class SqlServerProvider : BaseOrmProvider
             case Type factType when factType == typeof(SqlSegment):
                 {
                     var sqlSegment = value as SqlSegment;
-                    if (sqlSegment.IsConstant || sqlSegment.IsVariable)
+                    if (sqlSegment.IsValue)
                         return this.GetQuotedValue(sqlSegment.Value);
-                    return sqlSegment.Body;
+                    return sqlSegment.Value;
                 }
             default: return value.ToString();
         }
@@ -484,7 +484,7 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
             return tableNames.FindAll(f => tableNameSelector(f));
         return tableNames;
     }
-    public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
+    public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out Func<ISqlVisitor, MethodCallExpression, Stack<DeferredOperation>, SqlSegment> formatter)
     {
         var methodInfo = methodCallExpr.Method;
         var parameterInfos = methodInfo.GetParameters();
@@ -581,11 +581,11 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
                 cacheKey = RepositoryHelper.GetCacheKey(typeof(Sql), methodInfo.GetGenericMethodDefinition());
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
-                    var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                    var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                    var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                    var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
                     var targetArgument = visitor.GetQuotedValue(targetSegment);
                     var rightArgument = visitor.GetQuotedValue(rightSegment);
-                    return targetSegment.Merge(rightSegment, $"ISNULL({targetArgument},{rightArgument})", false, true);
+                    return targetSegment.Merge(rightSegment, $"ISNULL({targetArgument},{rightArgument})", SqlType.MethodCall);
                 });
                 return true;
         }

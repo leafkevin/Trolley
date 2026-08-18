@@ -431,7 +431,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                 sqlSegment.TypeHandler = memberMapper.TypeHandler;
                 if (this.IsOutput) fieldName = this.OutputTableAlias + "." + fieldName;
                 else if (this.IsNeedTableAlias) fieldName = tableSegment.AliasName + "." + fieldName;
-                sqlSegment.Body = fieldName;
+                sqlSegment.Value = fieldName;
                 return sqlSegment;
             }
         }
@@ -483,10 +483,10 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     fieldSqlSegment.SegmentType = memberInfo.GetMemberType();
                     readerFields.Add(fieldSqlSegment);
                 }
-                return sqlSegment.ChangeValue(readerFields);
+                return sqlSegment.Change(readerFields);
             }
         }
-        return sqlSegment.ChangeValue(sqlSegment.Expression.Evaluate(), true);
+        return sqlSegment.Change(sqlSegment.Expression.Evaluate(), true);
     }
     public override SqlSegment VisitMemberInit(SqlSegment sqlSegment)
     {
@@ -511,9 +511,9 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                 fieldSqlSegment.SegmentType = memberInfo.GetMemberType();
                 readerFields.Add(fieldSqlSegment);
             }
-            return sqlSegment.ChangeValue(readerFields);
+            return sqlSegment.Change(readerFields);
         }
-        return sqlSegment.ChangeValue(sqlSegment.Expression.Evaluate(), true);
+        return sqlSegment.Change(sqlSegment.Expression.Evaluate(), true);
     }
     public void Output(string fieldNames)
     {
@@ -598,8 +598,8 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     this.WrapSql(sqlSegment, true);
                     sqlSegment.TargetMember = memberExpr.Member;
                     sqlSegment.SegmentType = memberExpr.Type;
-                    builder.Append(sqlSegment.Body);
-                    if (sqlSegment.IsNeedAlias || sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall
+                    builder.Append(sqlSegment.Value);
+                    if (sqlSegment.IsNeedAlias || sqlSegment.IsValue || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall
                         || sqlSegment.FromMember != null && sqlSegment.FromMember.Name != sqlSegment.TargetMember.Name)
                         builder.Append($" AS {this.OrmProvider.GetFieldName(memberExpr.Member.Name)}");
                     this.ReaderFields.Add(sqlSegment);
@@ -615,8 +615,8 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     sqlSegment.TargetMember = memberInfo;
                     sqlSegment.SegmentType = memberInfo.GetMemberType();
                     if (i > 0) builder.Append(',');
-                    builder.Append(sqlSegment.Body);
-                    if (sqlSegment.IsNeedAlias || sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                    builder.Append(sqlSegment.Value);
+                    if (sqlSegment.IsNeedAlias || sqlSegment.IsValue || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
                         builder.Append($" AS {this.OrmProvider.GetFieldName(memberInfo.Name)}");
                     this.ReaderFields.Add(sqlSegment);
                 }
@@ -634,8 +634,8 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     sqlSegment.TargetMember = memberAssignment.Member;
                     sqlSegment.SegmentType = memberAssignment.Member.GetMemberType();
                     if (i > 0) builder.Append(',');
-                    builder.Append(sqlSegment.Body);
-                    if (sqlSegment.IsNeedAlias || sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                    builder.Append(sqlSegment.Value);
+                    if (sqlSegment.IsNeedAlias || sqlSegment.IsValue || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
                         builder.Append($" AS {this.OrmProvider.GetFieldName(memberAssignment.Member.Name)}");
                     this.ReaderFields.Add(sqlSegment);
                 }

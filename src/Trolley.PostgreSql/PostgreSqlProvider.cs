@@ -394,9 +394,9 @@ public partial class PostgreSqlProvider : BaseOrmProvider
             case Type factType when factType == typeof(SqlSegment):
                 {
                     var sqlSegment = value as SqlSegment;
-                    if (sqlSegment.IsConstant || sqlSegment.IsVariable)
+                    if (sqlSegment.IsValue)
                         return this.GetQuotedValue(sqlSegment.Value);
-                    return sqlSegment.Body;
+                    return sqlSegment.Value;
                 }
             default: return value.ToString();
         }
@@ -2481,7 +2481,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         }
         return entityMapProvider.EntityMaps.Count(f => !f.IsMapped) == 0;
     }
-    public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
+    public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out Func<ISqlVisitor, MethodCallExpression, Stack<DeferredOperation>, SqlSegment> formatter)
     {
         var methodInfo = methodCallExpr.Method;
         var parameterInfos = methodInfo.GetParameters();
@@ -2521,11 +2521,11 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                 cacheKey = HashCode.Combine(typeof(Sql), methodInfo.GetGenericMethodDefinition());
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
-                    var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0], IsNullFields = true });
-                    var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                    var targetSegment = visitor.Visit(new SqlSegment { Expression = args[0], IsNullFields = true });
+                    var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
                     var targetArgument = visitor.GetQuotedValue(targetSegment);
                     var rightArgument = visitor.GetQuotedValue(rightSegment);
-                    return targetSegment.Merge(rightSegment, $"COALESCE({targetArgument},{rightArgument})", false, true);
+                    return targetSegment.Merge(rightSegment, $"COALESCE({targetArgument},{rightArgument})", SqlType.MethodCall);
                 });
                 return true;
         }

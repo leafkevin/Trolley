@@ -59,6 +59,7 @@ public interface IQueryVisitor : ICloneable, IDisposable
     bool IsNeedPaging { get; set; }
 
     (bool, ITheaConnection, ITheaCommand) UseCommand();
+    string BuildShardingTablesSqlByFormat(string formatSql, string jointMark);
     string BuildSql(bool isBuildCteSql, out List<ReaderField> readerFields);
     string BuildCommandSql(Type entityType, out IDataParameterCollection dbParameters);
     string BuildShardingSql(string formatSql);

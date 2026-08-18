@@ -8,7 +8,7 @@ namespace Trolley.PostgreSql;
 
 partial class PostgreSqlProvider
 {
-    public override bool TryGetIEnumerableMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
+    public override bool TryGetIEnumerableMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out Func<ISqlVisitor, MethodCallExpression, Stack<DeferredOperation>, SqlSegment> formatter)
     {
         var result = false;
         formatter = null;
@@ -23,10 +23,10 @@ partial class PostgreSqlProvider
                 if (methodInfo.IsStatic && parameterInfos.Length >= 2)
                 {
                     //数组调用
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key =>  (visitor, methodCallExpr, deferredOperations) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                     {
-                        var elementSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
-                        var arraySegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var elementSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
+                        var arraySegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
 
                         if (arraySegment.IsConstant || arraySegment.IsVariable)
                         {
@@ -52,7 +52,7 @@ partial class PostgreSqlProvider
                             if (deferExprs.IsDeferredNot())
                                 throw new NotSupportedException("数组查询不支持非！操作");
                             var elementArgument = visitor.GetQuotedValue(elementSegment);
-                            return arraySegment.Merge(elementSegment, $"{arraySegment.Body} @> ARRAY[{elementArgument}]");
+                            return arraySegment.Merge(elementSegment, $"{arraySegment.Value} @> ARRAY[{elementArgument}]");
                         }
                         else throw new NotSupportedException("不支持的查询操作");
                     });
@@ -64,12 +64,12 @@ partial class PostgreSqlProvider
                 if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType.GenericTypeArguments.Length > 0
                      && typeof(IEnumerable<>).MakeGenericType(methodInfo.DeclaringType.GenericTypeArguments[0]).IsAssignableFrom(methodInfo.DeclaringType))
                 {
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key =>  (visitor, methodCallExpr, deferredOperations) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                     {
-                        var elementSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var elementSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                        var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
 
-                        if (targetSegment.IsConstant || targetSegment.IsVariable)
+                        if (targetSegment.IsValue)
                         {
                             var builder = new StringBuilder();
                             var enumerable = targetSegment.Value as IEnumerable;
@@ -93,7 +93,7 @@ partial class PostgreSqlProvider
                             if (deferExprs.IsDeferredNot())
                                 throw new NotSupportedException("数组查询不支持非！操作");
                             var elementArgument = visitor.GetQuotedValue(elementSegment);
-                            return targetSegment.Merge(elementSegment, $"{targetSegment.Body} @> ARRAY[{elementArgument}]");
+                            return targetSegment.Merge(elementSegment, $"{targetSegment.Value} @> ARRAY[{elementArgument}]");
                         }
                         else throw new NotSupportedException("不支持的查询操作");
                     });
@@ -104,12 +104,12 @@ partial class PostgreSqlProvider
                 if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType.GenericTypeArguments.Length > 0
                     && methodInfo.DeclaringType.GenericTypeArguments[0] == typeof(char))
                 {
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key =>  (visitor, methodCallExpr, deferredOperations) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                     {
-                        var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                         if (args0Segment.IsConstant || args0Segment.IsVariable)
-                            return args0Segment.ChangeValue(methodInfo.Invoke(args0Segment.Value, null));
-                        return args0Segment.Change($"REVERSE({args0Segment.Body})", false, true);
+                            return args0Segment.Change(methodInfo.Invoke(args0Segment.Value, null));
+                        return args0Segment.Change($"REVERSE({args0Segment.Value})", SqlType.MethodCall);
                     });
                     result = true;
                 }

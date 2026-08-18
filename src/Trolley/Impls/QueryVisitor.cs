@@ -48,7 +48,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             this.DbParameters = this.Command.Parameters;
         }
         this.IsNeedTableAlias = true;
-    }  
+    }
     public virtual string BuildSql(bool isBuildCteSql, out List<ReaderField> readerFields)
     {
         var builder = new StringBuilder();
@@ -1577,7 +1577,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //Select场景和Where场景，单个字段成员访(包括Json实体类型字段)，返回FromMember，TargetMember，字段类型，Body有值为带有别名的FieldName
         var memberExpr = sqlSegment.Expression as MemberExpression;
         var memberInfo = memberExpr.Member;
-        MemberAccessSqlFormatter formatter = null;
+        Func<ISqlVisitor, SqlSegment, SqlSegment> formatter = null;
         if (memberExpr.Expression != null)
         {
             //Where(f=>... && !f.OrderId.HasValue && ...)

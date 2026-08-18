@@ -135,7 +135,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
         {
             if (tableSegment.IsSharding)
-                tableName = tableSegment.Body;
+                tableName = tableSegment.Value;
             else tabledInsertObjs = this.SplitShardingParameters(tableShardingInfo, insertObjs);
         }
         else tableName = tableSegment.Mapper.TableName;
@@ -301,8 +301,8 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                     this.WrapSql(sqlSegment, true);
                     sqlSegment.TargetMember = memberExpr.Member;
                     sqlSegment.SegmentType = memberExpr.Type;
-                    builder.Append(sqlSegment.Body);
-                    if (sqlSegment.IsNeedAlias || sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall
+                    builder.Append(sqlSegment.Value);
+                    if (sqlSegment.IsNeedAlias || sqlSegment.IsValue || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall
                         || sqlSegment.FromMember != null && sqlSegment.FromMember.Name != sqlSegment.TargetMember.Name)
                         builder.Append($" AS {this.OrmProvider.GetFieldName(memberExpr.Member.Name)}");
                     this.ReaderFields.Add(sqlSegment);
@@ -318,8 +318,8 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                     sqlSegment.TargetMember = memberInfo;
                     sqlSegment.SegmentType = memberInfo.GetMemberType();
                     if (i > 0) builder.Append(',');
-                    builder.Append(sqlSegment.Body);
-                    if (sqlSegment.IsNeedAlias || sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                    builder.Append(sqlSegment.Value);
+                    if (sqlSegment.IsNeedAlias || sqlSegment.IsValue || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
                         builder.Append($" AS {this.OrmProvider.GetFieldName(memberInfo.Name)}");
                     this.ReaderFields.Add(sqlSegment);
                 }
@@ -337,8 +337,8 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                     sqlSegment.TargetMember = memberAssignment.Member;
                     sqlSegment.SegmentType = memberAssignment.Member.GetMemberType();
                     if (i > 0) builder.Append(',');
-                    builder.Append(sqlSegment.Body);
-                    if (sqlSegment.IsNeedAlias || sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                    builder.Append(sqlSegment.Value);
+                    if (sqlSegment.IsNeedAlias || sqlSegment.IsValue || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
                         builder.Append($" AS {this.OrmProvider.GetFieldName(memberAssignment.Member.Name)}");
                     this.ReaderFields.Add(sqlSegment);
                 }
@@ -396,7 +396,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
             sqlSegment.NativeDbType = memberMapper.NativeDbType;
             sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
             sqlSegment.TypeHandler = memberMapper.TypeHandler;
-            sqlSegment.Body = fieldName;
+            sqlSegment.Value = fieldName;
             return sqlSegment;
         }
         return base.VisitMemberAccess(sqlSegment);

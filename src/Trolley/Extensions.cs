@@ -364,7 +364,7 @@ public static class Extensions
             var targetType = typeof(T);
             //兼容某些分布式数据库，byte[]类型转换为string类型
             if (readerValue is byte[] bytes && targetType == typeof(string))
-                return (T)(object)UTF8Encoding.UTF8.GetString(bytes);
+                return (T)(object)Encoding.UTF8.GetString(bytes);
             var fieldType = readerValue.GetType();
             throw new NotSupportedException($"不支持的类型转换，{fieldType.FullName}->{targetType.FullName}");
         }

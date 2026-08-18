@@ -407,7 +407,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             {
                 var enumValues = Enum.GetValues(sqlSegment.SegmentType);
                 var enumUnderlyingType = Enum.GetUnderlyingType(sqlSegment.SegmentType);
-                var enumBuilder = new StringBuilder($"CASE {sqlSegment.Body}");
+                var enumBuilder = new StringBuilder($"CASE {sqlSegment.Value}");
                 foreach (var enumValue in enumValues)
                 {
                     var enumName = Enum.GetName(sqlSegment.SegmentType, enumValue);
@@ -416,10 +416,10 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
                 }
                 enumBuilder.Append(" END");
                 sqlSegment.IsExpression = true;
-                sqlSegment.Body = enumBuilder.ToString();
+                sqlSegment.Value = enumBuilder.ToString();
             }
         }
-        else if (sqlSegment.IsConstant || sqlSegment.IsVariable)
+        else if (sqlSegment.IsValue)
             sqlSegment.Value = Enum.GetName(sqlSegment.SegmentType, sqlSegment.Value);
         sqlSegment.SegmentType = typeof(string);
         return sqlSegment;

@@ -302,7 +302,7 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             {
                 shardingTables = shardingType switch
                 {
-                    ShardingTableType.SingleTable => tableSegment.Body,
+                    ShardingTableType.SingleTable => tableSegment.Value,
                     ShardingTableType.MultiTable => tableSegment.TableNames,
                     _ => tableSegment.Mapper.TableName,
                 };
@@ -364,8 +364,8 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     this.WrapSql(sqlSegment, true);
                     sqlSegment.TargetMember = memberExpr.Member;
                     sqlSegment.SegmentType = memberExpr.Type;
-                    builder.Append(sqlSegment.Body);
-                    if (sqlSegment.IsNeedAlias || sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall
+                    builder.Append(sqlSegment.Value);
+                    if (sqlSegment.IsNeedAlias || sqlSegment.IsValue || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall
                         || sqlSegment.FromMember != null && sqlSegment.FromMember.Name != sqlSegment.TargetMember.Name)
                         builder.Append($" AS {this.OrmProvider.GetFieldName(memberExpr.Member.Name)}");
                     this.ReaderFields.Add(sqlSegment);
@@ -381,8 +381,8 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     sqlSegment.TargetMember = memberInfo;
                     sqlSegment.SegmentType = memberInfo.GetMemberType();
                     if (i > 0) builder.Append(',');
-                    builder.Append(sqlSegment.Body);
-                    if (sqlSegment.IsNeedAlias || sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                    builder.Append(sqlSegment.Value);
+                    if (sqlSegment.IsNeedAlias || sqlSegment.IsValue || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
                         builder.Append($" AS {this.OrmProvider.GetFieldName(memberInfo.Name)}");
                     this.ReaderFields.Add(sqlSegment);
                 }
@@ -400,8 +400,8 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     sqlSegment.TargetMember = memberAssignment.Member;
                     sqlSegment.SegmentType = memberAssignment.Member.GetMemberType();
                     if (i > 0) builder.Append(',');
-                    builder.Append(sqlSegment.Body);
-                    if (sqlSegment.IsNeedAlias || sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                    builder.Append(sqlSegment.Value);
+                    if (sqlSegment.IsNeedAlias || sqlSegment.IsValue || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
                         builder.Append($" AS {this.OrmProvider.GetFieldName(memberAssignment.Member.Name)}");
                     this.ReaderFields.Add(sqlSegment);
                 }
@@ -470,7 +470,7 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             {
                 shardingTables = shardingType switch
                 {
-                    ShardingTableType.SingleTable => tableSegment.Body,
+                    ShardingTableType.SingleTable => tableSegment.Value,
                     ShardingTableType.MultiTable => tableSegment.TableNames,
                     _ => tableSegment.Mapper.TableName,
                 };

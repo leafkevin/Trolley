@@ -151,7 +151,7 @@ public partial class MySqlProvider : BaseOrmProvider
         => this.GetSchemaName(connectionString);
     public override ITheaConnection CreateConnection(string dbKey, string connectionString)
         => new MySqlTheaConnection(dbKey, connectionString);
-    public override ITheaCommand CreateCommand() => new MySqlTheaCommand(new MySqlCommand());
+    //public override ITheaCommand CreateCommand() => new MySqlTheaCommand(new MySqlCommand());
     public override IDbDataParameter CreateParameter(string parameterName, object value)
        => new MySqlParameter(parameterName, value);
     public override IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value)
@@ -427,7 +427,7 @@ public partial class MySqlProvider : BaseOrmProvider
         var builder = new MySqlConnectionStringBuilder(connectionString);
         return builder.Database;
     }
-    public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
+    public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out Func<ISqlVisitor, MethodCallExpression, Stack<DeferredOperation>, SqlSegment> formatter)
     {
         var methodInfo = methodCallExpr.Method;
         var parameterInfos = methodInfo.GetParameters();
@@ -439,10 +439,10 @@ public partial class MySqlProvider : BaseOrmProvider
                 {
                     cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo.GetGenericMethodDefinition());
                     //.Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (ISqlVisitor visitor, MethodCallExpression methodCallExpr, deferredOperations) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                     {
                         var dialectVisitor = visitor as MySqlCreateVisitor;
-                        if (args[1] is not MemberExpression memberExpr)
+                        if (methodCallExpr.Arguments[1] is not MemberExpression memberExpr)
                             throw new NotSupportedException($"不支持的表达式访问，类型{methodInfo.DeclaringType.FullName}.Values方法，只支持MemberAccess访问，如：.Set(f =&gt; new {{TotalAmount = x.Values(f.TotalAmount)}})");
                         if (!dialectVisitor.Tables[0].Mapper.TryGetMemberMap(memberExpr.Member.Name, out var memberMapper))
                             throw new MissingMemberException($"类{dialectVisitor.Tables[0].EntityType.FullName}未找到成员{memberExpr.Member.Name}");
@@ -454,12 +454,12 @@ public partial class MySqlProvider : BaseOrmProvider
                             fieldName = $"VALUES({fieldName})";
                         return new SqlSegment
                         {
-                            HasField = true,
-                            FromMember = memberMapper.Member,
-                            NativeDbType = memberMapper.NativeDbType,
+                            SqlType = SqlType.MethodCall,
+                            MemberMapper = memberMapper,
+                            TargetMember = memberMapper.Member,
                             MappedTargetType = memberMapper.MappedTargetType,
                             TypeHandler = memberMapper.TypeHandler,
-                            Body = fieldName
+                            Value = fieldName
                         };
                     });
                     return true;
@@ -469,69 +469,26 @@ public partial class MySqlProvider : BaseOrmProvider
                 cacheKey = HashCode.Combine(typeof(Sql), methodInfo.GetGenericMethodDefinition());
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                 {
-                    var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0], IsNullFields = true });
-                    var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
-                    var targetArgument = visitor.GetQuotedValue(targetSegment);
-                    var rightArgument = visitor.GetQuotedValue(rightSegment);
-                    return targetSegment.Merge(rightSegment, $"IFNULL({targetArgument},{rightArgument})", false, true);
+                    var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                    var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
+                    var targetArgument = visitor.WrapSql(targetSegment);
+                    var rightArgument = visitor.WrapSql(rightSegment);
+                    return targetSegment.Change($"IFNULL({targetArgument},{rightArgument})", SqlType.MethodCall);
                 });
                 return true;
         }
         formatter = null;
         return false;
     }
-    public virtual List<string> GetShardingTableNames<TEntity>(DbContext dbContext, Func<string, bool> tableNameSelector = null, string tableSchema = null)
+    public int ExecuteBulkCopy(string tableName, MySqlBulkCopy bulkCopyObj, DbContext dbContext, ITheaConnection connection, IDataReader dataReader)
     {
-        var entityMapper = dbContext.EntityMapProvider.GetEntityMap(typeof(TEntity));
-        var orgTableName = entityMapper.TableName;
-        if (string.IsNullOrEmpty(tableSchema))
-            tableSchema = this.GetSchemaName(dbContext.Database.ConnectionStrings.First());
-        var sql = $"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME LIKE '{orgTableName}_%' AND TABLE_SCHEMA='{tableSchema}'";
-        var tableNames = dbContext.QueryValue<string>(sql, reader =>
-        {
-            var result = new List<string>();
-            while (reader.Read())
-                result.Add(reader.GetFieldValue<string>(0));
-            return result;
-        });
-        if (tableNameSelector != null)
-            return tableNames.FindAll(f => tableNameSelector(f));
-        return tableNames;
-    }
-    public virtual async Task<List<string>> GetShardingTableNamesAsync<TEntity>(DbContext dbContext, Func<string, bool> tableNameSelector = null, string tableSchema = null, CancellationToken cancellationToken = default)
-    {
-        var entityMapper = dbContext.EntityMapProvider.GetEntityMap(typeof(TEntity));
-        var orgTableName = entityMapper.TableName;
-        if (string.IsNullOrEmpty(tableSchema))
-            tableSchema = this.GetSchemaName(dbContext.Database.ConnectionStrings.First());
-        var sql = $"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME LIKE '{orgTableName}_%' AND TABLE_SCHEMA='{tableSchema}'";
-        var tableNames = await dbContext.QueryValueAsync<string>(sql, async (reader, cancellationToken) =>
-        {
-            var result = new List<string>();
-            while (await reader.ReadAsync(cancellationToken))
-                result.Add(await reader.GetFieldValueAsync<string>(0, cancellationToken));
-            return result;
-        }, CommandType.Text, cancellationToken);
-        if (tableNameSelector != null)
-            return tableNames.FindAll(f => tableNameSelector(f));
-        return tableNames;
-    }
-    public int ExecuteBulkCopy(string tableName, MySqlBulkCopy bulkCopyObj, ITheaConnection connection, DbContext dbContext, IDataReader data)
-    {
-        var createdAt = DateTime.Now;
         bulkCopyObj.DestinationTableName = tableName;
-        dbContext.Interceptor.OnCommandExecuting?.Invoke(new CommandEventArgs
-        {
-            DbKey = dbContext.DbKey,
-            ConnectionString = connection.ConnectionString,
-            SqlType = CommandSqlType.BulkCopyInsert
-        });
         int recordsAffected = 0;
         bool isSuccess = true;
         Exception exception = null;
         try
         {
-            var bulkCopyResult = bulkCopyObj.WriteToServer(data);
+            var bulkCopyResult = bulkCopyObj.WriteToServer(dataReader);
             recordsAffected = bulkCopyResult.RowsInserted;
         }
         catch (Exception ex)
@@ -539,61 +496,29 @@ public partial class MySqlProvider : BaseOrmProvider
             exception = ex;
             isSuccess = false;
         }
-        finally
-        {
-            var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
-            dbContext.Interceptor.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
-            {
-                DbKey = dbContext.DbKey,
-                ConnectionString = connection.ConnectionString,
-                SqlType = CommandSqlType.BulkCopyInsert,
-                IsSuccess = isSuccess,
-                Exception = exception,
-                Elapsed = (int)elapsed
-            });
-        }
         if (!isSuccess)
         {
-            if (dbContext.Transaction == null) dbContext.Connection.Close();
+            if (dbContext.Transaction == null) connection.Close();
             throw exception;
         }
         return recordsAffected;
     }
-    public async Task<int> ExecuteBulkCopyAsync(string tableName, MySqlBulkCopy bulkCopyObj, ITheaConnection connection, DbContext dbContext, IDataReader data, CancellationToken cancellationToken = default)
+    public async Task<int> ExecuteBulkCopyAsync(string tableName, MySqlBulkCopy bulkCopyObj, DbContext dbContext, ITheaConnection connection, IDataReader dataReader, CancellationToken cancellationToken = default)
     {
         var createdAt = DateTime.Now;
         bulkCopyObj.DestinationTableName = tableName;
-        dbContext.Interceptor.OnCommandExecuting?.Invoke(new CommandEventArgs
-        {
-            DbKey = dbContext.DbKey,
-            ConnectionString = connection.ConnectionString,
-            SqlType = CommandSqlType.BulkCopyInsert
-        });
         int recordsAffected = 0;
         bool isSuccess = true;
         Exception exception = null;
         try
         {
-            var bulkCopyResult = await bulkCopyObj.WriteToServerAsync(data, cancellationToken);
+            var bulkCopyResult = await bulkCopyObj.WriteToServerAsync(dataReader, cancellationToken);
             recordsAffected = bulkCopyResult.RowsInserted;
         }
         catch (Exception ex)
         {
             exception = ex;
             isSuccess = false;
-        }
-        finally
-        {
-            var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
-            dbContext.Interceptor.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
-            {
-                DbKey = dbContext.DbKey,
-                ConnectionString = connection.ConnectionString,
-                SqlType = CommandSqlType.BulkCopyInsert,
-                IsSuccess = isSuccess,
-                Exception = exception,
-                Elapsed = (int)elapsed
-            });
         }
         if (!isSuccess)
         {
