@@ -3939,23 +3939,17 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         Assert.True(result.Count > 0);
 
         var sql1 = repository.From<User>()
-            .Where(f => Sql.Exists(t => t
-                .From<Order, OrderDetail>('b')
+            .Where(f => Sql.From<Order, OrderDetail>()
                 .Where((x, y) => x.Id == y.OrderId && f.Id == x.BuyerId)
-                .GroupBy((a, b) => a.Id)
-                .Having((x, a, b) => x.CountDistinct(b.ProductId) > 1)
-                .Select()))
+                .Exists())
             .GroupBy(f => new { f.Gender, f.CompanyId })
             .Select((t, a) => new { t.Grouping, UserTotal = t.CountDistinct(a.Id) })
             .ToSql(out _);
         Assert.Equal("SELECT a.`Gender`,a.`CompanyId`,COUNT(DISTINCT a.`Id`) AS `UserTotal` FROM `sys_user` a WHERE EXISTS(SELECT b.`Id` FROM `sys_order` b,`sys_order_detail` c WHERE b.`Id`=c.`OrderId` AND a.`Id`=b.`BuyerId` GROUP BY b.`Id` HAVING COUNT(DISTINCT c.`ProductId`)>1) GROUP BY a.`Gender`,a.`CompanyId`", sql1);
         var result1 = repository.From<User>()
-            .Where(f => Sql.Exists(t => t
-                .From<Order, OrderDetail>('b')
+            .Where(f => Sql.From<Order, OrderDetail>()
                 .Where((x, y) => x.Id == y.OrderId && f.Id == x.BuyerId)
-                .GroupBy((a, b) => a.Id)
-                .Having((x, a, b) => x.CountDistinct(b.ProductId) > 1)
-                .Select()))
+                .Exists())
             .GroupBy(f => new { f.Gender, f.CompanyId })
             .Select((t, a) => new { t.Grouping, UserTotal = t.CountDistinct(a.Id) })
             .ToList();
@@ -3968,24 +3962,22 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
             .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
-            .Where((x, y) => Sql.Exists(f => f
-                .From<Order, OrderDetail>('c')
+            .Where((x, y) => Sql.From<Order, OrderDetail>()
                 .Where((a, b) => a.BuyerId == x.Id && a.Id == b.OrderId)
                 .GroupBy((a, b) => a.Id)
                 .Having((x, a, b) => x.CountDistinct(b.ProductId) > 0)
-                .Select()))
+                .Exists())
             .GroupBy((x, y) => new { x.Gender, x.CompanyId })
             .Select((x, a, b) => new { x.Grouping, UserTotal = x.CountDistinct(a.Id) })
             .ToSql(out _);
         Assert.Equal("SELECT a.`Gender`,a.`CompanyId`,COUNT(DISTINCT a.`Id`) AS `UserTotal` FROM `sys_user` a INNER JOIN `sys_company` b ON a.`CompanyId`=b.`Id` WHERE EXISTS(SELECT c.`Id` FROM `sys_order` c,`sys_order_detail` d WHERE c.`BuyerId`=a.`Id` AND c.`Id`=d.`OrderId` GROUP BY c.`Id` HAVING COUNT(DISTINCT d.`ProductId`)>0) GROUP BY a.`Gender`,a.`CompanyId`", sql);
         var result = await repository.From<User>()
             .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
-            .Where((x, y) => Sql.Exists(f => f
-                .From<Order, OrderDetail>('c')
+            .Where((x, y) => Sql.From<Order, OrderDetail>()
                 .Where((a, b) => a.BuyerId == x.Id && a.Id == b.OrderId)
                 .GroupBy((a, b) => a.Id)
                 .Having((x, a, b) => x.CountDistinct(b.ProductId) > 0)
-                .Select()))
+                .Exists())
             .GroupBy((x, y) => new { x.Gender, x.CompanyId })
             .Select((x, a, b) => new { x.Grouping, UserTotal = x.CountDistinct(a.Id) })
             .ToListAsync();
@@ -4006,7 +3998,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
 
         var sql = repository.From<User>()
             .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
-            .Where((x, y) => Sql.Exists(f => myOrders.Where(t => t.BuyerId == x.Id)))
+            .Where((x, y) => Sql.FromQuery(myOrders).Where(t => t.BuyerId == x.Id).Exists())
             .Select((a, b) => new { a.Id, a.Name, CompanyName = b.Name })
             .ToSql(out _);
         Assert.Equal(@"WITH `myOrders`(`OrderId`,`BuyerId`) AS 
@@ -4017,7 +4009,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
 
         var result = repository.From<User>()
             .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
-            .Where((x, y) => Sql.Exists(f => myOrders.Where(f => f.BuyerId == x.Id)))
+            .Where((x, y) => Sql.FromQuery(myOrders).Where(t => t.BuyerId == x.Id).Exists())
             .Select((a, b) => new { a.Id, a.Name, CompanyName = b.Name })
             .First();
         Assert.NotNull(result);
@@ -4948,7 +4940,7 @@ SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id`
         Assert.True(result2.Count > 0);
 
         sql = repository
-            .FromQuery(f => f.Use(menuList))
+            .FromQuery(menuList)
             .WithQuery(x => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)
@@ -4974,7 +4966,7 @@ SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id`
         SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN `MenuPageList` b ON a.`Id`=b.`Id`", sql);
 
         var result3 = await repository
-            .FromQuery(f => f.Use(menuList))
+            .FromQuery(menuList)
             .WithQuery(x => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)
@@ -8813,7 +8805,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .ToSql(out _);
         Assert.Equal("SELECT * FROM `sys_order` a,`sys_user` b WHERE a.`BuyerId`=b.`Id` AND (a.`SellerId` IS NULL OR a.`ProductCount` IS NULL) AND a.`Products` IS NOT NULL AND (a.`Products` IS NULL OR a.`Disputes` IS NULL)", sql);
 
-        var filterExpr = Sql.Where<Order, User>()
+        var filterExpr = Sql.From<Order, User>()
             .And((x, y) => x.BuyerId <= 10 && x.ProductCount > 5 && y.SourceType == UserSourceType.Douyin)
             .Or((x, y) => x.BuyerId > 10 && x.ProductCount <= 5 && y.SourceType == UserSourceType.Website)
             .Or((x, y) => x.BuyerSource == UserSourceType.Taobao)

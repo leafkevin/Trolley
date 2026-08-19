@@ -1509,6 +1509,10 @@ public class SqlVisitor : ISqlVisitor
                     }
                     else queryVisitor.AddTable(genericArguments);
                     break;
+                case "FromQuery":
+                    entityType = callExpr.Type.GetGenericArguments()[0];
+                    queryVisitor.UseQuery(entityType, callExpr.Arguments[0].Evaluate<IQuery>(), true);
+                    break;
                 case "WithTable":
                     if (callExpr.Arguments.Count > 0)
                     {
