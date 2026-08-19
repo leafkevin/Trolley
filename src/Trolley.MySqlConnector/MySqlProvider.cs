@@ -476,6 +476,9 @@ public partial class MySqlProvider : BaseOrmProvider
                     return targetSegment.Change($"IFNULL({targetArgument},{rightArgument})", SqlType.MethodCall);
                 });
                 return true;
+            //TODO: 其他方法的处理
+            case "GroupConcat":
+                break;
         }
         formatter = null;
         return false;

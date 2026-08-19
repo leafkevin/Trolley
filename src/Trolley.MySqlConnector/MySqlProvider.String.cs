@@ -278,7 +278,7 @@ partial class MySqlProvider
 
                             if (!separatorSegment.IsConstant)
                                 throw new NotSupportedException("暂时不支持分隔符是非常量的表达式解析，可以考虑在表达式外Join后再进行查询");
-                      
+
                             if (valuesSegment.IsValue)
                                 return valuesSegment.Change(string.Join(separatorSegment.Value.ToString(), valuesSegment.Value as IEnumerable));
 
@@ -308,13 +308,14 @@ partial class MySqlProvider
                                     builder.Append(',');
 
                                     var body = visitor.WrapSql(elementSegment);
-                                    if (elementSegment.SegmentType != typeof(string))
-                                    {
-                                        if (elementSegment.HasField)
-                                            body = this.CastTo(typeof(string), elementSegment.Value);
-                                        //变量场景
-                                        else body = visitor.ChangeParameterValue(elementSegment, typeof(string));
-                                    }
+                                    //TODO: 暂时注释，等待测试修改
+                                    //if (elementSegment.SegmentType != typeof(string))
+                                    //{
+                                    //    if (elementSegment.HasField)
+                                    //        body = this.CastTo(typeof(string), elementSegment.Value);
+                                    //    //变量场景
+                                    //    else body = visitor.ChangeParameterValue(elementSegment, typeof(string));
+                                    //}
                                     builder.Append(body);
                                 }
                                 else constBuilder.Append(item.ToString());
@@ -382,13 +383,14 @@ partial class MySqlProvider
                                     builder.Append(',');
 
                                     var body = visitor.WrapSql(elementSegment);
-                                    if (elementSegment.SegmentType != typeof(string))
-                                    {
-                                        if (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall)
-                                            body = this.CastTo(typeof(string), elementSegment.Value);
-                                        //变量场景
-                                        else body = visitor.ChangeParameterValue(elementSegment, typeof(string));
-                                    }
+                                    //TODO: 暂时注释，等待测试修改
+                                    //if (elementSegment.SegmentType != typeof(string))
+                                    //{
+                                    //    if (elementSegment.HasField)
+                                    //        body = this.CastTo(typeof(string), elementSegment.Value);
+                                    //    //变量场景
+                                    //    else body = visitor.ChangeParameterValue(elementSegment, typeof(string));
+                                    //}
                                     builder.Append(body);
                                 }
                                 else constBuilder.Append(item.ToString());
@@ -729,7 +731,7 @@ partial class MySqlProvider
                                 return targetSegment.Change(targetSegment.Value.ToString().Substring(Convert.ToInt32(indexSegment.Value), Convert.ToInt32(lengthSegment.Value)));
 
                             var targetArgument = visitor.WrapSql(targetSegment);
-                            indexSegment.Value = visitor.GetQuotedValue<int>(indexSegment) + 1;
+                            indexSegment.Value = (int)indexSegment.Value + 1;
                             var indexArgument = visitor.WrapSql(indexSegment);
                             var lengthArgument = visitor.WrapSql(lengthSegment);
                             return targetSegment.Change($"SUBSTR({targetArgument},{indexArgument},{lengthArgument})", SqlType.MethodCall);
@@ -748,7 +750,7 @@ partial class MySqlProvider
                                 return targetSegment.Change(targetSegment.Value.ToString().Substring(Convert.ToInt32(indexSegment.Value)));
 
                             var targetArgument = visitor.WrapSql(targetSegment);
-                            indexSegment.Value = visitor.GetQuotedValue<int>(indexSegment) + 1;
+                            indexSegment.Value = (int)indexSegment.Value + 1;
                             var indexArgument = visitor.WrapSql(indexSegment);
                             return targetSegment.Change($"SUBSTR({targetArgument},{indexArgument})", SqlType.MethodCall);
                         });

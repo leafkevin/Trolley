@@ -13,10 +13,6 @@ public class MySqlUpdated : Updated
 {
     private MySqlUpdateVisitor dialectVisitor;
 
-    #region Properties
-    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
-    #endregion
-
     #region Constructor
     public MySqlUpdated(DbContext dbContext, IUpdateVisitor visitor)
         : base(dbContext, visitor)
@@ -38,12 +34,12 @@ public class MySqlUpdated : Updated
                         var memberMappers, var valueGetters) = this.dialectVisitor.BuildSetBulkCopy();
 
                     var tableId = $"{Guid.NewGuid():N}";
-                    var pkFields = memberMappers.Where(f => f.IsKey).Select(f => this.OrmProvider.GetFieldName(f.FieldName)).ToList();
+                    var pkFields = memberMappers.Where(f => f.IsKey).Select(f => this.ormProvider.GetFieldName(f.FieldName)).ToList();
                     var builder = new StringBuilder();
-                    builder.AppendLine($"CREATE TEMPORARY TABLE {this.OrmProvider.GetTableName("{0}_" + tableId)}(");
+                    builder.AppendLine($"CREATE TEMPORARY TABLE {this.ormProvider.GetTableName("{0}_" + tableId)}(");
                     foreach (var memberMapper in memberMappers)
                     {
-                        var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
+                        var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
                         builder.Append($"{fieldName} {memberMapper.DbColumnType}");
                         if (memberMapper.IsKey)
                             builder.Append(" NOT NULL");
@@ -55,7 +51,7 @@ public class MySqlUpdated : Updated
 
                     //添加临时表
                     builder.Clear();
-                    builder.Append($"UPDATE {this.OrmProvider.GetTableName("{0}")} a INNER JOIN {this.OrmProvider.GetTableName("{0}_" + tableId)} b ON ");
+                    builder.Append($"UPDATE {this.ormProvider.GetTableName("{0}")} a INNER JOIN {this.ormProvider.GetTableName("{0}_" + tableId)} b ON ");
                     for (int i = 0; i < pkFields.Count; i++)
                     {
                         if (i > 0) builder.Append(" AND ");
@@ -65,13 +61,13 @@ public class MySqlUpdated : Updated
                     int setIndex = 0;
                     foreach (var memberMapper in memberMappers)
                     {
-                        var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
+                        var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
                         if (pkFields.Contains(fieldName)) continue;
                         if (setIndex > 0) builder.Append(',');
                         builder.Append($"a.{fieldName}=b.{fieldName}");
                         setIndex++;
                     }
-                    builder.Append($";DROP TABLE {this.OrmProvider.GetTableName("{0}_" + tableId)};");
+                    builder.Append($";DROP TABLE {this.ormProvider.GetTableName("{0}_" + tableId)};");
                     var updateFormatSql = builder.ToString();
                     builder.Clear();
 
@@ -96,9 +92,9 @@ public class MySqlUpdated : Updated
                         updateSql = string.Format(updateFormatSql, shardingTables as string);
                     }
 
-                    var dialectOrmProvider = this.OrmProvider as MySqlProvider;
-                    var mySqlConnection = connection.BaseConnection as MySqlConnection;
-                    var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;
+                    var dialectOrmProvider = this.ormProvider as MySqlProvider;
+                    var mySqlConnection = connection.DbConnection as MySqlConnection;
+                    var mySqlTransaction = this.DbContext.Transaction?.DbTransaction as MySqlTransaction;
                     var bulkCopyObj = new MySqlBulkCopy(mySqlConnection, mySqlTransaction);
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
@@ -106,7 +102,7 @@ public class MySqlUpdated : Updated
                     //创建临时表
                     connection.Open();
                     command.CommandText = createSql;
-                    command.ExecuteNonQuery(CommandSqlType.BulkCopyUpdate);
+                    command.ExecuteNonQuery();
 
                     //插入数据到临时表
                     if (shardingType == ShardingTableType.SplitTables)
@@ -126,7 +122,7 @@ public class MySqlUpdated : Updated
                     }
                     //执行更新
                     command.CommandText = updateSql;
-                    command.ExecuteNonQuery(CommandSqlType.BulkCopyUpdate);
+                    command.ExecuteNonQuery();
                     builder.Clear();
                 }
                 break;
@@ -155,7 +151,7 @@ public class MySqlUpdated : Updated
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
-                                result += command.ExecuteNonQuery(CommandSqlType.BulkUpdate);
+                                result += command.ExecuteNonQuery();
                                 command.Parameters.Clear();
                                 fixedSqlSetter?.Invoke(command.Parameters);
                                 builder.Clear();
@@ -186,7 +182,7 @@ public class MySqlUpdated : Updated
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
-                                result += command.ExecuteNonQuery(CommandSqlType.BulkUpdate);
+                                result += command.ExecuteNonQuery();
                                 command.Parameters.Clear();
                                 fixedSqlSetter?.Invoke(command.Parameters);
                                 builder.Clear();
@@ -198,7 +194,7 @@ public class MySqlUpdated : Updated
                     if (index > 0)
                     {
                         command.CommandText = builder.ToString();
-                        result += command.ExecuteNonQuery(CommandSqlType.BulkUpdate);
+                        result += command.ExecuteNonQuery();
                     }
                     builder.Clear();
                 }
@@ -210,7 +206,7 @@ public class MySqlUpdated : Updated
 
                     command.CommandText = this.Visitor.BuildSql(command, out _);
                     connection.Open();
-                    result = command.ExecuteNonQuery(CommandSqlType.Update);
+                    result = command.ExecuteNonQuery();
                 }
                 break;
         }
@@ -231,13 +227,13 @@ public class MySqlUpdated : Updated
                         var memberMappers, var valueGetters) = this.dialectVisitor.BuildSetBulkCopy();
 
                     var tableId = $"{Guid.NewGuid():N}";
-                    var pkFields = memberMappers.Where(f => f.IsKey).Select(f => this.OrmProvider.GetFieldName(f.FieldName)).ToList();
+                    var pkFields = memberMappers.Where(f => f.IsKey).Select(f => this.ormProvider.GetFieldName(f.FieldName)).ToList();
 
                     var builder = new StringBuilder();
-                    builder.AppendLine($"CREATE TEMPORARY TABLE {this.OrmProvider.GetTableName("{0}_" + tableId)}(");
+                    builder.AppendLine($"CREATE TEMPORARY TABLE {this.ormProvider.GetTableName("{0}_" + tableId)}(");
                     foreach (var memberMapper in memberMappers)
                     {
-                        var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
+                        var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
                         builder.Append($"{fieldName} {memberMapper.DbColumnType}");
                         if (memberMapper.IsKey)
                             builder.Append(" NOT NULL");
@@ -249,7 +245,7 @@ public class MySqlUpdated : Updated
 
                     //添加临时表
                     builder.Clear();
-                    builder.Append($"UPDATE {this.OrmProvider.GetTableName("{0}")} a INNER JOIN {this.OrmProvider.GetTableName("{0}_" + tableId)} b ON ");
+                    builder.Append($"UPDATE {this.ormProvider.GetTableName("{0}")} a INNER JOIN {this.ormProvider.GetTableName("{0}_" + tableId)} b ON ");
                     for (int i = 0; i < pkFields.Count; i++)
                     {
                         if (i > 0) builder.Append(" AND ");
@@ -259,13 +255,13 @@ public class MySqlUpdated : Updated
                     int setIndex = 0;
                     foreach (var memberMapper in memberMappers)
                     {
-                        var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
+                        var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
                         if (pkFields.Contains(fieldName)) continue;
                         if (setIndex > 0) builder.Append(',');
                         builder.Append($"a.{fieldName}=b.{fieldName}");
                         setIndex++;
                     }
-                    builder.Append($";DROP TABLE {this.OrmProvider.GetTableName("{0}_" + tableId)};");
+                    builder.Append($";DROP TABLE {this.ormProvider.GetTableName("{0}_" + tableId)};");
                     var updateFormatSql = builder.ToString();
                     builder.Clear();
 
@@ -290,9 +286,9 @@ public class MySqlUpdated : Updated
                         updateSql = string.Format(updateFormatSql, shardingTables as string);
                     }
 
-                    var dialectOrmProvider = this.OrmProvider as MySqlProvider;
-                    var mySqlConnection = connection.BaseConnection as MySqlConnection;
-                    var mySqlTransaction = this.DbContext.Transaction?.BaseTransaction as MySqlTransaction;
+                    var dialectOrmProvider = this.ormProvider as MySqlProvider;
+                    var mySqlConnection = connection.DbConnection as MySqlConnection;
+                    var mySqlTransaction = this.DbContext.Transaction?.DbTransaction as MySqlTransaction;
                     var bulkCopyObj = new MySqlBulkCopy(mySqlConnection, mySqlTransaction);
                     if (timeoutSeconds.HasValue)
                         bulkCopyObj.BulkCopyTimeout = timeoutSeconds.Value;
@@ -300,7 +296,7 @@ public class MySqlUpdated : Updated
                     //创建临时表
                     await connection.OpenAsync(cancellationToken);
                     command.CommandText = createSql;
-                    await command.ExecuteNonQueryAsync(CommandSqlType.BulkCopyUpdate, cancellationToken);
+                    await command.ExecuteNonQueryAsync(cancellationToken);
 
                     //插入数据到临时表
                     if (shardingType == ShardingTableType.SplitTables)
@@ -320,7 +316,7 @@ public class MySqlUpdated : Updated
                     }
                     //执行更新
                     command.CommandText = updateSql;
-                    await command.ExecuteNonQueryAsync(CommandSqlType.BulkCopyUpdate, cancellationToken);
+                    await command.ExecuteNonQueryAsync(cancellationToken);
                     builder.Clear();
                 }
                 break;
@@ -349,7 +345,7 @@ public class MySqlUpdated : Updated
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
-                                result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkUpdate, cancellationToken);
+                                result += await command.ExecuteNonQueryAsync(cancellationToken);
                                 command.Parameters.Clear();
                                 fixedSqlSetter?.Invoke(command.Parameters);
                                 builder.Clear();
@@ -380,7 +376,7 @@ public class MySqlUpdated : Updated
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
-                                result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkUpdate, cancellationToken);
+                                result += await command.ExecuteNonQueryAsync(cancellationToken);
                                 command.Parameters.Clear();
                                 fixedSqlSetter?.Invoke(command.Parameters);
                                 builder.Clear();
@@ -391,7 +387,7 @@ public class MySqlUpdated : Updated
                     if (index > 0)
                     {
                         command.CommandText = builder.ToString();
-                        result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkUpdate, cancellationToken);
+                        result += await command.ExecuteNonQueryAsync(cancellationToken);
                     }
                     builder.Clear();
                 }
@@ -403,7 +399,7 @@ public class MySqlUpdated : Updated
 
                     command.CommandText = this.Visitor.BuildSql(command, out _);
                     await connection.OpenAsync(cancellationToken);
-                    result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
+                    result = await command.ExecuteNonQueryAsync(cancellationToken);
                 }
                 break;
         }
@@ -427,11 +423,11 @@ public class MySqlUpdated : Updated
                 var memberMappers, var valueGetters) = this.dialectVisitor.BuildSetBulkCopy();
 
             var tableId = $"{Guid.NewGuid():N}";
-            var pkFields = memberMappers.Where(f => f.IsKey).Select(f => this.OrmProvider.GetFieldName(f.FieldName)).ToList();
-            builder.AppendLine($"CREATE TEMPORARY TABLE {this.OrmProvider.GetTableName("{0}_" + tableId)}(");
+            var pkFields = memberMappers.Where(f => f.IsKey).Select(f => this.ormProvider.GetFieldName(f.FieldName)).ToList();
+            builder.AppendLine($"CREATE TEMPORARY TABLE {this.ormProvider.GetTableName("{0}_" + tableId)}(");
             foreach (var memberMapper in memberMappers)
             {
-                var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
+                var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
                 builder.Append($"{fieldName} {memberMapper.DbColumnType}");
                 if (memberMapper.IsKey)
                     builder.Append(" NOT NULL");
@@ -443,7 +439,7 @@ public class MySqlUpdated : Updated
 
             //添加临时表
             builder.Clear();
-            builder.Append($"UPDATE {this.OrmProvider.GetTableName("{0}")} a INNER JOIN {this.OrmProvider.GetTableName("{0}_" + tableId)} b ON ");
+            builder.Append($"UPDATE {this.ormProvider.GetTableName("{0}")} a INNER JOIN {this.ormProvider.GetTableName("{0}_" + tableId)} b ON ");
             for (int i = 0; i < pkFields.Count; i++)
             {
                 if (i > 0) builder.Append(" AND ");
@@ -453,13 +449,13 @@ public class MySqlUpdated : Updated
             int setIndex = 0;
             foreach (var memberMapper in memberMappers)
             {
-                var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
+                var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
                 if (pkFields.Contains(fieldName)) continue;
                 if (setIndex > 0) builder.Append(',');
                 builder.Append($"a.{fieldName}=b.{fieldName}");
                 setIndex++;
             }
-            builder.Append($";DROP TABLE {this.OrmProvider.GetTableName("{0}_" + tableId)};");
+            builder.Append($";DROP TABLE {this.ormProvider.GetTableName("{0}_" + tableId)};");
             var updateFormatSql = builder.ToString();
             builder.Clear();
 

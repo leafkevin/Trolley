@@ -11,7 +11,6 @@ namespace Trolley.MySqlConnector;
 
 public class MySqlCreateVisitor : CreateVisitor
 {
-    private MySqlProvider dialectProvider => this.OrmProvider as MySqlProvider;
     public bool IsUseIgnoreInto { get; set; }
     public bool IsUseSetAlias { get; set; }
     public string RowAlias { get; set; } = "newRow";

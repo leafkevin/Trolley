@@ -1453,7 +1453,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     ReaderType = toTargetExpr.Body.Type,
                     Value = wrapSql
                 }];
-
                 break;
         }
         this.IsSelect = false;

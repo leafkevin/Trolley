@@ -21,7 +21,7 @@ public class MySqlRepository : Repository
     public override void CreateShardingTable<TEntity>(string tableName, string fromTableSchema = null)
     {
         var entityType = typeof(TEntity);
-        if (!this.MapProvider.TryGetEntityMap(entityType, out var entityMapper))
+        if (!this.entityMapProvider.TryGetEntityMap(entityType, out var entityMapper))
             throw new Exception($"未找到{entityType.FullName}实体映射");
 
         fromTableSchema ??= this.DbContext.DefaultTableSchema;
@@ -41,14 +41,14 @@ information_schema.referential_constraints b on a.table_schema=b.constraint_sche
         var indexInfos = reader.Read<IndexInfo>();
         var foreignKeyInfos = reader.Read<ForeignKeyInfo>();
 
-        var builder = new StringBuilder($"CREATE TABLE IF NOT EXISTS {this.OrmProvider.GetTableName(tableName)}");
+        var builder = new StringBuilder($"CREATE TABLE IF NOT EXISTS {this.ormProvider.GetTableName(tableName)}");
         builder.AppendLine();
         builder.AppendLine("(");
         for (int i = 0; i < columnInfos.Count; i++)
         {
             if (i > 0) builder.AppendLine(",");
             var columnInfo = columnInfos[i];
-            builder.Append($"{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} {columnInfo.ColumnType}");
+            builder.Append($"{this.ormProvider.GetFieldName(columnInfo.ColumnName)} {columnInfo.ColumnType}");
             if (columnInfo.IsNullable == "NO")
                 builder.Append(" NOT");
             builder.Append(" NULL");
@@ -71,7 +71,7 @@ information_schema.referential_constraints b on a.table_schema=b.constraint_sche
                 if (!indexInfo.NonUnique)
                     builder.Append("UNIQUE ");
                 var myIndexName = indexName + shardingPart;
-                builder.Append($"INDEX {this.OrmProvider.GetFieldName(myIndexName)}");
+                builder.Append($"INDEX {this.ormProvider.GetFieldName(myIndexName)}");
             }
             builder.Append($" USING {indexInfo.IndexType}");
             builder.Append('(');
@@ -81,7 +81,7 @@ information_schema.referential_constraints b on a.table_schema=b.constraint_sche
             {
                 if (j > 0) builder.Append(',');
                 var myIndexInfo = myIndexInfos[j];
-                builder.Append(this.OrmProvider.GetFieldName(myIndexInfo.ColumnName));
+                builder.Append(this.ormProvider.GetFieldName(myIndexInfo.ColumnName));
                 if (myIndexInfo.Collation == "D")
                     builder.Append($" DESC");
             }
@@ -92,8 +92,8 @@ information_schema.referential_constraints b on a.table_schema=b.constraint_sche
         {
             builder.AppendLine(",");
             var indexInfo = foreignKeyInfos.First(f => f.ConstraintName == indexName);
-            builder.Append($"FOREIGN KEY ({this.OrmProvider.GetFieldName(indexInfo.ColumnName)}) REFERENCES {this.OrmProvider.GetTableName(indexInfo.RefTable)}");
-            builder.Append($"({this.OrmProvider.GetFieldName(indexInfo.RefColumnName)}) ON DELETE {indexInfo.DeleteRule} ON UPDATE {indexInfo.UpdateRule}");
+            builder.Append($"FOREIGN KEY ({this.ormProvider.GetFieldName(indexInfo.ColumnName)}) REFERENCES {this.ormProvider.GetTableName(indexInfo.RefTable)}");
+            builder.Append($"({this.ormProvider.GetFieldName(indexInfo.RefColumnName)}) ON DELETE {indexInfo.DeleteRule} ON UPDATE {indexInfo.UpdateRule}");
         }
         builder.AppendLine();
         builder.Append(')');
@@ -108,7 +108,7 @@ information_schema.referential_constraints b on a.table_schema=b.constraint_sche
     public override async Task CreateShardingTableAsync<TEntity>(string tableName, string fromTableSchema = null, CancellationToken cancellationToken = default)
     {
         var entityType = typeof(TEntity);
-        if (!this.MapProvider.TryGetEntityMap(entityType, out var entityMapper))
+        if (!this.entityMapProvider.TryGetEntityMap(entityType, out var entityMapper))
             throw new Exception($"未找到{entityType.FullName}实体映射");
 
         fromTableSchema ??= this.DbContext.DefaultTableSchema;
@@ -128,14 +128,14 @@ information_schema.referential_constraints b on a.table_schema=b.constraint_sche
         var indexInfos = await reader.ReadAsync<IndexInfo>(cancellationToken);
         var foreignKeyInfos = await reader.ReadAsync<ForeignKeyInfo>(cancellationToken);
 
-        var builder = new StringBuilder($"CREATE TABLE IF NOT EXISTS {this.OrmProvider.GetTableName(tableName)}");
+        var builder = new StringBuilder($"CREATE TABLE IF NOT EXISTS {this.ormProvider.GetTableName(tableName)}");
         builder.AppendLine();
         builder.AppendLine("(");
         for (int i = 0; i < columnInfos.Count; i++)
         {
             if (i > 0) builder.AppendLine(",");
             var columnInfo = columnInfos[i];
-            builder.Append($"{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} {columnInfo.ColumnType}");
+            builder.Append($"{this.ormProvider.GetFieldName(columnInfo.ColumnName)} {columnInfo.ColumnType}");
             if (columnInfo.IsNullable == "NO")
                 builder.Append(" NOT");
             builder.Append(" NULL");
@@ -158,7 +158,7 @@ information_schema.referential_constraints b on a.table_schema=b.constraint_sche
                 if (!indexInfo.NonUnique)
                     builder.Append("UNIQUE ");
                 var myIndexName = indexName + shardingPart;
-                builder.Append($"INDEX {this.OrmProvider.GetFieldName(myIndexName)}");
+                builder.Append($"INDEX {this.ormProvider.GetFieldName(myIndexName)}");
             }
             builder.Append($" USING {indexInfo.IndexType}");
             builder.Append('(');
@@ -168,7 +168,7 @@ information_schema.referential_constraints b on a.table_schema=b.constraint_sche
             {
                 if (j > 0) builder.Append(',');
                 var myIndexInfo = myIndexInfos[j];
-                builder.Append(this.OrmProvider.GetFieldName(myIndexInfo.ColumnName));
+                builder.Append(this.ormProvider.GetFieldName(myIndexInfo.ColumnName));
                 if (myIndexInfo.Collation == "D")
                     builder.Append($" DESC");
             }
@@ -179,8 +179,8 @@ information_schema.referential_constraints b on a.table_schema=b.constraint_sche
         {
             builder.AppendLine(",");
             var indexInfo = foreignKeyInfos.First(f => f.ConstraintName == indexName);
-            builder.Append($"FOREIGN KEY ({this.OrmProvider.GetFieldName(indexInfo.ColumnName)}) REFERENCES {this.OrmProvider.GetTableName(indexInfo.RefTable)}");
-            builder.Append($"({this.OrmProvider.GetFieldName(indexInfo.RefColumnName)}) ON DELETE {indexInfo.DeleteRule} ON UPDATE {indexInfo.UpdateRule}");
+            builder.Append($"FOREIGN KEY ({this.ormProvider.GetFieldName(indexInfo.ColumnName)}) REFERENCES {this.ormProvider.GetTableName(indexInfo.RefTable)}");
+            builder.Append($"({this.ormProvider.GetFieldName(indexInfo.RefColumnName)}) ON DELETE {indexInfo.DeleteRule} ON UPDATE {indexInfo.UpdateRule}");
         }
         builder.AppendLine();
         builder.Append(')');

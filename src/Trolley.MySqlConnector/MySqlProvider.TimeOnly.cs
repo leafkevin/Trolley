@@ -38,7 +38,7 @@ partial class MySqlProvider
                         if (targetSegment.IsValue)
                             return targetSegment.Change(((TimeOnly)targetSegment.Value).Ticks);
 
-                        return targetSegment.Change($"TIME_TO_SEC({targetSegment.Value})*10000000");
+                        return targetSegment.Change($"TIME_TO_SEC({targetSegment.Value})*10000000", SqlType.Expression);
                     });
                     result = true;
                     break;
@@ -60,7 +60,7 @@ partial class MySqlProvider
                         if (targetSegment.IsValue)
                             return targetSegment.Change(((TimeOnly)targetSegment.Value).Millisecond);
 
-                        return targetSegment.Change($"MICROSECOND({targetSegment.Value}) DIV 1000 MOD 1000");
+                        return targetSegment.Change($"MICROSECOND({targetSegment.Value}) DIV 1000 MOD 1000", SqlType.MethodCall);
                     });
                     result = true;
                     break;
@@ -184,8 +184,7 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                        if (targetSegment.IsValue
-                            && (rightSegment.IsValue))
+                        if (targetSegment.IsValue && rightSegment.IsValue)
                             return targetSegment.Change(((TimeOnly)targetSegment.Value).AddHours((double)rightSegment.Value));
 
                         var targetArgument = visitor.WrapSql(targetSegment);
@@ -217,7 +216,7 @@ partial class MySqlProvider
 
                         var targetArgument = visitor.WrapSql(targetSegment);
                         var rightArgument = visitor.WrapSql(rightSegment);
-                        return targetSegment.Change($"CASE WHEN ({targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END");
+                        return targetSegment.Change($"CASE WHEN ({targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END", SqlType.Expression);
                     });
                     result = true;
                     break;
@@ -229,7 +228,7 @@ partial class MySqlProvider
 
                         var targetArgument = visitor.WrapSql(targetSegment);
                         var rightArgument = visitor.WrapSql(rightSegment);
-                        return targetSegment.Change($"{targetArgument}={rightArgument}");
+                        return targetSegment.Change($"{targetArgument}={rightArgument}", SqlType.Expression);
                     });
                     result = true;
                     break;

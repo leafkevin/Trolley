@@ -44,7 +44,7 @@ partial class MySqlProvider
                         if (targetSegment.IsValue)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).Ticks);
 
-                        return targetSegment.Change($"TIME_TO_SEC({targetSegment.Value})*10000000");
+                        return targetSegment.Change($"TIME_TO_SEC({targetSegment.Value})*10000000", SqlType.Expression);
                     });
                     result = true;
                     break;
@@ -77,7 +77,7 @@ partial class MySqlProvider
                         if (targetSegment.IsValue)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).Milliseconds);
 
-                        return targetSegment.Change($"MICROSECOND({targetSegment.Value}) DIV 1000 MOD 1000");
+                        return targetSegment.Change($"MICROSECOND({targetSegment.Value}) DIV 1000 MOD 1000", SqlType.Expression);
                     });
                     result = true;
                     break;
@@ -110,7 +110,7 @@ partial class MySqlProvider
                         if (targetSegment.IsValue)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).TotalDays);
 
-                        return targetSegment.Change($"TIME_TO_SEC({targetSegment.Value})/{3600 * 24}");
+                        return targetSegment.Change($"TIME_TO_SEC({targetSegment.Value})/{3600 * 24}", SqlType.Expression);
                     });
                     result = true;
                     break;
@@ -121,7 +121,7 @@ partial class MySqlProvider
                         if (targetSegment.IsValue)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).TotalHours);
 
-                        return targetSegment.Change($"TIME_TO_SEC({targetSegment.Value})/3600");
+                        return targetSegment.Change($"TIME_TO_SEC({targetSegment.Value})/3600", SqlType.Expression);
                     });
                     result = true;
                     break;
@@ -132,7 +132,7 @@ partial class MySqlProvider
                         if (targetSegment.IsValue)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).TotalMilliseconds);
 
-                        return targetSegment.Change($"TIME_TO_SEC({targetSegment.Value})*1000");
+                        return targetSegment.Change($"TIME_TO_SEC({targetSegment.Value})*1000", SqlType.Expression);
                     });
                     result = true;
                     break;
@@ -143,7 +143,7 @@ partial class MySqlProvider
                         if (targetSegment.IsValue)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).TotalMinutes);
 
-                        return targetSegment.Change($"TIME_TO_SEC({targetSegment.Value})/60");
+                        return targetSegment.Change($"TIME_TO_SEC({targetSegment.Value})/60", SqlType.Expression);
                     });
                     result = true;
                     break;
@@ -181,7 +181,7 @@ partial class MySqlProvider
 
                         var leftArgument = visitor.WrapSql(leftSegment);
                         var rightArgument = visitor.WrapSql(rightSegment);
-                        return leftSegment.Change($"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END");
+                        return leftSegment.Change($"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END", SqlType.Expression);
                     });
                     result = true;
                     break;
@@ -193,7 +193,7 @@ partial class MySqlProvider
 
                         var leftArgument = visitor.WrapSql(leftSegment);
                         var rightArgument = visitor.WrapSql(rightSegment);
-                        return leftSegment.Change($"{leftArgument}={rightArgument}");
+                        return leftSegment.Change($"{leftArgument}={rightArgument}", SqlType.Expression);
                     });
                     result = true;
                     break;
@@ -297,7 +297,7 @@ partial class MySqlProvider
 
                         var targetArgument = visitor.WrapSql(targetSegment);
                         var rightArgument = visitor.WrapSql(rightSegment);
-                        return targetSegment.Change($"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END");
+                        return targetSegment.Change($"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END", SqlType.Expression);
                     });
                     result = true;
                     break;
@@ -309,7 +309,7 @@ partial class MySqlProvider
 
                         var targetArgument = visitor.WrapSql(targetSegment);
                         var rightArgument = visitor.WrapSql(rightSegment);
-                        return targetSegment.Change($"{targetArgument}={rightArgument}");
+                        return targetSegment.Change($"{targetArgument}={rightArgument}", SqlType.Expression);
                     });
                     result = true;
                     break;
@@ -368,13 +368,12 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                        if (targetSegment.IsValue
-                            && (rightSegment.IsValue))
+                        if (targetSegment.IsValue && rightSegment.IsValue)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).Multiply((double)rightSegment.Value));
 
                         var targetArgument = visitor.WrapSql(targetSegment, true);
                         var rightArgument = visitor.WrapSql(rightSegment, true);
-                        return targetSegment.Change($"{targetArgument}*{rightArgument}");
+                        return targetSegment.Change($"{targetArgument}*{rightArgument}", SqlType.Expression);
                     });
                     result = true;
                     break;
@@ -391,7 +390,7 @@ partial class MySqlProvider
 
                             var targetArgument = visitor.WrapSql(targetSegment, true);
                             var rightArgument = visitor.WrapSql(rightSegment, true);
-                            return targetSegment.Change($"{targetArgument}/{rightArgument}");
+                            return targetSegment.Change($"{targetArgument}/{rightArgument}", SqlType.Expression);
                         });
                         result = true;
                     }
@@ -401,13 +400,12 @@ partial class MySqlProvider
                         {
                             var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                             var rightSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                            if (targetSegment.IsValue
-                                && (rightSegment.IsValue))
+                            if (targetSegment.IsValue && rightSegment.IsValue)
                                 return targetSegment.Change(((TimeSpan)targetSegment.Value).Divide((TimeSpan)rightSegment.Value));
 
                             var targetArgument = visitor.WrapSql(targetSegment, true);
                             var rightArgument = visitor.WrapSql(rightSegment, true);
-                            return targetSegment.Change($"{targetArgument}/{rightArgument}");
+                            return targetSegment.Change($"{targetArgument}/{rightArgument}", SqlType.Expression);
                         });
                         result = true;
                     }

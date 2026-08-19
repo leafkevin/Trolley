@@ -7,8 +7,6 @@ namespace Trolley.MySqlConnector;
 
 public class MySqlDeleteVisitor : DeleteVisitor
 {
-    private MySqlProvider dialectProvider => this.OrmProvider as MySqlProvider;
-
     public MySqlDeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
         : base(entityType, dbContext, tableAsStart, command) { }
 

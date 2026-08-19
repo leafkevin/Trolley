@@ -14,213 +14,214 @@ public class MySqlQueryVisitor : QueryVisitor
     public MySqlQueryVisitor(DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
         : base(dbContext, tableAsStart, command) { }
 
-    public override string BuildCommandSql(Type entityType, out IDataParameterCollection dbParameters)
-    {
-        var builder = new StringBuilder();
-        var entityMapper = this.EntityMapProvider.GetEntityMap(entityType);
-        if (this.IsUseIgnoreInto)
-            builder.Append("INSERT IGNORE INTO");
-        else builder.Append("INSERT INTO");
-        builder.Append($" {this.OrmProvider.GetTableName(entityMapper.TableName)} (");
-        int index = 0;
-        //如果ReaderFields没有设置，通常是从Query中来的，ReaderFields是从Query中获取的
+    //public override string BuildCommandSql(Type entityType, out IDataParameterCollection dbParameters)
+    //{
+    //    var builder = new StringBuilder();
+    //    var entityMapper = this.EntityMapProvider.GetEntityMap(entityType);
+    //    if (this.IsUseIgnoreInto)
+    //        builder.Append("INSERT IGNORE INTO");
+    //    else builder.Append("INSERT INTO");
+    //    builder.Append($" {this.OrmProvider.GetTableName(entityMapper.TableName)} (");
+    //    int index = 0;
+    //    //如果ReaderFields没有设置，通常是从Query中来的，ReaderFields是从Query中获取的
 
-        foreach (var readerField in this.ReaderFields)
-        {
-            //Union后，如果没有select语句时，通常实体类型或是select分组对象
-            if (readerField.FieldType != ReaderFieldType.Field)
-                this.AddVisitedFieldsSqlWithoutAlias(builder, readerField);
-            else
-            {
-                var memberName = readerField.TargetMember.Name;
-                if (!entityMapper.TryGetMemberMap(memberName, out var memberMapper)
-                    || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert
-                    || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion)
-                    continue;
-                if (index > 0) builder.Append(',');
-                builder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}");
-            }
-            index++;
-        }
-        builder.Append(") ");
-        //有CTE表
-        if (this.RefQueries != null && this.RefQueries.Count > 0)
-        {
-            var fieldsSql = builder.ToString();
-            builder.Clear();
-            bool isRecursive = false;
-            var cteQueries = this.FlattenRefCteTables(this.RefQueries);
-            if (cteQueries.Count > 0)
-            {
-                builder.AppendLine();
-                for (int i = 0; i < cteQueries.Count; i++)
-                {
-                    if (i > 0) builder.AppendLine(",");
-                    builder.Append(cteQueries[i].Body);
-                    if (cteQueries[i].IsRecursive)
-                        isRecursive = true;
-                }
-                if (isRecursive)
-                    builder.Insert(0, "WITH RECURSIVE ");
-                else builder.Insert(0, "WITH ");
-                builder.AppendLine();
-            }
-            builder.Insert(0, fieldsSql);
-        }
-        dbParameters = this.DbParameters;
-        string sql = null;
-        if (!string.IsNullOrEmpty(this.UnionSql))
-        {
-            builder.Append(this.UnionSql);
-            sql = builder.ToString();
-            builder.Clear();
-            return sql;
-        }
-        var headSql = builder.ToString();
-        builder.Clear();
+    //    foreach (var readerField in this.ReaderFields)
+    //    {
+    //        //Union后，如果没有select语句时，通常实体类型或是select分组对象
+    //        if (readerField.FieldType != ReaderFieldType.Field)
+    //            this.AddVisitedFieldsSqlWithoutAlias(builder, readerField);
+    //        else
+    //        {
+    //            var memberName = readerField.TargetMember.Name;
+    //            if (!entityMapper.TryGetMemberMap(memberName, out var memberMapper)
+    //                || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert
+    //                || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion)
+    //                continue;
+    //            if (index > 0) builder.Append(',');
+    //            builder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}");
+    //        }
+    //        index++;
+    //    }
+    //    builder.Append(") ");
+    //    //有CTE表
+    //    if (this.RefQueries != null && this.RefQueries.Count > 0)
+    //    {
+    //        var fieldsSql = builder.ToString();
+    //        builder.Clear();
+    //        bool isRecursive = false;
+    //        var cteQueries = this.FlattenRefCteTables(this.RefQueries);
+    //        if (cteQueries.Count > 0)
+    //        {
+    //            builder.AppendLine();
+    //            for (int i = 0; i < cteQueries.Count; i++)
+    //            {
+    //                if (i > 0) builder.AppendLine(",");
+    //                builder.Append(cteQueries[i].Body);
+    //                if (cteQueries[i].IsRecursive)
+    //                    isRecursive = true;
+    //            }
+    //            if (isRecursive)
+    //                builder.Insert(0, "WITH RECURSIVE ");
+    //            else builder.Insert(0, "WITH ");
+    //            builder.AppendLine();
+    //        }
+    //        builder.Insert(0, fieldsSql);
+    //    }
+    //    dbParameters = this.DbParameters;
+    //    string sql = null;
+    //    if (!string.IsNullOrEmpty(this.UnionSql))
+    //    {
+    //        builder.Append(this.UnionSql);
+    //        sql = builder.ToString();
+    //        builder.Clear();
+    //        return sql;
+    //    }
+    //    var headSql = builder.ToString();
+    //    builder.Clear();
 
-        //先判断表是否有多分表isManySharding
-        string tableSql = null;
-        var hasShardingTables = this.ShardingTables != null && this.ShardingTables.Count > 0;
-        if (this.Tables.Count > 0)
-        {
-            for (int i = 1; i < this.Tables.Count; i++)
-            {
-                var tableSegment = this.Tables[i];
-                string tableName = this.GetFormatTableName(tableSegment);
-                if (i > 1)
-                {
-                    if (!string.IsNullOrEmpty(tableSegment.JoinType))
-                    {
-                        builder.Append(' ');
-                        builder.Append($"{tableSegment.JoinType} ");
-                    }
-                    else builder.Append(',');
-                }
-                builder.Append(tableName);
-                //子查询要设置表别名
-                builder.Append(" " + tableSegment.AliasName);
-                if (!string.IsNullOrEmpty(tableSegment.SuffixRawSql))
-                    builder.Append(" " + tableSegment.SuffixRawSql);
-                if (!string.IsNullOrEmpty(tableSegment.OnExpr))
-                    builder.Append($" ON {tableSegment.OnExpr}");
-                if (hasShardingTables && this.ShardingTables[0] == tableSegment
-                    && tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
-                    this.IsManyShardingTables = true;
-            }
-            tableSql = builder.ToString();
-        }
-        builder.Clear();
+    //    //先判断表是否有多分表isManySharding
+    //    string tableSql = null;
+    //    var hasShardingTables = this.ShardingTables != null && this.ShardingTables.Count > 0;
+    //    if (this.Tables.Count > 0)
+    //    {
+    //        for (int i = 1; i < this.Tables.Count; i++)
+    //        {
+    //            var tableSegment = this.Tables[i];
+    //            string tableName = this.GetFormatTableName(tableSegment);
+    //            if (i > 1)
+    //            {
+    //                if (!string.IsNullOrEmpty(tableSegment.JoinType))
+    //                {
+    //                    builder.Append(' ');
+    //                    builder.Append($"{tableSegment.JoinType} ");
+    //                }
+    //                else builder.Append(',');
+    //            }
+    //            builder.Append(tableName);
+    //            //子查询要设置表别名
+    //            builder.Append(" " + tableSegment.AliasName);
+    //            if (!string.IsNullOrEmpty(tableSegment.SuffixRawSql))
+    //                builder.Append(" " + tableSegment.SuffixRawSql);
+    //            if (!string.IsNullOrEmpty(tableSegment.OnExpr))
+    //                builder.Append($" ON {tableSegment.OnExpr}");
+    //            if (hasShardingTables && this.ShardingTables[0] == tableSegment
+    //                && tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
+    //                this.IsManyShardingTables = true;
+    //        }
+    //        tableSql = builder.ToString();
+    //    }
+    //    builder.Clear();
 
-        //各种单值查询，如：SELECT COUNT(*)/MAX(*)..等，都有SELECT操作     
-        //如：From(f=>...).InnerJoin/UnionAll(f=>...)
-        //生成sql时，include表的字段，一定要紧跟着主表字段后面，方便赋值主表实体的属性中，所以在插入时候就排好序
-        //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
-        if (this.ReaderFields == null)
-            throw new Exception("缺少Select语句");
+    //    //各种单值查询，如：SELECT COUNT(*)/MAX(*)..等，都有SELECT操作     
+    //    //如：From(f=>...).InnerJoin/UnionAll(f=>...)
+    //    //生成sql时，include表的字段，一定要紧跟着主表字段后面，方便赋值主表实体的属性中，所以在插入时候就排好序
+    //    //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
+    //    if (this.ReaderFields == null)
+    //        throw new Exception("缺少Select语句");
 
-        if (this.IsManyShardingTables)
-        {
-            if (!string.IsNullOrEmpty(this.GroupBySql))
-            {
-                //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
-                foreach (var groupByField in this.GroupByFields)
-                {
-                    var memberInfo = groupByField.TargetMember ?? groupByField.FromMember;
-                    if (this.ReaderFields.Exists(f => f.IsGroupByField && f.TargetMember.Name == memberInfo.Name || f.IsGroupingField))
-                        continue;
-                    this.ReaderFields.Add(groupByField);
-                }
-            }
-            if (!string.IsNullOrEmpty(this.OrderBySql))
-            {
-                //当有多分表时，有排序，Select字段中，没有完全的排序字段，则需要补全所有排序字段
-                var hasGrouping = this.ReaderFields.Exists(f => f.IsGroupingField);
-                foreach (var orderByField in this.OrderByFields)
-                {
-                    var memberInfo = orderByField.Field.TargetMember ?? orderByField.Field.FromMember;
-                    if (this.ReaderFields.Exists(f => f.TargetMember.Name == memberInfo.Name || f.FromMember == memberInfo))
-                        continue;
-                    if (hasGrouping && this.GroupByFields.Exists(f => f.TargetMember.Name == memberInfo.Name || f.FromMember == memberInfo))
-                        continue;
-                    this.ReaderFields.Add(orderByField.Field);
-                }
-            }
-        }
+    //    if (this.IsManyShardingTables)
+    //    {
+    //        if (!string.IsNullOrEmpty(this.GroupBySql))
+    //        {
+    //            //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
+    //            foreach (var groupByField in this.GroupByFields)
+    //            {
+    //                var memberInfo = groupByField.TargetMember ?? groupByField.FromMember;
+    //                if (this.ReaderFields.Exists(f => f.IsGroupByField && f.TargetMember.Name == memberInfo.Name || f.IsGroupingField))
+    //                    continue;
+    //                this.ReaderFields.Add(groupByField);
+    //            }
+    //        }
+    //        if (!string.IsNullOrEmpty(this.OrderBySql))
+    //        {
+    //            //当有多分表时，有排序，Select字段中，没有完全的排序字段，则需要补全所有排序字段
+    //            var hasGrouping = this.ReaderFields.Exists(f => f.IsGroupingField);
+    //            foreach (var orderByField in this.OrderByFields)
+    //            {
+    //                var memberInfo = orderByField.Field.TargetMember ?? orderByField.Field.FromMember;
+    //                if (this.ReaderFields.Exists(f => f.TargetMember.Name == memberInfo.Name || f.FromMember == memberInfo))
+    //                    continue;
+    //                if (hasGrouping && this.GroupByFields.Exists(f => f.TargetMember.Name == memberInfo.Name || f.FromMember == memberInfo))
+    //                    continue;
+    //                this.ReaderFields.Add(orderByField.Field);
+    //            }
+    //        }
+    //    }
 
-        this.AddSelectFieldsSql(builder, this.ReaderFields);
-        if (this.IsManyShardingTables && this.IsNeedFormatShardingTables && this.AggFieldAlias != null)
-            builder.Append($" AS {this.AggFieldAlias},COUNT(*) AS AVG_COUNT");
+    //    this.AddSelectFieldsSql(builder, this.ReaderFields);
+    //    if (this.IsManyShardingTables && this.IsNeedFormatShardingTables && this.AggFieldAlias != null)
+    //        builder.Append($" AS {this.AggFieldAlias},COUNT(*) AS AVG_COUNT");
 
-        string selectSql = null;
-        if (this.IsDistinct)
-            selectSql = "DISTINCT " + builder.ToString();
-        else selectSql = builder.ToString();
+    //    string selectSql = null;
+    //    if (this.IsDistinct)
+    //        selectSql = "DISTINCT " + builder.ToString();
+    //    else selectSql = builder.ToString();
 
-        builder.Clear();
-        if (this.WhereBuilder != null && this.WhereBuilder.Length > 0)
-            builder.Append($" WHERE {this.WhereBuilder.ToString()}");
-        //有多分表还有Group By操作，每个分表语句中做Group By操作，Union All语句后，还要再做Group By操作
-        if (!string.IsNullOrEmpty(this.GroupBySql))
-            builder.Append($" GROUP BY {this.GroupBySql}");
-        //有多分表还有Group By+Having操作，每个分表语句中只做Group By操作，不做Having操作，在Union All语句后，再做Group By+Having操作
-        if (!this.IsManyShardingTables && !string.IsNullOrEmpty(this.HavingSql))
-            builder.Append($" HAVING {this.HavingSql}");
+    //    builder.Clear();
+    //    if (this.WhereBuilder != null && this.WhereBuilder.Length > 0)
+    //        builder.Append($" WHERE {this.WhereBuilder.ToString()}");
+    //    //有多分表还有Group By操作，每个分表语句中做Group By操作，Union All语句后，还要再做Group By操作
+    //    if (!string.IsNullOrEmpty(this.GroupBySql))
+    //        builder.Append($" GROUP BY {this.GroupBySql}");
+    //    //有多分表还有Group By+Having操作，每个分表语句中只做Group By操作，不做Having操作，在Union All语句后，再做Group By+Having操作
+    //    if (!this.IsManyShardingTables && !string.IsNullOrEmpty(this.HavingSql))
+    //        builder.Append($" HAVING {this.HavingSql}");
 
-        string orderBy = null;
-        if (!string.IsNullOrEmpty(this.OrderBySql) && (!this.IsManyShardingTables
-            || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue)))
-        {
-            orderBy = $"ORDER BY {this.OrderBySql}";
-            if (!this.offset.HasValue && !this.limit.HasValue)
-                builder.Append(" " + orderBy);
-        }
-        string others = builder.ToString();
+    //    string orderBy = null;
+    //    if (!string.IsNullOrEmpty(this.OrderBySql) && (!this.IsManyShardingTables
+    //        || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue)))
+    //    {
+    //        orderBy = $"ORDER BY {this.OrderBySql}";
+    //        if (!this.offset.HasValue && !this.limit.HasValue)
+    //            builder.Append(" " + orderBy);
+    //    }
+    //    string others = builder.ToString();
 
-        builder.Clear();
-        if (!string.IsNullOrEmpty(headSql))
-            builder.Append(headSql);
+    //    builder.Clear();
+    //    if (!string.IsNullOrEmpty(headSql))
+    //        builder.Append(headSql);
 
-        if (!this.IsManyShardingTables && (this.offset.HasValue || this.limit.HasValue)
-            || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue))
-        {
-            //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
-            var pageSql = this.OrmProvider.GetPagingTemplate(this.offset, this.limit, orderBy);
-            pageSql = pageSql.Replace("/**fields**/", selectSql);
-            pageSql = pageSql.Replace("/**tables**/", tableSql);
-            pageSql = pageSql.Replace(" /**others**/", others);
+    //    if (!this.IsManyShardingTables && (this.offset.HasValue || this.limit.HasValue)
+    //        || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue))
+    //    {
+    //        //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
+    //        var pageSql = this.OrmProvider.GetPagingTemplate(this.offset, this.limit, orderBy);
+    //        pageSql = pageSql.Replace("/**fields**/", selectSql);
+    //        pageSql = pageSql.Replace("/**tables**/", tableSql);
+    //        pageSql = pageSql.Replace(" /**others**/", others);
 
-            if (this.IsNeedPaging && this.offset.HasValue && this.limit.HasValue)
-            {
-                var myTableSql = $"{tableSql}{others}";
-                if (this.HasAggFields || !string.IsNullOrEmpty(this.GroupBySql))
-                    myTableSql = $"(SELECT {selectSql} FROM {tableSql}{others}) a";
-                builder.Append($"SELECT COUNT(*) FROM {myTableSql};");
-            }
-            builder.Append($"{pageSql}");
-        }
-        else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
+    //        if (this.IsNeedPaging && this.offset.HasValue && this.limit.HasValue)
+    //        {
+    //            var myTableSql = $"{tableSql}{others}";
+    //            if (this.HasAggFields || !string.IsNullOrEmpty(this.GroupBySql))
+    //                myTableSql = $"(SELECT {selectSql} FROM {tableSql}{others}) a";
+    //            builder.Append($"SELECT COUNT(*) FROM {myTableSql};");
+    //        }
+    //        builder.Append($"{pageSql}");
+    //    }
+    //    else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql)
-            || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue || this.HasAggFields))
-            this.IsNeedChangeUnionShardingTables = true;
+    //    if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql)
+    //        || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue || this.HasAggFields))
+    //        this.IsNeedChangeUnionShardingTables = true;
 
-        //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
-        bool isNeedWrap = ((this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
-            || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue);
-        if (isNeedWrap)
-        {
-            builder.Insert(0, "SELECT * FROM (");
-            builder.Append($") a");
-        }
-        sql = builder.ToString();
-        builder.Clear();
-        return sql;
-    }
+    //    //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
+    //    bool isNeedWrap = ((this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
+    //        || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue);
+    //    if (isNeedWrap)
+    //    {
+    //        builder.Insert(0, "SELECT * FROM (");
+    //        builder.Append($") a");
+    //    }
+    //    sql = builder.ToString();
+    //    builder.Clear();
+    //    return sql;
+    //}
     public override void UseTableSchema(bool isIncludeMany, string tableSchema)
     {
         var dialectProvider = this.OrmProvider as MySqlProvider;
-        var defaultSchemaName = dialectProvider.GetDefaultSchemaName(this.DbContext);
+        var connectionString = this.DbContext.Database.ConnectionStrings.First();
+        var defaultSchemaName = dialectProvider.GetSchemaName(connectionString);
         if (tableSchema == defaultSchemaName) return;
 
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
@@ -242,37 +243,38 @@ public class MySqlQueryVisitor : QueryVisitor
         bool hasOrder = false, hasDistinct = false;
         string fieldsSql = null, separator = null, orderBySql = null;
         SqlSegment fieldsSegment = default;
-        while (callStack.TryPop(out methodCallExpr))
-        {
-            switch (methodCallExpr.Method.Name)
-            {
-                case "GroupConcat":
-                    fieldsSegment = this.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                    this.AddVisitedFieldsSqlWithoutAlias(builder, fieldsSegment);
-                    fieldsSql = builder.ToString();
-                    builder.Clear();
-                    if (methodCallExpr.Arguments.Count > 1)
-                        separator = this.Evaluate<string>(methodCallExpr.Arguments[1]);
-                    break;
-                case "OrderBy":
-                    fieldsSegment = this.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                    if (hasOrder) builder.Append(',');
-                    else builder.Append("ORDER BY ");
-                    this.AddVisitedFieldsSqlWithoutAlias(builder, fieldsSegment);
-                    hasOrder = true;
-                    break;
-                case "OrderByDescending":
-                    fieldsSegment = this.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
-                    if (hasOrder) builder.Append(',');
-                    else builder.Append("ORDER BY ");
-                    this.AddVisitedFieldsSqlWithoutAlias(builder, fieldsSegment, " DESC");
-                    hasOrder = true;
-                    break;
-                case "Distinct":
-                    hasDistinct = true;
-                    break;
-            }
-        }
+        //TODO: 暂时注释日后解开
+        //while (callStack.TryPop(out methodCallExpr))
+        //{
+        //    switch (methodCallExpr.Method.Name)
+        //    {
+        //        case "GroupConcat":
+        //            fieldsSegment = this.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+        //            this.AddVisitedFieldsSqlWithoutAlias(builder, fieldsSegment);
+        //            fieldsSql = builder.ToString();
+        //            builder.Clear();
+        //            if (methodCallExpr.Arguments.Count > 1)
+        //                separator = methodCallExpr.Arguments[1].Evaluate<string>();
+        //            break;
+        //        case "OrderBy":
+        //            fieldsSegment = this.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+        //            if (hasOrder) builder.Append(',');
+        //            else builder.Append("ORDER BY ");
+        //            this.AddVisitedFieldsSqlWithoutAlias(builder, fieldsSegment);
+        //            hasOrder = true;
+        //            break;
+        //        case "OrderByDescending":
+        //            fieldsSegment = this.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+        //            if (hasOrder) builder.Append(',');
+        //            else builder.Append("ORDER BY ");
+        //            this.AddVisitedFieldsSqlWithoutAlias(builder, fieldsSegment, " DESC");
+        //            hasOrder = true;
+        //            break;
+        //        case "Distinct":
+        //            hasDistinct = true;
+        //            break;
+        //    }
+        //}
         if (hasOrder) orderBySql = builder.ToString();
         builder.Clear();
         builder.Append($"GROUP_CONCAT(");
@@ -284,7 +286,7 @@ public class MySqlQueryVisitor : QueryVisitor
         builder.Append(')');
         fieldsSql = builder.ToString();
         builder.Clear();
-        return sqlSegment.Change(fieldsSql, false, true);
+        return sqlSegment.Change(fieldsSql, SqlType.MethodCall);
     }
     public override SqlSegment VisitStringAggMethodCall(SqlSegment sqlSegment)
         => throw new NotSupportedException("不支持的方法调用，请考虑使用Sql.GroupConcat方法");

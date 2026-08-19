@@ -10,8 +10,6 @@ namespace Trolley.MySqlConnector;
 
 public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
 {
-    private MySqlProvider dialectProvider => this.OrmProvider as MySqlProvider;
-
     public MySqlUpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
         : base(entityType, dbContext, tableAsStart, command) { }
 
@@ -23,7 +21,7 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
         tableSegment.TableSchema = tableSchema;
     }
     public override (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>,
-        Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>, List<SqlSegment>) BuildSetBulk(ITheaCommand command)
+        Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>, List<ReaderField>) BuildSetBulk(ITheaCommand command)
     {
         (var updateObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
         object firstUpdateObj = null;
@@ -154,7 +152,7 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             {
                 shardingTables = shardingType switch
                 {
-                    ShardingTableType.SingleTable => tableSegment.Value,
+                    ShardingTableType.SingleTable => tableSegment.Body,
                     ShardingTableType.MultiTable => tableSegment.TableNames,
                     _ => tableSegment.Mapper.TableName,
                 };
@@ -188,7 +186,7 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             {
                 shardingTables = shardingType switch
                 {
-                    ShardingTableType.SingleTable => tableSegment.Value,
+                    ShardingTableType.SingleTable => tableSegment.Body,
                     ShardingTableType.MultiTable => tableSegment.TableNames,
                     _ => tableSegment.Mapper.TableName,
                 };

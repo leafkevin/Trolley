@@ -1097,7 +1097,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         string tableName = null;
         if (tableSegment.TableShardingInfo != null)
         {
-            if (tableSegment.IsSharding) tableName = tableSegment.Value;
+            if (tableSegment.IsSharding) tableName = tableSegment.Body;
             else tableName = RepositoryHelper.GetShardingTableName(this.DbContext, tableSegment.TableShardingInfo, this.ShardingValues);
         }
         else tableName = tableSegment.Mapper.TableName;
