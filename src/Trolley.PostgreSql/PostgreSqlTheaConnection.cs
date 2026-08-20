@@ -44,7 +44,6 @@ class PostgreSqlTheaConnection : ITheaConnection
     {
         this.DbKey = dbKey;
         this.ConnectionId = Guid.NewGuid().ToString("N");
-        this.ConnectionString = connection.ConnectionString;
         this.connection = connection;
     }
 
@@ -194,7 +193,7 @@ class PostgreSqlTheaConnection : ITheaConnection
         return transaction;
     }   
 #else
-    public ValueTask<ITheaTransaction> BeginTransactionAsync(IsolationLevel il, CancellationToken cancellationToken = default)
+    public async ValueTask<ITheaTransaction> BeginTransactionAsync(IsolationLevel il, CancellationToken cancellationToken = default)
     {
         bool isSuccess = true;
         Exception exception = null;
@@ -202,7 +201,7 @@ class PostgreSqlTheaConnection : ITheaConnection
         this.Interceptor?.TransactionCreating(this);
         try
         {
-            var dbTransaction = this.connection.BeginTransaction(il, cancellationToken);
+            var dbTransaction = this.connection.BeginTransaction(il);
             transaction = new PostgreSqlTheaTransaction(this, dbTransaction);
         }
         catch (Exception ex)
@@ -217,7 +216,7 @@ class PostgreSqlTheaConnection : ITheaConnection
             if (!isSuccess) await this.CloseAsync();
             throw exception;
         }
-        return ValueTask.FromResult(transaction);
+        return transaction;
     }
 #endif
     public void Dispose()

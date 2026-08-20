@@ -55,8 +55,13 @@ class SqlServerTheaCommand : ITheaCommand
             if (value is not SqlServerTheaTransaction theaTransaction)
                 throw new NotSupportedException("不支持的事务类型，只支持SqlServerTheaTransaction类型");
             this.transaction = theaTransaction;
-            this.DbKey = theaTransaction.DbKey;
-            this.connection = this.transaction.Connection as SqlServerTheaConnection;
+            this.command.Transaction = theaTransaction.DbTransaction as SqlTransaction;
+            if (theaTransaction.Connection is SqlServerTheaConnection theaConnection
+                && !ReferenceEquals(this.connection, theaTransaction.Connection))
+            {
+                this.DbKey = theaConnection.DbKey;
+                this.connection = theaConnection;
+            }
         }
     }
     public UpdateRowSource UpdatedRowSource
@@ -77,8 +82,15 @@ class SqlServerTheaCommand : ITheaCommand
     }
 
     public void Prepare() => this.command.Prepare();
-    public virtual async Task PrepareAsync(CancellationToken cancellationToken = default)
-        => await this.command.PrepareAsync(cancellationToken);
+    public virtual Task PrepareAsync(CancellationToken cancellationToken = default)
+    {
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+        return this.command.PrepareAsync(cancellationToken);
+#else
+        this.command.Prepare();
+        return Task.CompletedTask;
+#endif
+    }
     public void Cancel() => this.command.Cancel();
     public IDbDataParameter CreateParameter() => this.command.CreateParameter();
     public int ExecuteNonQuery()
@@ -260,7 +272,7 @@ class SqlServerTheaCommand : ITheaCommand
         this.Parameters.Clear();
         return default;
     }
-#endif   
+#endif
     private bool OnExecuting(out object evtData)
     {
         if (this.Interceptor != null)
@@ -290,7 +302,7 @@ class SqlServerTheaCommand : ITheaCommand
     public object Clone()
     {
         var dbCommand = this.command.Clone();
-        return new MySqlTheaCommand(this.DbKey, dbCommand, this.connection, this.transaction);
+        return new SqlServerTheaCommand(this.DbKey, dbCommand, this.connection, this.transaction);
     }
 
     IDbConnection IDbCommand.Connection
@@ -298,14 +310,15 @@ class SqlServerTheaCommand : ITheaCommand
         get => this.connection.DbConnection;
         set
         {
-            if (value is MySqlTheaConnection theaConnection)
+            if (value is SqlServerTheaConnection theaConnection)
+                this.Connection = theaConnection;
+            else if (value is SqlConnection dbConnection)
             {
-                this.connection = theaConnection;
-                this.DbKey = theaConnection.DbKey;
+                if (this.connection == null)
+                    this.connection = new SqlServerTheaConnection(this.DbKey, dbConnection);
+                else this.connection.DbConnection = dbConnection;
             }
-            else if (value is MySqlConnection dbConnection)
-                this.connection.DbConnection = value;
-            else throw new NotSupportedException("不支持的连接类型，只支持MySqlTheaConnection或是MySqlConnection类型");
+            else throw new NotSupportedException("不支持的连接类型，只支持PostgreSqlTheaConnection或是PostgreSqlConnection类型");
         }
     }
     IDbTransaction IDbCommand.Transaction
@@ -313,16 +326,15 @@ class SqlServerTheaCommand : ITheaCommand
         get => this.transaction.DbTransaction;
         set
         {
-            if (value is MySqlTheaTransaction theaTransaction)
+            if (value is SqlServerTheaTransaction theaTransaction)
+                this.Transaction = theaTransaction;
+            else if (value is SqlTransaction dbTransaction)
             {
-                this.transaction = theaTransaction;
-                this.DbKey = theaTransaction.DbKey;
-                if (theaTransaction.Connection is MySqlTheaConnection theaConnection)
-                    this.connection = theaConnection;
+                if (this.transaction == null)
+                    this.transaction = new SqlServerTheaTransaction(this.connection, dbTransaction);
+                else this.transaction.DbTransaction = dbTransaction;
             }
-            else if (value is MySqlTransaction dbTransaction)
-                this.transaction.DbTransaction = dbTransaction;
-            else throw new NotSupportedException("不支持的事务类型，只支持MySqlTheaTransaction或是MySqlTransaction类型");
+            else throw new NotSupportedException("不支持的事务类型，只支持PostgreSqlTheaTransaction或是PostgreSqlTransaction类型");
         }
     }
     IDataReader IDbCommand.ExecuteReader() => this.ExecuteReader().DbDataReader;

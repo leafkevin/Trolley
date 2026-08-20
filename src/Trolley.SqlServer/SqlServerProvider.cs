@@ -166,7 +166,7 @@ public partial class SqlServerProvider : BaseOrmProvider
         if (tableName.Contains('.'))
         {
             var tableNames = tableName.Split('.');
-            if (tableNames[0] == this.DefaultTableSchema)
+            if (tableNames[0] == this.GetDefaultSchema(null))
                 return "[" + tableNames[1] + "]";
             return $"[{tableNames[0]}].[{tableNames[1]}]";
         }
@@ -180,7 +180,7 @@ public partial class SqlServerProvider : BaseOrmProvider
         {
             if (string.IsNullOrEmpty(orderBy)) throw new ArgumentNullException("orderBy");
             builder.Append("/**fields**/ FROM /**tables**/ /**others**/");
-            if (!String.IsNullOrEmpty(orderBy)) builder.Append($" {orderBy}");
+            if (!string.IsNullOrEmpty(orderBy)) builder.Append($" {orderBy}");
             builder.Append($" OFFSET {skip} ROWS");
             builder.AppendFormat($" FETCH NEXT {limit} ROWS ONLY", limit);
         }
@@ -188,13 +188,15 @@ public partial class SqlServerProvider : BaseOrmProvider
         {
             builder.Append($"TOP {limit} ");
             builder.Append("/**fields**/ FROM /**tables**/ /**others**/");
-            if (!String.IsNullOrEmpty(orderBy)) builder.Append($" {orderBy}");
+            if (!string.IsNullOrEmpty(orderBy)) builder.Append($" {orderBy}");
         }
         return builder.ToString();
     }
     public override object GetNativeDbType(Type fieldType)
     {
-        if (!defaultDbTypes.TryGetValue(fieldType, out var dbType))
+        if (fieldType == null)
+            throw new ArgumentNullException(nameof(fieldType));
+        if (!defaultDbTypes.TryGetValue(fieldType.ToUnderlyingType(), out var dbType))
             throw new Exception($"类型{fieldType.FullName}没有对应的System.Data.SqlDbType映射类型");
         return dbType;
     }
@@ -236,13 +238,13 @@ public partial class SqlServerProvider : BaseOrmProvider
 #if NET6_0_OR_GREATER
             case Type factType when factType == typeof(TimeOnly): return $"'{(TimeOnly)value:hh\\:mm\\:ss\\.ffffff}'";
 #endif
-            case Type factType when factType == typeof(SqlSegment):
-                {
-                    var sqlSegment = value as SqlSegment;
-                    if (sqlSegment.IsValue)
-                        return this.GetQuotedValue(sqlSegment.Value);
-                    return sqlSegment.Value;
-                }
+            //case Type factType when factType == typeof(SqlSegment):
+            //    {
+            //        var sqlSegment = (SqlSegment)value;
+            //        if (sqlSegment.IsValue)
+            //            return this.GetQuotedValue(sqlSegment.Value);
+            //        return sqlSegment.Value as string;
+            //    }
             default: return value.ToString();
         }
     }

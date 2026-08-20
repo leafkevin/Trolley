@@ -55,8 +55,13 @@ class PostgreSqlTheaCommand : ITheaCommand
             if (value is not PostgreSqlTheaTransaction theaTransaction)
                 throw new NotSupportedException("不支持的事务类型，只支持PostgreSqlTheaTransaction类型");
             this.transaction = theaTransaction;
-            this.DbKey = theaTransaction.DbKey;
-            this.connection = this.transaction.Connection as PostgreSqlTheaConnection;
+            this.command.Transaction = theaTransaction.DbTransaction as NpgsqlTransaction;
+            if (theaTransaction.Connection is PostgreSqlTheaConnection theaConnection
+                && !ReferenceEquals(this.connection, theaTransaction.Connection))
+            {
+                this.DbKey = theaConnection.DbKey;
+                this.connection = theaConnection;
+            }
         }
     }
     public UpdateRowSource UpdatedRowSource
@@ -299,13 +304,14 @@ class PostgreSqlTheaCommand : ITheaCommand
         set
         {
             if (value is PostgreSqlTheaConnection theaConnection)
-            {
-                this.connection = theaConnection;
-                this.DbKey = theaConnection.DbKey;
-            }
+                this.Connection = theaConnection;
             else if (value is NpgsqlConnection dbConnection)
-                this.connection.DbConnection = value;
-            else throw new NotSupportedException("不支持的连接类型，只支持PostgreSqlTheaConnection或是NpgsqlConnection类型");
+            {
+                if (this.connection == null)
+                    this.connection = new PostgreSqlTheaConnection(this.DbKey, dbConnection);
+                else this.connection.DbConnection = dbConnection;
+            }
+            else throw new NotSupportedException("不支持的连接类型，只支持PostgreSqlTheaConnection或是PostgreSqlConnection类型");
         }
     }
     IDbTransaction IDbCommand.Transaction
@@ -314,15 +320,14 @@ class PostgreSqlTheaCommand : ITheaCommand
         set
         {
             if (value is PostgreSqlTheaTransaction theaTransaction)
-            {
-                this.transaction = theaTransaction;
-                this.DbKey = theaTransaction.DbKey;
-                if (theaTransaction.Connection is PostgreSqlTheaConnection theaConnection)
-                    this.connection = theaConnection;
-            }
+                this.Transaction = theaTransaction;
             else if (value is NpgsqlTransaction dbTransaction)
-                this.transaction.DbTransaction = dbTransaction;
-            else throw new NotSupportedException("不支持的事务类型，只支持PostgreSqlTheaTransaction或是NpgsqlTransaction类型");
+            {
+                if (this.transaction == null)
+                    this.transaction = new PostgreSqlTheaTransaction(this.connection, dbTransaction);
+                else this.transaction.DbTransaction = dbTransaction;
+            }
+            else throw new NotSupportedException("不支持的事务类型，只支持PostgreSqlTheaTransaction或是PostgreSqlTransaction类型");
         }
     }
     IDataReader IDbCommand.ExecuteReader() => this.ExecuteReader().DbDataReader;

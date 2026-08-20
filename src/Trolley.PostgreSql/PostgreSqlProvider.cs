@@ -309,7 +309,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         if (tableName.Contains('.'))
         {
             var tableNames = tableName.Split('.');
-            if (tableNames[0] == this.DefaultTableSchema)
+            if (tableNames[0] == this.GetDefaultSchema(null))
                 return "\"" + tableNames[1] + "\"";
             return $"\"{tableNames[0]}\".\"{tableNames[1]}\"";
         }
@@ -318,7 +318,9 @@ public partial class PostgreSqlProvider : BaseOrmProvider
     public override string GetFieldName(string fieldName) => "\"" + fieldName + "\"";
     public override object GetNativeDbType(Type fieldType)
     {
-        if (!defaultDbTypes.TryGetValue(fieldType, out var dbType))
+        if (fieldType == null)
+            throw new ArgumentNullException(nameof(fieldType));
+        if (!defaultDbTypes.TryGetValue(fieldType.ToUnderlyingType(), out var dbType))
             throw new Exception($"类型{fieldType.FullName}没有对应的NpgsqlTypes.NpgsqlDbType映射类型");
         return dbType;
     }
@@ -391,13 +393,13 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                 }
             case Type factType when selfTypes.Contains(factType):
                 return $"'{value}'";
-            case Type factType when factType == typeof(SqlSegment):
-                {
-                    var sqlSegment = value as SqlSegment;
-                    if (sqlSegment.IsValue)
-                        return this.GetQuotedValue(sqlSegment.Value);
-                    return sqlSegment.Value;
-                }
+            //case Type factType when factType == typeof(SqlSegment):
+            //    {
+            //        var sqlSegment = value as SqlSegment;
+            //        if (sqlSegment.IsValue)
+            //            return this.GetQuotedValue(sqlSegment.Value);
+            //        return sqlSegment.Value;
+            //    }
             default: return value.ToString();
         }
     }

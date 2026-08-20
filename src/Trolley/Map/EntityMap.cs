@@ -120,17 +120,17 @@ public class EntityMap
                 if (memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsIgnore && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
                     throw new Exception($"类{this.EntityType.FullName}的成员{memberInfo.Name}不是值类型，未配置为导航属性也没有配置TypeHandler，也不是忽略成员");
             }
-            if (memberMapper.NativeDbType == null)
-            {
-                //没有配置，就生成默认的数据库映射类型
-                if (!memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsIgnore && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
-                    memberMapper.NativeDbType = ormProvider.GetNativeDbType(memberMapper.MemberType);
-            }
+            //NativeDbType不能为null，在OrmProvider的MapTables方法中已经设置过了
+            //if (memberMapper.NativeDbType == null)
+            //{
+            //    //没有配置，就生成默认的数据库映射类型
+            //    if (!memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsIgnore && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
+            //        memberMapper.NativeDbType = ormProvider.GetNativeDbType(memberMapper.UnderlyingType);
+            //}
+            //if (memberMapper.NativeDbType is int nativeDbType)
+            //    memberMapper.NativeDbType = Enum.ToObject(ormProvider.NativeDbTypeType, nativeDbType);
             if (!memberMapper.IsNavigation && string.IsNullOrEmpty(memberMapper.DbColumnType))
                 throw new Exception($"未找到表：{this.TableName}或是未找到实体类{this.EntityType.FullName}成员{memberMapper.MemberName}的映射字段");
-            if (memberMapper.NativeDbType is int nativeDbType)
-                memberMapper.NativeDbType = Enum.ToObject(ormProvider.NativeDbTypeType, nativeDbType);
-
             if (memberMapper.TypeHandlerType != null && memberMapper.TypeHandler == null)
                 memberMapper.TypeHandler = ormProvider.GetTypeHandler(memberMapper.TypeHandlerType);
             //这个默认值是实体参数存在字段，但没有赋值

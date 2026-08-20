@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Data;
 using System.Linq.Expressions;
 using System.Text;
@@ -685,7 +686,10 @@ public class DialectProvider
             firstInsertObj = insertObj;
             break;
         }
-        var insertObjType = firstInsertObj.GetType();
+        Type insertObjType = null;
+        if (firstInsertObj is IDictionary<string, object>)
+            insertObjType = typeof(IDictionary<string, object>);
+        else insertObjType = firstInsertObj.GetType();
 
         string headSql = null;
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string> commandInitializer = null;

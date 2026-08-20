@@ -15,5 +15,5 @@ public abstract class DefaultModelMappingConfiguration : IModelMappingConfigurat
             return true;
         return false;
     }
-    public abstract void Configure(ModelBuilder builder);
+    public abstract void OnModelCreating(ModelBuilder builder);
 }

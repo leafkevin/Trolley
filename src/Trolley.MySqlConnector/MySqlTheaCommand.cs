@@ -55,8 +55,13 @@ class MySqlTheaCommand : ITheaCommand
             if (value is not MySqlTheaTransaction theaTransaction)
                 throw new NotSupportedException("不支持的事务类型，只支持MySqlTheaTransaction类型");
             this.transaction = theaTransaction;
-            this.DbKey = theaTransaction.DbKey;
-            this.connection = this.transaction.Connection as MySqlTheaConnection;
+            this.command.Transaction = theaTransaction.DbTransaction as MySqlTransaction;
+            if (theaTransaction.Connection is MySqlTheaConnection theaConnection
+                && !ReferenceEquals(this.connection, theaTransaction.Connection))
+            {
+                this.DbKey = theaConnection.DbKey;
+                this.connection = theaConnection;
+            }
         }
     }
     public UpdateRowSource UpdatedRowSource
@@ -72,7 +77,7 @@ class MySqlTheaCommand : ITheaCommand
         this.DbKey = dbKey;
         this.CommandId = Guid.NewGuid().ToString("N");
         this.command = command;
-        this.Connection = connection;
+        this.connection = connection;
         this.transaction = transaction;
     }
 
@@ -288,12 +293,13 @@ class MySqlTheaCommand : ITheaCommand
         set
         {
             if (value is MySqlTheaConnection theaConnection)
-            {
-                this.connection = theaConnection;
-                this.DbKey = theaConnection.DbKey;
-            }
+                this.Connection = theaConnection;
             else if (value is MySqlConnection dbConnection)
-                this.connection.DbConnection = value;
+            {
+                if (this.connection == null)
+                    this.connection = new MySqlTheaConnection(this.DbKey, dbConnection);
+                else this.connection.DbConnection = dbConnection;
+            }
             else throw new NotSupportedException("不支持的连接类型，只支持MySqlTheaConnection或是MySqlConnection类型");
         }
     }
@@ -303,14 +309,13 @@ class MySqlTheaCommand : ITheaCommand
         set
         {
             if (value is MySqlTheaTransaction theaTransaction)
-            {
-                this.transaction = theaTransaction;
-                this.DbKey = theaTransaction.DbKey;
-                if (theaTransaction.Connection is MySqlTheaConnection theaConnection)
-                    this.connection = theaConnection;
-            }
+                this.Transaction = theaTransaction;
             else if (value is MySqlTransaction dbTransaction)
-                this.transaction.DbTransaction = dbTransaction;
+            {
+                if (this.transaction == null)
+                    this.transaction = new MySqlTheaTransaction(this.connection, dbTransaction);
+                else this.transaction.DbTransaction = dbTransaction;
+            }
             else throw new NotSupportedException("不支持的事务类型，只支持MySqlTheaTransaction或是MySqlTransaction类型");
         }
     }

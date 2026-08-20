@@ -36,6 +36,8 @@ public sealed class OrmDbFactory : IOrmDbFactory
 
     public void Register(TheaDatabase database)
     {
+        if (database == null)
+            throw new ArgumentNullException(nameof(database));
         if (string.IsNullOrEmpty(database.DbKey))
             throw new ArgumentNullException(nameof(database.DbKey));
         this.databases.TryAdd(database.DbKey, database);

@@ -2,7 +2,7 @@
 
 public class ModelMappingConfiguration : DefaultModelMappingConfiguration
 {
-    public override void Configure(ModelBuilder builder)
+    public override void OnModelCreating(ModelBuilder builder)
     {
         builder
             .Entity<Brand>(f =>

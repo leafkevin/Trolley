@@ -44,7 +44,6 @@ class SqlServerTheaConnection : ITheaConnection
     {
         this.DbKey = dbKey;
         this.ConnectionId = Guid.NewGuid().ToString("N");
-        this.ConnectionString = connection.ConnectionString;
         this.connection = connection;
     }
 
@@ -240,7 +239,7 @@ class SqlServerTheaConnection : ITheaConnection
             if (!isSuccess) this.Close();
             throw exception;
         }
-        return ValueTask.FromResult(transaction);
+        return new ValueTask<ITheaTransaction>(transaction);
     }
 #endif
     public void Dispose()
@@ -249,12 +248,22 @@ class SqlServerTheaConnection : ITheaConnection
         this.connection.Dispose();
         this.Interceptor?.ConnectionDisposed(this);
     }
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
     public async ValueTask DisposeAsync()
     {
         this.Interceptor?.ConnectionDisposing(this);
         await this.connection.DisposeAsync();
         this.Interceptor?.ConnectionDisposed(this);
     }
+#else
+    public ValueTask DisposeAsync()
+    {
+        this.Interceptor?.ConnectionDisposing(this);
+        this.connection.Dispose();
+        this.Interceptor?.ConnectionDisposed(this);
+        return default;
+    }
+#endif
     IDbCommand IDbConnection.CreateCommand() => this.CreateCommand().DbCommand;
     IDbTransaction IDbConnection.BeginTransaction()
         => this.BeginTransaction().DbTransaction;

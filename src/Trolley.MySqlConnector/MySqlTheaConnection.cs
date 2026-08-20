@@ -44,7 +44,6 @@ class MySqlTheaConnection : ITheaConnection
     {
         this.DbKey = dbKey;
         this.ConnectionId = Guid.NewGuid().ToString("N");
-        this.ConnectionString = connection.ConnectionString;
         this.connection = connection;
     }
 

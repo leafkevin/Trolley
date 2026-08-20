@@ -47,7 +47,7 @@ public sealed class OrmDbFactoryBuilder
         if (!this.dbFactory.TryGetEntityMapProvider(dbKey, out var entityMapProvider))
             this.dbFactory.UseEntityMapProvider(dbKey, entityMapProvider = new EntityMapProvider());
         entityMapProvider.IsCanMapTo = configuration.IsCanMapTo;
-        configuration.Configure(new ModelBuilder(entityMapProvider));
+        configuration.OnModelCreating(new ModelBuilder(entityMapProvider));
         return this;
     }
     public OrmDbFactoryBuilder UseMapping(OrmProviderType ormProviderType, IModelMappingConfiguration configuration)
@@ -58,7 +58,7 @@ public sealed class OrmDbFactoryBuilder
         if (!this.dbFactory.TryGetEntityMapProvider(ormProviderType, out var entityMapProvider))
             this.dbFactory.UseEntityMapProvider(ormProviderType, entityMapProvider = new EntityMapProvider());
         entityMapProvider.IsCanMapTo = configuration.IsCanMapTo;
-        configuration.Configure(new ModelBuilder(entityMapProvider));
+        configuration.OnModelCreating(new ModelBuilder(entityMapProvider));
         return this;
     }
 
@@ -127,27 +127,26 @@ public sealed class OrmDbFactoryBuilder
     }
     private Type GetOrmProviderType(OrmProviderType ormProviderType)
     {
-        string fileName = null;
         string strOrmProviderType = null;
         switch (ormProviderType)
         {
             case OrmProviderType.MySql:
-                fileName = "Trolley.MySqlConnector.dll";
                 strOrmProviderType = "Trolley.MySqlConnector.MySqlProvider, Trolley.MySqlConnector";
                 break;
             case OrmProviderType.PostgreSql:
-                fileName = "Trolley.PostgreSql.dll";
                 strOrmProviderType = "Trolley.PostgreSql.PostgreSqlProvider, Trolley.PostgreSql";
                 break;
             case OrmProviderType.SqlServer:
-                fileName = "Trolley.SqlServer.dll";
                 strOrmProviderType = "Trolley.SqlServer.SqlServerProvider, Trolley.SqlServer";
                 break;
         }
         var type = Type.GetType(strOrmProviderType);
-        var packageName = fileName.Replace(".dll", string.Empty);
         if (type == null)
-            throw new DllNotFoundException($"没有找到[{fileName}]文件，或是没有引入[{packageName}]nuget包");
+        {
+            var index = strOrmProviderType.IndexOf(',') + 1;
+            string packageName = strOrmProviderType.Substring(index).Trim();
+            throw new DllNotFoundException($"没有找到[{packageName}.dll]文件，或是没有引入[{packageName}]nuget包");
+        }
         return type;
     }
 }
@@ -211,7 +210,7 @@ public sealed class OrmDatabaseBuilder
             throw new ArgumentNullException(nameof(configuration));
         if (!this.dbFactory.TryGetEntityMapProvider(this.dbKey, out var entityMapProvider))
             this.dbFactory.UseEntityMapProvider(this.dbKey, entityMapProvider = new EntityMapProvider());
-        configuration.Configure(new ModelBuilder(entityMapProvider));
+        configuration.OnModelCreating(new ModelBuilder(entityMapProvider));
         this.database.UseEntityMapProvider(entityMapProvider);
         return this;
     }

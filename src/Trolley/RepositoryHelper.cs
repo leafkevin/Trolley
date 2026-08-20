@@ -24,18 +24,18 @@ public static class RepositoryHelper
 
     private static readonly ConcurrentDictionary<int, Action<IDataParameterCollection, IOrmProvider, object>> queryRawSqlCommandInitializerCache = new();
 
-    private static readonly ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>> queryByCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>> queryByIdCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>> queryByIdsCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>> existsByCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>> existsByIdCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>> existsByIdsCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>> deleteByCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>> deleteByIdCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>> deleteByIdsCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>> whereByCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>> whereByIdCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>> whereByIdsCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> queryByCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> queryByIdCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> queryByIdsCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> existsByCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> existsByIdCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> existsByIdsCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> deleteByCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> deleteByIdCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> deleteByIdsCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> whereByCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> whereByIdCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> whereByIdsCommandInitializerCache = new();
 
     private static readonly ConcurrentDictionary<int, object> createWithCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<int, object> updateWithCommandInitializerCache = new();
@@ -148,7 +148,7 @@ public static class RepositoryHelper
         }
         blockBodies.Add(Expression.Assign(fieldValueExpr, memberValueExpr));
 
-        Expression nativeDbTypeExpr = Expression.Constant(memberMapper.NativeDbType);
+        Expression nativeDbTypeExpr = Expression.Constant(memberMapper.NativeDbType, typeof(object));
         if (nativeDbTypeExpr.Type != typeof(object))
             nativeDbTypeExpr = Expression.Convert(nativeDbTypeExpr, typeof(object));
         methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), [typeof(string), typeof(object), typeof(object)]);
@@ -252,7 +252,6 @@ public static class RepositoryHelper
         else whereObjType = whereObjs.GetType();
         bool hasWhere = whereObjs != null;
 
-        var cacheKey = HashCode.Combine(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, isMultiple);
         var commandInitializerCache = commandType switch
         {
             1 => isBulk ? queryByIdsCommandInitializerCache : isUseKey ? queryByIdCommandInitializerCache : queryByCommandInitializerCache,
@@ -261,7 +260,9 @@ public static class RepositoryHelper
             4 => isBulk ? whereByIdsCommandInitializerCache : isUseKey ? whereByIdCommandInitializerCache : whereByCommandInitializerCache,
             _ => throw new NotSupportedException($"不支持的命令类型:{commandType}"),
         };
-        return commandInitializerCache.GetOrAdd(cacheKey, f =>
+        var typedCommandInitializerCache = commandInitializerCache.GetOrAdd(entityType, f => new());
+        var cacheKey = HashCode.Combine(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, isMultiple);
+        return typedCommandInitializerCache.GetOrAdd(cacheKey, f =>
         {
             string headSql = null, tailSql = null;
             var entityMapper = dbContext.EntityMapProvider.GetEntityMap(entityType);
@@ -291,17 +292,17 @@ public static class RepositoryHelper
             {
                 var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>>, DbContext, object, string>;
                 return (dbParameters, dbContext, whereObjs) =>
-                {
-                    IDictionary<string, object> dict = null;
-                    var typedWhereObjs = whereObjs as IEnumerable;
-                    foreach (var whereObj in typedWhereObjs)
-                    {
-                        dict = whereObj as IDictionary<string, object>;
-                        break;
-                    }
-                    var valueSetters = BuildBulkDictKeysValueSetters(dbContext, entityType, dict);
-                    return typedCommandInitializer.Invoke(dbParameters, valueSetters, dbContext, whereObjs);
-                };
+                 {
+                     IDictionary<string, object> dict = null;
+                     var typedWhereObjs = whereObjs as IEnumerable;
+                     foreach (var whereObj in typedWhereObjs)
+                     {
+                         dict = whereObj as IDictionary<string, object>;
+                         break;
+                     }
+                     var valueSetters = BuildBulkDictKeysValueSetters(dbContext, entityType, dict);
+                     return typedCommandInitializer.Invoke(dbParameters, valueSetters, dbContext, whereObjs);
+                 };
             }
             return commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
         });
@@ -351,7 +352,7 @@ public static class RepositoryHelper
         if (!string.IsNullOrEmpty(headSql))
         {
             string tableName = ormProvider.GetTableName(entityMapper.TableName);
-            fixedHeadSql = $"{headSql} FROM {tableName} WHERE";
+            fixedHeadSql = $"{headSql} FROM {tableName} WHERE ";
         }
         if (isInExpr) fixedHeadSql += $"{ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName)} IN (";
         if (!string.IsNullOrEmpty(fixedHeadSql))
@@ -408,6 +409,7 @@ public static class RepositoryHelper
                 isEntityType = whereObjType.IsEntityType(out _);
                 if (isEntityType) targetMemberInfos = whereObjType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                     .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToDictionary(f => f.Name.ToLower(), f => f);
+                //TODO: 需要支持非单主键场景，采用OR
                 else if (!(isUseKey && entityMapper.KeyMembers.Count == 1))
                     throw new NotSupportedException("不支持非单主键字段的业务场景");
             }

@@ -178,13 +178,14 @@ public partial class MySqlProvider : BaseOrmProvider
     public override string GetFieldName(string fieldName) => "`" + fieldName + "`";
     public override object GetNativeDbType(Type fieldType)
     {
-        if (!defaultDbTypes.TryGetValue(fieldType, out var dbType))
+        if (fieldType == null)
+            throw new ArgumentNullException(nameof(fieldType));
+        if (!defaultDbTypes.TryGetValue(fieldType.ToUnderlyingType(), out var dbType))
             throw new Exception($"类型{fieldType.FullName}没有对应的MySqlConnector.MySqlDbType映射类型");
         return dbType;
     }
     public override Type MapDefaultType(MemberMap memberMappper)
     {
-
         //bit(n)，会映射为ulong类型，bit(1)映射为bool类型
         if (memberMappper.NativeDbType is MySqlDbType nativeDbType)
         {
@@ -298,6 +299,7 @@ public partial class MySqlProvider : BaseOrmProvider
             sqlBuilder.Append($"a.TABLE_SCHEMA='{tableBuilder.Key}' AND a.TABLE_NAME IN ({tableBuilder.Value.ToString()})");
         }
         sql = string.Format(sql, sqlBuilder.ToString());
+        tableBuilders.Clear();
         var entityMappers = entityMapProvider.EntityMaps.ToList();
         var tableInfos = new List<DbTableInfo>();
         using var command = new MySqlCommand(sql, connection);
