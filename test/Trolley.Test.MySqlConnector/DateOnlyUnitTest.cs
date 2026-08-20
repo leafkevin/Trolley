@@ -1,12 +1,8 @@
 ﻿#if NET6_0_OR_GREATER
-using MySqlConnector;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Globalization;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Text;
-using Trolley.MySqlConnector;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +10,8 @@ namespace Trolley.Test.MySqlConnector;
 
 public class DateOnlyUnitTest : UnitTestBase
 {
-    private readonly ITestOutputHelper output;
     public DateOnlyUnitTest(ITestOutputHelper output)
     {
-        this.output = output;
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {

@@ -1,8 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Trolley.MySqlConnector;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,10 +8,8 @@ namespace Trolley.Test.MySqlConnector;
 
 public class UnitTest7 : UnitTestBase
 {
-    private readonly ITestOutputHelper output;
     public UnitTest7(ITestOutputHelper output)
     {
-        this.output = output;
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {

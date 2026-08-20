@@ -9,10 +9,8 @@ namespace Trolley.Test.MySqlConnector;
 
 public class WhereUnitTest : UnitTestBase
 {
-    private readonly ITestOutputHelper output;
     public WhereUnitTest(ITestOutputHelper output)
     {
-        this.output = output;
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
@@ -170,6 +168,23 @@ public class WhereUnitTest : UnitTestBase
             .Select((a, b) => "*")
             .ToSql(out _);
         Assert.Equal("SELECT * FROM `sys_order` a,`sys_user` b WHERE (a.`BuyerId`=b.`Id` OR b.`SourceType`='Douyin') AND (a.`BuyerSource`='Taobao' OR (a.`SellerId` IS NULL AND a.`ProductCount` IS NULL) OR a.`ProductCount`>1 OR (a.`TotalAmount`>500 AND a.`BuyerSource`='Website')) AND ((a.`BuyerId`<=10 AND a.`ProductCount`>5 AND b.`SourceType`='Douyin') OR (a.`BuyerId`>10 AND a.`ProductCount`<=5 AND b.`SourceType`='Website') OR a.`BuyerSource`='Taobao') AND a.`IsEnabled`=1 AND a.`BuyerId`=b.`Id` AND (a.`Products` IS NULL OR a.`Disputes` IS NULL)", sql);
+    }
+    public void SqlWhere_Predicate()
+    {
+        var repository = this.dbFactory.Create();
+        var filterExpr = Sql.Where<Order, User>()
+            .And((x, y) => x.BuyerId <= 10 && x.ProductCount > 5 && y.SourceType == UserSourceType.Douyin)
+            .Or((x, y) => x.BuyerId > 10 && x.ProductCount <= 5 && y.SourceType == UserSourceType.Website)
+            .Or((x, y) => x.BuyerSource == UserSourceType.Taobao)
+            .Build();
+        var sql = repository.From<Order, User>()
+            .Where((a, b) => a.BuyerId == b.Id || b.SourceType == UserSourceType.Douyin)
+            .And(true, (a, b) => (a.BuyerSource == UserSourceType.Taobao || a.SellerId.IsNull() && !a.ProductCount.HasValue) || a.ProductCount > 1 || a.TotalAmount > 500 && a.BuyerSource == UserSourceType.Website)
+            .And(true, filterExpr)
+            .And(true, (a, b) => a.Products == null || a.Disputes == null)
+            .Select((a, b) => "*")
+        .ToSql(out _);
+        Assert.Equal("SELECT * FROM `sys_order` a,`sys_user` b WHERE (a.`BuyerId`=b.`Id` OR b.`SourceType`='Douyin') AND (a.`BuyerSource`='Taobao' OR (a.`SellerId` IS NULL AND a.`ProductCount` IS NULL) OR a.`ProductCount`>1 OR (a.`TotalAmount`>500 AND a.`BuyerSource`='Website')) AND ((a.`BuyerId`<=10 AND a.`ProductCount`>5 AND b.`SourceType`='Douyin') OR (a.`BuyerId`>10 AND a.`ProductCount`<=5 AND b.`SourceType`='Website') OR a.`BuyerSource`='Taobao') AND (a.`Products` IS NULL OR a.`Disputes` IS NULL)", sql);
     }
     [Fact]
     public void Where()

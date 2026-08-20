@@ -3,9 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Trolley.MySqlConnector;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +11,8 @@ namespace Trolley.Test.MySqlConnector;
 
 public class MethodCallUnitTest : UnitTestBase
 {
-    private readonly ITestOutputHelper output;
     public MethodCallUnitTest(ITestOutputHelper output)
     {
-        this.output = output;
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {

@@ -9,10 +9,8 @@ namespace Trolley.Test.MySqlConnector;
 
 public class DateTimeUnitTest : UnitTestBase
 {
-    private readonly ITestOutputHelper output;
     public DateTimeUnitTest(ITestOutputHelper output)
     {
-        this.output = output;
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {

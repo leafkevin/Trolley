@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
@@ -10,10 +9,8 @@ namespace Trolley.Test.MySqlConnector;
 
 public class UnitTest5 : UnitTestBase
 {
-    private readonly ITestOutputHelper output;
     public UnitTest5(ITestOutputHelper output)
     {
-        this.output = output;
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
@@ -124,5 +121,5 @@ public class UnitTest5 : UnitTestBase
         Assert.Equal("1", orderInfo.Id);
         Assert.Equal("1", groupedOrderInfo.Id);
         Assert.Equal("1", groupedOrderInfo.Grouping.OrderId);
-    } 
+    }
 }

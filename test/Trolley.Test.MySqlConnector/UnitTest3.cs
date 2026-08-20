@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 using Trolley.MySqlConnector;
 using Xunit;
@@ -13,10 +12,8 @@ namespace Trolley.Test.MySqlConnector;
 
 public class UnitTest3 : UnitTestBase
 {
-    private readonly ITestOutputHelper output;
     public UnitTest3(ITestOutputHelper output)
     {
-        this.output = output;
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
@@ -1285,7 +1282,7 @@ public class UnitTest3 : UnitTestBase
         var user = new User { Gender = Gender.Female };
         var sql3 = repository.Update<User>()
             .Set(new { user.Gender })
-            .Set(f => f.Age, 20)            
+            .Set(f => f.Age, 20)
             .WhereBy(new { Id = 1 })
             .ToSql(out var parameters3);
         Assert.Equal("UPDATE `sys_user` SET `Age`=@Age,`Gender`=@Gender WHERE `Id`=@kId", sql3);
@@ -1296,7 +1293,7 @@ public class UnitTest3 : UnitTestBase
         int age = 20;
         var sql7 = repository.Update<User>()
             .Set(new { Gender = Gender.Male })
-            .Set(f => f.Age, age)            
+            .Set(f => f.Age, age)
             .WhereBy(new { Id = 1 })
             .ToSql(out var parameters7);
         Assert.Equal("UPDATE `sys_user` SET `Age`=@Age,`Gender`=@Gender WHERE `Id`=@kId", sql7);

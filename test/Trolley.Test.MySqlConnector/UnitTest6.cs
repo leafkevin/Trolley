@@ -13,11 +13,9 @@ namespace Trolley.Test.MySqlConnector;
 
 public class UnitTest6 : UnitTestBase
 {
-    private readonly ITestOutputHelper output;
     private int[] robinIndices = [0, 0, 0];
     public UnitTest6(ITestOutputHelper output)
     {
-        this.output = output;
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {

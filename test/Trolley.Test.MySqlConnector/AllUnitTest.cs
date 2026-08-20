@@ -16,10 +16,8 @@ namespace Trolley.Test.MySqlConnector;
 
 public class AllUnitTest : UnitTestBase
 {
-    private readonly ITestOutputHelper output;
     public AllUnitTest(ITestOutputHelper output)
     {
-        this.output = output;
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
@@ -4083,14 +4081,14 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
     {
         var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
-            .Where(f => Sql.In(f.Id, t => t.From<Order>('b')
+            .Where(f => f.Id.In(Sql.From<Order>()
                 .InnerJoin<OrderDetail>((a, b) => a.Id == b.OrderId && b.ProductId == 1)
                 .Select((x, y) => x.BuyerId)))
             .Select(f => f.Id)
             .ToSql(out _);
         Assert.Equal("SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (SELECT b.`BuyerId` FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` AND c.`ProductId`=1)", sql);
         var result = repository.From<User>()
-            .Where(f => Sql.In(f.Id, t => t.From<Order>('b')
+            .Where(f => f.Id.In(Sql.From<Order>()
                 .InnerJoin<OrderDetail>((a, b) => a.Id == b.OrderId && b.ProductId == 1)
                 .Select((x, y) => x.BuyerId)))
             .Select(f => f.Id)
@@ -4099,14 +4097,14 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
         Assert.True(result.Count > 0);
 
         sql = repository.From<User>()
-            .Where(f => Sql.In(f.Id, t => t.From<Order, OrderDetail>('b')
+            .Where(f => Sql.In(f.Id, Sql.From<Order, OrderDetail>()
                 .Where((a, b) => a.Id == b.OrderId && b.ProductId == 1)
                 .Select((x, y) => x.BuyerId)))
             .Select(f => f.Id)
             .ToSql(out _);
         Assert.Equal("SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (SELECT b.`BuyerId` FROM `sys_order` b,`sys_order_detail` c WHERE b.`Id`=c.`OrderId` AND c.`ProductId`=1)", sql);
         result = repository.From<User>()
-           .Where(f => Sql.In(f.Id, t => t.From<Order, OrderDetail>('b')
+           .Where(f => Sql.In(f.Id, Sql.From<Order, OrderDetail>()
                .Where((a, b) => a.Id == b.OrderId && b.ProductId == 1)
                .Select((x, y) => x.BuyerId)))
            .Select(f => f.Id)
@@ -4118,12 +4116,12 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
               .InnerJoin<OrderDetail>((a, b) => a.Id == b.OrderId && b.ProductId == 1)
               .Select((x, y) => x.BuyerId);
         sql = repository.From<User>()
-            .Where(f => Sql.In(f.Id, subQuery))
+            .Where(f => f.Id.In(subQuery))
             .Select(f => f.Id)
             .ToSql(out _);
         Assert.Equal("SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (SELECT b.`BuyerId` FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` AND c.`ProductId`=1)", sql);
         result = repository.From<User>()
-            .Where(f => Sql.In(f.Id, subQuery))
+            .Where(f => f.Id.In(subQuery))
             .Select(f => f.Id)
             .ToList();
         Assert.NotNull(result);
@@ -4133,12 +4131,12 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
             .Where((a, b) => a.Id == b.OrderId && b.ProductId == 1)
             .Select((x, y) => x.BuyerId);
         sql = repository.From<User>()
-           .Where(f => Sql.In(f.Id, t => subQuery))
+           .Where(f => Sql.In(f.Id, subQuery))
            .Select(f => f.Id)
            .ToSql(out _);
         Assert.Equal("SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (SELECT b.`BuyerId` FROM `sys_order` b,`sys_order_detail` c WHERE b.`Id`=c.`OrderId` AND c.`ProductId`=1)", sql);
         result = repository.From<User>()
-           .Where(f => Sql.In(f.Id, t => subQuery))
+           .Where(f => Sql.In(f.Id, subQuery))
            .Select(f => f.Id)
            .ToList();
         Assert.NotNull(result);
@@ -4150,7 +4148,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
         var repository = this.dbFactory.Create();
         bool? isMale = true;
         var sql = repository.From<User>()
-            .Where(f => Sql.In(f.Id, t => t.From<Order>('b')
+            .Where(f => Sql.In(f.Id, Sql.From<Order>()
                 .InnerJoin<OrderDetail>((a, b) => a.Id == b.OrderId && b.ProductId == 1)
                 .Select((x, y) => x.BuyerId)))
             .And(isMale.HasValue, f => Sql.Exists<Order, Company>((x, y) => f.Id == x.SellerId && f.CompanyId == y.Id))
@@ -4158,7 +4156,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
             .ToSql(out _);
         Assert.Equal("SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (SELECT b.`BuyerId` FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` AND c.`ProductId`=1) AND EXISTS(SELECT * FROM `sys_order` x,`sys_company` y WHERE a.`Id`=x.`SellerId` AND a.`CompanyId`=y.`Id`)", sql);
         var result = repository.From<User>()
-            .Where(f => Sql.In(f.Id, t => t.From<Order>('b')
+            .Where(f => Sql.In(f.Id, Sql.From<Order>()
                 .InnerJoin<OrderDetail>((a, b) => a.Id == b.OrderId && b.ProductId == 1)
                 .Select((x, y) => x.BuyerId)))
             .And(isMale.HasValue, f => Sql.Exists<Order, Company>((x, y) => f.Id == x.SellerId && f.CompanyId == y.Id))
@@ -4168,7 +4166,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
         Assert.True(result.Count > 0);
 
         sql = repository.From<User>()
-            .Where(f => Sql.In(f.Id, t => t.From<Order, OrderDetail>('b')
+            .Where(f => Sql.In(f.Id, Sql.From<Order, OrderDetail>()
                 .Where((a, b) => a.Id == b.OrderId && b.ProductId == 1)
                 .Select((x, y) => x.BuyerId)))
             .And(isMale.HasValue, f => Sql.Exists<Order, Company>((x, y) => f.Id == x.SellerId && f.CompanyId == y.Id))
@@ -4176,7 +4174,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
             .ToSql(out _);
         Assert.Equal("SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (SELECT b.`BuyerId` FROM `sys_order` b,`sys_order_detail` c WHERE b.`Id`=c.`OrderId` AND c.`ProductId`=1) AND EXISTS(SELECT * FROM `sys_order` x,`sys_company` y WHERE a.`Id`=x.`SellerId` AND a.`CompanyId`=y.`Id`)", sql);
         result = repository.From<User>()
-            .Where(f => Sql.In(f.Id, t => t.From<Order, OrderDetail>('b')
+            .Where(f => Sql.In(f.Id, Sql.From<Order, OrderDetail>()
                 .Where((a, b) => a.Id == b.OrderId && b.ProductId == 1)
                 .Select((x, y) => x.BuyerId)))
             .And(isMale.HasValue, f => Sql.Exists<Order, Company>((x, y) => f.Id == x.SellerId && f.CompanyId == y.Id))
@@ -4191,7 +4189,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
         var repository = this.dbFactory.Create();
         bool? isMale = true;
         var sql = repository.From<User>()
-            .Where(f => Sql.In(f.Id, t => t.From<OrderDetail>('b')
+            .Where(f => f.Id.In(Sql.From<OrderDetail>()
                 .InnerJoin<Order>((a, b) => a.OrderId == b.Id && a.ProductId == 1)
                 .Select((x, y) => y.BuyerId)))
             .And(isMale.HasValue, f => Sql.Exists<Company, Order>((x, y) => f.Id == y.SellerId && f.CompanyId == x.Id))
@@ -4201,7 +4199,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
         Assert.Equal("SELECT a.`Gender`,a.`Age`,COUNT(DISTINCT a.`CompanyId`) AS `CompanyCount`,COUNT(a.`Id`) AS `UserCount` FROM `sys_user` a WHERE a.`Id` IN (SELECT c.`BuyerId` FROM `sys_order_detail` b INNER JOIN `sys_order` c ON b.`OrderId`=c.`Id` AND b.`ProductId`=1) AND EXISTS(SELECT * FROM `sys_company` x,`sys_order` y WHERE a.`Id`=y.`SellerId` AND a.`CompanyId`=x.`Id`) GROUP BY a.`Gender`,a.`Age`", sql);
 
         var result = repository.From<User>()
-            .Where(f => Sql.In(f.Id, t => t.From<OrderDetail>('b')
+            .Where(f => f.Id.In(Sql.From<OrderDetail>()
                 .InnerJoin<Order>((a, b) => a.OrderId == b.Id && a.ProductId == 1)
                 .Select((x, y) => y.BuyerId)))
             .And(isMale.HasValue, f => Sql.Exists<Company, Order>((x, y) => f.Id == y.SellerId && f.CompanyId == x.Id))
@@ -4252,12 +4250,11 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
         this.Initialize(1);
         var repository = this.dbFactory.Create();
         var result = repository.From<User>()
-            .Where(t => Sql.Exists(f =>
-                f.From<Order, OrderDetail>('o')
-                    .Where((a, b) => a.BuyerId == t.Id && a.Id == b.OrderId)
-                    .GroupBy((a, b) => a.Id)
-                    .Having((x, a, b) => x.Count(b.Id) > 0)
-                    .Select()))
+            .Where(t => Sql.From<Order, OrderDetail>()
+                .Where((a, b) => a.BuyerId == t.Id && a.Id == b.OrderId)
+                .GroupBy((a, b) => a.Id)
+                .Having((x, a, b) => x.Count(b.Id) > 0)
+                .Exists())
             .GroupBy(f => new { f.Gender, f.CompanyId })
             .Select((x, y) => new { x.Grouping, UserTotal = x.CountDistinct(y.Id) })
             .ToList();
@@ -8805,7 +8802,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .ToSql(out _);
         Assert.Equal("SELECT * FROM `sys_order` a,`sys_user` b WHERE a.`BuyerId`=b.`Id` AND (a.`SellerId` IS NULL OR a.`ProductCount` IS NULL) AND a.`Products` IS NOT NULL AND (a.`Products` IS NULL OR a.`Disputes` IS NULL)", sql);
 
-        var filterExpr = Sql.From<Order, User>()
+        var filterExpr = Sql.Where<Order, User>()
             .And((x, y) => x.BuyerId <= 10 && x.ProductCount > 5 && y.SourceType == UserSourceType.Douyin)
             .Or((x, y) => x.BuyerId > 10 && x.ProductCount <= 5 && y.SourceType == UserSourceType.Website)
             .Or((x, y) => x.BuyerSource == UserSourceType.Taobao)
