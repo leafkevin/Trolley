@@ -586,8 +586,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
                     sqlSegment.SqlType = SqlType.OnlyField;
                     sqlSegment.MemberMapper = memberMapper;
-                    sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
-                    sqlSegment.TypeHandler = memberMapper.TypeHandler;
+                    //sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
+                    //sqlSegment.TypeHandler = memberMapper.TypeHandler;
                     sqlSegment.MemberName = memberMapper.FieldName;
                     var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
                     if (this.IsNeedTableAlias) fieldName = fromSegment.AliasName + "." + fieldName;
@@ -598,8 +598,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 {
                     var readerField = fromSegment.Fields.Find(f => f.TargetMember.Name == memberInfo.Name);
                     sqlSegment.SqlType = SqlType.OnlyField;
-                    sqlSegment.MappedTargetType = readerField.MappedTargetType;
-                    sqlSegment.TypeHandler = readerField.TypeHandler;
+                    sqlSegment.MemberMapper = readerField.MemberMapper;
+                    //sqlSegment.MappedTargetType = readerField.MappedTargetType;
+                    //sqlSegment.TypeHandler = readerField.TypeHandler;
                     sqlSegment.MemberName = readerField.MemberName;
                     sqlSegment.Value = readerField.Value;
                 }
@@ -865,8 +866,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     {
                         Expression = newExpr.Arguments[i],
                         MemberMapper = memberMapper,
-                        MappedTargetType = memberMapper.MappedTargetType,
-                        TypeHandler = memberMapper.TypeHandler
+                        //MappedTargetType = memberMapper.MappedTargetType,
+                        //TypeHandler = memberMapper.TypeHandler
                     });
                     if (sqlSegment.SqlType == SqlType.OnlyField && sqlSegment.MemberName == memberInfo.Name)
                         fieldsAction.Invoke(memberMapper);
@@ -885,8 +886,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     {
                         Expression = memberAssignment.Expression,
                         MemberMapper = memberMapper,
-                        MappedTargetType = memberMapper.MappedTargetType,
-                        TypeHandler = memberMapper.TypeHandler
+                        //MappedTargetType = memberMapper.MappedTargetType,
+                        //TypeHandler = memberMapper.TypeHandler
                     });
                     if (sqlSegment.SqlType == SqlType.OnlyField && sqlSegment.MemberName == memberAssignment.Member.Name)
                         fieldsAction.Invoke(memberMapper);

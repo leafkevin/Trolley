@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Data;
 using System.Linq.Expressions;
 using System.Text;
@@ -43,7 +42,6 @@ public class DialectProvider
         this.interceptor?.CommandCreating(connection);
         command = connection.CreateCommand();
         this.interceptor?.CommandCreated(command);
-        command.CommandType = CommandType.Text;
         command.CommandTimeout = this.options.CommandTimeout;
         command.Transaction = this.transaction;
         command.Interceptor = this.interceptor;
@@ -68,7 +66,6 @@ public class DialectProvider
                 command.Connection = connection;
             }
         }
-        command.CommandType = CommandType.Text;
         command.CommandTimeout = this.options.CommandTimeout;
         command.Transaction = this.transaction;
         command.Interceptor = this.interceptor;
@@ -88,7 +85,6 @@ public class DialectProvider
         this.interceptor?.CommandCreating(connection);
         command = connection.CreateCommand();
         this.interceptor?.CommandCreated(command);
-        command.CommandType = CommandType.Text;
         command.CommandTimeout = this.options.CommandTimeout;
         command.Transaction = this.transaction;
         command.Interceptor = this.interceptor;
@@ -113,7 +109,6 @@ public class DialectProvider
                 command.Connection = connection;
             }
         }
-        command.CommandType = CommandType.Text;
         command.CommandTimeout = this.options.CommandTimeout;
         command.Transaction = this.transaction;
         command.Interceptor = this.interceptor;
@@ -686,10 +681,7 @@ public class DialectProvider
             firstInsertObj = insertObj;
             break;
         }
-        Type insertObjType = null;
-        if (firstInsertObj is IDictionary<string, object>)
-            insertObjType = typeof(IDictionary<string, object>);
-        else insertObjType = firstInsertObj.GetType();
+        var insertObjType = firstInsertObj.GetType();
 
         string headSql = null;
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string> commandInitializer = null;
@@ -698,6 +690,7 @@ public class DialectProvider
         {
             int index = 0;
             var builder = new StringBuilder();
+            insertObjType = typeof(IDictionary<string, object>);
             var valueSetters = new List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>>();
             builder.Append($"INSERT INTO {this.ormProvider.GetTableName(entityMapper.TableName)} (");
             foreach (var key in dict.Keys)
@@ -1170,7 +1163,7 @@ public class DialectProvider
         if (whereObjs == null)
             throw new ArgumentNullException(nameof(whereObjs));
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjs, 3, isUseKey, false, isBulk);
+        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjs, 4, isUseKey, false, isBulk);
         command.CommandText = commandInitializer.Invoke(command.Parameters, this.DbContext, whereObjs);
         if (this.interceptor != null)
             command = this.interceptor.CommandInitialized(command);
@@ -1264,6 +1257,7 @@ public class DialectProvider
         this.DbContext.Connection ??= this.CreateConnection(this.database.Select());
         this.connection.Open();
         this.DbContext.Transaction = this.connection.BeginTransaction();
+        this.transaction.Interceptor = this.interceptor;
     }
     public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
@@ -1272,6 +1266,7 @@ public class DialectProvider
         this.DbContext.Connection ??= this.CreateConnection(this.database.Select());
         await this.connection.OpenAsync(cancellationToken);
         this.DbContext.Transaction = await this.connection.BeginTransactionAsync(cancellationToken);
+        this.transaction.Interceptor = this.interceptor;
     }
     public void Commit()
     {

@@ -57,7 +57,9 @@ public class DeferredExpressionVisitor : ExpressionVisitor
             {
                 FieldType = ReaderFieldType.Field,
                 ReaderType = node.Type,
-                TypeHandler = sqlSegment.TypeHandler,
+                MemberMapper = sqlSegment.MemberMapper,
+                MemberName = sqlSegment.MemberName,
+                //TypeHandler = sqlSegment.TypeHandler,
                 Value = sqlSegment.Value
             });
             var parameterExpr = node.Expression as ParameterExpression;
@@ -88,8 +90,8 @@ public class DeferredExpressionVisitor : ExpressionVisitor
 
         var result = base.VisitMethodCall(node);
         //支持IsNull、Max、Min、Sum、Avg等聚合函数的参数表达式中包含成员访问表达式的情况
-        if (isSupportMethod  && this.hasMemberAccess)
-        {           
+        if (isSupportMethod && this.hasMemberAccess)
+        {
             var sqlSegment = this.sqlVisitor.Visit(new SqlSegment { Expression = node });
             if (sqlSegment.SqlType == SqlType.ReaderField)
                 this.readerFields.Add(sqlSegment.Value as ReaderField);

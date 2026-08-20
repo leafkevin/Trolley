@@ -202,12 +202,14 @@ public class Repository : DialectProvider, IRepository
     }
     public virtual TEntity QueryFirst<TEntity>(object whereObj = null)
     {
-        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereObj, false, false);
+        var isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereObj, false, isBulk);
         return this.QuerySingle<TEntity>(isNeedClose, connection, command);
     }
     public virtual async Task<TEntity> QueryFirstAsync<TEntity>(object whereObj = null, CancellationToken cancellationToken = default)
     {
-        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereObj, false, false);
+        var isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereObj, false, isBulk);
         return await this.QuerySingleAsync<TEntity>(isNeedClose, connection, command, cancellationToken);
     }
     #endregion
@@ -258,12 +260,14 @@ public class Repository : DialectProvider, IRepository
     }
     public virtual List<TEntity> Query<TEntity>(object whereObj = null)
     {
-        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereObj, false, false);
+        var isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereObj, false, isBulk);
         return this.Query<TEntity>(isNeedClose, connection, command);
     }
     public virtual async Task<List<TEntity>> QueryAsync<TEntity>(object whereObj = null, CancellationToken cancellationToken = default)
     {
-        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereObj, false, false);
+        var isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereObj, false, isBulk);
         return await this.QueryAsync<TEntity>(isNeedClose, connection, command, cancellationToken);
     }
     #endregion
@@ -317,11 +321,15 @@ public class Repository : DialectProvider, IRepository
             queryVisitor.SelectRaw(typeof(int), "1");
             queryVisitor.Take(1);
             command.CommandText = this.BuildScalarSql(queryVisitor);
-            return this.Exists(isNeedClose, connection, command);
         }
-        var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(entityType);
-        var tableName = this.DbContext.OrmProvider.GetTableName(entityMapper.TableName);
-        command.CommandText = $"SELECT 1 FROM {tableName} LIMIT 1";
+        else
+        {
+            var entityMapper = this.entityMapProvider.GetEntityMap(entityType);
+            var tableName = this.ormProvider.GetTableName(entityMapper.TableName);
+            command.CommandText = $"SELECT 1 FROM {tableName} LIMIT 1";
+        }
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
         return this.Exists(isNeedClose, connection, command);
     }
     /// <summary>
@@ -343,11 +351,15 @@ public class Repository : DialectProvider, IRepository
             queryVisitor.SelectRaw(typeof(int), "1");
             queryVisitor.Take(1);
             command.CommandText = this.BuildScalarSql(queryVisitor);
-            return await this.ExistsAsync(isNeedClose, connection, command, cancellationToken);
         }
-        var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(entityType);
-        var tableName = this.DbContext.OrmProvider.GetTableName(entityMapper.TableName);
-        command.CommandText = $"SELECT 1 FROM {tableName} LIMIT 1";
+        else
+        {
+            var entityMapper = this.entityMapProvider.GetEntityMap(entityType);
+            var tableName = this.ormProvider.GetTableName(entityMapper.TableName);
+            command.CommandText = $"SELECT 1 FROM {tableName} LIMIT 1";
+        }
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
         return await this.ExistsAsync(isNeedClose, connection, command, cancellationToken);
     }
     #endregion

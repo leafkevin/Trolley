@@ -255,8 +255,8 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
 
                     sqlSegment.SqlType = SqlType.OnlyField;
                     sqlSegment.MemberMapper = memberMapper;
-                    sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
-                    sqlSegment.TypeHandler = memberMapper.TypeHandler;
+                    //sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
+                    //sqlSegment.TypeHandler = memberMapper.TypeHandler;
                     sqlSegment.MemberName = memberMapper.FieldName;
                     var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
                     if (this.IsNeedTableAlias) fieldName = fromSegment.AliasName + "." + fieldName;
@@ -267,8 +267,9 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                 {
                     var readerField = fromSegment.Fields.Find(f => f.TargetMember.Name == memberInfo.Name);
                     sqlSegment.SqlType = SqlType.OnlyField;
-                    sqlSegment.MappedTargetType = readerField.MappedTargetType;
-                    sqlSegment.TypeHandler = readerField.TypeHandler;
+                    sqlSegment.MemberMapper = readerField.MemberMapper;
+                    //sqlSegment.MappedTargetType = readerField.MappedTargetType;
+                    //sqlSegment.TypeHandler = readerField.TypeHandler;
                     sqlSegment.MemberName = readerField.MemberName;
                     sqlSegment.Value = readerField.Value;
                 }

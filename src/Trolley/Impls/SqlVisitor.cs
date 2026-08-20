@@ -324,12 +324,15 @@ public class SqlVisitor : ISqlVisitor
     }
     public bool TryGetTableShardingInfo(Type entityType, TableShardingUsageMode usageMode, out TableShardingInfo tableShardingInfo)
     {
-        tableShardingInfo = null;
         if (this.ShardingProvider == null)
+        {
+            tableShardingInfo = null;
             return false;
+        }
         if (this.ShardingProvider.TryGetTableSharding(entityType, out tableShardingInfo)
            && (tableShardingInfo.UsageMode == TableShardingUsageMode.Default || tableShardingInfo.UsageMode == usageMode))
             return true;
+        tableShardingInfo = null;
         return false;
     }
     public void UseUnionShardingTable() => this.ShardingTableJointMark = "UNION";
@@ -530,7 +533,11 @@ public class SqlVisitor : ISqlVisitor
                 else dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, dbFieldValue));
                 wrapSql = parameterName;
             }
-            else wrapSql = this.OrmProvider.GetQuotedValue(sqlSegment.Value.GetType(), sqlSegment.Value);
+            else
+            {
+                var targetType = sqlSegment.MemberMapper?.MemberType ?? sqlSegment.Value.GetType();
+                wrapSql = this.OrmProvider.GetQuotedValue(targetType, sqlSegment.Value);
+            }
         }
         //先处理延迟表达式操作
         if (sqlSegment.HasDeferred)
@@ -716,12 +723,10 @@ public class SqlVisitor : ISqlVisitor
 
         //单个字段访问，才会设置nativeDbType和typeHandler
         //如果是枚举类型，右边是值，左边是字段访问，且字段访问的表达式类型是枚举类型，则把右边的值当作枚举值处理
-        if (leftSegment.SqlType == SqlType.OnlyField && rightSegment.IsValue)
-        {
+        if (leftSegment.IsField && rightSegment.IsValue)
             rightSegment.MemberMapper = leftSegment.MemberMapper;
-            rightSegment.MappedTargetType = leftSegment.MappedTargetType;
-            rightSegment.TypeHandler = leftSegment.TypeHandler;
-        }
+        //rightSegment.MappedTargetType = leftSegment.MappedTargetType;
+        //rightSegment.TypeHandler = leftSegment.TypeHandler; 
 
         string leftValue = this.WrapSql(leftSegment);
         string rightValue = this.WrapSql(rightSegment);
@@ -811,7 +816,7 @@ public class SqlVisitor : ISqlVisitor
         //include表的ReaderField字段，紧跟在主表ReaderField后面
         List<ReaderField> readerFields = [readerField];
         this.AddIncludeTableReaderFields(readerField, readerFields);
-        return sqlSegment.Change(readerField, SqlType.ReaderFields);
+        return sqlSegment.Change(readerFields, SqlType.ReaderFields);
     }
     protected void AddIncludeTableReaderFields(ReaderField parent, List<ReaderField> readerFields)
     {
@@ -838,19 +843,20 @@ public class SqlVisitor : ISqlVisitor
                     this.AddIncludeTableReaderFields(readerField, readerFields);
             }
         }
-        if (this.IncludeTables != null)
-        {
-            var manyIncludedSegments = this.IncludeTables.FindAll(f => f.FromTable == parent.TableSegment);
-            if (manyIncludedSegments.Count > 0)
-            {
-                //目前，1:N关系只支持1级
-                foreach (var includedSegment in manyIncludedSegments)
-                {
-                    //更换path，方便后续Include成员赋值时，能够找到parent对象
-                    includedSegment.Path = includedSegment.Path.Replace(parent.TableSegment.Path, parent.Path);
-                }
-            }
-        }
+        //TODO: 需要注释掉，无用
+        //if (this.IncludeTables != null)
+        //{
+        //    var manyIncludedSegments = this.IncludeTables.FindAll(f => f.FromTable == parent.TableSegment);
+        //    if (manyIncludedSegments.Count > 0)
+        //    {
+        //        //目前，1:N关系只支持1级
+        //        foreach (var includedSegment in manyIncludedSegments)
+        //        {
+        //            //更换path，方便后续Include成员赋值时，能够找到parent对象
+        //            includedSegment.Path = includedSegment.Path.Replace(parent.TableSegment.Path, parent.Path);
+        //        }
+        //    }
+        //}
     }
     public virtual SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
@@ -1869,7 +1875,8 @@ public class SqlVisitor : ISqlVisitor
                     TableSegment = tableSegment,
                     ReaderType = memberMapper.MemberType,
                     MemberName = memberMapper.FieldName,
-                    TypeHandler = memberMapper.TypeHandler,
+                    MemberMapper = memberMapper,
+                    //TypeHandler = memberMapper.TypeHandler,
                     TargetMember = memberMapper.Member,
                     Value = fieldName
                 });
@@ -2468,7 +2475,7 @@ public class SqlVisitor : ISqlVisitor
     public virtual SqlSegment ToEnumString(SqlSegment sqlSegment)
     {
         //对有字段的成员访问有效
-        if (sqlSegment.MappedTargetType == typeof(string))
+        if (sqlSegment.MemberMapper?.MappedTargetType == typeof(string))
             return sqlSegment;
 
         var enumType = sqlSegment.MemberMapper.UnderlyingType;
@@ -2522,6 +2529,7 @@ public class SqlVisitor : ISqlVisitor
             {
                 case ExpressionType.Parameter:
                     parameterExpr = currentExpr as ParameterExpression;
+                    currentExpr = null;
                     break;
                 case ExpressionType.MemberAccess:
                     var parentExpr = currentExpr as MemberExpression;
@@ -2555,6 +2563,8 @@ public class SqlVisitor : ISqlVisitor
             return;
         this.isDisposed = true;
 
+        this.Connection = null;
+        this.Command = null;
         this.Tables = null;
         this.TableAliases = null;
         this.RefTableAliases = null;
@@ -2568,6 +2578,12 @@ public class SqlVisitor : ISqlVisitor
         this.DbContext = null;
 
         //应用子查询表，只删除元素，不能dispose，后续操作可能还会用到子查询
-        this.RefQueries.Clear();
+        this.CteQueryObj = null;
+        this.RefQueries = null;
+        this.UnionSql = null;
+        this.HeadRawSql = null;
+        this.TailRawSql = null;
+        this.ShardingTables = null;
+        this.ShardingTableJointMark = null;
     }
 }

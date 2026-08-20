@@ -44,17 +44,19 @@ public struct SqlSegment
     public bool IsNull { get; set; }
     public string ParameterName { get; set; }
     public TableSegment TableSegment { get; set; }
-    public Type MappedTargetType { get; set; }
+    //public Type MappedTargetType { get; set; }
     public string MemberName { get; set; }
     //where条件时候，需要用于添加参数
     public MemberMap MemberMapper { get; set; }
-    public ITypeHandler TypeHandler { get; set; }
+    //public ITypeHandler TypeHandler { get; set; }
     public MemberInfo TargetMember { get; set; }
     public List<ReaderField> Fields { get; set; }
     public bool IsRawSqlFields { get; set; }
     public bool IsConstant => this.SqlType == SqlType.Constant;
     public bool IsVariable => this.SqlType == SqlType.Variable;
+
     public bool IsValue => this.SqlType == SqlType.Constant || this.SqlType == SqlType.Variable;
+    public bool IsField => this.SqlType == SqlType.OnlyField;
     public bool HasField => this.SqlType > SqlType.Variable;
     public bool IsFixedValue => this.SqlType == SqlType.FixedValue;
     public bool HasDeferred => this.DeferredOperations != null && this.DeferredOperations.Count > 0;
@@ -133,18 +135,17 @@ public class ReaderField
     public int FieldsCount { get; set; }
     public bool IsTargetType { get; set; }
     public Expression Expression { get; set; }
+    public MemberMap MemberMapper { get; set; }
     /// <summary>
     /// 只需要在最外层select时设置
     /// </summary>
     public Type ReaderType { get; set; }
-    public Type MappedTargetType { get; set; }
+    //public Type MappedTargetType { get; set; }
     /// <summary>
     /// 成员访问时是成员名称，临时表、多分表多次包装时也是成员名称
     /// </summary>
     public string MemberName { get; set; }
-    //where条件时候，需要用于添加参数
-    public object NativeDbType { get; set; }
-    public ITypeHandler TypeHandler { get; set; }
+    //public ITypeHandler TypeHandler { get; set; }
     public MemberInfo TargetMember { get; set; }
     public bool IsDeferredFields { get; set; }
     /// <summary>

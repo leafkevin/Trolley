@@ -25,20 +25,20 @@ public static class RepositoryHelper
     private static readonly ConcurrentDictionary<int, Action<IDataParameterCollection, IOrmProvider, object>> queryRawSqlCommandInitializerCache = new();
 
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> queryByCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> queryBysCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> queryByIdCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> queryByIdsCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> existsByCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> existsBysCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> existsByIdCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> existsByIdsCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> deleteByCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> deleteBysCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> deleteByIdCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> deleteByIdsCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> whereByCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> whereByIdCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> whereByIdsCommandInitializerCache = new();
 
-    private static readonly ConcurrentDictionary<int, object> createWithCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<int, object> updateWithCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, object>> createWithCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, object>> updateWithCommandInitializerCache = new();
 
     private static readonly ConcurrentDictionary<int, Delegate> readerDeserializerGetters = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerDeserializerAsyncGetters = new();
@@ -252,14 +252,24 @@ public static class RepositoryHelper
         else whereObjType = whereObjs.GetType();
         bool hasWhere = whereObjs != null;
 
-        var commandInitializerCache = commandType switch
+        ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> commandInitializerCache = null;
+        switch (commandType)
         {
-            1 => isBulk ? queryByIdsCommandInitializerCache : isUseKey ? queryByIdCommandInitializerCache : queryByCommandInitializerCache,
-            2 => isBulk ? existsByIdsCommandInitializerCache : isUseKey ? existsByIdCommandInitializerCache : existsByCommandInitializerCache,
-            3 => isBulk ? deleteByIdsCommandInitializerCache : isUseKey ? deleteByIdCommandInitializerCache : deleteByCommandInitializerCache,
-            4 => isBulk ? whereByIdsCommandInitializerCache : isUseKey ? whereByIdCommandInitializerCache : whereByCommandInitializerCache,
-            _ => throw new NotSupportedException($"不支持的命令类型:{commandType}"),
-        };
+            case 1:
+                if (isBulk) commandInitializerCache = isUseKey ? queryByIdsCommandInitializerCache : queryBysCommandInitializerCache;
+                else commandInitializerCache = isUseKey ? queryByIdCommandInitializerCache : queryByCommandInitializerCache;
+                break;
+            case 2:
+                if (isBulk) commandInitializerCache = isUseKey ? existsByIdsCommandInitializerCache : existsBysCommandInitializerCache;
+                else commandInitializerCache = isUseKey ? existsByIdCommandInitializerCache : existsByCommandInitializerCache;
+                break;
+            case 3:
+                if (isBulk) commandInitializerCache = isUseKey ? deleteByIdsCommandInitializerCache : deleteBysCommandInitializerCache;
+                else commandInitializerCache = isUseKey ? deleteByIdCommandInitializerCache : deleteByCommandInitializerCache;
+                break;
+            default: throw new NotSupportedException($"不支持的命令类型:{commandType}");
+        }
+        ;
         var typedCommandInitializerCache = commandInitializerCache.GetOrAdd(entityType, f => new());
         var cacheKey = HashCode.Combine(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, isMultiple);
         return typedCommandInitializerCache.GetOrAdd(cacheKey, f =>
@@ -678,7 +688,8 @@ public static class RepositoryHelper
         var ignoreFieldsKey = hasIgnoreFields ? string.Join("-", ignoreFields) : "";
         var cacheKey = HashCode.Combine(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, parameterType, hasIdentity, onlyFieldsKey, ignoreFieldsKey);
         var commandInitializerCache = commandType == 1 ? createWithCommandInitializerCache : updateWithCommandInitializerCache;
-        return commandInitializerCache.GetOrAdd(cacheKey, f =>
+        var typedCommandInitializerCache = commandInitializerCache.GetOrAdd(entityType, f => new());
+        return typedCommandInitializerCache.GetOrAdd(cacheKey, f =>
         {
             var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
             var fieldBuilderExpr = Expression.Variable(typeof(StringBuilder), "fieldBuilder");
@@ -842,7 +853,8 @@ public static class RepositoryHelper
         var hasFilterFields = hasOnlyFields || hasIgnoreFields;
         var cacheKey = HashCode.Combine(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, parameterType, onlyFieldsKey, ignoreFieldsKey);
         var commandInitializerCache = commandType == 1 ? createWithCommandInitializerCache : updateWithCommandInitializerCache;
-        return commandInitializerCache.GetOrAdd(cacheKey, f =>
+        var typedCommandInitializerCache = commandInitializerCache.GetOrAdd(entityType, f => new());
+        return typedCommandInitializerCache.GetOrAdd(cacheKey, f =>
         {
             var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
             var builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
@@ -1403,7 +1415,7 @@ public static class RepositoryHelper
             var fieldType = reader.GetFieldType(0);
             var childReaderField = readerField.Fields[0];
             var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(0),
-                childReaderField.ReaderType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
+                childReaderField.ReaderType, fieldType, childReaderField.MemberMapper?.TypeHandler, blockParameters, blockBodies);
             argsExprs.Add(readerValueExpr);
 
             if (readerField.ValuesParameters.Count > 0)
@@ -1480,7 +1492,7 @@ public static class RepositoryHelper
                             {
                                 var fieldType = reader.GetFieldType(index);
                                 var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                                    readerField.ReaderType, fieldType, readerField.TypeHandler, blockParameters, blockBodies);
+                                    readerField.ReaderType, fieldType, readerField.MemberMapper?.TypeHandler, blockParameters, blockBodies);
                                 argsExprs.Add(readerValueExpr);
                                 index++;
                             }
@@ -1517,7 +1529,7 @@ public static class RepositoryHelper
                         //单个字段和RawSql单个字段场景
                         var fieldType = reader.GetFieldType(index);
                         var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                            readerField.ReaderType, fieldType, readerField.TypeHandler, blockParameters, blockBodies);
+                            readerField.ReaderType, fieldType, readerField.MemberMapper?.TypeHandler, blockParameters, blockBodies);
                         if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
                         else if (readerField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
                         index++;
@@ -1597,7 +1609,7 @@ public static class RepositoryHelper
                             var fieldType = reader.GetFieldType(index);
                             var myReaderField = readerField.Fields[i];
                             var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                                myReaderField.ReaderType, fieldType, myReaderField.TypeHandler, blockParameters, blockBodies);
+                                myReaderField.ReaderType, fieldType, myReaderField.MemberMapper?.TypeHandler, blockParameters, blockBodies);
 
                             if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
                             else if (myReaderField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(myReaderField.TargetMember, readerValueExpr));
@@ -1609,7 +1621,7 @@ public static class RepositoryHelper
                             deferredBuilds.Push(current);
                             readerBuilders.Add(readerField, current);
                         }
-                        else
+                        else if (current.Parent != null)
                         {
                             do
                             {
@@ -1646,9 +1658,9 @@ public static class RepositoryHelper
     public static Expression GetReaderValue(DbContext dbContext, ParameterExpression readerExpr, Expression indexExpr,
         Type targetType, Type fieldType, ITypeHandler typeHandler, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
     {
-        var methodInfo = typeof(ITheaDataReader).GetMethod(nameof(ITheaDataReader.GetValue), [typeof(int)]);
-        var objLocalExpr = Expression.Variable(typeof(object), $"local{blockParameters.Count}");
-        blockParameters.Add(objLocalExpr);
+        var methodInfo = typeof(IDataRecord).GetMethod(nameof(IDataRecord.GetValue), [typeof(int)]);
+        var typedLocalExpr = Expression.Variable(targetType, $"local{blockParameters.Count}");
+        blockParameters.Add(typedLocalExpr);
         var readerValueExpr = Expression.Call(readerExpr, methodInfo, indexExpr);
         //blockBodies.Add(Expression.Assign(objLocalExpr, readerValueExpr));
         Expression targetValueExpr = null;
@@ -1667,9 +1679,10 @@ public static class RepositoryHelper
             targetValueExpr = Expression.Invoke(Expression.Constant(valueGetter), readerValueExpr);
         }
         else targetValueExpr = readerValueExpr;
-        blockBodies.Add(Expression.Assign(objLocalExpr, targetValueExpr));
-        return objLocalExpr;
-        //return Expression.Convert(objLocalExpr, targetType);
+        if (targetValueExpr.Type != targetType)
+            targetValueExpr = Expression.Convert(targetValueExpr, targetType);
+        blockBodies.Add(Expression.Assign(typedLocalExpr, targetValueExpr));
+        return typedLocalExpr;
     }
     private static EntityBuildInfo NewBuildInfo(Type targetType, MemberInfo fromMember = null, EntityBuildInfo parent = null)
     {

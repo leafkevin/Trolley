@@ -24,10 +24,10 @@ public static class Extensions
         typeof(BitArray),typeof(DBNull)
     };
 
-    private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> typedValueTupleReaderDeserializerCache = new();
-    private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> typedReaderDeserializerCache = new();
-    private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, List<ReaderField>, object>> queryReaderDeserializerCache = new();
-    private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, List<ReaderField>, object>> deferredValueReaderDeserializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<ITheaDataReader, object>>> valueTupleReaderDeserializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<ITheaDataReader, object>>> simpleReaderDeserializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<ITheaDataReader, List<ReaderField>, object>>> queryReaderDeserializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<ITheaDataReader, List<ReaderField>, object>>> deferredValueReaderDeserializerCache = new();
 
     extension(OrmDbFactoryBuilder builder)
     {
@@ -273,9 +273,9 @@ public static class Extensions
             var cacheKey = GetTypeReaderKey(targetType, ormProviderType, reader);
             if (targetType.FullName.StartsWith("System.ValueTuple`"))
             {
-                if (!typedValueTupleReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
-                    typedValueTupleReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderValueTupleDeserializer(targetType, dbContext, reader));
-                return deserializer;
+                var typedValueTupleReaderDeserializerCache = valueTupleReaderDeserializerCache.GetOrAdd(targetType, f => new());
+                return typedValueTupleReaderDeserializerCache.GetOrAdd(cacheKey, f =>
+                    RepositoryHelper.CreateReaderValueTupleDeserializer(targetType, dbContext, reader));
             }
             else if (typeof(IDictionary<string, object>).IsAssignableFrom(targetType))
             {
@@ -292,9 +292,9 @@ public static class Extensions
             }
             else
             {
-                if (!typedReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
-                    typedReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderEntityDeserializer(targetType, dbContext, reader));
-                return deserializer;
+                var typedSimpleReaderDeserializerCache = simpleReaderDeserializerCache.GetOrAdd(targetType, f => new());
+                return typedSimpleReaderDeserializerCache.GetOrAdd(cacheKey, f =>
+                    RepositoryHelper.CreateReaderEntityDeserializer(targetType, dbContext, reader));
             }
         }
         public Func<ITheaDataReader, List<ReaderField>, object> GetReaderDeserializer(Type targetType, DbContext dbContext, List<ReaderField> readerFields)
@@ -306,16 +306,16 @@ public static class Extensions
                 if (readerFields.Exists(f => f.IsDeferredFields))
                 {
                     cacheKey = GetTypeReaderKey(targetType, ormProviderType, reader, readerFields);
-                    if (!deferredValueReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
-                        deferredValueReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderDeferredValueDeserializer(dbContext, reader, readerFields));
-                    return deserializer;
+                    var typedDeferredValueReaderDeserializerCache = deferredValueReaderDeserializerCache.GetOrAdd(targetType, f => new());
+                    return typedDeferredValueReaderDeserializerCache.GetOrAdd(cacheKey, f =>
+                        RepositoryHelper.CreateReaderDeferredValueDeserializer(dbContext, reader, readerFields));
                 }
                 else
                 {
                     var fieldType = reader.GetFieldType(0);
                     if (fieldType != targetType)
                     {
-                        var typeHandler = readerFields[0].TypeHandler;
+                        var typeHandler = readerFields[0].MemberMapper?.TypeHandler;
                         if (typeHandler != null)
                             return (reader, readerFields) => typeHandler.Parse(readerFields[0].ReaderType, reader.GetValue(0));
                         else
@@ -345,9 +345,9 @@ public static class Extensions
             else
             {
                 //TEntity类型与Target类型，不一定一致，可能是dynamic或是object类型，内部还是它真正的Target类型
-                if (!queryReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
-                    queryReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderEntityDeserializer(targetType, dbContext, reader, readerFields));
-                return deserializer;
+                var typedQueryReaderDeserializerCache = queryReaderDeserializerCache.GetOrAdd(targetType, f => new());
+                return typedQueryReaderDeserializerCache.GetOrAdd(cacheKey, f =>
+                    RepositoryHelper.CreateReaderEntityDeserializer(targetType, dbContext, reader, readerFields));
             }
         }
     }
@@ -477,13 +477,20 @@ public static class Extensions
     }
     public static bool TryFind(this List<MemberInfo> memberInfos, string memberName, out MemberInfo memberInfo)
     {
-        foreach (var myMemberInfo in memberInfos)
+        var myMemberInfos = memberInfos.FindAll(f => string.Equals(f.Name, memberName, StringComparison.OrdinalIgnoreCase));
+        if (myMemberInfos.Count > 1)
         {
-            if (string.Equals(myMemberInfo.Name, memberName, StringComparison.OrdinalIgnoreCase))
+            var myMemberInfo = myMemberInfos.Find(f => f.Name == memberName);
+            if (myMemberInfo != null)
             {
                 memberInfo = myMemberInfo;
                 return true;
             }
+        }
+        else if (myMemberInfos.Count > 0)
+        {
+            memberInfo = myMemberInfos[0];
+            return true;
         }
         memberInfo = null;
         return false;
@@ -497,14 +504,15 @@ public static class Extensions
         for (int i = 0; i < reader.FieldCount; i++)
         {
             hashCode.Add(reader.GetFieldType(i));
+            hashCode.Add(reader.GetName(i));
         }
         hashCode.Add(readerFields.Count);
         int index = 0;
         foreach (var readerField in readerFields)
         {
             hashCode.Add(readerField.FieldType);
-            if (readerField.FieldType == ReaderFieldType.Entity && readerField.IsTargetType)
-                hashCode.Add("TargetEntity");
+            if (readerField.FieldType == ReaderFieldType.Entity)
+                hashCode.Add(readerField.ReaderType);
             else if (readerField.FieldType == ReaderFieldType.RawSql)
                 hashCode.Add($"RawSql:{readerField.Value}");
             else if (readerField.IsDeferredFields)

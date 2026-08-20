@@ -52,6 +52,7 @@ class PostgreSqlTheaCommand : ITheaCommand
         get => this.transaction;
         set
         {
+            if (value == null) return;
             if (value is not PostgreSqlTheaTransaction theaTransaction)
                 throw new NotSupportedException("不支持的事务类型，只支持PostgreSqlTheaTransaction类型");
             this.transaction = theaTransaction;

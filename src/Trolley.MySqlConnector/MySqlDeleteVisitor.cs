@@ -33,9 +33,10 @@ public class MySqlDeleteVisitor : DeleteVisitor
                     FieldType = ReaderFieldType.Field,
                     TargetMember = memberMapper.Member,
                     ReaderType = memberMapper.MemberType,
-                    MappedTargetType = memberMapper.MappedTargetType,
-                    TypeHandler = memberMapper.TypeHandler,
-                    MemberName = memberMapper.MemberName,
+                    MemberMapper = memberMapper,
+                    MemberName = memberMapper.FieldName,
+                    //MappedTargetType = memberMapper.MappedTargetType,
+                    //TypeHandler = memberMapper.TypeHandler,
                     Value = memberMapper.FieldName
                 });
             }
@@ -74,9 +75,10 @@ public class MySqlDeleteVisitor : DeleteVisitor
                         FieldType = ReaderFieldType.Field,
                         TargetMember = memberExpr.Member,
                         ReaderType = memberExpr.Type,
-                        MappedTargetType = sqlSegment.MappedTargetType,
-                        TypeHandler = sqlSegment.TypeHandler,
-                        MemberName = memberExpr.Member.Name,
+                        MemberMapper = sqlSegment.MemberMapper,
+                        MemberName = sqlSegment.MemberMapper?.FieldName,
+                        //MappedTargetType = sqlSegment.MappedTargetType,
+                        //TypeHandler = sqlSegment.TypeHandler,
                         Value = fieldName,
                         IsNeedAlias = isNeedAlias
                     });
@@ -103,9 +105,10 @@ public class MySqlDeleteVisitor : DeleteVisitor
                         FieldType = ReaderFieldType.Field,
                         TargetMember = memberInfo,
                         ReaderType = memberInfo.GetMemberType(),
-                        MappedTargetType = sqlSegment.MappedTargetType,
-                        TypeHandler = sqlSegment.TypeHandler,
-                        MemberName = memberInfo.Name,
+                        MemberMapper = sqlSegment.MemberMapper,
+                        MemberName = sqlSegment.MemberMapper?.FieldName,
+                        //MappedTargetType = sqlSegment.MappedTargetType,
+                        //TypeHandler = sqlSegment.TypeHandler,
                         Value = fieldName,
                         IsNeedAlias = isNeedAlias
                     });
@@ -135,9 +138,10 @@ public class MySqlDeleteVisitor : DeleteVisitor
                         FieldType = ReaderFieldType.Field,
                         TargetMember = memberAssignment.Member,
                         ReaderType = memberAssignment.Member.GetMemberType(),
-                        MappedTargetType = sqlSegment.MappedTargetType,
-                        TypeHandler = sqlSegment.TypeHandler,
-                        MemberName = memberAssignment.Member.Name,
+                        MemberMapper = sqlSegment.MemberMapper,
+                        MemberName = sqlSegment.MemberMapper?.FieldName,
+                        //MappedTargetType = sqlSegment.MappedTargetType,
+                        //TypeHandler = sqlSegment.TypeHandler,
                         Value = fieldName,
                         IsNeedAlias = isNeedAlias
                     });
@@ -154,9 +158,10 @@ public class MySqlDeleteVisitor : DeleteVisitor
                         FieldType = ReaderFieldType.Field,
                         TargetMember = memberMapper.Member,
                         ReaderType = memberMapper.MemberType,
-                        MappedTargetType = memberMapper.MappedTargetType,
-                        TypeHandler = memberMapper.TypeHandler,
-                        MemberName = memberMapper.Member.Name,
+                        MemberMapper = memberMapper,
+                        MemberName = memberMapper.FieldName,
+                        //MappedTargetType = memberMapper.MappedTargetType,
+                        //TypeHandler = memberMapper.TypeHandler,
                         Value = memberMapper.FieldName
                     });
                 }

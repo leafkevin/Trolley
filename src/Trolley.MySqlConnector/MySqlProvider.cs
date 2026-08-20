@@ -458,9 +458,10 @@ public partial class MySqlProvider : BaseOrmProvider
                         {
                             SqlType = SqlType.MethodCall,
                             MemberMapper = memberMapper,
-                            TargetMember = memberMapper.Member,
-                            MappedTargetType = memberMapper.MappedTargetType,
-                            TypeHandler = memberMapper.TypeHandler,
+                            TargetMember = memberMapper.Member, 
+                            MemberName = memberMapper.FieldName,
+                            //MappedTargetType = memberMapper.MappedTargetType,
+                            //TypeHandler = memberMapper.TypeHandler,
                             Value = fieldName
                         };
                     });

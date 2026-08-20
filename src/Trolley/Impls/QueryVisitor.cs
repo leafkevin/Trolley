@@ -831,6 +831,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual bool BuildIncludeSql(Type targetType, object target, bool isMultiResult, out string sql)
     {
         sql = null;
+        if (this.IncludeTables == null) return false;
+
         if (target == null) return false;
         ICollection targets = null;
         if (isMultiResult)
@@ -839,7 +841,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             if (targets.Count == 0)
                 return false;
         }
-        if (this.IncludeTables == null) return false;
 
         Action<StringBuilder, Action<StringBuilder, IOrmProvider, object>> sqlBuilderInitializer = null;
         if (isMultiResult)
@@ -1428,8 +1429,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 {
                     FieldType = ReaderFieldType.Field,
                     ReaderType = toTargetExpr.Body.Type,
-                    MappedTargetType = sqlSegment.MappedTargetType,
-                    TypeHandler = sqlSegment.TypeHandler,
+                    MemberMapper = sqlSegment.MemberMapper,
+                    //MappedTargetType = sqlSegment.MappedTargetType,
+                    //TypeHandler = sqlSegment.TypeHandler,
                     MemberName = sqlSegment.MemberName,
                     Value = sqlSegment.Value
                 }];
@@ -1536,9 +1538,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 FieldType = ReaderFieldType.Field,
                 TargetMember = memberInfo,
                 ReaderType = memberInfo.GetMemberType(),
-                NativeDbType = memberMapper.NativeDbType,
-                MappedTargetType = memberMapper.MappedTargetType,
-                TypeHandler = memberMapper.TypeHandler,
+                MemberMapper = memberMapper,
+                //MappedTargetType = memberMapper.MappedTargetType,
+                //TypeHandler = memberMapper.TypeHandler,
                 Value = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(memberMapper.FieldName)
             };
         }
@@ -1749,8 +1751,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
                         sqlSegment.SqlType = SqlType.OnlyField;
                         sqlSegment.MemberMapper = memberMapper;
-                        sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
-                        sqlSegment.TypeHandler = memberMapper.TypeHandler;
+                        //sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
+                        //sqlSegment.TypeHandler = memberMapper.TypeHandler;
                         sqlSegment.MemberName = memberMapper.MemberName;
                         sqlSegment.Value = fromSegment.AliasName + "." + fieldName;
                         sqlSegment.IsEnum = memberMapper.UnderlyingType.IsEnum;
@@ -1886,8 +1888,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         {
                             FieldType = ReaderFieldType.Field,
                             ReaderType = memberInfo.GetMemberType(),
-                            MappedTargetType = sqlSegment.MappedTargetType,
-                            TypeHandler = sqlSegment.TypeHandler,
+                            MemberMapper = sqlSegment.MemberMapper,
+                            //MappedTargetType = sqlSegment.MappedTargetType,
+                            //TypeHandler = sqlSegment.TypeHandler,
                             MemberName = sqlSegment.MemberName,
                             Value = wrapSql,
                             TargetMember = memberInfo
@@ -2212,7 +2215,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.LastIncludeSegment = null;
         this.GroupByFields = null;
         this.OrderByFields = null;
-        this.CteQueryObj = null;
 
         base.Dispose();
     }

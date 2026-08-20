@@ -52,6 +52,7 @@ class SqlServerTheaCommand : ITheaCommand
         get => this.transaction;
         set
         {
+            if (value == null) return;
             if (value is not SqlServerTheaTransaction theaTransaction)
                 throw new NotSupportedException("不支持的事务类型，只支持SqlServerTheaTransaction类型");
             this.transaction = theaTransaction;

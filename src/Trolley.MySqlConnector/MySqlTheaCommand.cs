@@ -52,6 +52,7 @@ class MySqlTheaCommand : ITheaCommand
         get => this.transaction;
         set
         {
+            if (value == null) return;
             if (value is not MySqlTheaTransaction theaTransaction)
                 throw new NotSupportedException("不支持的事务类型，只支持MySqlTheaTransaction类型");
             this.transaction = theaTransaction;
