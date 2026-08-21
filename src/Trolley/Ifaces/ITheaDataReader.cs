@@ -8,6 +8,8 @@ namespace Trolley;
 
 public interface ITheaDataReader : IDataReader, IDisposable, IAsyncDisposable
 {
+    string CommandId { get; }
+    string ReaderId { get; }
     IDataReader DbDataReader { get; }
     IDbInterceptor Interceptor { get; set; }
 

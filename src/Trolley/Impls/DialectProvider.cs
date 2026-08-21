@@ -203,11 +203,17 @@ public class DialectProvider
     }
     public (bool, ITheaConnection, ITheaCommand) CreateExistsCommand(Type entityType, object whereObjs, bool isUseKey, bool isBulk)
     {
-        if (whereObjs == null)
-            throw new ArgumentNullException(nameof(whereObjs));
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjs, 2, isUseKey, false, isBulk);
-        command.CommandText = commandInitializer.Invoke(command.Parameters, this.DbContext, whereObjs);
+        if (whereObjs == null)
+        {
+            var entityMapper = this.entityMapProvider.GetEntityMap(entityType);
+            command.CommandText = $"SELECT 1 FROM {this.ormProvider.GetTableName(entityMapper.TableName)} LIMIT 1";
+        }
+        else
+        {
+            var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjs, 2, isUseKey, false, isBulk);
+            command.CommandText = commandInitializer.Invoke(command.Parameters, this.DbContext, whereObjs);
+        }
         if (this.interceptor != null)
             command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
@@ -473,7 +479,7 @@ public class DialectProvider
 
         connection.Open();
         var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-        if (reader.Read()) result.TotalCount = reader.ToValue<int>(this.DbContext);
+        if (reader.Read()) result.TotalCount = reader.GetFieldValue<int>(0);
         result.PageNumber = visitor.PageNumber;
         result.PageSize = visitor.PageSize;
 
@@ -515,7 +521,7 @@ public class DialectProvider
         await connection.OpenAsync(cancellationToken);
         var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
-            result.TotalCount = reader.ToValue<int>(this.DbContext);
+            result.TotalCount = await reader.GetFieldValueAsync<int>(0, cancellationToken);
         result.PageNumber = visitor.PageNumber;
         result.PageSize = visitor.PageSize;
 
@@ -1163,7 +1169,7 @@ public class DialectProvider
         if (whereObjs == null)
             throw new ArgumentNullException(nameof(whereObjs));
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjs, 4, isUseKey, false, isBulk);
+        var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjs, 3, isUseKey, false, isBulk);
         command.CommandText = commandInitializer.Invoke(command.Parameters, this.DbContext, whereObjs);
         if (this.interceptor != null)
             command = this.interceptor.CommandInitialized(command);

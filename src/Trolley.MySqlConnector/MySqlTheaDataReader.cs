@@ -9,8 +9,11 @@ namespace Trolley.MySqlConnector;
 
 class MySqlTheaDataReader : ITheaDataReader
 {
+    private bool isClosed = false;
+    private bool isDisposed = false;
     private readonly MySqlDataReader reader;
 
+    public string CommandId { get; private set; }
     public string ReaderId { get; private set; }
     public int Depth => this.reader.Depth;
     public bool IsClosed => this.reader.IsClosed;
@@ -23,38 +26,59 @@ class MySqlTheaDataReader : ITheaDataReader
     public IDataReader DbDataReader => this.reader;
     public IDbInterceptor Interceptor { get; set; }
 
-    public MySqlTheaDataReader(MySqlDataReader reader)
+    public MySqlTheaDataReader(string commandId, MySqlDataReader reader)
     {
+        this.CommandId = commandId;
         this.ReaderId = Guid.NewGuid().ToString("N");
         this.reader = reader;
     }
     public void Close()
     {
+        if (this.isDisposed || this.isClosed) return;
         this.Interceptor?.DataReaderClosing(this);
         this.reader.Close();
         this.Interceptor?.DataReaderClosed(this);
+        this.CommandId = null;
+        this.ReaderId = null;
+        this.isClosed = true;
     }
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
     public async Task CloseAsync()
     {
+        if (this.isDisposed || this.isClosed) return;
         this.Interceptor?.DataReaderClosing(this);
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         await this.reader.CloseAsync();
-#else
-        await this.reader.DisposeAsync();
-#endif
         this.Interceptor?.DataReaderClosed(this);
+        this.isClosed = true;
     }
+#else
+    public Task CloseAsync()
+    {
+        if (this.isDisposed || this.isClosed) 
+            return Task.CompletedTask;
+        this.Close();
+        return Task.CompletedTask;
+    }
+#endif
     public void Dispose()
     {
+        if (this.isDisposed) return;
         this.Interceptor?.DataReaderDisposing(this);
         this.reader.Dispose();
         this.Interceptor?.DataReaderDisposed(this);
+        this.CommandId = null;
+        this.ReaderId = null;
+        this.isDisposed = true;
     }
     public async ValueTask DisposeAsync()
     {
+        if (this.isDisposed) return;
         this.Interceptor?.DataReaderDisposing(this);
         await this.reader.DisposeAsync();
         this.Interceptor?.DataReaderDisposed(this);
+        this.CommandId = null;
+        this.ReaderId = null;
+        this.isDisposed = true;
     }
     public bool Read() => this.reader.Read();
     public Task<bool> ReadAsync(CancellationToken cancellationToken = default)

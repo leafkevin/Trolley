@@ -36,6 +36,10 @@ public static class RepositoryHelper
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> deleteBysCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> deleteByIdCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> deleteByIdsCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> whereByCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> whereBysCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> whereByIdCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> whereByIdsCommandInitializerCache = new();
 
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, object>> createWithCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, object>> updateWithCommandInitializerCache = new();
@@ -149,8 +153,6 @@ public static class RepositoryHelper
         blockBodies.Add(Expression.Assign(fieldValueExpr, memberValueExpr));
 
         Expression nativeDbTypeExpr = Expression.Constant(memberMapper.NativeDbType, typeof(object));
-        if (nativeDbTypeExpr.Type != typeof(object))
-            nativeDbTypeExpr = Expression.Convert(nativeDbTypeExpr, typeof(object));
         methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), [typeof(string), typeof(object), typeof(object)]);
         var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
         methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add));
@@ -250,6 +252,8 @@ public static class RepositoryHelper
             else whereObjType = firstWhereObj.GetType();
         }
         else whereObjType = whereObjs.GetType();
+        if (!isUseKey && !isDictionary && !whereObjType.IsEntityType(out _))
+            throw new NotSupportedException("不支持的whereObjs参数类型，只支持实体类型或是多字段的Struct类型");
         bool hasWhere = whereObjs != null;
 
         ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> commandInitializerCache = null;
@@ -267,9 +271,12 @@ public static class RepositoryHelper
                 if (isBulk) commandInitializerCache = isUseKey ? deleteByIdsCommandInitializerCache : deleteBysCommandInitializerCache;
                 else commandInitializerCache = isUseKey ? deleteByIdCommandInitializerCache : deleteByCommandInitializerCache;
                 break;
+            case 4:
+                if (isBulk) commandInitializerCache = isUseKey ? whereByIdsCommandInitializerCache : whereBysCommandInitializerCache;
+                else commandInitializerCache = isUseKey ? whereByIdCommandInitializerCache : whereByCommandInitializerCache;
+                break;
             default: throw new NotSupportedException($"不支持的命令类型:{commandType}");
         }
-        ;
         var typedCommandInitializerCache = commandInitializerCache.GetOrAdd(entityType, f => new());
         var cacheKey = HashCode.Combine(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, whereObjType, isMultiple);
         return typedCommandInitializerCache.GetOrAdd(cacheKey, f =>
@@ -353,11 +360,15 @@ public static class RepositoryHelper
             valueSettersType = typeof(List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>>);
             valueSettersExpr = Expression.Parameter(valueSettersType, "valueSetters");
         }
+        var isEntityType = !isDictionary && whereObjType.IsEntityType(out _);
+        ParameterExpression typedWhereObjExpr = null;
+        if (isDictionary || isEntityType || isBulk)
+        {
+            typedWhereObjExpr = Expression.Variable(whereObjType, isDictionary ? "dict" : "typedWhereObj");
+            blockParameters.Add(typedWhereObjExpr);
+        }
 
-        var typedWhereObjExpr = Expression.Variable(whereObjType, isDictionary ? "dict" : "typedWhereObj");
-        blockParameters.Add(typedWhereObjExpr);
         //builder.Append($"{headSql} FROM {ormProvider.GetTableName(tableName)} {tailSql}");
-
         string fixedHeadSql = null;
         if (!string.IsNullOrEmpty(headSql))
         {
@@ -402,24 +413,22 @@ public static class RepositoryHelper
 
             // if (index > 0) builder.Append(jointMark);
             var greaterThanExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0));
-            var jointMark = isMultiKeys ? " OR " : ",";
+            var jointMark = isInExpr ? "," : " OR ";
             var addJointMarkExpr = Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(jointMark));
             loopBodies.Add(Expression.IfThen(greaterThanExpr, addJointMarkExpr));
             myBlockBodies = loopBodies;
         }
-        else blockBodies.Add(Expression.Assign(typedWhereObjExpr, Expression.Convert(whereObjExpr, whereObjType)));
+        else if (typedWhereObjExpr != null)
+            blockBodies.Add(Expression.Assign(typedWhereObjExpr, Expression.Convert(whereObjExpr, whereObjType)));
 
         if (isDictionary && isUseKey && !isBulk || !isDictionary)
         {
-            //实体场景或是ById字典场景
+            //实体、单值场景或是ById字典场景
             Dictionary<string, MemberInfo> targetMemberInfos = null;
-            bool isEntityType = false;
             if (!isDictionary)
             {
-                isEntityType = whereObjType.IsEntityType(out _);
                 if (isEntityType) targetMemberInfos = whereObjType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                     .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToDictionary(f => f.Name.ToLower(), f => f);
-                //TODO: 需要支持非单主键场景，采用OR
                 else if (!(isUseKey && entityMapper.KeyMembers.Count == 1))
                     throw new NotSupportedException("不支持非单主键字段的业务场景");
             }
@@ -485,11 +494,25 @@ public static class RepositoryHelper
                 myBlockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, contentExpr));
 
                 Expression fieldValueExpr = null;
-                if (isDictionary) fieldValueExpr = Expression.Property(typedWhereObjExpr, dictItemPropertyInfo, itemKeyExpr);
-                else if (isEntityType) fieldValueExpr = Expression.PropertyOrField(typedWhereObjExpr, targetMemberInfo.Name);
-                else fieldValueExpr = myWhereObjExpr;
+                Type fieldValueType = null;
+                if (isDictionary)
+                {
+                    fieldValueExpr = Expression.Property(typedWhereObjExpr, dictItemPropertyInfo, itemKeyExpr);
+                    fieldValueType = typeof(object);
+                }
+                else if (isEntityType)
+                {
+                    fieldValueExpr = Expression.PropertyOrField(typedWhereObjExpr, targetMemberInfo.Name);
+                    fieldValueType = targetMemberInfo.GetMemberType();
+                }
+                else
+                {
+                    //比较时使用数据库映射类型，赋值时使用原始包装的object类型，减少一次object拆箱装箱
+                    fieldValueExpr = myWhereObjExpr;
+                    fieldValueType = whereObjType;
+                }
 
-                AddMemberValueParameter(dbContext, dbParametersExpr, ormProviderExpr, whereObjType,
+                AddMemberValueParameter(dbContext, dbParametersExpr, ormProviderExpr, fieldValueType,
                     myParameterNameExpr, fieldValueExpr, memberMapper, blockParameters, myBlockBodies);
                 index++;
             }
@@ -497,7 +520,7 @@ public static class RepositoryHelper
         }
         else if (isBulk)
         {
-            //批量字典ByIds场景
+            //批量字典ByIds,Bys场景
             var loopIndexExpr = Expression.Variable(typeof(int), "loopIndex");
             var countExpr = Expression.Variable(typeof(int), "count");
             var myLoopBodies = new List<Expression>();

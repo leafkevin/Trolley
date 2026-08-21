@@ -146,7 +146,7 @@ class MySqlTheaCommand : ITheaCommand
         {
             this.Interceptor?.DataReaderCreating(this);
             var dbReader = this.command.ExecuteReader(behavior);
-            reader = new MySqlTheaDataReader(dbReader) { Interceptor = this.Interceptor };
+            reader = new MySqlTheaDataReader(this.CommandId, dbReader) { Interceptor = this.Interceptor };
         }
         catch (Exception ex)
         {
@@ -176,7 +176,7 @@ class MySqlTheaCommand : ITheaCommand
         {
             this.Interceptor?.DataReaderCreating(this);
             var dbReader = await this.command.ExecuteReaderAsync(behavior, cancellationToken);
-            reader = new MySqlTheaDataReader(dbReader) { Interceptor = this.Interceptor };
+            reader = new MySqlTheaDataReader(this.CommandId, dbReader) { Interceptor = this.Interceptor };
         }
         catch (Exception ex)
         {
@@ -248,6 +248,7 @@ class MySqlTheaCommand : ITheaCommand
         this.command.Dispose();
         this.Interceptor?.CommandDisposed(this);
         this.Parameters.Clear();
+        this.CommandId = null;
     }
     public async ValueTask DisposeAsync()
     {
@@ -255,6 +256,7 @@ class MySqlTheaCommand : ITheaCommand
         await this.command.DisposeAsync();
         this.Interceptor?.CommandDisposed(this);
         this.Parameters.Clear();
+        this.CommandId = null;
     }
     private bool OnExecuting(out object evtData)
     {

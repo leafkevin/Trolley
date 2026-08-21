@@ -133,8 +133,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 {
                     if (this.ReaderFields.Exists(f => f.IsGroupingField && f.FieldType == ReaderFieldType.Entity))
                         break;
-                    var readerField = this.ReaderFields.Find(f => f.Value.ToString() == groupByField.Value.ToString());
-                    if (readerField != null && groupByField != readerField)
+                    var fieldName = groupByField.Value.ToString();
+                    if (!this.TryFindReaderFieldByValue(this.ReaderFields, fieldName, out var readerField))
+                        continue;
+                    if (groupByField != readerField)
                     {
                         readerField.IsGroupingField = true;
                         groupByField.RefField = readerField;
@@ -153,8 +155,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 foreach (var orderByField in this.OrderByFields)
                 {
                     var fieldName = orderByField.Field.Value.ToString();
-                    var readerField = this.ReaderFields.Find(f => f.Value.ToString() == fieldName);
-                    if (readerField != null && orderByField.Field != readerField)
+                    if (!this.TryFindReaderFieldByValue(this.ReaderFields, fieldName, out var readerField))
+                        continue;
+                    if (orderByField.Field != readerField)
                     {
                         readerField.IsOrderingField = true;
                         orderByField.Field.RefField = readerField;
@@ -175,9 +178,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         builder.Clear();
 
         if (this.WhereBuilder != null && this.WhereBuilder.Length > 0)
-            builder.Append($" WHERE {this.WhereBuilder.ToString()}");
+            builder.Append($"WHERE {this.WhereBuilder.ToString()}");
         //有多分表还有Group By操作，每个分表语句中做Group By操作，Union All语句后，还要再做Group By操作
-        if (hasGroupBy) builder.Append($" GROUP BY {this.GroupBySql}");
+        if (hasGroupBy)
+        {
+            if (builder.Length > 0) builder.Append(' ');
+            builder.Append($"GROUP BY {this.GroupBySql}");
+        }
         //有多分表还有Group By+Having操作，每个分表语句中只做Group By操作，不做Having操作，在Union All语句后，再做Group By+Having操作
         if (!this.IsManyShardingTables && !string.IsNullOrEmpty(this.HavingSql))
             builder.Append($" HAVING {this.HavingSql}");
@@ -195,13 +202,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             foreach (var orderByField in this.OrderByFields)
             {
                 var fieldName = orderByField.Field.Value.ToString();
-                var readerField = this.ReaderFields.Find(f => f.Value.ToString() == fieldName);
+                if (!this.TryFindReaderFieldByValue(this.ReaderFields, fieldName, out var readerField))
+                    continue;
                 //OrderBy字段，优先使用SELECT字段别名
-                if (readerField != null && readerField.IsNeedAlias)
+                if (readerField.IsNeedAlias)
                     builder.Append(readerField.AliasName);
                 else builder.Append(fieldName);
             }
-            orderBy = $" ORDER BY {builder.ToString()}";
+            orderBy = $"ORDER BY {builder.ToString()}";
             //if (!this.IsManyShardingTables || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue))
             //{
             //    orderBy = $"ORDER BY {orderBy}";
@@ -229,30 +237,29 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //生成分页COUNT语句，不需要添加OrderBy语句
                 if (this.IsNeedPaging && !this.IsManyShardingTables)
                 {
-                    var fromSql = $"{tableSql}{others}";
+                    var fromSql = others.Length > 0 ? $"{tableSql} {others}" : tableSql;
                     if (!string.IsNullOrEmpty(this.GroupBySql))
-                        fromSql = $"(SELECT {selectSql} FROM {tableSql}{others}) a";
+                        fromSql = $"(SELECT {selectSql} FROM {fromSql}) a";
                     builder.Append($"SELECT COUNT(*) FROM {fromSql};");
                 }
             }
-
-            //生成查询数据语句时，需要添加OrderBy语句
-            if (!string.IsNullOrEmpty(orderBy))
-                others += orderBy;
-
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
             var pageSql = this.OrmProvider.GetPagingTemplate(offset, limit, orderBy);
             pageSql = pageSql.Replace("/**fields**/", selectSql);
             pageSql = pageSql.Replace("/**tables**/", tableSql);
-            pageSql = pageSql.Replace(" /**others**/", others);
+            pageSql = pageSql.Replace("/**others**/", others);
             builder.Append($"{pageSql}");
         }
         else
         {
+            builder.Append($"SELECT {selectSql} FROM {tableSql}");
             //生成查询数据语句时，需要添加OrderBy语句
+            if (others.Length > 0) builder.Append(' ');
             if (!string.IsNullOrEmpty(orderBy))
-                others += orderBy;
-            builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
+            {
+                builder.Append(' ');
+                builder.Append(orderBy);
+            }
         }
 
         if (this.IsManyShardingTables && (hasGroupBy || hasOrderBy || this.offset.HasValue || this.limit.HasValue))
@@ -373,8 +380,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 {
                     if (this.ReaderFields.Exists(f => f.IsGroupingField && f.FieldType == ReaderFieldType.Entity))
                         break;
-                    var readerField = this.ReaderFields.Find(f => f.Value.ToString() == groupByField.Value.ToString());
-                    if (readerField != null && groupByField != readerField)
+                    var fieldName = groupByField.Value.ToString();
+                    if (!this.TryFindReaderFieldByValue(this.ReaderFields, fieldName, out var readerField))
+                        continue;
+                    if (groupByField != readerField)
                     {
                         readerField.IsGroupingField = true;
                         groupByField.RefField = readerField;
@@ -390,8 +399,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 foreach (var orderByField in this.OrderByFields)
                 {
                     var fieldName = orderByField.Field.Value.ToString();
-                    var readerField = this.ReaderFields.Find(f => f.Value.ToString() == fieldName);
-                    if (readerField != null && orderByField.Field != readerField)
+                    if (!this.TryFindReaderFieldByValue(this.ReaderFields, fieldName, out var readerField))
+                        continue;
+                    if (orderByField.Field != readerField)
                     {
                         readerField.IsOrderingField = true;
                         orderByField.Field.RefField = readerField;
@@ -436,9 +446,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             foreach (var orderByField in this.OrderByFields)
             {
                 var fieldName = orderByField.Field.Value.ToString();
-                var readerField = this.ReaderFields.Find(f => f.Value.ToString() == fieldName);
+                if (!this.TryFindReaderFieldByValue(this.ReaderFields, fieldName, out var readerField))
+                    continue;
                 //OrderBy字段，优先使用SELECT字段别名
-                if (readerField != null && readerField.IsNeedAlias)
+                if (readerField.IsNeedAlias)
                     builder.Append(readerField.AliasName);
                 else builder.Append(fieldName);
             }
@@ -1494,7 +1505,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             foreach (var memberInfo in targetMembers)
             {
                 if (isExistsFields && existsMembers.Contains(memberInfo.Name)) continue;
-                if (this.TryFindReaderField(memberInfo, out var readerField))
+                if (this.TryFindReaderFieldByValue(memberInfo, out var readerField))
                     this.ReaderFields.Add(readerField);
             }
         }
@@ -1504,23 +1515,23 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var targetMembers = RepositoryHelper.GetMembers(targetType).FindAll(f => f.CanWrite);
             foreach (var memberInfo in targetMembers)
             {
-                if (this.TryFindReaderField(memberInfo, out var readerField))
+                if (this.TryFindReaderFieldByValue(memberInfo, out var readerField))
                     this.ReaderFields.Add(readerField);
             }
         }
         this.IsSelect = false;
     }
-    public virtual bool TryFindReaderField(MemberInfo memberInfo, out ReaderField readerField)
+    public virtual bool TryFindReaderFieldByValue(MemberInfo memberInfo, out ReaderField readerField)
     {
         foreach (var tableSegment in this.Tables)
         {
-            if (this.TryFindReaderField(tableSegment, memberInfo, out readerField))
+            if (this.TryFindReaderFieldByValue(tableSegment, memberInfo, out readerField))
                 return true;
         }
         readerField = null;
         return false;
     }
-    public virtual bool TryFindReaderField(TableSegment tableSegment, MemberInfo memberInfo, out ReaderField readerField)
+    public virtual bool TryFindReaderFieldByValue(TableSegment tableSegment, MemberInfo memberInfo, out ReaderField readerField)
     {
         readerField = null;
         if (tableSegment.Fields != null)

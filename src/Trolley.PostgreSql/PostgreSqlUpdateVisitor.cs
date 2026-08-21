@@ -163,7 +163,7 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                         builder.Append(this.OutputSql);
                     sql = builder.ToString();
                     if (this.ShardingTables != null && this.ShardingTables.Count > 0)
-                        sql = this.DbContext.BuildShardingTablesSqlByFormat(this, sql, ";");
+                        sql = this.BuildShardingTablesSqlByFormat(sql, ";");
                 }
                 break;
         }

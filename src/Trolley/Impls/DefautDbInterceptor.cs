@@ -24,12 +24,12 @@ public class DefautDbInterceptor : IDbInterceptor
     public virtual void CommandDisposing(ITheaCommand command) { }
     public virtual void CommandDisposed(ITheaCommand command) { }
 
-    public void DataReaderCreating(ITheaCommand command) { }
-    public ITheaDataReader DataReaderCreated(ITheaDataReader reader) => reader;
-    public void DataReaderClosing(ITheaDataReader reader) { }
-    public void DataReaderClosed(ITheaDataReader reader) { }
-    public void DataReaderDisposing(ITheaDataReader reader) { }
-    public void DataReaderDisposed(ITheaDataReader reader) { }
+    public virtual void DataReaderCreating(ITheaCommand command) { }
+    public virtual ITheaDataReader DataReaderCreated(ITheaDataReader reader) => reader;
+    public virtual void DataReaderClosing(ITheaDataReader reader) { }
+    public virtual void DataReaderClosed(ITheaDataReader reader) { }
+    public virtual void DataReaderDisposing(ITheaDataReader reader) { }
+    public virtual void DataReaderDisposed(ITheaDataReader reader) { }
 
     public virtual void TransactionCreating(ITheaConnection connection) { }
     public virtual ITheaTransaction TransactionCreated(ITheaTransaction transaction) => transaction;

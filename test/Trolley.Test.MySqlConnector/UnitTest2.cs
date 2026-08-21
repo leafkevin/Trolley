@@ -32,32 +32,54 @@ public class UnitTest2 : UnitTestBase
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create();
-        var result = repository.QueryFirst<User>(f => f.Id == 1);
-        Assert.NotNull(result);
-        Assert.NotNull(result.Name);
-        result = repository.QueryFirst<User>("SELECT * FROM sys_user where Id=1");
-        Assert.NotNull(result);
-        Assert.NotNull(result.Name);
-        var result1 = await repository.QueryFirstAsync<User>(f => f.Name == "leafkevin");
-        var result2 = await repository.QueryFirstAsync<User>(new { Name = "leafkevin" });
-        Assert.NotNull(result1);
-        Assert.NotNull(result2);
-        Assert.True(result1.Id == result2.Id);
-        var result3 = await repository.QueryFirstAsync<User>(new[] { new { Name = "leafkevin" }, new { Name = "cindy" } });
-        Assert.NotNull(result3);
+        var result1 = repository.QueryFirst<User>(new { Name = "leafkevin" });
+        Assert.Equal("leafkevin", result1.Name);
+        var result2 = repository.QueryFirst<User>(f => f.Id == 1);
+        Assert.Equal("leafkevin", result2.Name);
+        var result3 = repository.QueryFirst<User>("SELECT * FROM sys_user where Id=1");
         Assert.Equal("leafkevin", result3.Name);
+        var result4 = repository.QueryFirst<User>("SELECT * FROM sys_user where Id=@Id", new { Id = 1 });
+        Assert.Equal("leafkevin", result4.Name);
+        var result5 = repository.QueryFirst<User>("SELECT * FROM sys_user where Id=@Id", new List<IDbDataParameter> { new MySqlParameter("@Id", MySqlDbType.Int32) { Value = 1 } });
+        Assert.Equal("leafkevin", result5.Name);
+        var result6 = repository.QueryFirst<User>(new[] { new { Name = "leafkevin" }, new { Name = "cindy" } });
+        Assert.Equal("leafkevin", result6.Name);
+
+        result1 = await repository.QueryFirstAsync<User>(new { Name = "leafkevin" });
+        Assert.Equal("leafkevin", result1.Name);
+        result2 = await repository.QueryFirstAsync<User>(f => f.Id == 1);
+        Assert.Equal("leafkevin", result2.Name);
+        result3 = await repository.QueryFirstAsync<User>("SELECT * FROM sys_user where Id=1");
+        Assert.Equal("leafkevin", result3.Name);
+        result4 = await repository.QueryFirstAsync<User>("SELECT * FROM sys_user where Id=@Id", new { Id = 1 });
+        Assert.Equal("leafkevin", result4.Name);
+        result5 = await repository.QueryFirstAsync<User>("SELECT * FROM sys_user where Id=@Id", new List<IDbDataParameter> { new MySqlParameter("@Id", MySqlDbType.Int32) { Value = 1 } });
+        Assert.Equal("leafkevin", result5.Name);
+        result6 = await repository.QueryFirstAsync<User>(new[] { new { Name = "leafkevin" }, new { Name = "cindy" } });
+        Assert.Equal("leafkevin", result6.Name);
     }
     [Fact]
     public async Task QueryById()
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create();
-        var result = repository.QueryById<User>(1);
-        Assert.Equal("leafkevin", result.Name);
-        var user = await repository.QueryByIdAsync<User>(new { Id = 1 });
-        Assert.True(user.Name == result.Name);
-        user = await repository.QueryByIdAsync<User>(new[] { 1, 2, 3 });
-        Assert.True(user.Name == result.Name);
+        var result1 = repository.QueryById<User>(1);
+        Assert.Equal("leafkevin", result1.Name);
+        var result2 = repository.QueryById<User>(new { Id = 1 });
+        Assert.Equal("leafkevin", result2.Name);
+        var result3 = repository.QueryById<User>(new[] { 1, 2, 3 });
+        Assert.Equal("leafkevin", result3.Name);
+        var result4 = repository.QueryById<User>(new[] { new { Id = 1 }, new { Id = 2 }, new { Id = 3 } });
+        Assert.Equal("leafkevin", result4.Name);
+
+        result1 = await repository.QueryByIdAsync<User>(1);
+        Assert.Equal("leafkevin", result1.Name);
+        result2 = await repository.QueryByIdAsync<User>(new { Id = 1 });
+        Assert.Equal("leafkevin", result2.Name);
+        result3 = await repository.QueryByIdAsync<User>(new[] { 1, 2, 3 });
+        Assert.Equal("leafkevin", result3.Name);
+        result4 = await repository.QueryByIdAsync<User>(new[] { new { Id = 1 }, new { Id = 2 }, new { Id = 3 } });
+        Assert.Equal("leafkevin", result4.Name);
     }
     [Fact]
     public async Task QueryByIds()
@@ -65,35 +87,97 @@ public class UnitTest2 : UnitTestBase
         this.Initialize(1);
         var repository = this.dbFactory.Create();
         var userIds = new int[] { 1, 2, 3 };
-        var users = repository.QueryByIds<User>(userIds);
-        Assert.Equal("leafkevin", users[0].Name);
-        var userInfos = await repository.QueryByIdsAsync<User>(new[] { new { Id = 1 }, new { Id = 2 }, new { Id = 3 } });
-        Assert.True(users[0].Name == userInfos[0].Name);
+        var result1 = repository.QueryByIds<User>(userIds);
+        Assert.Equal(userIds.Length, result1.Count);
+        Assert.True(userIds[0] == result1[0].Id);
+        Assert.True(userIds[1] == result1[1].Id);
+        Assert.True(userIds[2] == result1[2].Id);
+
+        var result2 = await repository.QueryByIdsAsync<User>(new[] { new { Id = 1 }, new { Id = 2 }, new { Id = 3 } });
+        Assert.Equal(userIds.Length, result2.Count);
+        Assert.True(userIds[0] == result2[0].Id);
+        Assert.True(userIds[1] == result2[1].Id);
+        Assert.True(userIds[2] == result2[2].Id);
     }
     [Fact]
     public async Task Query()
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create();
-        var result = await repository.QueryAsync<Product>(f => f.ProductNo.Contains("PN-00"));
-        Assert.True(result.Count >= 3);
+        var result1 = repository.Query<User>(new { IsEnabled = true });
+        Assert.All(result1, f => Assert.True(f.IsEnabled));
+        var result2 = repository.Query<User>(f => f.IsEnabled);
+        Assert.All(result2, f => Assert.True(f.IsEnabled));
+        var result3 = repository.Query<User>("SELECT * FROM sys_user where IsEnabled=1");
+        Assert.All(result3, f => Assert.True(f.IsEnabled));
+        var result4 = repository.Query<User>("SELECT * FROM sys_user where IsEnabled=@IsEnabled", new { IsEnabled = true });
+        Assert.All(result4, f => Assert.True(f.IsEnabled));
+        var result5 = repository.Query<User>("SELECT * FROM sys_user where IsEnabled=@IsEnabled", new List<IDbDataParameter> { new MySqlParameter("@IsEnabled", MySqlDbType.Bool) { Value = true } });
+        Assert.All(result5, f => Assert.True(f.IsEnabled));
+        var result6 = repository.Query<User>(new[] { new { Name = "leafkevin" }, new { Name = "cindy" } });
+        Assert.Equal(2, result6.Count);
+        Assert.Equal("leafkevin", result6[0].Name);
+        Assert.Equal("cindy", result6[1].Name);
+
+        result1 = await repository.QueryAsync<User>(new { IsEnabled = true });
+        Assert.All(result1, f => Assert.True(f.IsEnabled));
+        result2 = await repository.QueryAsync<User>(f => f.IsEnabled);
+        Assert.All(result2, f => Assert.True(f.IsEnabled));
+        result3 = await repository.QueryAsync<User>("SELECT * FROM sys_user where IsEnabled=1");
+        Assert.All(result3, f => Assert.True(f.IsEnabled));
+        result4 = await repository.QueryAsync<User>("SELECT * FROM sys_user where IsEnabled=@IsEnabled", new { IsEnabled = true });
+        Assert.All(result4, f => Assert.True(f.IsEnabled));
+        result5 = await repository.QueryAsync<User>("SELECT * FROM sys_user where IsEnabled=@IsEnabled", new List<IDbDataParameter> { new MySqlParameter("@IsEnabled", MySqlDbType.Bool) { Value = true } });
+        Assert.All(result5, f => Assert.True(f.IsEnabled));
+        result6 = await repository.QueryAsync<User>(new[] { new { Name = "leafkevin" }, new { Name = "cindy" } });
+        Assert.Equal(2, result6.Count);
+        Assert.Equal("leafkevin", result6[0].Name);
+        Assert.Equal("cindy", result6[1].Name);
     }
     [Fact]
     public async Task QueryPage()
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create();
-        var result = repository.From<OrderDetail>()
-            .Where(f => f.ProductId == 1)
+        var result1 = repository.From<OrderDetail>()
+            .Where(f => f.IsEnabled)
             .OrderByDescending(f => f.CreatedAt)
-            .Page(2, 1)
+            .Page(2, 2)
             .ToPageList();
-        var count = await repository.From<OrderDetail>().Where(f => f.ProductId == 1).CountAsync();
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.Data);
-        Assert.True(result.TotalCount == count);
-        Assert.True(result.Data.Count == result.Count);
-        Assert.Equal(1, result.Count);
+        Assert.True(result1.Data.Count == result1.Count);
+        Assert.Equal(2, result1.Count);
+
+        var result2 = await repository.From<OrderDetail>()
+           .Where(f => f.IsEnabled)
+           .OrderByDescending(f => f.CreatedAt)
+           .Page(2, 2)
+           .ToPageListAsync();
+        Assert.True(result2.Data.Count == result2.Count);
+        Assert.Equal(2, result2.Count);
+
+        var count1 = repository.From<OrderDetail>().Where(f => f.IsEnabled).Count();
+        var count2 = await repository.From<OrderDetail>().Where(f => f.IsEnabled).CountAsync();
+        Assert.True(result1.TotalCount == count1);
+        Assert.True(result2.TotalCount == count1);
+        Assert.True(count1 == count2);
+
+        var result3 = repository.From<OrderDetail>()
+            .Where(f => f.IsEnabled)
+            .OrderByDescending(f => f.CreatedAt)
+            .Page(2, 2)
+            .ToList();
+        Assert.Equal(2, result3.Count);
+        Assert.Equal(result1.Data[0].Id, result3[0].Id);
+        Assert.Equal(result1.Data[1].Id, result3[1].Id);
+
+        var result4 = await repository.From<OrderDetail>()
+            .Where(f => f.IsEnabled)
+            .OrderByDescending(f => f.CreatedAt)
+            .Page(2, 2)
+            .ToListAsync();
+        Assert.Equal(2, result4.Count);
+        Assert.Equal(result2.Data[0].Id, result4[0].Id);
+        Assert.Equal(result2.Data[1].Id, result4[1].Id);
     }
     class OrderBuyerInfo
     {

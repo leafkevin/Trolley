@@ -146,7 +146,7 @@ class PostgreSqlTheaCommand : ITheaCommand
         {
             this.Interceptor?.DataReaderCreating(this);
             var dbReader = this.command.ExecuteReader(behavior);
-            reader = new PostgreSqlTheaDataReader(dbReader) { Interceptor = this.Interceptor };
+            reader = new PostgreSqlTheaDataReader(this.CommandId, dbReader) { Interceptor = this.Interceptor };
         }
         catch (Exception ex)
         {
@@ -176,7 +176,7 @@ class PostgreSqlTheaCommand : ITheaCommand
         {
             this.Interceptor?.DataReaderCreating(this);
             var dbReader = await this.command.ExecuteReaderAsync(behavior, cancellationToken);
-            reader = new PostgreSqlTheaDataReader(dbReader) { Interceptor = this.Interceptor };
+            reader = new PostgreSqlTheaDataReader(this.CommandId, dbReader) { Interceptor = this.Interceptor };
         }
         catch (Exception ex)
         {
@@ -248,6 +248,7 @@ class PostgreSqlTheaCommand : ITheaCommand
         this.command.Dispose();
         this.Interceptor?.CommandDisposed(this);
         this.Parameters.Clear();
+        this.CommandId = null;
     }
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
     public async ValueTask DisposeAsync()
@@ -256,6 +257,7 @@ class PostgreSqlTheaCommand : ITheaCommand
         await this.command.DisposeAsync();
         this.Interceptor?.CommandDisposed(this);
         this.Parameters.Clear();
+        this.CommandId = null;
     }
 #else
     public ValueTask DisposeAsync()
@@ -264,6 +266,7 @@ class PostgreSqlTheaCommand : ITheaCommand
         this.command.Dispose();
         this.Interceptor?.CommandDisposed(this);
         this.Parameters.Clear();
+        this.CommandId = null;
         return default;
     }
 #endif

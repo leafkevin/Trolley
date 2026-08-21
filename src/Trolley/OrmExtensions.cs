@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,15 +12,15 @@ public static class OrmExtensions
     {
         #region QueryFirst
         /// <summary>
-        /// 查询TEntity实体表满足表达式wherePredicate条件的第一条记录，条件表达式wherePredicate可以为null，为null时，查询所有记录的第一条
+        /// 查询TEntity实体表满足表达式wherePredicate条件的第一条记录，条件表达式wherePredicate不可为null
         /// </summary>
         /// <typeparam name="TEntity">实体类型</typeparam>
         /// <param name="wherePredicate">条件表达式</param>
         /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
-        public TEntity QueryFirst<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null)
+        public TEntity QueryFirst<TEntity>(Expression<Func<TEntity, bool>> wherePredicate)
             => repository.From<TEntity>().Where(wherePredicate).First();
         /// <summary>
-        /// 查询TEntity实体表满足表达式wherePredicate条件的第一条记录，条件表达式wherePredicate可以为null，为null时，查询所有记录的第一条
+        /// 查询TEntity实体表满足表达式wherePredicate条件的第一条记录，条件表达式wherePredicate不可为null
         /// </summary>
         /// <typeparam name="TEntity">实体类型</typeparam>
         /// <param name="wherePredicate">条件表达式</param>
@@ -33,7 +32,7 @@ public static class OrmExtensions
 
         #region Query
         /// <summary>
-        /// 查询TEntity实体表满足表达式wherePredicate条件的所有记录，条件表达式wherePredicate可以为null，为null时，查询所有记录
+        /// 查询TEntity实体表满足表达式wherePredicate条件的所有记录，条件表达式wherePredicate不可为null，记录不存在时返回没有任何元素的空列表
         /// </summary>
         /// <typeparam name="TEntity">实体类型</typeparam>
         /// <param name="wherePredicate">条件表达式</param>
@@ -41,7 +40,7 @@ public static class OrmExtensions
         public List<TEntity> Query<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null)
             => repository.From<TEntity>().Where(wherePredicate).ToList();
         /// <summary>
-        /// 查询TEntity实体表满足表达式wherePredicate条件的所有记录，条件表达式wherePredicate可以为null，为null时，查询所有记录，记录不存在时返回没有任何元素的空列表
+        /// 查询TEntity实体表满足表达式wherePredicate条件的所有记录，条件表达式wherePredicate不可为null，记录不存在时返回没有任何元素的空列表
         /// </summary>
         /// <typeparam name="TEntity">实体类型</typeparam>
         /// <param name="wherePredicate">条件表达式</param>

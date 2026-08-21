@@ -159,12 +159,32 @@ public class Repository : DialectProvider, IRepository
     #region QueryById
     public virtual TEntity QueryById<TEntity>(object whereKey)
     {
-        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereKey, true, false);
+        if (whereKey == null) throw new ArgumentNullException(nameof(whereKey));
+        var isBulk = whereKey is IEnumerable && whereKey is not string && whereKey is not IDictionary<string, object>;
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereKey, true, isBulk);
         return this.QuerySingle<TEntity>(isNeedClose, connection, command);
     }
     public virtual async Task<TEntity> QueryByIdAsync<TEntity>(object whereKey, CancellationToken cancellationToken = default)
     {
-        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereKey, true, false);
+        if (whereKey == null) throw new ArgumentNullException(nameof(whereKey));
+        var isBulk = whereKey is IEnumerable && whereKey is not string && whereKey is not IDictionary<string, object>;
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereKey, true, isBulk);
+        return await this.QuerySingleAsync<TEntity>(isNeedClose, connection, command, cancellationToken);
+    }
+    public virtual TEntity QueryById<TEntity>(IEnumerable whereKeys)
+    {
+        if (whereKeys == null) throw new ArgumentNullException(nameof(whereKeys));
+        var isBulk = whereKeys is not string && whereKeys is not IDictionary<string, object>;
+        if (!isBulk) throw new NotSupportedException("不支持的IEnumerable类型，类型String，IDictionary<string, object>除外");
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereKeys, true, isBulk);
+        return this.QuerySingle<TEntity>(isNeedClose, connection, command);
+    }
+    public virtual async Task<TEntity> QueryByIdAsync<TEntity>(IEnumerable whereKeys, CancellationToken cancellationToken = default)
+    {
+        if (whereKeys == null) throw new ArgumentNullException(nameof(whereKeys));
+        var isBulk = whereKeys is not string && whereKeys is not IDictionary<string, object>;
+        if (!isBulk) throw new NotSupportedException("不支持的IEnumerable类型，类型String，IDictionary<string, object>除外");
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereKeys, true, isBulk);
         return await this.QuerySingleAsync<TEntity>(isNeedClose, connection, command, cancellationToken);
     }
     #endregion
@@ -212,17 +232,39 @@ public class Repository : DialectProvider, IRepository
         (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereObj, false, isBulk);
         return await this.QuerySingleAsync<TEntity>(isNeedClose, connection, command, cancellationToken);
     }
+    public virtual TEntity QueryFirst<TEntity>(IEnumerable whereObjs)
+    {
+        if (whereObjs == null) throw new ArgumentNullException(nameof(whereObjs));
+        var isBulk = whereObjs is not string && whereObjs is not IDictionary<string, object>;
+        if (!isBulk) throw new NotSupportedException("不支持的IEnumerable类型，类型String，IDictionary<string, object>除外");
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereObjs, false, isBulk);
+        return this.QuerySingle<TEntity>(isNeedClose, connection, command);
+    }
+    public virtual async Task<TEntity> QueryFirstAsync<TEntity>(IEnumerable whereObjs, CancellationToken cancellationToken = default)
+    {
+        if (whereObjs == null) throw new ArgumentNullException(nameof(whereObjs));
+        var isBulk = whereObjs is not string && whereObjs is not IDictionary<string, object>;
+        if (!isBulk) throw new NotSupportedException("不支持的IEnumerable类型，类型String，IDictionary<string, object>除外");
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereObjs, false, isBulk);
+        return await this.QuerySingleAsync<TEntity>(isNeedClose, connection, command, cancellationToken);
+    }
     #endregion
 
     #region QueryByIds
     public virtual List<TEntity> QueryByIds<TEntity>(IEnumerable whereKeys)
     {
-        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereKeys, true, true);
+        if (whereKeys == null) throw new ArgumentNullException(nameof(whereKeys));
+        var isBulk = whereKeys is not string && whereKeys is not IDictionary<string, object>;
+        if (!isBulk) throw new NotSupportedException("不支持的IEnumerable类型，类型String，IDictionary<string, object>除外");
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereKeys, true, isBulk);
         return this.Query<TEntity>(isNeedClose, connection, command);
     }
     public virtual async Task<List<TEntity>> QueryByIdsAsync<TEntity>(IEnumerable whereKeys, CancellationToken cancellationToken = default)
     {
-        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereKeys, true, true);
+        if (whereKeys == null) throw new ArgumentNullException(nameof(whereKeys));
+        var isBulk = whereKeys is not string && whereKeys is not IDictionary<string, object>;
+        if (!isBulk) throw new NotSupportedException("不支持的IEnumerable类型，类型String，IDictionary<string, object>除外");
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereKeys, true, isBulk);
         return await this.QueryAsync<TEntity>(isNeedClose, connection, command, cancellationToken);
     }
     #endregion
@@ -270,36 +312,76 @@ public class Repository : DialectProvider, IRepository
         (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereObj, false, isBulk);
         return await this.QueryAsync<TEntity>(isNeedClose, connection, command, cancellationToken);
     }
+    public virtual List<TEntity> Query<TEntity>(IEnumerable whereObjs)
+    {
+        if (whereObjs == null) throw new ArgumentNullException(nameof(whereObjs));
+        var isBulk = whereObjs is not string && whereObjs is not IDictionary<string, object>;
+        if (!isBulk) throw new NotSupportedException("不支持的IEnumerable类型，类型String，IDictionary<string, object>除外");
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereObjs, false, isBulk);
+        return this.Query<TEntity>(isNeedClose, connection, command);
+    }
+    public virtual async Task<List<TEntity>> QueryAsync<TEntity>(IEnumerable whereObjs, CancellationToken cancellationToken = default)
+    {
+        if (whereObjs == null) throw new ArgumentNullException(nameof(whereObjs));
+        var isBulk = whereObjs is not string && whereObjs is not IDictionary<string, object>;
+        if (!isBulk) throw new NotSupportedException("不支持的IEnumerable类型，类型String，IDictionary<string, object>除外");
+        (var isNeedClose, var connection, var command) = this.CreateQueryByCommand(typeof(TEntity), whereObjs, false, isBulk);
+        return await this.QueryAsync<TEntity>(isNeedClose, connection, command, cancellationToken);
+    }
     #endregion
 
     #region Exists
-    public virtual bool ExistsBy<TEntity>(object whereObj)
+    public virtual bool Exists<TEntity>(object whereObj = null)
     {
         (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereObj, false, false);
         return this.Exists(isNeedClose, connection, command);
     }
-    public virtual async Task<bool> ExistsByAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
+    public virtual async Task<bool> ExistsAsync<TEntity>(object whereObj = null, CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereObj, false, false);
         return await this.ExistsAsync(isNeedClose, connection, command, cancellationToken);
     }
+    public virtual bool Exists<TEntity>(IEnumerable whereObjs)
+    {
+        if (whereObjs == null) throw new ArgumentNullException(nameof(whereObjs));
+        var isBulk = whereObjs is not string && whereObjs is not IDictionary<string, object>;
+        if (!isBulk) throw new NotSupportedException("不支持的IEnumerable类型，类型String，IDictionary<string, object>除外");
+        (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereObjs, false, isBulk);
+        return this.Exists(isNeedClose, connection, command);
+    }
+    public virtual async Task<bool> ExistsAsync<TEntity>(IEnumerable whereObjs, CancellationToken cancellationToken = default)
+    {
+        if (whereObjs == null) throw new ArgumentNullException(nameof(whereObjs));
+        var isBulk = whereObjs is not string && whereObjs is not IDictionary<string, object>;
+        if (!isBulk) throw new NotSupportedException("不支持的IEnumerable类型，类型String，IDictionary<string, object>除外");
+        (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereObjs, false, isBulk);
+        return await this.ExistsAsync(isNeedClose, connection, command, cancellationToken);
+    }
     public virtual bool ExistsById<TEntity>(object whereKey)
     {
+        if (whereKey == null) throw new ArgumentNullException(nameof(whereKey));
         (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereKey, true, false);
         return this.Exists(isNeedClose, connection, command);
     }
     public virtual async Task<bool> ExistsByIdAsync<TEntity>(object whereKey, CancellationToken cancellationToken = default)
     {
+        if (whereKey == null) throw new ArgumentNullException(nameof(whereKey));
         (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereKey, true, false);
         return await this.ExistsAsync(isNeedClose, connection, command, cancellationToken);
     }
     public virtual bool ExistsByIds<TEntity>(IEnumerable whereKeys)
     {
+        if (whereKeys == null) throw new ArgumentNullException(nameof(whereKeys));
+        var isBulk = whereKeys is not string && whereKeys is not IDictionary<string, object>;
+        if (!isBulk) throw new NotSupportedException("不支持的IEnumerable类型，类型String，IDictionary<string, object>除外");
         (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereKeys, true, true);
         return this.Exists(isNeedClose, connection, command);
     }
     public virtual async Task<bool> ExistsByIdsAsync<TEntity>(IEnumerable whereKeys, CancellationToken cancellationToken = default)
     {
+        if (whereKeys == null) throw new ArgumentNullException(nameof(whereKeys));
+        var isBulk = whereKeys is not string && whereKeys is not IDictionary<string, object>;
+        if (!isBulk) throw new NotSupportedException("不支持的IEnumerable类型，类型String，IDictionary<string, object>除外");
         (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereKeys, true, true);
         return await this.ExistsAsync(isNeedClose, connection, command, cancellationToken);
     }
@@ -307,10 +389,11 @@ public class Repository : DialectProvider, IRepository
     /// 判断TEntity表是否存在满足wherePredicate条件的记录，存在返回true，否则返回false，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="wherePredicate">where条件表达式，可以为null</param>
+    /// <param name="wherePredicate">where条件表达式，不可为null</param>
     /// <returns>返回是否存在</returns>
-    public bool Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null)
+    public bool Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate)
     {
+        if (wherePredicate == null) throw new ArgumentNullException(nameof(wherePredicate));
         var entityType = typeof(TEntity);
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         if (wherePredicate != null)
@@ -336,11 +419,12 @@ public class Repository : DialectProvider, IRepository
     /// 判断TEntity表是否存在满足wherePredicate条件的记录，存在返回true，否则返回false，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="wherePredicate">where条件表达式，可以为null</param>
+    /// <param name="wherePredicate">where条件表达式，不可为null</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回是否存在，布尔值</returns>
-    public async Task<bool> ExistsAsync<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null, CancellationToken cancellationToken = default)
+    public async Task<bool> ExistsAsync<TEntity>(Expression<Func<TEntity, bool>> wherePredicate, CancellationToken cancellationToken = default)
     {
+        if (wherePredicate == null) throw new ArgumentNullException(nameof(wherePredicate));
         var entityType = typeof(TEntity);
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         if (wherePredicate != null)

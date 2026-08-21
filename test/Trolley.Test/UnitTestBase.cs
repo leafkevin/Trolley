@@ -19,7 +19,7 @@ public class UnitTestBase
     {
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
-        repository.DeleteByIds<User>(new[] { 1, 2 });
+        repository.DeleteByIds<User>(new[] { 1, 2, 3 });
         repository.Create<User>(new[]
         {
             new User
@@ -27,7 +27,7 @@ public class UnitTestBase
                 Id = 1,
                 TenantId = "1",
                 Name = "leafkevin",
-                Age = 25,
+                Age = 24,
                 CompanyId = 1,
                 Gender = Gender.Male,
                 GuidField = Guid.NewGuid(),
@@ -48,9 +48,30 @@ public class UnitTestBase
                 Id = 2,
                 TenantId = "2",
                 Name = "cindy",
-                Age = 21,
+                Age = 20,
                 CompanyId = 2,
-                Gender = Gender.Male,
+                Gender = Gender.Female,
+                GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(5730),
+#endif
+                SourceType = UserSourceType.Taobao,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            },
+            new User
+            {
+                Id = 3,
+                TenantId = "3",
+                Name = "xiyuan",
+                Age = 17,
+                CompanyId = 3,
+                Gender = Gender.Female,
                 GuidField = Guid.NewGuid(),
 #if NET6_0_OR_GREATER
                 SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),

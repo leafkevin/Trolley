@@ -45,7 +45,7 @@ public static class Extensions
     public static string ToMySqlParametersString(this IDataParameterCollection dbParameters)
     {
         if (dbParameters == null || dbParameters.Count == 0)
-            return string.Empty;
+            return "None";
         var builder = new StringBuilder();
         foreach (var parameter in dbParameters)
         {
@@ -57,7 +57,7 @@ public static class Extensions
     public static string ToPostgreSqlParametersString(this IDataParameterCollection dbParameters)
     {
         if (dbParameters == null || dbParameters.Count == 0)
-            return string.Empty;
+            return "None";
         var builder = new StringBuilder();
         foreach (var parameter in dbParameters)
         {
@@ -69,7 +69,7 @@ public static class Extensions
     public static string ToSqlServerParametersString(this IDataParameterCollection dbParameters)
     {
         if (dbParameters == null || dbParameters.Count == 0)
-            return string.Empty;
+            return "None";
         var builder = new StringBuilder();
         foreach (var parameter in dbParameters)
         {

@@ -2472,6 +2472,23 @@ public class SqlVisitor : ISqlVisitor
             }
         }
     }
+    public virtual bool TryFindReaderFieldByValue(List<ReaderField> readerFields, string fieldValue, out ReaderField readerField)
+    {
+        foreach (var myReaderField in readerFields)
+        {
+            if (myReaderField.FieldType == ReaderFieldType.Entity
+                && this.TryFindReaderFieldByValue(myReaderField.Fields, fieldValue, out readerField))
+                return true;
+
+            if (myReaderField.Value.ToString() == fieldValue)
+            {
+                readerField = myReaderField;
+                return true;
+            }
+        }
+        readerField = null;
+        return false;
+    }
     public virtual SqlSegment ToEnumString(SqlSegment sqlSegment)
     {
         //对有字段的成员访问有效
