@@ -170,6 +170,7 @@ public class ReaderField
     public bool IsNeedAlias { get; set; }
     public string AliasName { get; set; }
     public bool IsIgnore { get; set; }
+    public bool IsRefField { get; set; }
 
     public ReaderField Clone()
     {
@@ -177,7 +178,12 @@ public class ReaderField
         if (this.Fields != null && this.Fields.Count > 0)
         {
             result.Fields = new();
-            this.Fields.ForEach(f => result.Fields.Add(f.Clone()));
+            this.Fields.ForEach(f =>
+            {
+                result.Fields.Add(f);
+                //暂时标识为引用，需要克隆副本时，再克隆
+                f.IsRefField = true;
+            });
         }
         return result;
     }

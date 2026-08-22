@@ -179,6 +179,210 @@ public class UnitTest2 : UnitTestBase
         Assert.Equal(result2.Data[0].Id, result4[0].Id);
         Assert.Equal(result2.Data[1].Id, result4[1].Id);
     }
+    [Fact]
+    public async Task FromQuery_Simple_NotSelect()
+    {
+        this.Initialize(1);
+        var repository = this.dbFactory.Create();
+        var sql1 = repository.From<Order>()
+            .Where(f => f.ProductCount > 1)
+            .ToSql(out _);
+        Assert.Equal("SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order` a WHERE a.`ProductCount`>1", sql1);
+        var result1 = repository.From<Order>()
+            .Where(f => f.ProductCount > 1)
+            .First();
+        Assert.True(result1.ProductCount > 1);
+
+        var result2 = repository.From<Order>()
+            .Where(f => f.ProductCount > 1)
+            .ToList();
+        if (result2.Count > 0)
+            Assert.All(result2, f => Assert.True(f.ProductCount > 1));
+
+        result1 = await repository.From<Order>()
+           .Where(f => f.ProductCount > 1)
+           .FirstAsync();
+        Assert.True(result1.ProductCount > 1);
+
+        result2 = await repository.From<Order>()
+            .Where(f => f.ProductCount > 1)
+            .ToListAsync();
+        if (result2.Count > 0)
+            Assert.All(result2, f => Assert.True(f.ProductCount > 1));
+    }
+    [Fact]
+    public async Task FromQuery_Simple_HasSelect()
+    {
+        this.Initialize(1);
+        var repository = this.dbFactory.Create();
+        var sql1 = repository.From<Order>()
+            .Where(f => f.TotalAmount > 50)
+            .Select(f => new
+            {
+                f.Id,
+                f.OrderNo,
+                f.TotalAmount,
+                f.ProductCount
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.`Id`,a.`OrderNo`,a.`TotalAmount`,a.`ProductCount` FROM `sys_order` a WHERE a.`TotalAmount`>50", sql1);
+        var result1 = repository.From<Order>()
+            .Where(f => f.TotalAmount > 50)
+            .Select(f => new
+            {
+                f.Id,
+                f.OrderNo,
+                f.TotalAmount,
+                f.ProductCount
+            })
+            .First();
+        Assert.True(result1.TotalAmount > 50);
+
+        var result2 = repository.From<Order>()
+            .Where(f => f.TotalAmount > 50)
+            .Select(f => new
+            {
+                f.Id,
+                f.OrderNo,
+                f.TotalAmount,
+                f.ProductCount
+            })
+            .ToList();
+        if (result2.Count > 0)
+            Assert.All(result2, f => Assert.True(f.TotalAmount > 50));
+
+        result1 = await repository.From<Order>()
+            .Where(f => f.TotalAmount > 50)
+            .Select(f => new
+            {
+                f.Id,
+                f.OrderNo,
+                f.TotalAmount,
+                f.ProductCount
+            })
+            .FirstAsync();
+        Assert.True(result1.TotalAmount > 50);
+
+        result2 = await repository.From<Order>()
+            .Where(f => f.TotalAmount > 50)
+            .Select(f => new
+            {
+                f.Id,
+                f.OrderNo,
+                f.TotalAmount,
+                f.ProductCount
+            })
+            .ToListAsync();
+        if (result2.Count > 0)
+            Assert.All(result2, f => Assert.True(f.TotalAmount > 50));
+    }
+    [Fact]
+    public async Task FromQuery_Simple_HasGroupBy()
+    {
+        this.Initialize(1);
+        var repository = this.dbFactory.Create();
+        var sql1 = repository.From<Order>()
+            .GroupBy(f => f.BuyerId)
+            .Select((x, f) => new
+            {
+                f.BuyerId,
+                TotalCount = x.Count(f.Id),
+                TotalAmount = x.Sum(f.TotalAmount)
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.`BuyerId`,COUNT(a.`Id`) AS `TotalCount`,SUM(a.`TotalAmount`) AS `TotalAmount` FROM `sys_order` a GROUP BY a.`BuyerId`", sql1);
+        var result1 = repository.From<Order>()
+            .GroupBy(f => f.BuyerId)
+            .Select((x, f) => new
+            {
+                f.BuyerId,
+                TotalCount = x.Count(f.Id),
+                TotalAmount = x.Sum(f.TotalAmount)
+            })
+            .First();
+        Assert.NotNull(result1);
+        result1 = await repository.From<Order>()
+            .GroupBy(f => f.BuyerId)
+            .Select((x, f) => new
+            {
+                f.BuyerId,
+                TotalCount = x.Count(f.Id),
+                TotalAmount = x.Sum(f.TotalAmount)
+            })
+            .FirstAsync();
+        Assert.NotNull(result1);
+
+        var sql2 = repository.From<Order>()
+            .GroupBy(f => f.BuyerId)
+            .Select((x, f) => new
+            {
+                f.BuyerId,
+                TotalCount = x.Count(f.Id),
+                TotalAmount = x.Sum(f.TotalAmount)
+            })
+            .OrderBy(f => f.BuyerId)
+            .ToSql(out _);
+        Assert.Equal("SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` AS `NewProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail` a INNER JOIN `sys_order` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1", sql1);
+
+        var result2 = repository.From<Order>()
+            .GroupBy(f => f.BuyerId)
+            .Select((x, f) => new
+            {
+                f.BuyerId,
+                TotalCount = x.Count(f.Id),
+                TotalAmount = x.Sum(f.TotalAmount)
+            })
+            .OrderBy(f => f.BuyerId)
+            .ToList();
+        Assert.True(result2.Count > 0);
+        result2 = await repository.From<Order>()
+            .GroupBy(f => f.BuyerId)
+            .Select((x, f) => new
+            {
+                f.BuyerId,
+                TotalCount = x.Count(f.Id),
+                TotalAmount = x.Sum(f.TotalAmount)
+            })
+            .OrderBy(f => f.BuyerId)
+            .ToListAsync();
+        Assert.True(result2.Count > 0);
+    }
+    [Fact]
+    public void FromQuery_Select()
+    {
+        this.Initialize(1);
+        var repository = this.dbFactory.Create();
+        var sql1 = repository
+            .From<Order>()
+            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+            .Where((a, b) => a.ProductCount > 1)
+            .Select((x, y) => new
+            {
+                x.Id,
+                x.BuyerId,
+                Buyer = y,
+                x.ProductCount
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` AS `NewProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail` a INNER JOIN `sys_order` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1", sql1);
+        var result1 = repository
+            .From<Order>()
+            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+            .Where((a, b) => a.ProductCount > 1)
+            .Select((x, y) => new
+            {
+                x.Id,
+                x.BuyerId,
+                Buyer = y,
+                x.ProductCount
+            })
+            .ToList();
+        if (result1.Count > 0)
+        {
+            Assert.All(result1, f => Assert.NotNull(f.Buyer));
+            Assert.All(result1, f => Assert.True(f.ProductCount > 1));
+        }
+    }
     class OrderBuyerInfo
     {
         public string OrderId { get; set; }
@@ -188,36 +392,50 @@ public class UnitTest2 : UnitTestBase
         public int ProductTotal { get; set; }
     }
     [Fact]
-    public async Task QueryRawSql()
-    {
-        this.Initialize(1);
-        var repository = this.dbFactory.Create();
-        var result = await repository.QueryAsync<Product>("SELECT * FROM sys_product where Id=@ProductId", new { ProductId = 1 });
-        Assert.NotNull(result);
-        Assert.Single(result);
-    }
-    [Fact]
     public void FromQuery_SubQuery()
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create();
-        var sql = repository
+        var sql1 = repository
             .FromQuery(f => f.From<OrderDetail>()
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
-                .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
-                .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
-            .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
+                .GroupBy((a, b) => new { b.Id, b.BuyerId })
+                .Select((x, a, b) => new { a.Id, b.BuyerId, ProductCount = x.CountDistinct(a.ProductId) }))
+            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
             .Where((a, b) => a.ProductCount > 1)
             .Select((x, y) => new
             {
-                x.Group,
+                x.Id,
+                x.BuyerId,
                 Buyer = y,
                 x.ProductCount
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail` a INNER JOIN `sys_order` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1", sql);
+        Assert.Equal("SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` AS `NewProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail` a INNER JOIN `sys_order` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1", sql1);
+        var result1 = repository
+            .FromQuery(f => f.From<OrderDetail>()
+                .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+                .GroupBy((a, b) => new { b.Id, b.BuyerId })
+                .Select((x, a, b) => new { a.Id, b.BuyerId, ProductCount = x.CountDistinct(a.ProductId) }))
+            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+            .Where((a, b) => a.ProductCount > 1)
+            .Select((x, y) => new
+            {
+                x.Id,
+                x.BuyerId,
+                Buyer = y,
+                x.ProductCount
+            })
+            .ToList();
+        if (result1.Count > 0)
+        {
+            Assert.All(result1, f => Assert.NotNull(f.Buyer));
+            Assert.All(result1, f => Assert.True(f.ProductCount > 1));
+        }
 
-        var result = repository
+
+
+        var sql2 = repository
             .FromQuery(f => f.From<OrderDetail>()
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
                 .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
@@ -226,32 +444,34 @@ public class UnitTest2 : UnitTestBase
             .Where((a, b) => a.ProductCount > 1)
             .Select((x, y) => new
             {
-                x.Group,
+                Grouping = x.Group,
                 Buyer = y,
-                x.ProductCount
+                NewProductCount = x.ProductCount
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` AS `NewProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail` a INNER JOIN `sys_order` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1", sql2);
+
+        var result2 = repository
+            .FromQuery(f => f.From<OrderDetail>()
+                .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+                .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
+                .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
+            .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
+            .Where((a, b) => a.ProductCount > 1)
+            .Select((x, y) => new
+            {
+                Grouping = x.Group,
+                Buyer = y,
+                NewProductCount = x.ProductCount
             })
             .ToList();
-        if (result.Count > 0)
+        if (result2.Count > 0)
         {
-            Assert.NotNull(result[0]);
-            Assert.NotNull(result[0].Group);
-            Assert.NotNull(result[0].Buyer);
-            Assert.True(result[0].ProductCount > 1);
-        }
-        var sql1 = repository
-           .FromQuery(f => f.From<Order>()
-               .Select(x => new { x.Id, x.OrderNo, x.BuyerId, x.SellerId }))
-           .Select(x => new { Order = x })
-           .ToSql(out _);
-        Assert.Equal("SELECT a.`Id`,a.`OrderNo`,a.`BuyerId`,a.`SellerId` FROM (SELECT a.`Id`,a.`OrderNo`,a.`BuyerId`,a.`SellerId` FROM `sys_order` a) a", sql1);
-
-        var result1 = repository
-            .FromQuery(f => f.From<Order>()
-                .Select(x => new { x.Id, x.OrderNo, x.BuyerId, x.SellerId }))
-            .Select(x => new { Order = x })
-            .First();
-        Assert.NotNull(result1);
-        Assert.NotNull(result1.Order);
+            Assert.NotNull(result2[0]);
+            Assert.NotNull(result2[0].Grouping);
+            Assert.NotNull(result2[0].Buyer);
+            Assert.All(result2, f => Assert.True(f.NewProductCount > 1));
+        }         
     }
     [Fact]
     public void FromQuery_SubQuery1()

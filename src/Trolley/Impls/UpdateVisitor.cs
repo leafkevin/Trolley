@@ -48,7 +48,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (this.TryGetTableShardingInfo(entityType, TableShardingUsageMode.WriteOnly, out var tableShardingInfo))
             this.Tables[0].TableShardingInfo = tableShardingInfo;
     }
-    public virtual string BuildSql(ITheaCommand command, out List<ReaderField> readerFields)
+    public override string BuildSql(out List<ReaderField> readerFields)
     {
         string sql = null;
         readerFields = null;
@@ -84,10 +84,10 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         {
             case ActionMode.Bulk:
                 (shardingType, shardingTables, var updateObjs, _, var fixedSqlSetter,
-                    var loopSqlSetter, readerFields) = this.BuildSetBulk(command);
+                    var loopSqlSetter, readerFields) = this.BuildSetBulk(this.Command);
 
                 int index = 0;
-                fixedSqlSetter?.Invoke(command.Parameters);
+                fixedSqlSetter?.Invoke(this.DbParameters);
                 if (shardingType == ShardingTableType.SplitTables)
                 {
                     var tabledUpdateObjs = shardingTables as Dictionary<string, List<object>>;
@@ -96,7 +96,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         var tableParameters = tabledUpdateObjs[tableName];
                         foreach (var updateObj in tableParameters)
                         {
-                            loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, index.ToString());
+                            loopSqlSetter.Invoke(this.DbParameters, builder, this.DbContext, tableName, updateObj, index.ToString());
                             index++;
                         }
                     }
@@ -109,14 +109,14 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         {
                             case ShardingTableType.None:
                             case ShardingTableType.SingleTable:
-                                loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, shardingTables as string, updateObj, index.ToString());
+                                loopSqlSetter.Invoke(this.DbParameters, builder, this.DbContext, shardingTables as string, updateObj, index.ToString());
                                 break;
                             case ShardingTableType.MultiTable:
                             case ShardingTableType.ShardingTableMap:
                                 var tableNames = shardingTables as List<string>;
                                 foreach (var tableName in tableNames)
                                 {
-                                    loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, index.ToString());
+                                    loopSqlSetter.Invoke(this.DbParameters, builder, this.DbContext, tableName, updateObj, index.ToString());
                                 }
                                 break;
                         }
@@ -543,14 +543,16 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             //Where(f=>... f.OrderId.Value==10 && ...)
             //Select(f=>... ,f.OrderId.HasValue  ...)
             //Select(f=>... ,f.OrderId.Value==10  ...)
-            if (memberExpr.Type.IsValueType && Nullable.GetUnderlyingType(memberExpr.Type) != null)
+            if (memberInfo.DeclaringType.IsValueType && Nullable.GetUnderlyingType(memberInfo.DeclaringType) != null)
             {
                 if (memberInfo.Name == "HasValue")
                 {
                     sqlSegment.Push(DeferredOperation.IsNull);
                     sqlSegment.Push(DeferredOperation.Not);
+                    return this.Visit(sqlSegment.Next(memberExpr.Expression));
                 }
-                return this.Visit(sqlSegment.Next(memberExpr.Expression));
+                if (memberInfo.Name == "Value")
+                    return this.Visit(sqlSegment.Next(memberExpr.Expression));
             }
 
             //各种OrmProvider提供的类型实例成员访问，如：DateTime,TimeSpan,String.Length

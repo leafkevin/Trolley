@@ -204,7 +204,7 @@ public class MySqlUpdated : Updated
                     if (!this.Visitor.HasWhere)
                         throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
-                    command.CommandText = this.Visitor.BuildSql(command, out _);
+                    command.CommandText = this.Visitor.BuildSql(out _);
                     connection.Open();
                     result = command.ExecuteNonQuery();
                 }
@@ -397,7 +397,7 @@ public class MySqlUpdated : Updated
                     if (!this.Visitor.HasWhere)
                         throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
 
-                    command.CommandText = this.Visitor.BuildSql(command, out _);
+                    command.CommandText = this.Visitor.BuildSql(out _);
                     await connection.OpenAsync(cancellationToken);
                     result = await command.ExecuteNonQueryAsync(cancellationToken);
                 }
@@ -480,7 +480,7 @@ public class MySqlUpdated : Updated
         }
         else
         {
-            sql = this.Visitor.BuildSql(command, out _);
+            sql = this.Visitor.BuildSql(out _);
             dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
             command.Dispose();
             if (isNeedClose) connection.Close();

@@ -12,7 +12,6 @@ namespace Trolley;
 public class DialectProvider
 {
     protected internal string dbKey => this.DbContext.DbKey;
-    protected internal string connectionString => this.DbContext.ConnectionString;
     protected internal TheaDatabase database => this.DbContext.Database;
     protected internal ITheaConnection connection => this.DbContext.Connection;
     protected internal ITheaTransaction transaction => this.DbContext.Transaction;
@@ -36,7 +35,7 @@ public class DialectProvider
             connection = this.connection;
         else
         {
-            var connString = this.connectionString ?? this.database.Select();
+            var connString = this.database.Select();
             connection = this.CreateConnection(connString);
         }
         this.interceptor?.CommandCreating(connection);
@@ -61,7 +60,7 @@ public class DialectProvider
                 connection = command.Connection;
             else
             {
-                var connString = this.connectionString ?? this.database.Select();
+                var connString = this.database.Select();
                 connection = this.CreateConnection(connString);
                 command.Connection = connection;
             }
@@ -79,7 +78,7 @@ public class DialectProvider
             connection = this.connection;
         else
         {
-            var connString = this.connectionString ?? this.database.SelectSlave();
+            var connString = this.database.SelectSlave();
             connection = this.CreateConnection(connString);
         }
         this.interceptor?.CommandCreating(connection);
@@ -104,7 +103,7 @@ public class DialectProvider
                 connection = command.Connection;
             else
             {
-                var connString = this.connectionString ?? this.database.SelectSlave();
+                var connString = this.database.SelectSlave();
                 connection = this.CreateConnection(connString);
                 command.Connection = connection;
             }
@@ -282,7 +281,7 @@ public class DialectProvider
         (var isNeedClose, var connection, var command) = visitor.UseCommand();
         Expression<Func<TTarget, TTarget>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
-        (var sql, var readerFields) = this.BuildSql(visitor);
+        var sql = visitor.BuildSql(out var readerFields);
         command.CommandText = sql;
         if (this.interceptor != null)
             command = this.interceptor.CommandInitialized(command);
@@ -315,7 +314,7 @@ public class DialectProvider
         (var isNeedClose, var connection, var command) = visitor.UseCommand();
         Expression<Func<TTarget, TTarget>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
-        (var sql, var readerFields) = this.BuildSql(visitor);
+        var sql = visitor.BuildSql(out var readerFields);
         command.CommandText = sql;
 
         await connection.OpenAsync(cancellationToken);
@@ -375,7 +374,7 @@ public class DialectProvider
         (var isNeedClose, var connection, var command) = visitor.UseCommand();
         Expression<Func<TTarget, TTarget>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
-        (var sql, var readerFields) = this.BuildSql(visitor);
+        var sql = visitor.BuildSql(out var readerFields);
         command.CommandText = sql;
 
         connection.Open();
@@ -407,7 +406,7 @@ public class DialectProvider
         (var isNeedClose, var connection, var command) = visitor.UseCommand();
         Expression<Func<TTarget, TTarget>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
-        (var sql, var readerFields) = this.BuildSql(visitor);
+        var sql = visitor.BuildSql(out var readerFields);
         command.CommandText = sql;
 
         await connection.OpenAsync(cancellationToken);
@@ -472,7 +471,7 @@ public class DialectProvider
         Expression<Func<TTarget, TTarget>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         visitor.IsNeedPaging = true;
-        (var sql, var readerFields) = this.BuildSql(visitor);
+        var sql = visitor.BuildSql(out var readerFields);
         command.CommandText = sql;
         if (this.interceptor != null)
             command = this.interceptor.CommandInitialized(command);
@@ -513,7 +512,7 @@ public class DialectProvider
         Expression<Func<TResult, TResult>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         visitor.IsNeedPaging = true;
-        (var sql, var readerFields) = this.BuildSql(visitor);
+        var sql = visitor.BuildSql(out var readerFields);
         command.CommandText = sql;
         if (this.interceptor != null)
             command = this.interceptor.CommandInitialized(command);
@@ -572,27 +571,27 @@ public class DialectProvider
     #endregion
 
     #region Build Query Sql
-    public (string, List<ReaderField>) BuildSql(IQueryVisitor visitor)
-    {
-        var sql = visitor.BuildSql(true, out var readerFields);
-        if (visitor.IsManyShardingTables)
-        {
-            sql = visitor.BuildShardingTablesSqlByFormat(sql, visitor.ShardingTableJointMark);
-            if (visitor.IsNeedChangeUnionShardingTables)
-                sql = visitor.BuildShardingSql(sql);
-        }
-        return (sql, readerFields);
-    }
-    public string BuildScalarSql(IQueryVisitor visitor)
-    {
-        var sql = visitor.BuildSql(true, out _);
-        if (visitor.IsManyShardingTables)
-        {
-            sql = visitor.BuildShardingTablesSqlByFormat(sql, visitor.ShardingTableJointMark);
-            sql = visitor.BuildShardingScalarSql(sql);
-        }
-        return sql;
-    }
+    //public (string, List<ReaderField>) BuildSql(IQueryVisitor visitor)
+    //{
+    //    var sql = visitor.BuildSql(true, out var readerFields);
+    //    if (visitor.IsManyShardingTables)
+    //    {
+    //        sql = visitor.BuildShardingTablesSqlByFormat(sql, visitor.ShardingTableJointMark);
+    //        if (visitor.IsNeedChangeUnionShardingTables)
+    //            sql = visitor.BuildShardingSql(sql);
+    //    }
+    //    return (sql, readerFields);
+    //}
+    //public string BuildScalarSql(IQueryVisitor visitor)
+    //{
+    //    var sql = visitor.BuildSql(true, out _);
+    //    if (visitor.IsManyShardingTables)
+    //    {
+    //        sql = visitor.BuildShardingTablesSqlByFormat(sql, visitor.ShardingTableJointMark);
+    //        sql = visitor.BuildShardingScalarSql(sql);
+    //    }
+    //    return sql;
+    //}
     public string GetShardingTable(Type entityType, params object[] fieldValues)
     {
         if (fieldValues == null || fieldValues.Length == 0)
@@ -1227,7 +1226,7 @@ public class DialectProvider
     public (bool, ITheaConnection, ITheaCommand, List<ReaderField>) CreateExecuteCommand(ICommandVisitor visitor)
     {
         (var isNeedClose, var connection, var command) = visitor.UseCommand();
-        command.CommandText = visitor.BuildSql(command, out var readerFields);
+        command.CommandText = visitor.BuildSql(out var readerFields);
         if (this.interceptor != null)
             command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command, readerFields);
@@ -1310,5 +1309,5 @@ public class DialectProvider
         this.DbContext.Transaction = null;
         this.DbContext.Connection = null;
     }
-    #endregion
+    #endregion     
 }

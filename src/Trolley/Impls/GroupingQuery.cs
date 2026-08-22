@@ -3,7 +3,7 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-public class GroupingQueryBase<TGrouping> : QueryInternal, IGroupingQueryBase<TGrouping>
+public class GroupingQueryBase<TGrouping> : QueryInternal, IGroupingQuery<TGrouping>
 {
     #region Constructor
     public GroupingQueryBase(DbContext dbContext, IQueryVisitor visitor)
@@ -27,7 +27,8 @@ public class GroupingQueryBase<TGrouping> : QueryInternal, IGroupingQueryBase<TG
         this.Visitor.SelectRaw(typeof(int), "1");
         this.Visitor.Take(1);
         (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
-        command.CommandText = this.BuildScalarSql(this.Visitor);
+        this.Visitor.IsScalar = true;
+        command.CommandText = this.Visitor.BuildSql(out _);
         return this.Exists(isNeedClose, connection, command);
     }
     #endregion

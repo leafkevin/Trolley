@@ -13,7 +13,7 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
 
     public PostgreSqlUpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
         : base(entityType, dbContext, tableAsStart) { }
-    public override string BuildSql(ITheaCommand command, out List<ReaderField> readerFields)
+    public override string BuildSql(  out List<ReaderField> readerFields)
     {
         string sql = null;
         readerFields = null;
@@ -30,10 +30,10 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             case ActionMode.Bulk:
                 {
                     (shardingType, shardingTables, var updateObjs, _, var fixedSqlSetter,
-                        var loopSqlSetter, readerFields) = this.BuildSetBulk(command);
+                        var loopSqlSetter, readerFields) = this.BuildSetBulk(this.Command);
 
                     int index = 0;
-                    fixedSqlSetter?.Invoke(command.Parameters);
+                    fixedSqlSetter?.Invoke(this.Command.Parameters);
                     if (shardingType == ShardingTableType.SplitTables)
                     {
                         var tabledUpdateObjs = shardingTables as Dictionary<string, List<object>>;
@@ -42,7 +42,7 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                             var tableParameters = tabledUpdateObjs[tableName];
                             foreach (var updateObj in tableParameters)
                             {
-                                loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, index.ToString());
+                                loopSqlSetter.Invoke(this.Command.Parameters, builder, this.DbContext, tableName, updateObj, index.ToString());
                                 index++;
                             }
                         }
@@ -55,14 +55,14 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                             {
                                 case ShardingTableType.None:
                                 case ShardingTableType.SingleTable:
-                                    loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, shardingTables as string, updateObj, index.ToString());
+                                    loopSqlSetter.Invoke(this.Command.Parameters, builder, this.DbContext, shardingTables as string, updateObj, index.ToString());
                                     break;
                                 case ShardingTableType.MultiTable:
                                 case ShardingTableType.ShardingTableMap:
                                     var tableNames = shardingTables as List<string>;
                                     foreach (var tableName in tableNames)
                                     {
-                                        loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, index.ToString());
+                                        loopSqlSetter.Invoke(this.Command.Parameters, builder, this.DbContext, tableName, updateObj, index.ToString());
                                     }
                                     break;
                             }
@@ -75,7 +75,7 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             case ActionMode.Single:
                 {
                     this.FieldsBuilder = new();
-                    this.DbParameters = command.Parameters;
+                    this.DbParameters = this.Command.Parameters;
                     var entityType = tableSegment.EntityType;
                     Func<IDataParameterCollection, DbContext, object, string> whereSqlInitializer = null;
                     foreach (var deferredSegment in this.deferredSegments)

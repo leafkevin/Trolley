@@ -99,6 +99,11 @@ public class SqlVisitor : ISqlVisitor
         var isNeedClose = this.DbContext.Transaction == null;
         return (isNeedClose, this.Connection, this.Command);
     }
+    public virtual string BuildSql(out List<ReaderField> readerFields)
+    {
+        readerFields = null;
+        return null;
+    }
     public string BuildShardingTablesSqlByFormat(string formatSql, string jointMark)
     {
         //查询，多分表时，都使用表名替换生成分表sql
@@ -481,7 +486,14 @@ public class SqlVisitor : ISqlVisitor
     {
         string wrapSql = null;
         if (sqlSegment.SqlType > SqlType.Variable)
-            wrapSql = sqlSegment.Value.ToString();
+        {
+            if (sqlSegment.SqlType == SqlType.ReaderField)
+            {
+                var readerField = sqlSegment.Value as ReaderField;
+                wrapSql = readerField.Value.ToString();
+            }
+            else wrapSql = sqlSegment.Value.ToString();
+        }
         else if (sqlSegment.IsFixedValue)
         {
             if (sqlSegment.IsTrue)
@@ -1103,7 +1115,6 @@ public class SqlVisitor : ISqlVisitor
                 sqlSegment.Change(new ReaderField
                 {
                     FieldType = ReaderFieldType.Expression,
-                    ReaderType = methodCallExpr.Type,
                     Value = sqlSegment.Value,
                     IsAggField = true,
                     AggFunc = "COUNT"
@@ -1121,7 +1132,6 @@ public class SqlVisitor : ISqlVisitor
                 sqlSegment.Change(new ReaderField
                 {
                     FieldType = ReaderFieldType.Expression,
-                    ReaderType = methodCallExpr.Type,
                     Value = sqlSegment.Value,
                     IsAggField = true,
                     AggFunc = "COUNT"
@@ -1132,7 +1142,6 @@ public class SqlVisitor : ISqlVisitor
                 sqlSegment.Change(new ReaderField
                 {
                     FieldType = ReaderFieldType.Expression,
-                    ReaderType = methodCallExpr.Type,
                     Value = $"SUM({sqlSegment.Value})",
                     IsAggField = true,
                     AggFunc = "SUM"
@@ -1164,7 +1173,6 @@ public class SqlVisitor : ISqlVisitor
                 sqlSegment.Change(new ReaderField
                 {
                     FieldType = ReaderFieldType.Expression,
-                    ReaderType = methodCallExpr.Type,
                     Value = $"AVG({sqlSegment.Value})",
                     IsAggField = true,
                     IsAvgField = true,
@@ -1177,7 +1185,6 @@ public class SqlVisitor : ISqlVisitor
                 sqlSegment.Change(new ReaderField
                 {
                     FieldType = ReaderFieldType.Expression,
-                    ReaderType = methodCallExpr.Type,
                     Value = $"MAX({sqlSegment.Value})",
                     IsAggField = true,
                     AggFunc = "MAX"
@@ -1188,7 +1195,6 @@ public class SqlVisitor : ISqlVisitor
                 sqlSegment.Change(new ReaderField
                 {
                     FieldType = ReaderFieldType.Expression,
-                    ReaderType = methodCallExpr.Type,
                     Value = $"MIN({sqlSegment.Value})",
                     IsAggField = true,
                     AggFunc = "MIN"
@@ -1559,6 +1565,7 @@ public class SqlVisitor : ISqlVisitor
                     queryVisitor.RefTableAliases = this.TableAliases;
                     if (genericArguments.Length > 0)
                     {
+                        //2个参数时，第一个参数是递归查询时自身引用对象，第二个参数是JoinOn语句
                         if (callExpr.Arguments.Count > 1)
                         {
                             if (typeof(IQuery).IsAssignableFrom(callExpr.Arguments[0].Type))
@@ -1668,17 +1675,34 @@ public class SqlVisitor : ISqlVisitor
                     queryVisitor.Page(callExpr.Arguments[0].Evaluate<int>(), callExpr.Arguments[1].Evaluate<int>());
                     break;
                 case "Select":
-                    if (callExpr.Arguments.Count > 0)
+                    //Select(string sqlFormat, Expression selectExpr)
+                    if (callExpr.Arguments.Count > 1)
+                        queryVisitor.Select(callExpr.Arguments[0].Evaluate<string>(), callExpr.Arguments[1]);
+                    else if (callExpr.Arguments.Count > 0)
                     {
+                        //SelectRaw(Type targetType, string rawFields)
                         if (callExpr.Arguments[0].Type == typeof(string))
                             queryVisitor.SelectRaw(genericArguments[0], callExpr.Arguments[0].Evaluate<string>());
                         else
                         {
+                            //Select(Expression selectExpr)
                             lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
                             queryVisitor.Select(lambdaArgsExpr);
                         }
                     }
-                    else queryVisitor.SelectGrouping();
+                    else
+                    {
+                        if (methodInfo.DeclaringType.IsAssignableFrom(typeof(IGroupingQuery<>)))
+                            queryVisitor.SelectGrouping();
+                        else
+                        {
+                            //Expression<Func<T, T>> defaultExpr = f => f;
+                            entityType = genericArguments[0];
+                            var parameter = Expression.Parameter(entityType, "f");
+                            var funcType = typeof(Func<,>).MakeGenericType(entityType, entityType);
+                            queryVisitor.SelectDefault(Expression.Lambda(funcType, parameter, parameter));
+                        }
+                    }
                     break;
                 case "SelectAggregate":
                     lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
@@ -1736,11 +1760,11 @@ public class SqlVisitor : ISqlVisitor
                 default: throw new NotSupportedException("不支持的表达式解析");
             }
         }
-        if (readerFields == null || readerFields.Count == 0)
-        {
-            entityType = methodInfo.DeclaringType.GetGenericArguments()[0];
-            readerFields = queryVisitor.FlattenTableFields(queryVisitor.Tables[0]);
-        }
+        //if (readerFields == null || readerFields.Count == 0)
+        //{
+        //    entityType = methodInfo.DeclaringType.GetGenericArguments()[0];
+        //    readerFields = queryVisitor.FlattenTableFields(queryVisitor.Tables[0]);
+        //}
         sql = queryVisitor.BuildSql(false, out readerFields);
         return (sql, readerFields);
     }
@@ -2159,7 +2183,8 @@ public class SqlVisitor : ISqlVisitor
     public bool IsGroupingMember(MemberExpression memberExpr)
     {
         if (memberExpr == null) return false;
-        return memberExpr.Member.Name == "Grouping" && memberExpr.Member.DeclaringType.FullName.StartsWith("Trolley.IGroupingObject");
+        var memberInfo = memberExpr.Member;
+        return memberInfo.Name == "Grouping" && memberInfo.DeclaringType.FullName.StartsWith("Trolley.IGroupingObject");
     }
     //public List<ICteQuery> FlattenRefCteTables(List<IQuery> cteQueries)
     //{
@@ -2464,10 +2489,14 @@ public class SqlVisitor : ISqlVisitor
                 //已经变成子查询了，原表字段名已经没意义了，直接变成新的字段名
                 readerField.TableSegment = tableSegment;
                 //重新设置body内容，表别名变更，字段名也可能变更
-                if (readerField.TargetMember != null)
+                readerField.MemberName = readerField.TargetMember.Name;
+                readerField.Value = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
+                readerField.IsRefField = false;
+                if (readerField.FieldType == ReaderFieldType.Expression)
                 {
-                    readerField.MemberName = readerField.TargetMember.Name;
-                    readerField.Value = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
+                    readerField.IsNeedAlias = false;
+                    readerField.AliasName = null;
+                    readerField.FieldType = ReaderFieldType.Field;
                 }
             }
         }
@@ -2602,5 +2631,5 @@ public class SqlVisitor : ISqlVisitor
         this.TailRawSql = null;
         this.ShardingTables = null;
         this.ShardingTableJointMark = null;
-    }
+    }  
 }

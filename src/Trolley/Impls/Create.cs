@@ -94,7 +94,7 @@ public class Create : DialectProvider, ICreate
         this.Visitor.WithBulk(insertObjs, bulkCount);
         return this.ormProvider.NewBulkContinuedCreate(this.DbContext, this.Visitor);
     }
-    #endregion     
+    #endregion
 }
 public class Created : DialectProvider, ICreated
 {
@@ -192,7 +192,7 @@ public class Created : DialectProvider, ICreated
                 builder.Clear();
                 break;
             default:
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 if (this.interceptor != null)
                     command = this.interceptor.CommandInitialized(command);
 
@@ -269,7 +269,7 @@ public class Created : DialectProvider, ICreated
                 builder.Clear();
                 break;
             default:
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 if (this.interceptor != null)
                     command = this.interceptor.CommandInitialized(command);
 
@@ -289,10 +289,11 @@ public class Created : DialectProvider, ICreated
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (_, _, var command) = this.UseMasterCommand(this.Visitor.Command);
-        var sql = this.Visitor.BuildSql(command, out _);
+        (_, var connection, var command) = this.Visitor.UseCommand();
+        var sql = this.Visitor.BuildSql(out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
+        connection.Dispose();
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;
@@ -464,10 +465,11 @@ public class ResultCreated<TResult> : DialectProvider, IResultCommand<TResult>
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (_, _, var command) = this.UseMasterCommand(this.Visitor.Command);
-        var sql = this.Visitor.BuildSql(command, out _);
+        (_, var connection, var command) = this.Visitor.UseCommand();
+        var sql = this.Visitor.BuildSql(out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
+        connection.Dispose();
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;
@@ -510,10 +512,11 @@ public class BulkResultCreated<TResult> : DialectProvider, IBulkResultCommand<TR
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (_, _, var command) = this.UseMasterCommand(this.Visitor.Command);
-        var sql = this.Visitor.BuildSql(command, out _);
+        (_, var connection, var command) = this.Visitor.UseCommand();
+        var sql = this.Visitor.BuildSql(out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
+        connection.Dispose();
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;

@@ -270,7 +270,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
             default:
                 if (!this.Visitor.HasWhere)
                     throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 connection.Open();
                 result = command.ExecuteNonQuery(CommandSqlType.Update);
                 break;
@@ -360,7 +360,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
             default:
                 if (!this.Visitor.HasWhere)
                     throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 await connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
                 break;
@@ -376,7 +376,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        var sql = this.Visitor.BuildSql(command, out _);
+        var sql = this.Visitor.BuildSql(out _);
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         this.Visitor.Dispose();

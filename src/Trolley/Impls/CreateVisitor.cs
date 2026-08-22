@@ -47,7 +47,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (this.TryGetTableShardingInfo(entityType, TableShardingUsageMode.WriteOnly, out var tableShardingInfo))
             this.Tables[0].TableShardingInfo = tableShardingInfo;
     }
-    public virtual string BuildSql(ITheaCommand command, out List<ReaderField> readerFields)
+    public override string BuildSql(out List<ReaderField> readerFields)
     {
         string tailSql = null;
         readerFields = this.ReaderFields;
@@ -56,7 +56,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         {
             case ActionMode.Bulk:
                 (var shardingType, var shardingTables, var insertObjs, _, var firstSqlSetter,
-                  var loopSqlSetter, tailSql, readerFields) = this.BuildWithBulk(command);
+                  var loopSqlSetter, tailSql, readerFields) = this.BuildWithBulk(this.Command);
 
                 int index = 0;
                 var builder = new StringBuilder();
@@ -65,21 +65,21 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
                     foreach (var tableName in tabledInsertObjs.Keys)
                     {
-                        firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                        firstSqlSetter.Invoke(this.DbParameters, builder, tableName);
                         var tableParameters = tabledInsertObjs[tableName];
                         foreach (var insertObj in tableParameters)
                         {
-                            loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                            loopSqlSetter.Invoke(this.DbParameters, builder, this.DbContext, insertObj, index.ToString());
                             index++;
                         }
                     }
                 }
                 else
                 {
-                    firstSqlSetter.Invoke(command.Parameters, builder, shardingTables as string);
+                    firstSqlSetter.Invoke(this.DbParameters, builder, shardingTables as string);
                     foreach (var insertObj in insertObjs)
                     {
-                        loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                        loopSqlSetter.Invoke(this.DbParameters, builder, this.DbContext, insertObj, index.ToString());
                         index++;
                     }
                 }

@@ -36,6 +36,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public int PageNumber => this.pageNumber;
     public int PageSize => this.limit ?? 0;
     public bool IsNeedPaging { get; set; }
+    public bool IsScalar { get; set; }
 
     public QueryVisitor(DbContext dbContext, char tableAliasStart = 'a', ITheaCommand command = null)
     {
@@ -48,6 +49,31 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             this.DbParameters = this.Command.Parameters;
         }
         this.IsNeedTableAlias = true;
+    }
+
+    public override string BuildSql(out List<ReaderField> readerFields)
+    {
+        string sql = null;
+        if (this.IsScalar)
+        {
+            sql = this.BuildSql(true, out readerFields);
+            if (this.IsManyShardingTables)
+            {
+                sql = this.BuildShardingTablesSqlByFormat(sql, this.ShardingTableJointMark);
+                sql = this.BuildShardingScalarSql(sql);
+            }
+        }
+        else
+        {
+            sql = this.BuildSql(true, out readerFields);
+            if (this.IsManyShardingTables)
+            {
+                sql = this.BuildShardingTablesSqlByFormat(sql, this.ShardingTableJointMark);
+                if (this.IsNeedChangeUnionShardingTables)
+                    sql = this.BuildShardingSql(sql);
+            }
+        }
+        return sql;
     }
     public virtual string BuildSql(bool isBuildCteSql, out List<ReaderField> readerFields)
     {
@@ -253,8 +279,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else
         {
             builder.Append($"SELECT {selectSql} FROM {tableSql}");
-            //生成查询数据语句时，需要添加OrderBy语句
-            if (others.Length > 0) builder.Append(' ');
+            if (others.Length > 0)
+            {
+                builder.Append(' ');
+                builder.Append(others);
+            }
             if (!string.IsNullOrEmpty(orderBy))
             {
                 builder.Append(' ');
@@ -1278,9 +1307,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void GroupBy(Expression expr)
     {
         var lambdaExpr = expr as LambdaExpression;
-        if (lambdaExpr.Body.NodeType != ExpressionType.New && lambdaExpr.Body.NodeType != ExpressionType.MemberAccess)
-            throw new Exception("不支持的表达式访问，GroupBy只支持New或MemberAccess表达式");
-
         this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
         this.GroupByFields = new();
@@ -1298,12 +1324,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     var readerFieldType = sqlSegment.SqlType == SqlType.OnlyField ? ReaderFieldType.Field : ReaderFieldType.Expression;
                     var fieldName = this.WrapSql(sqlSegment);
                     if (builder.Length > 0) builder.Append(',');
+                    //生成GroupBy语句时，使用原始FieldName，需要在数据库中执行
                     builder.Append(fieldName);
                     this.GroupByFields.Add(new ReaderField
                     {
                         IsGroupingField = true,
                         FieldType = readerFieldType,
-                        MemberName = memberInfo.Name,
+                        MemberName = sqlSegment.MemberName,
                         Value = fieldName,
                         TargetMember = memberInfo
                     });
@@ -1321,7 +1348,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     {
                         IsGroupingField = true,
                         FieldType = ReaderFieldType.Field,
-                        MemberName = memberExpr.Member.Name,
+                        MemberName = sqlSegment.MemberName,
                         Value = fieldName,
                         TargetMember = memberExpr.Member
                     });
@@ -1459,12 +1486,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             default:
                 //常量、变量、表达式、方法调用、静态成员访问、原始SQL、延迟属性、延迟方法调用等场景
                 //原始SQL，当个字段当作方法调用处理
-                var wrapSql = this.WrapSql(sqlSegment, true);
                 this.ReaderFields = [new ReaderField
                 {
                     FieldType = ReaderFieldType.Expression,
                     ReaderType = toTargetExpr.Body.Type,
-                    Value = wrapSql
+                    Value = this.WrapSql(sqlSegment)
                 }];
                 break;
         }
@@ -1596,14 +1622,16 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             //Where(f=>... f.OrderId.Value==10 && ...)
             //Select(f=>... ,f.OrderId.HasValue  ...)
             //Select(f=>... ,f.OrderId.Value==10  ...)
-            if (memberExpr.Type.IsValueType && Nullable.GetUnderlyingType(memberExpr.Type) != null)
+            if (memberInfo.DeclaringType.IsValueType && Nullable.GetUnderlyingType(memberInfo.DeclaringType) != null)
             {
                 if (memberInfo.Name == "HasValue")
                 {
                     sqlSegment.Push(DeferredOperation.IsNull);
                     sqlSegment.Push(DeferredOperation.Not);
+                    return this.Visit(sqlSegment.Next(memberExpr.Expression));
                 }
-                return this.Visit(sqlSegment.Next(memberExpr.Expression));
+                if (memberInfo.Name == "Value")
+                    return this.Visit(sqlSegment.Next(memberExpr.Expression));
             }
 
             //各种OrmProvider提供的类型实例成员访问，如：DateTime,TimeSpan,String.Length
@@ -1629,7 +1657,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     {
                         IsGroupingField = true,
                         FieldType = ReaderFieldType.Entity,
-                        ReaderType = memberInfo.GetMemberType(),
+                        //后续的OrderBy子句不需要，Select子句会设置
+                        //ReaderType = memberInfo.GetMemberType(),
                         Fields = new List<ReaderField>()
                     };
                     this.GroupByFields.ForEach(f => readerField.Fields.Add(f));
@@ -1642,7 +1671,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             {
                 //此时是Grouping对象字段的引用，最外面可能会更改成员名称，要复制一份，防止更改Grouping对象中的字段
                 var readerField = this.GroupByFields.Find(f => f.TargetMember.Name == memberInfo.Name);
-                return sqlSegment.Change(readerField, SqlType.ReaderField);
+                return sqlSegment.Change(readerField.Clone(), SqlType.ReaderField);
             }
 
             //支持多级成员访问，如：f.Order.Seller.Company.Name，f.Order.Seller.Company.Products.Count
@@ -1668,6 +1697,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 var fromSegment = this.TableAliases[parameterName];
                 ReaderField lastReaderField = null;
                 MemberMap memberMapper = null;
+                //当访问x.Grouping.UserId时，会有2个以上的成员访问
                 var memberExprs = this.GetMemberExprs(memberExpr, out _);
 
                 var builder = new StringBuilder(fromSegment.AliasName);
@@ -1719,6 +1749,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             Value = fieldName
                         };
                     }
+                    //子查询中的字段，后续操作可能会更改MemberName，先标识是引用已有ReaderField字段，需要时再做克隆副本                    
+                    else lastReaderField.IsRefField = true;
                     sqlSegment.Change(lastReaderField, SqlType.ReaderField);
                 }
                 else
@@ -1800,7 +1832,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             //为给里面的成员访问提供数据，有参数访问、引用Include成员访问的场景提供数据参数访问的ReaderField查询
             for (int i = 0; i < newExpr.Arguments.Count; i++)
             {
-                readerFields.AddRange(this.AddSelectElement(newExpr.Arguments[i], newExpr.Members[i]));
+                var mySelectObj = this.AddSelectElement(newExpr.Arguments[i], newExpr.Members[i]);
+                if (mySelectObj is ReaderField myReaderField)
+                    readerFields.Add(myReaderField);
+                else readerFields.AddRange(mySelectObj as List<ReaderField>);
             }
             this.IsSelectMember = false;
             return sqlSegment.Change(readerFields, SqlType.ReaderFields);
@@ -1822,7 +1857,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 if (memberInitExpr.Bindings[i].BindingType != MemberBindingType.Assignment)
                     throw new NotSupportedException("暂时不支持除MemberBindingType.Assignment类型外的成员绑定表达式");
                 var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-                readerFields.AddRange(this.AddSelectElement(memberAssignment.Expression, memberAssignment.Member));
+                var mySelectObj = this.AddSelectElement(memberAssignment.Expression, memberAssignment.Member);
+                if (mySelectObj is ReaderField myReaderField)
+                    readerFields.Add(myReaderField);
+                else readerFields.AddRange(mySelectObj as List<ReaderField>);
             }
             this.IsSelectMember = false;
             return sqlSegment.Change(readerFields, SqlType.ReaderFields);
@@ -1852,10 +1890,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.CteQueryObj.ReaderFields = readerFields;
         this.CteQueryObj.TableName = tableName;
     }
-    public virtual List<ReaderField> AddSelectElement(Expression elementExpr, MemberInfo memberInfo)
+    public virtual object AddSelectElement(Expression elementExpr, MemberInfo memberInfo)
     {
         SqlSegment sqlSegment = default;
-        List<ReaderField> readerFields = null;
         //生成的SQL，都不加AS子句，在buildSql时再决定是否使用AS子句，因为buildSql时候，Alias别名才能真正确定下来
         //这里的AS子句，到buildSql时候，Alias别名可能会发生变化
         switch (elementExpr.NodeType)
@@ -1863,39 +1900,35 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             case ExpressionType.Parameter:
                 //两种场景：.Select((x, y) => new { Order = x, x.Seller, x.Buyer, ... }) 和 .Select((x, y) => x)，可能有include操作
                 sqlSegment = this.VisitParameter(new SqlSegment { Expression = elementExpr });
-                readerFields = sqlSegment.Value as List<ReaderField>;
+                var readerFields = sqlSegment.Value as List<ReaderField>;
                 readerFields[0].TargetMember = memberInfo;
-                break;
+                return readerFields;
             case ExpressionType.New:
             case ExpressionType.MemberInit:
                 //为了简化SELECT操作，只支持一次New/MemberInit表达式操作
                 throw new NotSupportedException("不支持的表达式访问，SELECT语句只支持一次New/MemberInit表达式访问操作");
             case ExpressionType.AndAlso:
             case ExpressionType.OrElse:
+                sqlSegment = this.Visit(new SqlSegment { Expression = elementExpr });
+                return new ReaderField
                 {
-                    sqlSegment = this.Visit(new SqlSegment { Expression = elementExpr });
-                    readerFields = [new ReaderField
-                    {
-                        //当作非字段处理
-                        FieldType = ReaderFieldType.Expression,
-                        ReaderType = memberInfo.GetMemberType(),
-                        Value = this.WrapSql(sqlSegment, true),
-                        TargetMember = memberInfo
-                    }];
-                }
-                break;
+                    //当作非字段处理
+                    FieldType = ReaderFieldType.Expression,
+                    ReaderType = memberInfo.GetMemberType(),
+                    Value = this.WrapSql(sqlSegment),
+                    TargetMember = memberInfo
+                };
             default:
                 //常量、变量、表达式、方法调用、成员访问、原始SQL、延迟属性、延迟方法调用等场景
                 //.Select((x, y) => new { MaxValue = int.MaxValue, x.Seller, x.Buyer, Now = DateTime.UtcNow })
                 //.SelectTo((a, b...) => new DTO{ ActivityTypeEnum = this.GetEmnuName(f.ActivityType) })
                 //会有延迟成员访问，静态成员访问，还有方法调用等访问，所以需要VisitAndDeferred
                 sqlSegment = this.Visit(new SqlSegment { Expression = elementExpr });
-                var wrapSql = this.WrapSql(sqlSegment, true);
                 switch (sqlSegment.SqlType)
                 {
                     //成员访问
                     case SqlType.OnlyField:
-                        readerFields = [new ReaderField
+                        return new ReaderField
                         {
                             FieldType = ReaderFieldType.Field,
                             ReaderType = memberInfo.GetMemberType(),
@@ -1903,32 +1936,39 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             //MappedTargetType = sqlSegment.MappedTargetType,
                             //TypeHandler = sqlSegment.TypeHandler,
                             MemberName = sqlSegment.MemberName,
-                            Value = wrapSql,
+                            Value = this.WrapSql(sqlSegment),
                             TargetMember = memberInfo
-                        }];
-                        break;
+                        };
                     //成员访问，多个字段实体类型的原始SQL，聚合字段
                     case SqlType.ReaderField:
                         var readerField = sqlSegment.Value as ReaderField;
-                        readerField.ReaderType = memberInfo.GetMemberType();
-                        readerField.TargetMember = memberInfo;
-                        readerFields = [readerField];
-                        break;
+                        //引用已有字段，需要更名，先克隆副本再更名，以免影响原字段后续使用
+                        if (!readerField.IsRefField)
+                        {
+                            readerField.ReaderType = memberInfo.GetMemberType();
+                            readerField.TargetMember = memberInfo;
+                        }
+                        else if (memberInfo.Name != readerField.TargetMember.Name)
+                        {
+                            var orgReaderField = readerField;
+                            readerField = orgReaderField.Clone();
+                            readerField.RefField = orgReaderField;
+                            orgReaderField.IsRefField = false;
+                            readerField.TargetMember = memberInfo;
+                        }
+                        return readerField;
                     default:
                         //常量、变量、表达式、方法调用、静态成员访问、原始SQL、延迟属性、延迟方法调用等场景
                         //原始SQL，当个字段当作方法调用处理
-                        readerFields = [new ReaderField
+                        return new ReaderField
                         {
                             FieldType = ReaderFieldType.Expression,
                             ReaderType = memberInfo.GetMemberType(),
-                            Value = wrapSql,
+                            Value = this.WrapSql(sqlSegment),
                             TargetMember = memberInfo
-                        }];
-                        break;
+                        };
                 }
-                break;
         }
-        return readerFields;
     }
     public virtual TableSegment InitTableAlias(LambdaExpression lambdaExpr)
     {

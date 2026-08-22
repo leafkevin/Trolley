@@ -31,7 +31,7 @@ public class SqlServerDeleted<TEntity, TResult> : Deleted<TEntity>, ISqlServerDe
 
         var result = new List<TResult>();
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        command.CommandText = this.Visitor.BuildSql(command, out var readerFields);
+        command.CommandText = this.Visitor.BuildSql(out var readerFields);
         connection.Open();
 
         using var reader = command.ExecuteReader(CommandSqlType.Delete, CommandBehavior.SequentialAccess);
@@ -59,7 +59,7 @@ public class SqlServerDeleted<TEntity, TResult> : Deleted<TEntity>, ISqlServerDe
 
         var result = new List<TResult>();
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        command.CommandText = this.Visitor.BuildSql(command, out var readerFields);
+        command.CommandText = this.Visitor.BuildSql(out var readerFields);
         await connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Delete, CommandBehavior.SequentialAccess, cancellationToken);
         var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);

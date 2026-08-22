@@ -38,10 +38,9 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         if (this.TryGetTableShardingInfo(entityType, TableShardingUsageMode.WriteOnly, out var tableShardingInfo))
             this.Tables[0].TableShardingInfo = tableShardingInfo;
     }
-    public virtual string BuildSql(ITheaCommand command, out List<ReaderField> readerFields)
+    public override string BuildSql(out List<ReaderField> readerFields)
     {
         readerFields = null;
-        this.DbParameters = command.Parameters;
 
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
@@ -212,14 +211,16 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             //Where(f=>... f.OrderId.Value==10 && ...)
             //Select(f=>... ,f.OrderId.HasValue  ...)
             //Select(f=>... ,f.OrderId.Value==10  ...)
-            if (memberExpr.Type.IsValueType && Nullable.GetUnderlyingType(memberExpr.Type) != null)
+            if (memberInfo.DeclaringType.IsValueType && Nullable.GetUnderlyingType(memberInfo.DeclaringType) != null)
             {
                 if (memberInfo.Name == "HasValue")
                 {
                     sqlSegment.Push(DeferredOperation.IsNull);
                     sqlSegment.Push(DeferredOperation.Not);
+                    return this.Visit(sqlSegment.Next(memberExpr.Expression));
                 }
-                return this.Visit(sqlSegment.Next(memberExpr.Expression));
+                if (memberInfo.Name == "Value")
+                    return this.Visit(sqlSegment.Next(memberExpr.Expression));
             }
 
             //各种OrmProvider提供的类型实例成员访问，如：DateTime,TimeSpan,String.Length

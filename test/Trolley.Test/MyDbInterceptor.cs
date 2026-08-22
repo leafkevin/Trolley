@@ -38,6 +38,7 @@ public class MyDbInterceptor : DefautDbInterceptor
     public override ITheaCommand CommandCreated(ITheaCommand command)
     {
         Interlocked.Increment(ref commandTotal);
+        //Console.WriteLine($"Command CommandId:{command.CommandId} created, Total:{Volatile.Read(ref commandTotal)}");
         this.output.WriteLine($"Command CommandId:{command.CommandId} created, Total:{Volatile.Read(ref commandTotal)}");
         return command;
     }
@@ -56,6 +57,7 @@ public class MyDbInterceptor : DefautDbInterceptor
     public override void CommandDisposed(ITheaCommand command)
     {
         Interlocked.Decrement(ref commandTotal);
+        //Console.WriteLine($"Command {command.CommandId} disposed, Total:{Volatile.Read(ref commandTotal)}");
         this.output.WriteLine($"Command {command.CommandId} disposed, Total:{Volatile.Read(ref commandTotal)}");
     }
     public override ITheaDataReader DataReaderCreated(ITheaDataReader reader)

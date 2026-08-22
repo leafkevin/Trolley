@@ -70,7 +70,8 @@ public class MultiQueryBase : QueryInternal, IMultiQueryBase
     protected IMultipleQuery QueryScalar<TTarget>(string aggSql, string aggFunc)
     {
         this.Visitor.SelectRaw(typeof(TTarget), aggSql, aggFunc);
-        var sql = this.BuildScalarSql(this.Visitor);
+        this.Visitor.IsScalar = true;
+        var sql = this.Visitor.BuildSql(out _);
         this.MultipleQuery.AddReader(typeof(TTarget), sql, ReaderResultType.Value);
         return this.MultipleQuery;
     }
@@ -80,7 +81,8 @@ public class MultiQueryBase : QueryInternal, IMultiQueryBase
             throw new ArgumentNullException(nameof(fieldExpr));
 
         this.Visitor.Select(aggSqlFormat, fieldExpr);
-        var sql = this.BuildScalarSql(this.Visitor);
+        this.Visitor.IsScalar = true;
+        var sql = this.Visitor.BuildSql(out _);
         this.MultipleQuery.AddReader(typeof(TTarget), sql, ReaderResultType.Value);
         return this.MultipleQuery;
     }

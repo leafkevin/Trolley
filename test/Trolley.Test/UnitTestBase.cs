@@ -19,7 +19,7 @@ public class UnitTestBase
     {
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
-        repository.DeleteByIds<User>(new[] { 1, 2, 3 });
+        repository.DeleteByIds<User>(new[] { 1, 2, 3, 4, 5, 6 });
         repository.Create<User>(new[]
         {
             new User

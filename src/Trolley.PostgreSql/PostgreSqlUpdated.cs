@@ -202,7 +202,7 @@ public class PostgreSqlUpdated : Updated
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-                    command.CommandText = this.Visitor.BuildSql(command, out _);
+                    command.CommandText = this.Visitor.BuildSql(out _);
                     connection.Open();
                     result = command.ExecuteNonQuery(CommandSqlType.Update);
                 }
@@ -390,7 +390,7 @@ public class PostgreSqlUpdated : Updated
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-                    command.CommandText = this.Visitor.BuildSql(command, out _);
+                    command.CommandText = this.Visitor.BuildSql(out _);
                     await connection.OpenAsync(cancellationToken);
                     result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
                 }
@@ -485,7 +485,7 @@ public class PostgreSqlUpdated : Updated
                 builder.Append(';');
             }
             (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-            sql = this.Visitor.BuildSql(command, out _);
+            sql = this.Visitor.BuildSql(out _);
             if (this.Visitor.IsNeedFetchShardingTables)
             {
                 builder.Append(sql);
@@ -711,7 +711,7 @@ public class PostgreSqlResultUpdated<TResult> : IBulkResultCommand<TResult>
             builder.Append(';');
         }
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        sql = this.Visitor.BuildSql(command, out _);
+        sql = this.Visitor.BuildSql(out _);
         if (this.Visitor.IsNeedFetchShardingTables)
         {
             builder.Append(sql);

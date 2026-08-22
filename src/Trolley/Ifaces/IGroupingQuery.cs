@@ -23,7 +23,7 @@ public interface IGroupingAggregate<TGrouping> : IGroupingObject<TGrouping>, IAg
 /// 分组查询对象
 /// </summary>
 /// <typeparam name="TGrouping">分组后的对象类型</typeparam>
-public interface IGroupingQueryBase<TGrouping>
+public interface IGroupingQuery<TGrouping>
 {
     /// <summary>
     /// 使用分组后对象直接返回
@@ -41,7 +41,7 @@ public interface IGroupingQueryBase<TGrouping>
 /// </summary>
 /// <typeparam name="T">原始表类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IGroupingQuery<T, TGrouping> : IGroupingQueryBase<TGrouping>
+public interface IGroupingQuery<T, TGrouping> : IGroupingQuery<TGrouping>
 {
     #region Having
     /// <summary>
@@ -121,7 +121,7 @@ public interface IGroupingQuery<T, TGrouping> : IGroupingQueryBase<TGrouping>
 /// <typeparam name="T1">表T1实体类型</typeparam>
 /// <typeparam name="T2">表T2实体类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IGroupingQuery<T1, T2, TGrouping> : IGroupingQueryBase<TGrouping>
+public interface IGroupingQuery<T1, T2, TGrouping> : IGroupingQuery<TGrouping>
 {
     #region Having
     /// <summary>
@@ -202,7 +202,7 @@ public interface IGroupingQuery<T1, T2, TGrouping> : IGroupingQueryBase<TGroupin
 /// <typeparam name="T2">表T2实体类型</typeparam>
 /// <typeparam name="T3">表T3实体类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IGroupingQuery<T1, T2, T3, TGrouping> : IGroupingQueryBase<TGrouping>
+public interface IGroupingQuery<T1, T2, T3, TGrouping> : IGroupingQuery<TGrouping>
 {
     #region Having
     /// <summary>
@@ -284,7 +284,7 @@ public interface IGroupingQuery<T1, T2, T3, TGrouping> : IGroupingQueryBase<TGro
 /// <typeparam name="T3">表T3实体类型</typeparam>
 /// <typeparam name="T4">表T4实体类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IGroupingQuery<T1, T2, T3, T4, TGrouping> : IGroupingQueryBase<TGrouping>
+public interface IGroupingQuery<T1, T2, T3, T4, TGrouping> : IGroupingQuery<TGrouping>
 {
     #region Having
     /// <summary>
@@ -367,7 +367,7 @@ public interface IGroupingQuery<T1, T2, T3, T4, TGrouping> : IGroupingQueryBase<
 /// <typeparam name="T4">表T4实体类型</typeparam>
 /// <typeparam name="T5">表T5实体类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IGroupingQueryBase<TGrouping>
+public interface IGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IGroupingQuery<TGrouping>
 {
     #region Having
     /// <summary>
@@ -451,7 +451,7 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IGroupingQueryB
 /// <typeparam name="T5">表T5实体类型</typeparam>
 /// <typeparam name="T6">表T6实体类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : IGroupingQueryBase<TGrouping>
+public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : IGroupingQuery<TGrouping>
 {
     #region Having
     /// <summary>
@@ -536,7 +536,7 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : IGroupingQu
 /// <typeparam name="T6">表T6实体类型</typeparam>
 /// <typeparam name="T7">表T7实体类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : IGroupingQueryBase<TGrouping>
+public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : IGroupingQuery<TGrouping>
 {
     #region Having
     /// <summary>
@@ -622,7 +622,7 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : IGroupi
 /// <typeparam name="T7">表T7实体类型</typeparam>
 /// <typeparam name="T8">表T8实体类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : IGroupingQueryBase<TGrouping>
+public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : IGroupingQuery<TGrouping>
 {
     #region Having
     /// <summary>
@@ -709,7 +709,7 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : IGr
 /// <typeparam name="T8">表T8实体类型</typeparam>
 /// <typeparam name="T9">表T9实体类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> : IGroupingQueryBase<TGrouping>
+public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> : IGroupingQuery<TGrouping>
 {
     #region Having
     /// <summary>
@@ -797,7 +797,7 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> :
 /// <typeparam name="T9">表T9实体类型</typeparam>
 /// <typeparam name="T10">表T10实体类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> : IGroupingQueryBase<TGrouping>
+public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> : IGroupingQuery<TGrouping>
 {
     #region Having
     /// <summary>
@@ -886,7 +886,7 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGroupi
 /// <typeparam name="T10">表T10实体类型</typeparam>
 /// <typeparam name="T11">表T11实体类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> : IGroupingQueryBase<TGrouping>
+public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> : IGroupingQuery<TGrouping>
 {
     #region Having
     /// <summary>
@@ -976,7 +976,7 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TG
 /// <typeparam name="T11">表T11实体类型</typeparam>
 /// <typeparam name="T12">表T12实体类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> : IGroupingQueryBase<TGrouping>
+public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> : IGroupingQuery<TGrouping>
 {
     #region Having
     /// <summary>
@@ -1067,7 +1067,7 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
 /// <typeparam name="T12">表T12实体类型</typeparam>
 /// <typeparam name="T13">表T13实体类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> : IGroupingQueryBase<TGrouping>
+public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> : IGroupingQuery<TGrouping>
 {
     #region Having
     /// <summary>
@@ -1159,7 +1159,7 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
 /// <typeparam name="T13">表T13实体类型</typeparam>
 /// <typeparam name="T14">表T14实体类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> : IGroupingQueryBase<TGrouping>
+public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> : IGroupingQuery<TGrouping>
 {
     #region Having
     /// <summary>
@@ -1252,7 +1252,7 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
 /// <typeparam name="T14">表T14实体类型</typeparam>
 /// <typeparam name="T15">表T15实体类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> : IGroupingQueryBase<TGrouping>
+public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> : IGroupingQuery<TGrouping>
 {
     #region Having
     /// <summary>
@@ -1346,6 +1346,6 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
 /// <typeparam name="T15">表T15实体类型</typeparam>
 /// <typeparam name="T16">表T16实体类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping> : IGroupingQueryBase<TGrouping>
+public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping> : IGroupingQuery<TGrouping>
 {
 }

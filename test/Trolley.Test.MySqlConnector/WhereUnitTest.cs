@@ -255,4 +255,68 @@ public class WhereUnitTest : UnitTestBase
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
     }
+    [Fact]
+    public async Task NullableField()
+    {
+        this.Initialize(1);
+        var repository = this.dbFactory.Create();
+        var sql1 = repository.From<Order>()
+            .Where(f => f.ProductCount > 1)
+            .Select(f => new { f.Id, f.ProductCount })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.`Id`,a.`ProductCount` FROM `sys_order` a WHERE a.`ProductCount`>1", sql1);
+        var result1 = repository.From<Order>()
+            .Where(f => f.ProductCount > 1)
+            .Select(f => new { f.Id, f.ProductCount })
+            .First();
+        Assert.True(result1.ProductCount > 1);
+        result1 = await repository.From<Order>()
+           .Where(f => f.ProductCount > 1)
+           .Select(f => new { f.Id, f.ProductCount })
+           .FirstAsync();
+        Assert.True(result1.ProductCount > 1);
+
+        var sql2 = repository.From<Order>()
+            .Where(f => f.ProductCount.Value > 1)
+            .Select(f => new { f.Id, f.ProductCount })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.`Id`,a.`ProductCount` FROM `sys_order` a WHERE a.`ProductCount`>1", sql2);
+
+        var result2 = repository.From<Order>()
+            .Where(f => f.ProductCount.Value > 1)
+            .Select(f => new { f.Id, f.ProductCount })
+            .ToList();
+        if (result2.Count > 0)
+            Assert.All(result2, f => Assert.True(f.ProductCount > 1));
+        result2 = await repository.From<Order>()
+            .Where(f => f.ProductCount.Value > 1)
+            .Select(f => new { f.Id, f.ProductCount })
+            .ToListAsync();
+        if (result2.Count > 0)
+            Assert.All(result2, f => Assert.True(f.ProductCount > 1));
+
+        var sql3 = repository.From<Order>()
+           .Where(f => f.ProductCount.HasValue)
+           .Select(f => new { f.Id, f.ProductCount })
+           .ToSql(out _);
+        Assert.Equal("SELECT a.`Id`,a.`ProductCount` FROM `sys_order` a WHERE a.`ProductCount` IS NOT NULL", sql3);
+        var sql4 = repository.From<Order>()
+           .Where(f => !f.ProductCount.HasValue)
+           .Select(f => new { f.Id, f.ProductCount })
+           .ToSql(out _);
+        Assert.Equal("SELECT a.`Id`,a.`ProductCount` FROM `sys_order` a WHERE a.`ProductCount` IS NULL", sql4);
+
+        var result3 = repository.From<Order>()
+            .Where(f => f.ProductCount.HasValue)
+            .Select(f => new { f.Id, f.ProductCount })
+            .ToList();
+        if (result3.Count > 0)
+            Assert.All(result3, f => Assert.True(f.ProductCount.HasValue));
+        result3 = await repository.From<Order>()
+            .Where(f => f.ProductCount.HasValue)
+            .Select(f => new { f.Id, f.ProductCount })
+            .ToListAsync();
+        if (result3.Count > 0)
+            Assert.All(result3, f => Assert.True(f.ProductCount.HasValue));
+    }
 }

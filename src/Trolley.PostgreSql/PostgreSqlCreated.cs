@@ -100,7 +100,7 @@ public class PostgreSqlCreated : Created
                     break;
                 }
             default:
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 connection.Open();
                 result = command.ExecuteNonQuery(CommandSqlType.Insert);
                 break;
@@ -192,7 +192,7 @@ public class PostgreSqlCreated : Created
                     break;
                 }
             default:
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 await connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
                 break;
@@ -300,7 +300,7 @@ public class PostgreSqlIdentitiedCreated : IdentitiedCreated
                     break;
                 }
             default:
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 connection.Open();
                 result = command.ExecuteNonQuery(CommandSqlType.Insert);
                 break;
@@ -392,7 +392,7 @@ public class PostgreSqlIdentitiedCreated : IdentitiedCreated
                     break;
                 }
             default:
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 await connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
                 break;

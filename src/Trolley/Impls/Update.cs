@@ -233,7 +233,7 @@ public class Updated : DialectProvider, IUpdated
             default:
                 if (!this.Visitor.HasWhere)
                     throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 if (this.interceptor != null)
                     command = this.interceptor.CommandInitialized(command);
 
@@ -335,7 +335,7 @@ public class Updated : DialectProvider, IUpdated
             default:
                 if (!this.Visitor.HasWhere)
                     throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 if (this.interceptor != null)
                     command = this.interceptor.CommandInitialized(command);
 
@@ -353,11 +353,13 @@ public class Updated : DialectProvider, IUpdated
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
-        var sql = this.Visitor.BuildSql(command, out _);
-        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
+        (_, var connection, var command) = this.Visitor.UseCommand();
+        var sql = this.Visitor.BuildSql(out _);
+        dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
+        connection.Dispose();
         this.Visitor.Dispose();
+        this.Visitor = null;
         return sql;
     }
     #endregion
@@ -803,11 +805,13 @@ public class ResultUpdated<TResult> : DialectProvider, IBulkResultCommand<TResul
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (_, _, var command) = this.UseMasterCommand(this.Visitor.Command);
-        var sql = this.Visitor.BuildSql(command, out _);
+        (_, var connection, var command) = this.Visitor.UseCommand();
+        var sql = this.Visitor.BuildSql(out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
+        connection.Dispose();
         this.Visitor.Dispose();
+        this.Visitor = null;
         return sql;
     }
     #endregion

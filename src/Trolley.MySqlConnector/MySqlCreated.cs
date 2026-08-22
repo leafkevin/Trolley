@@ -114,7 +114,7 @@ public class MySqlCreated : Created
                     break;
                 }
             default:
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 if (this.interceptor != null)
                     command = this.interceptor.CommandInitialized(command);
 
@@ -222,7 +222,7 @@ public class MySqlCreated : Created
                     break;
                 }
             default:
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 if (this.interceptor != null)
                     command = this.interceptor.CommandInitialized(command);
 
@@ -346,7 +346,7 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
                     break;
                 }
             default:
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 if (this.interceptor != null)
                     command = this.interceptor.CommandInitialized(command);
 
@@ -454,7 +454,7 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
                     break;
                 }
             default:
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 if (this.interceptor != null)
                     command = this.interceptor.CommandInitialized(command);
 
@@ -576,7 +576,7 @@ public class MySqlContinuedCreate : ContinuedCreate
                     break;
                 }
             default:
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 if (this.interceptor != null)
                     command = this.interceptor.CommandInitialized(command);
 
@@ -684,7 +684,7 @@ public class MySqlContinuedCreate : ContinuedCreate
                     break;
                 }
             default:
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 if (this.interceptor != null)
                     command = this.interceptor.CommandInitialized(command);
 
@@ -813,7 +813,7 @@ public class MySqlBulkContinuedCreate : BulkContinuedCreate
                     break;
                 }
             default:
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 if (this.interceptor != null)
                     command = this.interceptor.CommandInitialized(command);
 
@@ -926,7 +926,7 @@ public class MySqlBulkContinuedCreate : BulkContinuedCreate
                     break;
                 }
             default:
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 if (this.interceptor != null)
                     command = this.interceptor.CommandInitialized(command);
 
@@ -1054,7 +1054,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>
                     break;
                 }
             default:
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 if (this.interceptor != null)
                     command = this.interceptor.CommandInitialized(command);
 
@@ -1167,7 +1167,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>
                     break;
                 }
             default:
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 if (this.interceptor != null)
                     command = this.interceptor.CommandInitialized(command);
 
@@ -1296,7 +1296,7 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
                     break;
                 }
             default:
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 if (this.interceptor != null)
                     command = this.interceptor.CommandInitialized(command);
 
@@ -1409,7 +1409,7 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
                     break;
                 }
             default:
-                command.CommandText = this.Visitor.BuildSql(command, out _);
+                command.CommandText = this.Visitor.BuildSql(out _);
                 if (this.interceptor != null)
                     command = this.interceptor.CommandInitialized(command);
 

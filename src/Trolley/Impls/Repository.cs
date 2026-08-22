@@ -403,7 +403,8 @@ public class Repository : DialectProvider, IRepository
             queryVisitor.And(wherePredicate);
             queryVisitor.SelectRaw(typeof(int), "1");
             queryVisitor.Take(1);
-            command.CommandText = this.BuildScalarSql(queryVisitor);
+            queryVisitor.IsScalar = true;
+            command.CommandText = queryVisitor.BuildSql(out _); 
         }
         else
         {
@@ -434,7 +435,8 @@ public class Repository : DialectProvider, IRepository
             queryVisitor.And(wherePredicate);
             queryVisitor.SelectRaw(typeof(int), "1");
             queryVisitor.Take(1);
-            command.CommandText = this.BuildScalarSql(queryVisitor);
+            queryVisitor.IsScalar = true;
+            command.CommandText = queryVisitor.BuildSql(out _);
         }
         else
         {

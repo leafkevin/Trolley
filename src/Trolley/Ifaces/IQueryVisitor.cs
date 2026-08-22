@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public interface IQueryVisitor : ICloneable, IDisposable
+public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
 {
     DbContext DbContext { get; }
     IOrmProvider OrmProvider { get; }
@@ -16,9 +16,6 @@ public interface IQueryVisitor : ICloneable, IDisposable
     List<TableSegment> Tables { get; set; }
     ITableShardingProvider ShardingProvider { get; }
 
-    ITheaConnection Connection { get; set; }
-    ITheaCommand Command { get; set; }
-    IDataParameterCollection DbParameters { get; set; }
     /// <summary>
     /// IncludeMany表，第二次执行时的参数列表，通常是Filter中使用的参数
     /// </summary>
@@ -57,11 +54,12 @@ public interface IQueryVisitor : ICloneable, IDisposable
     List<TableSegment> ShardingTables { get; set; }
     string ShardingTableJointMark { get; set; }
     bool IsNeedPaging { get; set; }
+    bool IsScalar { get; set; }
 
-    (bool, ITheaConnection, ITheaCommand) UseCommand();
-    string BuildShardingTablesSqlByFormat(string formatSql, string jointMark);
+
     string BuildSql(bool isBuildCteSql, out List<ReaderField> readerFields);
     string BuildCommandSql(Type entityType, out IDataParameterCollection dbParameters);
+    string BuildShardingTablesSqlByFormat(string formatSql, string jointMark);
     string BuildShardingSql(string formatSql);
     string BuildShardingScalarSql(string formatSql);
     string BuildCteTableSql(string tableName, out List<ReaderField> readerFields);
