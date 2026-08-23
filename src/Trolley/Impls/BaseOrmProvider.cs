@@ -720,14 +720,12 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             return typeHandler;
         });
     }
-    public virtual Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType, OrmDbFactoryOptions options)
+    public virtual Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType, bool isNullableType, OrmDbFactoryOptions options)
     {
         var hashKey = HashCode.Combine(targetType, fieldType, options.DefaultDateTimeKind);
         return readerValueGetters.GetOrAdd(hashKey, f =>
         {
-            var underlyingType = Nullable.GetUnderlyingType(targetType);
-            var isNullableType = underlyingType != null;
-            underlyingType ??= targetType;
+            var isNullableTargetType = targetType.IsNullableType(out var underlyingType);
             Func<object, object> typeHandler = null;
             if (targetType == fieldType || underlyingType == fieldType)
             {
@@ -738,7 +736,18 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                 var setDefaultExpr = Expression.Assign(resultExpr, Expression.Convert(Expression.Default(targetType), typeof(object)));
 
                 Expression typedValueExpr = null;
-                if (underlyingType == typeof(DateTime) || underlyingType == typeof(DateTimeOffset))
+                if (underlyingType == typeof(DateTime))
+                {
+                    MethodInfo methodInfo;
+                    if (options.DefaultDateTimeKind == DateTimeKind.Utc)
+                    {
+                        typedValueExpr = Expression.Convert(valueExpr, underlyingType);
+                        methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.SpecifyKind), [underlyingType, typeof(DateTimeKind)]);
+                        typedValueExpr = Expression.Call(methodInfo, typedValueExpr, Expression.Constant(DateTimeKind.Utc));
+                        typedValueExpr = Expression.Convert(typedValueExpr, typeof(object));
+                    }
+                }
+                if (underlyingType == typeof(DateTimeOffset))
                 {
                     MethodInfo methodInfo;
                     if (options.DefaultDateTimeKind == DateTimeKind.Utc)
@@ -774,11 +783,15 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     //数组类支持一元的，多元建议用json
                     if (underlyingType.IsArray)
                     {
-                        typeHandler = value =>
+                        if (isNullableType)
                         {
-                            if (value is DBNull) return null;
-                            return Convert.ChangeType(value, underlyingType);
-                        };
+                            typeHandler = value =>
+                            {
+                                if (value is DBNull) return null;
+                                return Convert.ChangeType(value, underlyingType);
+                            };
+                        }
+                        else typeHandler = value => Convert.ChangeType(value, underlyingType);
                     }
                     else
                     {
@@ -797,11 +810,15 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                 var listType = typeof(List<>).MakeGenericType(elelmentTypes[0]);
                                 var bodyExpr = Expression.New(listType.GetConstructor([parametersType]), typedCollectionExpr);
                                 var listCreater = Expression.Lambda<Func<object, object>>(bodyExpr, collectionExpr).Compile();
-                                typeHandler = value =>
+                                if (isNullableType)
                                 {
-                                    if (value is DBNull) return null;
-                                    return listCreater.Invoke(value);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return listCreater.Invoke(value);
+                                    };
+                                }
+                                else typeHandler = value => listCreater.Invoke(value);
                             }
                             else if (underlyingType == typeof(Collection<>).MakeGenericType(elelmentTypes))
                             {
@@ -811,34 +828,46 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                 var collectionType = typeof(Collection<>).MakeGenericType(elelmentTypes[0]);
                                 var bodyExpr = Expression.New(collectionType.GetConstructor([parametersType]), typedListExpr);
                                 var listCreater = Expression.Lambda<Func<object, object>>(bodyExpr, listExpr).Compile();
-                                typeHandler = value =>
+                                if (isNullableType)
                                 {
-                                    if (value is DBNull) return null;
-                                    return listCreater.Invoke(value);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return listCreater.Invoke(value);
+                                    };
+                                }
+                                else typeHandler = value => listCreater.Invoke(value);
                             }
                         }
                     }
                 }
                 else if (fieldType == typeof(byte[]))
                 {
-                    //兼容某些分布式数据库，bit[n]类型转换为string类型
+                    //兼容某些分布式数据库，bit[n]类型转换为string类型，比如：polardb
                     if (underlyingType == typeof(string))
                     {
-                        typeHandler = value =>
+                        if (isNullableType)
                         {
-                            if (value is DBNull) return null;
-                            return UTF8Encoding.UTF8.GetString((byte[])value);
-                        };
+                            typeHandler = value =>
+                            {
+                                if (value is DBNull) return null;
+                                return Encoding.UTF8.GetString((byte[])value);
+                            };
+                        }
+                        else typeHandler = value => Encoding.UTF8.GetString((byte[])value);
                     }
                     //兼容某些数据库，bit[1]类型转换为bool类型
                     if (underlyingType == typeof(bool))
                     {
-                        typeHandler = value =>
+                        if (isNullableType)
                         {
-                            if (value is DBNull) return null;
-                            return Convert.ToInt32(((byte[])value)[0]) != 0;
-                        };
+                            typeHandler = value =>
+                            {
+                                if (value is DBNull) return null;
+                                return Convert.ToInt32(((byte[])value)[0]) != 0;
+                            };
+                        }
+                        else typeHandler = value => Convert.ToInt32(((byte[])value)[0]) != 0;
                     }
                 }
                 else if (underlyingType.IsEnumType(out _))
@@ -848,21 +877,32 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     if (fieldType == typeof(string))
                     {
                         //参数类型可为null，数据库一定可为null
-                        if (isNullableType)
+                        if (isNullableTargetType)
                         {
-                            typeHandler = value =>
+                            if (isNullableType)
                             {
-                                if (value is DBNull) return null;
-                                return Enum.Parse(underlyingType, (string)value, true);
-                            };
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return Enum.Parse(underlyingType, (string)value, true);
+                                };
+                            }
+                            else typeHandler = value => Enum.Parse(underlyingType, (string)value, true);
                         }
                         else
                         {
-                            typeHandler = value =>
+                            if (isNullableType)
                             {
-                                if (value is DBNull) return Enum.ToObject(underlyingType, 0);
-                                return Enum.Parse(underlyingType, (string)value, true);
-                            };
+                                var defaultValue = Activator.CreateInstance(enumUnderlyingType);
+                                //TODO:
+                                // Enum.IsDefined(underlyingType, 0);
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return Enum.ToObject(underlyingType, 0);
+                                    return Enum.Parse(underlyingType, (string)value, true);
+                                };
+                            }
+                            else typeHandler = value => Enum.Parse(underlyingType, (string)value, true);
                         }
                     }
                     else if (enumUnderlyingType != fieldType && supportedTypes.Contains(fieldType))
