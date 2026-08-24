@@ -1435,12 +1435,12 @@ public static class RepositoryHelper
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
 
         //IDataReader的索引，readerFields的索引
-        int index = 0;
+        int index = 0, readerIndex = 0;
         var root = NewBuildInfo(targetType);
         var current = root;
         var parent = root;
-        var readerBuilders = new Dictionary<ReaderField, EntityBuildInfo>();
-        var deferredBuilds = new Stack<EntityBuildInfo>();
+        var readerBuilders = new Dictionary<ReaderField, EntityBuilder>();
+        var deferredBuilds = new Stack<EntityBuilder>();
         var entityMapProvider = dbContext.EntityMapProvider;
 
         foreach (var readerField in readerFields)
@@ -1482,8 +1482,8 @@ public static class RepositoryHelper
                                 newParameters.AddRange(readerField.ValuesParameters);
                                 var itemPropertyInfo = typeof(List<ReaderField>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
                                     .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(int)).First();
-                                var readerIndex = readerFields.IndexOf(readerField);
-                                var readerFieldExpr = Expression.Property(readerFieldsExpr, itemPropertyInfo, Expression.Constant(readerIndex));
+                                var myReaderIndex = readerFields.IndexOf(readerField);
+                                var readerFieldExpr = Expression.Property(readerFieldsExpr, itemPropertyInfo, Expression.Constant(myReaderIndex));
                                 var localValuesExpr = Expression.Property(readerFieldExpr, nameof(ReaderField.LocalValues));
                                 itemPropertyInfo = typeof(List<object>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
                                     .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(int)).First();
@@ -1506,6 +1506,17 @@ public static class RepositoryHelper
                         else if (readerField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(readerField.TargetMember, executeExpr));
                     }
                     else
+                    {
+                        //单个字段和RawSql单个字段场景
+                        var fieldType = reader.GetFieldType(index);
+                        var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(index),
+                            readerField.ReaderType, fieldType, readerField.MemberMapper, blockParameters, blockBodies);
+                        if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
+                        else if (readerField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
+                        index++;
+                    }
+                    break;
+                case ReaderFieldType.Expression:
                     {
                         //单个字段和RawSql单个字段场景
                         var fieldType = reader.GetFieldType(index);
@@ -1568,7 +1579,7 @@ public static class RepositoryHelper
                     if (readerField.FieldType == ReaderFieldType.IncludeRef)
                     {
                         //Include导航属性引用不能单独Select，前面一定有Parameter访问
-                        //Include导航属性引用单独处理，先设置默认值，在整个实体初始化完后，再设置具体值，初始化Action在成员访问的时候，已经构建好了
+                        //Include导航属性引用单独处理，先设置默认值，在整个实体初始化完后，再SELECT a.`Id`,a.`BuyerId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1设置具体值，初始化Action在成员访问的时候，已经构建好了
                         var refReaderField = readerField.Value as ReaderField;
                         var instanceExpr = readerBuilders[refReaderField].InstanceExpr;
                         //此处生成的副本，从新new的一个对象
@@ -1578,7 +1589,7 @@ public static class RepositoryHelper
                     else
                     {
                         //默认是目标类型，并且也只有第一个ReaderField才是目标类型
-                        if (!readerField.IsTargetType)
+                        if (readerIndex > 0)
                         {
                             if (readerField.Parent != null)
                                 parent = readerBuilders[readerField.Parent];
@@ -1604,25 +1615,27 @@ public static class RepositoryHelper
                         }
                         else if (current.Parent != null)
                         {
+                            EntityBuilder nextBuilder = null;
                             do
                             {
                                 //创建子对象，并赋值给父对象的属性,直到Select语句
+                                if (nextBuilder != null)
+                                    current = nextBuilder;
                                 Expression instanceExpr = null;
                                 if (current.IsDefault)
                                     instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
                                 else instanceExpr = Expression.New(current.Constructor, current.Arguments);
                                 current.InstanceExpr = instanceExpr;
-                                //赋值给父对象的属性
-                                if (current.Parent == null)
-                                    break;
                                 if (!current.Parent.IsDefault) current.Parent.Arguments.Add(instanceExpr);
                                 else if (current.FromMember.CanWrite) current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
                             }
-                            while (deferredBuilds.TryPop(out current));
+                            while (deferredBuilds.TryPop(out nextBuilder));
+                            current = current.Parent;
                         }
                     }
                     break;
             }
+            readerIndex++;
         }
         var resultLabelExpr = Expression.Label(typeof(object));
         Expression returnExpr = null;
@@ -1690,7 +1703,7 @@ public static class RepositoryHelper
         }
         return typedLocalExpr;
     }
-    private static EntityBuildInfo NewBuildInfo(Type targetType, MemberInfo fromMember = null, EntityBuildInfo parent = null)
+    private static EntityBuilder NewBuildInfo(Type targetType, MemberInfo fromMember = null, EntityBuilder parent = null)
     {
         bool isDefaultCtor = false;
         List<MemberBinding> bindings = null;
@@ -1707,7 +1720,7 @@ public static class RepositoryHelper
             ctor = targetType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).OrderBy(f => f.IsPublic ? 0 : (f.IsPrivate ? 2 : 1)).First();
             ctorArguments = new List<Expression>();
         }
-        return new EntityBuildInfo
+        return new EntityBuilder
         {
             IsDefault = isDefaultCtor,
             Constructor = ctor,
@@ -1725,14 +1738,14 @@ public static class RepositoryHelper
             hashCode.Add(type);
         return hashCode.ToHashCode();
     }
-    class EntityBuildInfo
+    class EntityBuilder
     {
         public bool IsDefault { get; set; }
         public ConstructorInfo Constructor { get; set; }
         public List<MemberBinding> Bindings { get; set; }
         public List<Expression> Arguments { get; set; }
         public MemberInfo FromMember { get; set; }
-        public EntityBuildInfo Parent { get; set; }
+        public EntityBuilder Parent { get; set; }
         public Expression InstanceExpr { get; set; }
     }
 }

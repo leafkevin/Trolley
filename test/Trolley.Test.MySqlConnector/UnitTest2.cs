@@ -322,7 +322,7 @@ public class UnitTest2 : UnitTestBase
             })
             .OrderBy(f => f.BuyerId)
             .ToSql(out _);
-        Assert.Equal("SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` AS `NewProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail` a INNER JOIN `sys_order` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1", sql1);
+        Assert.Equal("SELECT a.`BuyerId`,COUNT(a.`Id`) AS `TotalCount`,SUM(a.`TotalAmount`) AS `TotalAmount` FROM `sys_order` a GROUP BY a.`BuyerId` ORDER BY a.`BuyerId`", sql2);
 
         var result2 = repository.From<Order>()
             .GroupBy(f => f.BuyerId)
@@ -364,7 +364,7 @@ public class UnitTest2 : UnitTestBase
                 x.ProductCount
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` AS `NewProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail` a INNER JOIN `sys_order` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1", sql1);
+        Assert.Equal("SELECT a.`Id`,a.`BuyerId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1", sql1);
         var result1 = repository
             .From<Order>()
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
@@ -471,7 +471,7 @@ public class UnitTest2 : UnitTestBase
             Assert.NotNull(result2[0].Grouping);
             Assert.NotNull(result2[0].Buyer);
             Assert.All(result2, f => Assert.True(f.NewProductCount > 1));
-        }         
+        }
     }
     [Fact]
     public void FromQuery_SubQuery1()

@@ -133,7 +133,6 @@ public class ReaderField
     /// FieldType类型为RawSql才有效，默认值是1
     /// </summary>
     public int FieldsCount { get; set; }
-    public bool IsTargetType { get; set; }
     public Expression Expression { get; set; }
     public MemberMap MemberMapper { get; set; }
     /// <summary>
