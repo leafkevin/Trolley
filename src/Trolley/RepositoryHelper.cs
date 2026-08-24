@@ -1316,40 +1316,7 @@ public static class RepositoryHelper
             else throw new NotSupportedException("不支持的成员访问");
             return Expression.Lambda<Action<object, object>>(bodyExpr, objExpr, valueExpr).Compile();
         });
-    }
-
-    public static DateTime ToUtcTime(DateTime dateTime)
-    {
-        if (dateTime == DateTime.MinValue || dateTime == DateTime.MaxValue)
-            return dateTime;
-        if (dateTime.Kind == DateTimeKind.Local)
-            return dateTime.ToUniversalTime();
-        return dateTime;
-    }
-    public static DateTimeOffset ToUtcTime(DateTimeOffset dateTimeOffset)
-    {
-        if (dateTimeOffset == DateTimeOffset.MinValue || dateTimeOffset == DateTimeOffset.MaxValue)
-            return dateTimeOffset; 
-        if (dateTimeOffset.DateTime.Kind == DateTimeKind.Local)
-            return dateTimeOffset.ToUniversalTime();
-        return dateTimeOffset;
-    }
-    public static DateTime ToLocalTime(DateTime dateTime)
-    {
-        if (dateTime == DateTime.MinValue || dateTime == DateTime.MaxValue)
-            return dateTime;
-        if (dateTime.Kind == DateTimeKind.Utc)
-            return dateTime.ToLocalTime();
-        return dateTime;
-    }
-    public static DateTimeOffset ToLocalTime(DateTimeOffset dateTimeOffset)
-    {
-        if (dateTimeOffset == DateTimeOffset.MinValue || dateTimeOffset == DateTimeOffset.MaxValue)
-            return dateTimeOffset;
-        if (dateTimeOffset.DateTime.Kind == DateTimeKind.Utc)
-            return dateTimeOffset.ToLocalTime();
-        return dateTimeOffset;
-    }
+    } 
     public static Func<ITheaDataReader, object> CreateReaderValueTupleDeserializer(Type targetType, DbContext dbContext, ITheaDataReader reader)
     {
         var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
@@ -1710,7 +1677,7 @@ public static class RepositoryHelper
                     var setDefaultValueExpr = Expression.Assign(typedLocalExpr, defaultValueExpr);
                     if (targetType.ToUnderlyingType() != fieldType)
                     {
-                        var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext.Options);
+                        var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, true, dbContext.Options);
                         targetValueExpr = Expression.Invoke(Expression.Constant(valueGetter), readerValueExpr);
                     }
                     else targetValueExpr = Expression.Convert(readerValueExpr, targetType);
@@ -1730,7 +1697,7 @@ public static class RepositoryHelper
             var setDefaultValueExpr = Expression.Assign(typedLocalExpr, defaultValueExpr);
             if (targetType.ToUnderlyingType() != fieldType)
             {
-                var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext.Options);
+                var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, true, dbContext.Options);
                 targetValueExpr = Expression.Invoke(Expression.Constant(valueGetter), readerValueExpr);
             }
             else targetValueExpr = Expression.Convert(readerValueExpr, targetType);

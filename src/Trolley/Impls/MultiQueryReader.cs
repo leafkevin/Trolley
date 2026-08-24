@@ -62,7 +62,13 @@ class MultiQueryReader : IMultiQueryReader
             object readerValue = this.reader.GetValue(0);
             if (readerAfter.IsExists)
                 readerValue = readerValue != null && readerValue is not DBNull;
-            else this.reader.ToValue<TTarget>(this.dbContext);
+            else
+            {
+                var memberMapper = readerAfter.Visitor.ReaderFields[0].MemberMapper;
+                var isNullable = true;
+                if (memberMapper != null) isNullable = !memberMapper.IsRequired;
+                readerValue = this.reader.ToValue<TTarget>(this.dbContext, isNullable);
+            }
             result = (TTarget)readerValue;
         }
         else

@@ -720,60 +720,65 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             return typeHandler;
         });
     }
-    public virtual Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType, bool isNullableType, OrmDbFactoryOptions options)
+    public virtual Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType, bool isNullable, OrmDbFactoryOptions options)
     {
         var hashKey = HashCode.Combine(targetType, fieldType, options.DefaultDateTimeKind);
         return readerValueGetters.GetOrAdd(hashKey, f =>
         {
-            var isNullableTargetType = targetType.IsNullableType(out var underlyingType);
+            var isNullableType = targetType.IsNullableType(out var underlyingType);
             Func<object, object> typeHandler = null;
             if (targetType == fieldType || underlyingType == fieldType)
             {
-                var valueExpr = Expression.Parameter(typeof(object), "value");
-                var blockBodies = new List<Expression>();
-                var resultExpr = Expression.Variable(typeof(object), "result");
-                var isDbNullExpr = Expression.TypeIs(valueExpr, typeof(DBNull));
-                var setDefaultExpr = Expression.Assign(resultExpr, Expression.Convert(Expression.Default(targetType), typeof(object)));
-
-                Expression typedValueExpr = null;
                 if (underlyingType == typeof(DateTime))
                 {
-                    MethodInfo methodInfo;
-                    if (options.DefaultDateTimeKind == DateTimeKind.Utc)
+                    if (isNullable)
                     {
-                        typedValueExpr = Expression.Convert(valueExpr, underlyingType);
-                        methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.SpecifyKind), [underlyingType, typeof(DateTimeKind)]);
-                        typedValueExpr = Expression.Call(methodInfo, typedValueExpr, Expression.Constant(DateTimeKind.Utc));
-                        typedValueExpr = Expression.Convert(typedValueExpr, typeof(object));
+                        if (options.DefaultDateTimeKind == DateTimeKind.Utc)
+                        {
+                            typeHandler = value =>
+                            {
+                                if (value is DBNull) return null;
+                                return DateTime.SpecifyKind((DateTime)value, DateTimeKind.Utc);
+                            };
+                        }
+                        else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                        {
+                            typeHandler = value =>
+                            {
+                                if (value is DBNull) return null;
+                                return DateTime.SpecifyKind((DateTime)value, DateTimeKind.Local);
+                            };
+                        }
+                        else
+                        {
+                            typeHandler = value =>
+                            {
+                                if (value is DBNull) return null;
+                                return value;
+                            };
+                        }
+                    }
+                    else
+                    {
+                        if (options.DefaultDateTimeKind == DateTimeKind.Utc)
+                            typeHandler = value => DateTime.SpecifyKind((DateTime)value, DateTimeKind.Utc);
+                        else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                            typeHandler = value => DateTime.SpecifyKind((DateTime)value, DateTimeKind.Local);
+                        else typeHandler = value => value;
                     }
                 }
-                if (underlyingType == typeof(DateTimeOffset))
+                else
                 {
-                    MethodInfo methodInfo;
-                    if (options.DefaultDateTimeKind == DateTimeKind.Utc)
+                    if (isNullable)
                     {
-                        typedValueExpr = Expression.Convert(valueExpr, underlyingType);
-                        methodInfo = typeof(RepositoryHelper).GetMethod(nameof(RepositoryHelper.ToUtcTime), [underlyingType]);
-                        typedValueExpr = Expression.Call(methodInfo, typedValueExpr);
-                        typedValueExpr = Expression.Convert(typedValueExpr, typeof(object));
+                        typeHandler = value =>
+                        {
+                            if (value is DBNull) return null;
+                            return value;
+                        };
                     }
-                    else if (options.DefaultDateTimeKind == DateTimeKind.Local)
-                    {
-                        typedValueExpr = Expression.Convert(valueExpr, underlyingType);
-                        methodInfo = typeof(RepositoryHelper).GetMethod(nameof(RepositoryHelper.ToLocalTime), [underlyingType]);
-                        typedValueExpr = Expression.Call(methodInfo, typedValueExpr);
-                        typedValueExpr = Expression.Convert(typedValueExpr, typeof(object));
-                    }
-                    else typedValueExpr = valueExpr;
+                    else typeHandler = value => value;
                 }
-                else typedValueExpr = valueExpr;
-                var setTypedValueExpr = Expression.Assign(resultExpr, typedValueExpr);
-                blockBodies.Add(Expression.IfThenElse(isDbNullExpr, setDefaultExpr, setTypedValueExpr));
-                var resultLabelExpr = Expression.Label(typeof(object));
-                blockBodies.Add(Expression.Return(resultLabelExpr, resultExpr));
-                blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(object))));
-                var bodyExpr = Expression.Block([resultExpr], blockBodies);
-                typeHandler = Expression.Lambda<Func<object, object>>(bodyExpr, valueExpr).Compile();
             }
             else
             {
@@ -783,7 +788,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     //数组类支持一元的，多元建议用json
                     if (underlyingType.IsArray)
                     {
-                        if (isNullableType)
+                        if (isNullable)
                         {
                             typeHandler = value =>
                             {
@@ -810,7 +815,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                 var listType = typeof(List<>).MakeGenericType(elelmentTypes[0]);
                                 var bodyExpr = Expression.New(listType.GetConstructor([parametersType]), typedCollectionExpr);
                                 var listCreater = Expression.Lambda<Func<object, object>>(bodyExpr, collectionExpr).Compile();
-                                if (isNullableType)
+                                if (isNullable)
                                 {
                                     typeHandler = value =>
                                     {
@@ -828,7 +833,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                 var collectionType = typeof(Collection<>).MakeGenericType(elelmentTypes[0]);
                                 var bodyExpr = Expression.New(collectionType.GetConstructor([parametersType]), typedListExpr);
                                 var listCreater = Expression.Lambda<Func<object, object>>(bodyExpr, listExpr).Compile();
-                                if (isNullableType)
+                                if (isNullable)
                                 {
                                     typeHandler = value =>
                                     {
@@ -846,7 +851,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     //兼容某些分布式数据库，bit[n]类型转换为string类型，比如：polardb
                     if (underlyingType == typeof(string))
                     {
-                        if (isNullableType)
+                        if (isNullable)
                         {
                             typeHandler = value =>
                             {
@@ -857,264 +862,303 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         else typeHandler = value => Encoding.UTF8.GetString((byte[])value);
                     }
                     //兼容某些数据库，bit[1]类型转换为bool类型
-                    if (underlyingType == typeof(bool))
+                    else if (underlyingType == typeof(bool))
                     {
-                        if (isNullableType)
+                        if (isNullable)
                         {
-                            typeHandler = value =>
+                            if (isNullableType)
                             {
-                                if (value is DBNull) return null;
-                                return Convert.ToInt32(((byte[])value)[0]) != 0;
-                            };
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return Convert.ToInt32(((byte[])value)[0]) != 0;
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return false;
+                                    return Convert.ToInt32(((byte[])value)[0]) != 0;
+                                };
+                            }
                         }
                         else typeHandler = value => Convert.ToInt32(((byte[])value)[0]) != 0;
                     }
                 }
-                else if (underlyingType.IsEnumType(out _))
-                {
-                    var enumUnderlyingType = Enum.GetUnderlyingType(underlyingType);
-                    Type[] supportedTypes = [typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(decimal)];
-                    if (fieldType == typeof(string))
-                    {
-                        //参数类型可为null，数据库一定可为null
-                        if (isNullableTargetType)
-                        {
-                            if (isNullableType)
-                            {
-                                typeHandler = value =>
-                                {
-                                    if (value is DBNull) return null;
-                                    return Enum.Parse(underlyingType, (string)value, true);
-                                };
-                            }
-                            else typeHandler = value => Enum.Parse(underlyingType, (string)value, true);
-                        }
-                        else
-                        {
-                            if (isNullableType)
-                            {
-                                var defaultValue = Activator.CreateInstance(enumUnderlyingType);
-                                //TODO:
-                                // Enum.IsDefined(underlyingType, 0);
-                                typeHandler = value =>
-                                {
-                                    if (value is DBNull) return Enum.ToObject(underlyingType, 0);
-                                    return Enum.Parse(underlyingType, (string)value, true);
-                                };
-                            }
-                            else typeHandler = value => Enum.Parse(underlyingType, (string)value, true);
-                        }
-                    }
-                    else if (enumUnderlyingType != fieldType && supportedTypes.Contains(fieldType))
-                    {
-                        if (isNullableType)
-                        {
-                            typeHandler = value =>
-                            {
-                                if (value is DBNull) return null;
-                                var numberValue = Convert.ChangeType(value, enumUnderlyingType);
-                                return Enum.ToObject(underlyingType, numberValue);
-                            };
-                        }
-                        else
-                        {
-                            typeHandler = value =>
-                            {
-                                if (value is DBNull) return Enum.ToObject(underlyingType, 0);
-                                var numberValue = Convert.ChangeType(value, enumUnderlyingType);
-                                return Enum.ToObject(underlyingType, numberValue);
-                            };
-                        }
-                    }
-                    else
-                    {
-                        if (isNullableType)
-                        {
-                            typeHandler = value =>
-                            {
-                                if (value is DBNull) return null;
-                                return Enum.ToObject(underlyingType, value);
-                            };
-                        }
-                        else
-                        {
-                            typeHandler = value =>
-                            {
-                                if (value is DBNull) return Enum.ToObject(underlyingType, 0);
-                                return Enum.ToObject(underlyingType, value);
-                            };
-                        }
-                    }
-                }
                 else
                 {
-                    if (underlyingType == typeof(Guid))
+                    if (underlyingType.IsEnumType(out var enumUnderlyingType))
+                    {
+                        Type[] supportedTypes = [typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(decimal)];
+                        if (fieldType == typeof(string))
+                        {
+                            //参数类型可为null，数据库一定可为null
+                            if (isNullable)
+                            {
+                                if (isNullableType)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return Enum.Parse(underlyingType, (string)value, true);
+                                    };
+                                }
+                                else
+                                {
+                                    if (Enum.IsDefined(underlyingType, 0))
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value is DBNull) return Enum.ToObject(underlyingType, 0);
+                                            return Enum.Parse(underlyingType, (string)value, true);
+                                        };
+                                    }
+                                    else typeHandler = value => Enum.Parse(underlyingType, (string)value, true);
+                                }
+                            }
+                            else typeHandler = value => Enum.Parse(underlyingType, (string)value, true);
+                        }
+                        else if (enumUnderlyingType != fieldType && supportedTypes.Contains(fieldType))
+                        {
+                            if (isNullable)
+                            {
+                                if (isNullableType)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        var numberValue = Convert.ChangeType(value, enumUnderlyingType);
+                                        return Enum.ToObject(underlyingType, numberValue);
+                                    };
+                                }
+                                else
+                                {
+                                    if (Enum.IsDefined(underlyingType, 0))
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value is DBNull) return Enum.ToObject(underlyingType, 0);
+                                            var numberValue = Convert.ChangeType(value, enumUnderlyingType);
+                                            return Enum.ToObject(underlyingType, numberValue);
+                                        };
+                                    }
+                                    else
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            var numberValue = Convert.ChangeType(value, enumUnderlyingType);
+                                            return Enum.ToObject(underlyingType, numberValue);
+                                        };
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    var numberValue = Convert.ChangeType(value, enumUnderlyingType);
+                                    return Enum.ToObject(underlyingType, numberValue);
+                                };
+                            }
+                        }
+                        else
+                        {
+                            if (isNullable)
+                            {
+                                if (isNullableType)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        var numberValue = Convert.ChangeType(value, enumUnderlyingType);
+                                        return Enum.ToObject(underlyingType, numberValue);
+                                    };
+                                }
+                                else
+                                {
+                                    if (Enum.IsDefined(underlyingType, 0))
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value is DBNull) return Enum.ToObject(underlyingType, 0);
+                                            var numberValue = Convert.ChangeType(value, enumUnderlyingType);
+                                            return Enum.ToObject(underlyingType, numberValue);
+                                        };
+                                    }
+                                    else
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            var numberValue = Convert.ChangeType(value, enumUnderlyingType);
+                                            return Enum.ToObject(underlyingType, numberValue);
+                                        };
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    var numberValue = Convert.ChangeType(value, enumUnderlyingType);
+                                    return Enum.ToObject(underlyingType, numberValue);
+                                };
+                            }
+                        }
+                    }
+                    else if (underlyingType == typeof(Guid))
                     {
                         if (fieldType == typeof(string))
                         {
-                            if (isNullableType)
+                            if (isNullable)
                             {
-                                typeHandler = value =>
+                                if (isNullableType)
                                 {
-                                    if (value is DBNull) return null;
-                                    return new Guid((string)value);
-                                };
-                            }
-                            else
-                            {
-                                typeHandler = value =>
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return new Guid((string)value);
+                                    };
+                                }
+                                else
                                 {
-                                    if (value is DBNull) return Guid.Empty;
-                                    return new Guid((string)value);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return Guid.Empty;
+                                        return new Guid((string)value);
+                                    };
+                                }
                             }
+                            else typeHandler = value => new Guid((string)value);
                         }
                         else if (fieldType == typeof(byte[]))
                         {
-                            if (isNullableType)
+                            if (isNullable)
                             {
-                                typeHandler = value =>
+                                if (isNullableType)
                                 {
-                                    if (value is DBNull) return null;
-                                    return new Guid((byte[])value);
-                                };
-                            }
-                            else
-                            {
-                                typeHandler = value =>
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return new Guid((byte[])value);
+                                    };
+                                }
+                                else
                                 {
-                                    if (value is DBNull) return Guid.Empty;
-                                    return new Guid((byte[])value);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return Guid.Empty;
+                                        return new Guid((string)value);
+                                    };
+                                }
                             }
+                            else typeHandler = value => new Guid((byte[])value);
                         }
                     }
                     else if (underlyingType == typeof(DateTimeOffset))
                     {
                         if (fieldType == typeof(string))
                         {
-                            if (isNullableType)
+                            if (isNullable)
                             {
-                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (isNullableType)
                                 {
-                                    typeHandler = value =>
+                                    if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                     {
-                                        if (value is DBNull) return null;
-                                        return RepositoryHelper.ToUtcTime(DateTimeOffset.Parse((string)value));
-                                    };
-                                }
-                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
-                                {
-                                    typeHandler = value =>
+                                        typeHandler = value =>
+                                        {
+                                            if (value is DBNull) return null;
+                                            return new DateTimeOffset(DateTime.Parse((string)value), TimeSpan.Zero);
+                                        };
+                                    }
+                                    else
                                     {
-                                        if (value is DBNull) return null;
-                                        return RepositoryHelper.ToLocalTime(DateTimeOffset.Parse((string)value));
-                                    };
+                                        //不是UTC，就是Local
+                                        typeHandler = value =>
+                                        {
+                                            if (value is DBNull) return null;
+                                            return DateTimeOffset.Parse((string)value);
+                                        };
+                                    }
                                 }
                                 else
                                 {
-                                    typeHandler = value =>
+                                    if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                     {
-                                        if (value is DBNull) return null;
-                                        return DateTimeOffset.Parse((string)value);
-                                    };
+                                        typeHandler = value =>
+                                        {
+                                            if (value is DBNull) return DateTimeOffset.MinValue;
+                                            return new DateTimeOffset(DateTime.Parse((string)value), TimeSpan.Zero);
+                                        };
+                                    }
+                                    else
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value is DBNull) return DateTimeOffset.MinValue;
+                                            return DateTimeOffset.Parse((string)value);
+                                        };
+                                    }
                                 }
                             }
                             else
                             {
                                 if (options.DefaultDateTimeKind == DateTimeKind.Utc)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return DateTimeOffset.MinValue;
-                                        return RepositoryHelper.ToUtcTime(DateTimeOffset.Parse((string)value));
-                                    };
-                                }
-                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return DateTimeOffset.MinValue;
-                                        return RepositoryHelper.ToLocalTime(DateTimeOffset.Parse((string)value));
-                                    };
-                                }
-                                else
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return DateTimeOffset.MinValue;
-                                        return DateTimeOffset.Parse((string)value);
-                                    };
-                                }
+                                    typeHandler = value => new DateTimeOffset(DateTime.Parse((string)value), TimeSpan.Zero);
+                                else typeHandler = value => DateTimeOffset.Parse((string)value);
                             }
                         }
                         else if (fieldType == typeof(DateTime))
                         {
-                            if (isNullableType)
+                            if (isNullable)
                             {
-                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (isNullableType)
                                 {
-                                    typeHandler = value =>
+                                    if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                     {
-                                        if (value is DBNull) return null;
-                                        var dt = (DateTime)value;
-                                        if (dt == DateTime.MinValue) return DateTimeOffset.MinValue;
-                                        if (dt == DateTime.MaxValue) return DateTimeOffset.MaxValue;
-                                        return RepositoryHelper.ToUtcTime(new DateTimeOffset(dt));
-                                    };
-                                }
-                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
-                                {
-                                    typeHandler = value =>
+                                        typeHandler = value =>
+                                        {
+                                            if (value is DBNull) return null;
+                                            return new DateTimeOffset(DateTime.Parse((string)value), TimeSpan.Zero);
+                                        };
+                                    }
+                                    else
                                     {
-                                        if (value is DBNull) return null;
-                                        var dt = (DateTime)value;
-                                        if (dt == DateTime.MinValue) return DateTimeOffset.MinValue;
-                                        if (dt == DateTime.MaxValue) return DateTimeOffset.MaxValue;
-                                        return RepositoryHelper.ToLocalTime(new DateTimeOffset(dt));
-                                    };
+                                        typeHandler = value =>
+                                        {
+                                            if (value is DBNull) return null;
+                                            return DateTimeOffset.Parse((string)value);
+                                        };
+                                    }
                                 }
                                 else
                                 {
-                                    typeHandler = value =>
+                                    if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                     {
-                                        if (value is DBNull) return null;
-                                        var dt = (DateTime)value;
-                                        if (dt == DateTime.MinValue) return DateTimeOffset.MinValue;
-                                        if (dt == DateTime.MaxValue) return DateTimeOffset.MaxValue;
-                                        return new DateTimeOffset(dt);
-                                    };
+                                        typeHandler = value =>
+                                        {
+                                            if (value is DBNull) return DateTime.MinValue;
+                                            else return new DateTimeOffset((DateTime)value, TimeSpan.Zero);
+                                        };
+                                    }
+                                    else
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value is DBNull) return DateTime.MinValue;
+                                            else return DateTimeOffset.Parse((string)value);
+                                        };
+                                    }
                                 }
                             }
                             else
                             {
                                 if (options.DefaultDateTimeKind == DateTimeKind.Utc)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return DateTimeOffset.MinValue;
-                                        var dt = (DateTime)value;
-                                        if (dt == DateTime.MinValue) return DateTimeOffset.MinValue;
-                                        if (dt == DateTime.MaxValue) return DateTimeOffset.MaxValue;
-                                        return RepositoryHelper.ToUtcTime(new DateTimeOffset(dt));
-                                    };
-                                }
-                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return DateTimeOffset.MinValue;
-                                        var dt = (DateTime)value;
-                                        if (dt == DateTime.MinValue) return DateTimeOffset.MinValue;
-                                        if (dt == DateTime.MaxValue) return DateTimeOffset.MaxValue;
-                                        return new DateTimeOffset(RepositoryHelper.ToLocalTime(dt));
-                                    };
-                                }
+                                    typeHandler = value => new DateTimeOffset((DateTime)value, TimeSpan.Zero);
                                 else
                                 {
                                     typeHandler = value =>
                                     {
-                                        if (value is DBNull) return DateTimeOffset.MinValue;
                                         var dt = (DateTime)value;
                                         if (dt == DateTime.MinValue) return DateTimeOffset.MinValue;
                                         if (dt == DateTime.MaxValue) return DateTimeOffset.MaxValue;
@@ -1128,207 +1172,127 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     {
                         if (fieldType == typeof(string))
                         {
-                            if (isNullableType)
+                            if (isNullable)
                             {
-                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (isNullableType)
                                 {
-                                    typeHandler = value =>
+                                    if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                     {
-                                        if (value is DBNull) return null;
-                                        return RepositoryHelper.ToUtcTime(DateTime.Parse((string)value));
-                                    };
-                                }
-                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
-                                {
-                                    typeHandler = value =>
+                                        typeHandler = value =>
+                                        {
+                                            if (value is DBNull) return null;
+                                            return DateTime.SpecifyKind(DateTime.Parse((string)value), DateTimeKind.Utc);
+                                        };
+                                    }
+                                    else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                     {
-                                        if (value is DBNull) return null;
-                                        return RepositoryHelper.ToLocalTime(DateTime.Parse((string)value));
-                                    };
+                                        typeHandler = value =>
+                                        {
+                                            if (value is DBNull) return null;
+                                            return DateTime.SpecifyKind(DateTime.Parse((string)value), DateTimeKind.Local);
+                                        };
+                                    }
+                                    else
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value is DBNull) return null;
+                                            return DateTime.Parse((string)value);
+                                        };
+                                    }
                                 }
                                 else
                                 {
-                                    typeHandler = value =>
+                                    if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                     {
-                                        if (value is DBNull) return null;
-                                        return DateTime.Parse((string)value);
-                                    };
+                                        typeHandler = value =>
+                                        {
+                                            if (value is DBNull) return DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
+                                            return DateTime.SpecifyKind(DateTime.Parse((string)value), DateTimeKind.Utc);
+                                        };
+                                    }
+                                    else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value is DBNull) return DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
+                                            return DateTime.SpecifyKind(DateTime.Parse((string)value), DateTimeKind.Local);
+                                        };
+                                    }
+                                    else
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value is DBNull) return DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
+                                            return DateTime.Parse((string)value);
+                                        };
+                                    }
                                 }
                             }
                             else
                             {
                                 if (options.DefaultDateTimeKind == DateTimeKind.Utc)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return DateTime.MinValue;
-                                        return RepositoryHelper.ToUtcTime(DateTime.Parse((string)value));
-                                    };
-                                }
-                                else if (options.DefaultDateTimeKind == DateTimeKind.Utc)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return DateTime.MinValue;
-                                        return RepositoryHelper.ToLocalTime(DateTime.Parse((string)value));
-                                    };
-                                }
-                                else
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return DateTime.MinValue;
-                                        return DateTime.Parse((string)value);
-                                    };
-                                }
+                                    typeHandler = value => DateTime.SpecifyKind(DateTime.Parse((string)value), DateTimeKind.Utc);
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                                    typeHandler = value => DateTime.SpecifyKind(DateTime.Parse((string)value), DateTimeKind.Local);
+                                else typeHandler = value => DateTime.Parse((string)value);
                             }
                         }
 #if NET6_0_OR_GREATER
                         else if (fieldType == typeof(DateOnly))
                         {
-                            if (isNullableType)
+                            if (isNullable)
                             {
-                                typeHandler = value =>
+                                if (isNullableType)
                                 {
-                                    if (value is DBNull) return null;
-                                    return ((DateOnly)value).ToDateTime(TimeOnly.MinValue);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return ((DateOnly)value).ToDateTime(TimeOnly.MinValue);
+                                    };
+                                }
+                                else typeHandler = value => ((DateOnly)value).ToDateTime(TimeOnly.MinValue);
                             }
-                            else
-                            {
-                                typeHandler = value =>
-                                {
-                                    if (value is DBNull) return DateTime.MinValue;
-                                    return ((DateOnly)value).ToDateTime(TimeOnly.MinValue);
-                                };
-                            }
+                            else typeHandler = value => ((DateOnly)value).ToDateTime(TimeOnly.MinValue);
                         }
-#endif
-                        else if (fieldType == typeof(DateTimeOffset))
-                        {
-                            if (isNullableType)
-                            {
-                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return RepositoryHelper.ToUtcTime((DateTimeOffset)value);
-                                    };
-                                }
-                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return RepositoryHelper.ToLocalTime((DateTimeOffset)value);
-                                    };
-                                }
-                                else
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return ((DateTimeOffset)value).DateTime;
-                                    };
-                                }
-                            }
-                            else
-                            {
-                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return DateTime.MinValue;
-                                        return RepositoryHelper.ToUtcTime((DateTimeOffset)value);
-                                    };
-                                }
-                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return DateTime.MinValue;
-                                        return RepositoryHelper.ToLocalTime((DateTimeOffset)value);
-                                    };
-                                }
-                                else
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return DateTime.MinValue;
-                                        return ((DateTimeOffset)value).DateTime;
-                                    };
-                                }
-                            }
-                        }
+#endif                        
                     }
 #if NET6_0_OR_GREATER
                     else if (underlyingType == typeof(DateOnly))
                     {
                         if (fieldType == typeof(string))
                         {
-                            if (isNullableType)
+                            if (isNullable)
                             {
-                                typeHandler = value =>
-                                {
-                                    if (value is DBNull) return null;
-                                    return DateOnly.Parse((string)value);
-                                };
-                            }
-                            else
-                            {
-                                typeHandler = value =>
-                                {
-                                    if (value is DBNull) return DateOnly.MinValue;
-                                    return DateOnly.Parse((string)value);
-                                };
-                            }
-                        }
-                        else if (fieldType == typeof(DateTime))
-                        {
-                            if (isNullableType)
-                            {
-                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (isNullableType)
                                 {
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return DateOnly.FromDateTime(RepositoryHelper.ToUtcTime((DateTime)value));
-                                    };
-                                }
-                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return DateOnly.FromDateTime(RepositoryHelper.ToLocalTime((DateTime)value));
+                                        return DateOnly.Parse((string)value);
                                     };
                                 }
                                 else
                                 {
                                     typeHandler = value =>
                                     {
-                                        if (value is DBNull) return null;
-                                        return DateOnly.FromDateTime(((DateTime)value));
+                                        if (value is DBNull) return DateOnly.MinValue;
+                                        return DateOnly.Parse((string)value);
                                     };
                                 }
                             }
-                            else
+                            else typeHandler = value => DateOnly.Parse((string)value);
+                        }
+                        else if (fieldType == typeof(DateTime))
+                        {
+                            if (isNullable)
                             {
-                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
+                                if (isNullableType)
                                 {
                                     typeHandler = value =>
                                     {
-                                        if (value is DBNull) return DateOnly.MinValue;
-                                        return DateOnly.FromDateTime(RepositoryHelper.ToUtcTime((DateTime)value));
-                                    };
-                                }
-                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return DateOnly.MinValue;
-                                        return DateOnly.FromDateTime(RepositoryHelper.ToLocalTime((DateTime)value));
+                                        if (value is DBNull) return null;
+                                        return DateOnly.FromDateTime((DateTime)value);
                                     };
                                 }
                                 else
@@ -1340,63 +1304,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     };
                                 }
                             }
-                        }
-                        else if (fieldType == typeof(DateTimeOffset))
-                        {
-                            if (isNullableType)
-                            {
-                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return DateOnly.FromDateTime(RepositoryHelper.ToUtcTime((DateTimeOffset)value).DateTime);
-                                    };
-                                }
-                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return DateOnly.FromDateTime(RepositoryHelper.ToLocalTime((DateTimeOffset)value).DateTime);
-                                    };
-                                }
-                                else
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return DateOnly.FromDateTime(((DateTimeOffset)value).DateTime);
-                                    };
-                                }
-                            }
-                            else
-                            {
-                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return DateOnly.MinValue;
-                                        return DateOnly.FromDateTime(RepositoryHelper.ToUtcTime((DateTimeOffset)value).DateTime);
-                                    };
-                                }
-                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return DateOnly.MinValue;
-                                        return DateOnly.FromDateTime(RepositoryHelper.ToLocalTime((DateTimeOffset)value).DateTime);
-                                    };
-                                }
-                                else
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return DateOnly.MinValue;
-                                        return DateOnly.FromDateTime(((DateTimeOffset)value).DateTime);
-                                    };
-                                }
-                            }
+                            else typeHandler = value => DateOnly.FromDateTime((DateTime)value);
                         }
                     }
 #endif
@@ -1404,108 +1312,85 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     {
                         if (fieldType == typeof(long))
                         {
-                            if (isNullableType)
+                            if (isNullable)
                             {
-                                typeHandler = value =>
+                                if (isNullableType)
                                 {
-                                    if (value is DBNull) return null;
-                                    return TimeSpan.FromTicks((long)value);
-                                };
-                            }
-                            else
-                            {
-                                typeHandler = value =>
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return TimeSpan.FromTicks((long)value);
+                                    };
+                                }
+                                else
                                 {
-                                    if (value is DBNull) return TimeSpan.MinValue;
-                                    return TimeSpan.FromTicks((long)value);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return TimeSpan.MinValue;
+                                        return TimeSpan.FromTicks((long)value);
+                                    };
+                                }
                             }
+                            else typeHandler = value => TimeSpan.FromTicks((long)value);
                         }
                         else if (fieldType == typeof(string))
                         {
-                            if (isNullableType)
+                            if (isNullable)
                             {
-                                typeHandler = value =>
+                                if (isNullableType)
                                 {
-                                    if (value is DBNull) return null;
-                                    return TimeSpan.Parse((string)value);
-                                };
-                            }
-                            else
-                            {
-                                typeHandler = value =>
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return TimeSpan.Parse((string)value);
+                                    };
+                                }
+                                else
                                 {
-                                    if (value is DBNull) return TimeSpan.MinValue;
-                                    return TimeSpan.Parse((string)value);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return TimeSpan.MinValue;
+                                        return TimeSpan.Parse((string)value);
+                                    };
+                                }
                             }
+                            else typeHandler = value => TimeSpan.Parse((string)value);
                         }
 #if NET6_0_OR_GREATER
                         else if (fieldType == typeof(TimeOnly))
                         {
-                            if (isNullableType)
+                            if (isNullable)
                             {
-                                typeHandler = value =>
+                                if (isNullableType)
                                 {
-                                    if (value is DBNull) return null;
-                                    return ((TimeOnly)value).ToTimeSpan();
-                                };
-                            }
-                            else
-                            {
-                                typeHandler = value =>
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return ((TimeOnly)value).ToTimeSpan();
+                                    };
+                                }
+                                else
                                 {
-                                    if (value is DBNull) return TimeSpan.MinValue;
-                                    return ((TimeOnly)value).ToTimeSpan();
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return TimeSpan.MinValue;
+                                        return ((TimeOnly)value).ToTimeSpan();
+                                    };
+                                }
                             }
+                            else typeHandler = value => ((TimeOnly)value).ToTimeSpan();
                         }
 #endif
                         else if (fieldType == typeof(DateTime))
                         {
-                            if (isNullableType)
+                            if (isNullable)
                             {
-                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return RepositoryHelper.ToUtcTime((DateTime)value).TimeOfDay;
-                                    };
-                                }
-                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return RepositoryHelper.ToLocalTime((DateTime)value).TimeOfDay;
-                                    };
-                                }
-                                else
+                                if (isNullableType)
                                 {
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
                                         return ((DateTime)value).TimeOfDay;
-                                    };
-                                }
-                            }
-                            else
-                            {
-                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return TimeSpan.MinValue;
-                                        return RepositoryHelper.ToUtcTime((DateTime)value).TimeOfDay;
-                                    };
-                                }
-                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return TimeSpan.MinValue;
-                                        return RepositoryHelper.ToLocalTime((DateTime)value).TimeOfDay;
                                     };
                                 }
                                 else
@@ -1517,63 +1402,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     };
                                 }
                             }
-                        }
-                        else if (fieldType == typeof(DateTimeOffset))
-                        {
-                            if (isNullableType)
-                            {
-                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return RepositoryHelper.ToUtcTime((DateTimeOffset)value).TimeOfDay;
-                                    };
-                                }
-                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return RepositoryHelper.ToLocalTime((DateTimeOffset)value).TimeOfDay;
-                                    };
-                                }
-                                else
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return ((DateTimeOffset)value).DateTime.TimeOfDay;
-                                    };
-                                }
-                            }
-                            else
-                            {
-                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return TimeSpan.MinValue;
-                                        return RepositoryHelper.ToUtcTime((DateTimeOffset)value).TimeOfDay;
-                                    };
-                                }
-                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return TimeSpan.MinValue;
-                                        return RepositoryHelper.ToLocalTime((DateTimeOffset)value).TimeOfDay;
-                                    };
-                                }
-                                else
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return TimeSpan.MinValue;
-                                        return ((DateTimeOffset)value).DateTime.TimeOfDay;
-                                    };
-                                }
-                            }
+                            else typeHandler = value => ((DateTime)value).TimeOfDay;
                         }
                     }
 #if NET6_0_OR_GREATER
@@ -1581,106 +1410,83 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     {
                         if (fieldType == typeof(long))
                         {
-                            if (isNullableType)
+                            if (isNullable)
                             {
-                                typeHandler = value =>
+                                if (isNullableType)
                                 {
-                                    if (value is DBNull) return null;
-                                    return new TimeOnly((long)value);
-                                };
-                            }
-                            else
-                            {
-                                typeHandler = value =>
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return new TimeOnly((long)value);
+                                    };
+                                }
+                                else
                                 {
-                                    if (value is DBNull) return TimeOnly.MinValue;
-                                    return new TimeOnly((long)value);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return TimeOnly.MinValue;
+                                        return new TimeOnly((long)value);
+                                    };
+                                }
                             }
+                            else typeHandler = value => new TimeOnly((long)value);
                         }
                         else if (fieldType == typeof(string))
                         {
-                            if (isNullableType)
+                            if (isNullable)
                             {
-                                typeHandler = value =>
+                                if (isNullableType)
                                 {
-                                    if (value is DBNull) return null;
-                                    return TimeOnly.FromTimeSpan(TimeSpan.Parse((string)value));
-                                };
-                            }
-                            else
-                            {
-                                typeHandler = value =>
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return TimeOnly.FromTimeSpan(TimeSpan.Parse((string)value));
+                                    };
+                                }
+                                else
                                 {
-                                    if (value is DBNull) return TimeOnly.MinValue;
-                                    return TimeOnly.FromTimeSpan(TimeSpan.Parse((string)value));
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return TimeOnly.MinValue;
+                                        return TimeOnly.FromTimeSpan(TimeSpan.Parse((string)value));
+                                    };
+                                }
                             }
+                            else typeHandler = value => TimeOnly.FromTimeSpan(TimeSpan.Parse((string)value));
                         }
                         else if (fieldType == typeof(TimeSpan))
                         {
-                            if (isNullableType)
+                            if (isNullable)
                             {
-                                typeHandler = value =>
+                                if (isNullableType)
                                 {
-                                    if (value is DBNull) return null;
-                                    return TimeOnly.FromTimeSpan((TimeSpan)value);
-                                };
-                            }
-                            else
-                            {
-                                typeHandler = value =>
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return TimeOnly.FromTimeSpan((TimeSpan)value);
+                                    };
+                                }
+                                else
                                 {
-                                    if (value is DBNull) return TimeOnly.MinValue;
-                                    return TimeOnly.FromTimeSpan((TimeSpan)value);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return TimeOnly.MinValue;
+                                        return TimeOnly.FromTimeSpan((TimeSpan)value);
+                                    };
+                                }
                             }
+                            else typeHandler = value => TimeOnly.FromTimeSpan((TimeSpan)value);
                         }
                         else if (fieldType == typeof(DateTime))
                         {
-                            if (isNullableType)
+                            if (isNullable)
                             {
-                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return TimeOnly.FromTimeSpan(RepositoryHelper.ToUtcTime((DateTime)value).TimeOfDay);
-                                    };
-                                }
-                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return TimeOnly.FromTimeSpan(RepositoryHelper.ToLocalTime((DateTime)value).TimeOfDay);
-                                    };
-                                }
-                                else
+                                if (isNullableType)
                                 {
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
                                         return TimeOnly.FromTimeSpan(((DateTime)value).TimeOfDay);
-                                    };
-                                }
-                            }
-                            else
-                            {
-                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return TimeOnly.MinValue;
-                                        return TimeOnly.FromTimeSpan(RepositoryHelper.ToUtcTime((DateTime)value).TimeOfDay);
-                                    };
-                                }
-                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return TimeOnly.MinValue;
-                                        return TimeOnly.FromTimeSpan(RepositoryHelper.ToLocalTime((DateTime)value).TimeOfDay);
                                     };
                                 }
                                 else
@@ -1692,95 +1498,47 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     };
                                 }
                             }
-                        }
-                        else if (fieldType == typeof(DateTimeOffset))
-                        {
-                            if (isNullableType)
-                            {
-                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return TimeOnly.FromTimeSpan(RepositoryHelper.ToUtcTime((DateTimeOffset)value).TimeOfDay);
-                                    };
-                                }
-                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return TimeOnly.FromTimeSpan(RepositoryHelper.ToLocalTime((DateTimeOffset)value).TimeOfDay);
-                                    };
-                                }
-                                else
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return TimeOnly.FromTimeSpan(((DateTimeOffset)value).DateTime.TimeOfDay);
-                                    };
-                                }
-                            }
-                            else
-                            {
-                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return TimeOnly.MinValue;
-                                        return TimeOnly.FromTimeSpan(RepositoryHelper.ToUtcTime((DateTimeOffset)value).TimeOfDay);
-                                    };
-                                }
-                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return TimeOnly.MinValue;
-                                        return TimeOnly.FromTimeSpan(RepositoryHelper.ToLocalTime((DateTimeOffset)value).TimeOfDay);
-                                    };
-                                }
-                                else
-                                {
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return TimeOnly.MinValue;
-                                        return TimeOnly.FromTimeSpan(((DateTimeOffset)value).DateTime.TimeOfDay);
-                                    };
-                                }
-                            }
+                            else typeHandler = value => TimeOnly.FromTimeSpan(((DateTime)value).TimeOfDay);
                         }
                     }
 #endif
                     else if (underlyingType == typeof(string))
                     {
-                        typeHandler = value =>
+                        if (isNullable)
                         {
-                            if (value is DBNull) return null;
-                            return Convert.ToString(value);
-                        };
+                            typeHandler = value =>
+                            {
+                                if (value is DBNull) return null;
+                                return value.ToString();
+                            };
+                        }
+                        else typeHandler = value => value.ToString();
                     }
                     else if (underlyingType == typeof(bool))
                     {
                         Type[] supportedTypes = [typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong)];
                         if (supportedTypes.Contains(fieldType))
                         {
-                            if (isNullableType)
+                            if (isNullable)
                             {
-                                typeHandler = value =>
+                                if (isNullableType)
                                 {
-                                    if (value is DBNull) return null;
-                                    return Convert.ToInt32(value) != 0;
-                                };
-                            }
-                            else
-                            {
-                                typeHandler = value =>
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return Convert.ToInt32(value) != 0;
+                                    };
+                                }
+                                else
                                 {
-                                    if (value is DBNull) return false;
-                                    return Convert.ToInt32(value) != 0;
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return false;
+                                        return Convert.ToInt32(value) != 0;
+                                    };
+                                }
                             }
+                            else typeHandler = value => Convert.ToInt32(value) != 0;
                         }
                     }
                     else if (underlyingType == typeof(byte[]))
@@ -1792,88 +1550,19 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         ];
                         if (supportedTypes.Contains(fieldType))
                         {
-                            switch (fieldType)
+                            var valueExpr = Expression.Parameter(typeof(object), "value");
+                            var typedValueExpr = Expression.Convert(valueExpr, fieldType);
+                            var methodInfo = typeof(BitConverter).GetMethod(nameof(BitConverter.GetBytes), [fieldType]);
+                            var typedTypeHandler = Expression.Lambda<Func<object, object>>(Expression.Call(methodInfo, typedValueExpr), valueExpr).Compile();
+                            if (isNullable)
                             {
-                                case Type factType when factType == typeof(bool):
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return BitConverter.GetBytes((bool)value);
-                                    };
-                                    break;
-                                case Type factType when factType == typeof(char):
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return BitConverter.GetBytes((char)value);
-                                    };
-                                    break;
-                                case Type factType when factType == typeof(short):
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return BitConverter.GetBytes((short)value);
-                                    };
-                                    break;
-                                case Type factType when factType == typeof(ushort):
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return BitConverter.GetBytes((ushort)value);
-                                    };
-                                    break;
-                                case Type factType when factType == typeof(int):
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return BitConverter.GetBytes((int)value);
-                                    };
-                                    break;
-                                case Type factType when factType == typeof(uint):
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return BitConverter.GetBytes((uint)value);
-                                    };
-                                    break;
-                                case Type factType when factType == typeof(long):
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return BitConverter.GetBytes((long)value);
-                                    };
-                                    break;
-                                case Type factType when factType == typeof(ulong):
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return BitConverter.GetBytes((ulong)value);
-                                    };
-                                    break;
-                                case Type factType when factType == typeof(float):
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return BitConverter.GetBytes((float)value);
-                                    };
-                                    break;
-                                case Type factType when factType == typeof(double):
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return BitConverter.GetBytes((double)value);
-                                    };
-                                    break;
-#if NET6_0_OR_GREATER
-                                case Type factType when factType == typeof(Half):
-                                    typeHandler = value =>
-                                    {
-                                        if (value is DBNull) return null;
-                                        return BitConverter.GetBytes((Half)value);
-                                    };
-                                    break;
-#endif
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return typedTypeHandler.Invoke(value);
+                                };
                             }
+                            else typeHandler = typedTypeHandler;
                         }
                     }
                     else if (underlyingType == typeof(char))
@@ -1881,41 +1570,53 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         Type[] supportedTypes = [typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong)];
                         if (fieldType == typeof(string))
                         {
-                            if (isNullableType)
+                            if (isNullable)
                             {
-                                typeHandler = value =>
+                                if (isNullableType)
                                 {
-                                    if (value is DBNull) return null;
-                                    return ((string)value)[0];
-                                };
-                            }
-                            else
-                            {
-                                typeHandler = value =>
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return ((string)value)[0];
+                                    };
+                                }
+                                else
                                 {
-                                    if (value is DBNull) return default(char);
-                                    return ((string)value)[0];
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return default(char);
+                                        return ((string)value)[0];
+                                    };
+                                }
                             }
+                            else typeHandler = value => ((string)value)[0];
                         }
                         else if (supportedTypes.Contains(underlyingType))
                         {
-                            if (isNullableType)
+                            var valueExpr = Expression.Parameter(typeof(object), "value");
+                            var typedValueExpr = Expression.Convert(valueExpr, fieldType);
+                            var methodInfo = typeof(Convert).GetMethod(nameof(Convert.ToChar), [fieldType]);
+                            var typedTypeHandler = Expression.Lambda<Func<object, object>>(Expression.Call(methodInfo, typedValueExpr), valueExpr).Compile();
+                            if (isNullable)
                             {
-                                typeHandler = value =>
+                                if (isNullableType)
                                 {
-                                    if (value is DBNull) return null;
-                                    return Convert.ToChar(value);
-                                };
-                            }
-                            else
-                            {
-                                typeHandler = value =>
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return typedTypeHandler.Invoke(value);
+                                    };
+                                }
+                                else
                                 {
-                                    if (value is DBNull) return default(char);
-                                    return Convert.ToChar(value);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return default(char);
+                                        return typedTypeHandler.Invoke(value);
+                                    };
+                                }
                             }
+                            else typeHandler = typedTypeHandler;
                         }
                     }
                     else
@@ -1933,22 +1634,26 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             case TypeCode.Single:
                             case TypeCode.Double:
                             case TypeCode.Decimal:
-                                if (isNullableType)
+                                if (isNullable)
                                 {
-                                    typeHandler = value =>
+                                    if (isNullableType)
                                     {
-                                        if (value is DBNull) return null;
-                                        return Convert.ChangeType(value, underlyingType);
-                                    };
-                                }
-                                else
-                                {
-                                    typeHandler = value =>
+                                        typeHandler = value =>
+                                        {
+                                            if (value is DBNull) return null;
+                                            return Convert.ChangeType(value, underlyingType);
+                                        };
+                                    }
+                                    else
                                     {
-                                        if (value is DBNull) return Convert.ChangeType(0, underlyingType);
-                                        return Convert.ChangeType(value, underlyingType);
-                                    };
+                                        typeHandler = value =>
+                                        {
+                                            if (value is DBNull) return Convert.ChangeType(0, underlyingType);
+                                            return Convert.ChangeType(value, underlyingType);
+                                        };
+                                    }
                                 }
+                                else typeHandler = value => Convert.ChangeType(value, underlyingType);
                                 break;
                             case TypeCode.Object:
                                 typeHandler = value =>
