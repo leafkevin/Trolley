@@ -1898,8 +1898,7 @@ public class SqlVisitor : ISqlVisitor
                     TableSegment = tableSegment,
                     ReaderType = memberMapper.MemberType,
                     MemberName = memberMapper.FieldName,
-                    MemberMapper = memberMapper,
-                    //TypeHandler = memberMapper.TypeHandler,
+                    MemberMapper = memberMapper, 
                     TargetMember = memberMapper.Member,
                     Value = fieldName
                 });

@@ -1697,7 +1697,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 var fromSegment = this.TableAliases[parameterName];
                 ReaderField lastReaderField = null;
                 MemberMap memberMapper = null;
-                //当访问x.Grouping.UserId时，会有2个以上的成员访问
+                //当访问x.Grouping.UserId或是x.Order.Buyer时，会有2个以上的成员访问
                 var memberExprs = this.GetMemberExprs(memberExpr, out _);
 
                 var builder = new StringBuilder(fromSegment.AliasName);
@@ -1723,6 +1723,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
                             //最后一级成员访问，如果是导航属性，且没有下转成员访问，如：f.Order.Seller.Company.Products，直接访问Products集合对象
                             var myTables = memberMapper.IsToOne ? this.Tables : this.IncludeTables;
+                            //不是最后一个成员访问
+                            //if (memberExprs.Count > 0)
                             builder.Append("." + lastMemberExpr.Member.Name);
                             path = builder.ToString();
                             var nextTableSegment = myTables.Find(f => f.TableType == TableType.Include && f.Path == path);
@@ -1761,7 +1763,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         ReaderField refReaderField = null;
                         if (memberMapper.IsToOne)
                         {
-                            //有参数访问过，ReaderFields中包含引用的readerField
+                            //有参数访问过，ReaderFields中包含引用的readerField                         
                             refReaderField = this.ReaderFields.Find(f => f.Path == path);
                             if (refReaderField == null)
                             {
@@ -1828,6 +1830,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (this.IsSelect && newExpr.Type.Name.StartsWith("<>"))
         {
             this.IsSelectMember = true;
+            bool isTargetType = false;
+            int firstFieldCount = 0;
             var readerFields = new List<ReaderField>();
             //为给里面的成员访问提供数据，有参数访问、引用Include成员访问的场景提供数据参数访问的ReaderField查询
             for (int i = 0; i < newExpr.Arguments.Count; i++)
