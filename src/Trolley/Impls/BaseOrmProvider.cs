@@ -6,7 +6,6 @@ using System.Collections.ObjectModel;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 
 namespace Trolley;
@@ -906,7 +905,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                 }
                                 else
                                 {
-                                    if (Enum.IsDefined(underlyingType, 0))
+                                    if (Enum.IsDefined(underlyingType, Convert.ChangeType(0, enumUnderlyingType)))
                                     {
                                         typeHandler = value =>
                                         {
@@ -934,7 +933,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                 }
                                 else
                                 {
-                                    if (Enum.IsDefined(underlyingType, 0))
+                                    if (Enum.IsDefined(underlyingType, Convert.ChangeType(0, enumUnderlyingType)))
                                     {
                                         typeHandler = value =>
                                         {
@@ -977,7 +976,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                 }
                                 else
                                 {
-                                    if (Enum.IsDefined(underlyingType, 0))
+                                    if (Enum.IsDefined(underlyingType, Convert.ChangeType(0, enumUnderlyingType)))
                                     {
                                         typeHandler = value =>
                                         {
@@ -1255,7 +1254,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             }
                             else typeHandler = value => ((DateOnly)value).ToDateTime(TimeOnly.MinValue);
                         }
-#endif                        
+#endif
                     }
 #if NET6_0_OR_GREATER
                     else if (underlyingType == typeof(DateOnly))

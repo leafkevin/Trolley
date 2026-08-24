@@ -1316,7 +1316,7 @@ public static class RepositoryHelper
             else throw new NotSupportedException("不支持的成员访问");
             return Expression.Lambda<Action<object, object>>(bodyExpr, objExpr, valueExpr).Compile();
         });
-    } 
+    }
     public static Func<ITheaDataReader, object> CreateReaderValueTupleDeserializer(Type targetType, DbContext dbContext, ITheaDataReader reader)
     {
         var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
@@ -1365,8 +1365,7 @@ public static class RepositoryHelper
             var readerValueExpr = GetReaderValue(dbContext, readerExpr, Expression.Constant(index),
                 memberMapper.MemberType, fieldType, memberMapper, blockParameters, blockBodies);
 
-            if (!target.IsDefault)
-                target.Arguments.Add(readerValueExpr);
+            if (!target.IsDefault) target.Arguments.Add(readerValueExpr);
             else if (memberMapper.Member.CanWrite)
                 target.Bindings.Add(Expression.Bind(memberMapper.Member, readerValueExpr));
             index++;
@@ -1644,7 +1643,6 @@ public static class RepositoryHelper
         var typedLocalExpr = Expression.Variable(targetType, $"local{blockParameters.Count}");
         blockParameters.Add(typedLocalExpr);
         var readerValueExpr = Expression.Call(readerExpr, methodInfo, indexExpr);
-        //blockBodies.Add(Expression.Assign(objLocalExpr, readerValueExpr));
         Expression targetValueExpr = null;
         if (memberMapper != null)
         {
@@ -1668,42 +1666,27 @@ public static class RepositoryHelper
                 }
                 else
                 {
-                    methodInfo = typeof(IDataRecord).GetMethod(nameof(IDataRecord.IsDBNull));
-                    var isNullExpr = Expression.Call(readerExpr, methodInfo, indexExpr);
-                    Expression defaultValueExpr = null;
-                    if (targetType.IsNullableType(out _))
-                        defaultValueExpr = Expression.Constant(null, targetType);
-                    else defaultValueExpr = Expression.Constant(Activator.CreateInstance(targetType));
-                    var setDefaultValueExpr = Expression.Assign(typedLocalExpr, defaultValueExpr);
-                    if (targetType.ToUnderlyingType() != fieldType)
+                    if (targetType != fieldType)
                     {
-                        var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, true, dbContext.Options);
+                        var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, !memberMapper.IsRequired, dbContext.Options);
                         targetValueExpr = Expression.Invoke(Expression.Constant(valueGetter), readerValueExpr);
+                        targetValueExpr = Expression.Convert(targetValueExpr, targetType);
                     }
                     else targetValueExpr = Expression.Convert(readerValueExpr, targetType);
-                    var setTypedValueExpr = Expression.Assign(typedLocalExpr, targetValueExpr);
-                    blockBodies.Add(Expression.IfThenElse(isNullExpr, setDefaultValueExpr, setTypedValueExpr));
+                    blockBodies.Add(Expression.Assign(typedLocalExpr, targetValueExpr));
                 }
             }
         }
         else
         {
-            methodInfo = typeof(IDataRecord).GetMethod(nameof(IDataRecord.IsDBNull));
-            var isNullExpr = Expression.Call(readerExpr, methodInfo, indexExpr);
-            Expression defaultValueExpr = null;
-            if (targetType.IsNullableType(out _))
-                defaultValueExpr = Expression.Constant(null, targetType);
-            else defaultValueExpr = Expression.Constant(Activator.CreateInstance(targetType));
-            var setDefaultValueExpr = Expression.Assign(typedLocalExpr, defaultValueExpr);
-            if (targetType.ToUnderlyingType() != fieldType)
+            if (targetType != fieldType)
             {
                 var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, true, dbContext.Options);
                 targetValueExpr = Expression.Invoke(Expression.Constant(valueGetter), readerValueExpr);
+                targetValueExpr = Expression.Convert(targetValueExpr, targetType);
             }
             else targetValueExpr = Expression.Convert(readerValueExpr, targetType);
-
-            var setTypedValueExpr = Expression.Assign(typedLocalExpr, targetValueExpr);
-            blockBodies.Add(Expression.IfThenElse(isNullExpr, setDefaultValueExpr, setTypedValueExpr));
+            blockBodies.Add(Expression.Assign(typedLocalExpr, targetValueExpr));
         }
         return typedLocalExpr;
     }
