@@ -1589,7 +1589,7 @@ public static class RepositoryHelper
                     else
                     {
                         //默认是目标类型，并且也只有第一个ReaderField才是目标类型
-                        if (readerIndex > 0)
+                        if (readerIndex > 0 || readerIndex == 0 && readerField.ReaderType != targetType)
                         {
                             if (readerField.Parent != null)
                                 parent = readerBuilders[readerField.Parent];

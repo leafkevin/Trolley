@@ -1330,6 +1330,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     {
                         IsGroupingField = true,
                         FieldType = readerFieldType,
+                        ReaderType = argumentExpr.Type,
                         MemberName = sqlSegment.MemberName,
                         Value = fieldName,
                         TargetMember = memberInfo
@@ -1348,6 +1349,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     {
                         IsGroupingField = true,
                         FieldType = ReaderFieldType.Field,
+                        ReaderType = memberExpr.Type,
                         MemberName = sqlSegment.MemberName,
                         Value = fieldName,
                         TargetMember = memberExpr.Member
@@ -1363,6 +1365,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     {
                         IsGroupingField = true,
                         FieldType = ReaderFieldType.Expression,
+                        ReaderType = lambdaExpr.Body.Type,
                         Value = fieldName
                     });
                     this.GroupBySql = fieldName;
@@ -1830,8 +1833,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (this.IsSelect && newExpr.Type.Name.StartsWith("<>"))
         {
             this.IsSelectMember = true;
-            bool isTargetType = false;
-            int firstFieldCount = 0;
             var readerFields = new List<ReaderField>();
             //为给里面的成员访问提供数据，有参数访问、引用Include成员访问的场景提供数据参数访问的ReaderField查询
             for (int i = 0; i < newExpr.Arguments.Count; i++)
