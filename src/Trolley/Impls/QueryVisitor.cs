@@ -92,10 +92,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     isRecursive = true;
                 index++;
             }
-            if (isRecursive)
-                builder.Insert(0, "WITH RECURSIVE ");
-            else builder.Insert(0, "WITH ");
-            builder.AppendLine();
+            if (index > 0)
+            {
+                if (isRecursive)
+                    builder.Insert(0, "WITH RECURSIVE ");
+                else builder.Insert(0, "WITH ");
+                builder.AppendLine();
+            }
         }
         readerFields = this.ReaderFields;
 
@@ -913,15 +916,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var includeTableSegment = this.IncludeTables[i];
             var rootPath = includeTableSegment.Path.Substring(0, 1);
             var rootReaderField = this.ReaderFields.Find(f => f.Path == rootPath);
-
             if (rootReaderField == null)
-                continue;
-            //throw new NotSupportedException("Include导航属性成员，一定要Select对应的实体表，如：\r\nrepository.From<Order>()\r\n    .InnerJoin<User>((x, y) => x.SellerId == y.Id)\r\n    .Include((x, y) => x.Buyer)\r\n    .Include((x, y) => y.Company)\r\n    .Select((x, y) => new { Order = x, Seller = y, ... })");
+                throw new NotSupportedException("Include导航属性成员，必须先Select对应的实体表，如：.Include((x, y) => x.Buyer).Select((x, y) => new { Order = x, ... })");
+
             var firstMember = rootReaderField.TargetMember;
-
             (var headSql, var sqlInitializer) = this.BuildIncludeSqlGetter(targetType, firstMember, includeTableSegment);
-            headSql = string.Format(headSql, this.GetFormatTableName(includeTableSegment));
-
             if (includeTableSegment.IsSharding && includeTableSegment.TableNames.Count > 0)
             {
                 var sqlBuilder = new StringBuilder();
@@ -966,7 +965,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var rootReaderField = this.ReaderFields.Find(f => f.Path == rootPath);
             //当最外层实体是参数访问时，此值为null
             var firstMember = rootReaderField.TargetMember;
-            var includeValues = RepositoryHelper.ReadList(navigationType, includeSegment.EntityType, reader, this.DbContext, this.ReaderFields);
+            var includeValues = RepositoryHelper.ReadList(navigationType, includeSegment.EntityType, reader, this.DbContext);
             Action<object> includeValuesSetter = f => this.SetIncludeValueToTarget(targetType, firstMember, includeSegment, f, includeValues);
             deferredInitializers.Add((includeValues, includeValuesSetter));
         }
@@ -1000,8 +999,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var navigationType = includeSegment.FromMember.NavigationType;
             var rootPath = includeSegment.Path.Substring(0, 1);
             var rootReaderField = this.ReaderFields.Find(f => f.Path == rootPath);
+            //当最外层实体是参数访问时，此值为null
             var firstMember = rootReaderField.TargetMember;
-            var includeValues = await RepositoryHelper.ReadListAsync(navigationType, reader, this.DbContext, this.ReaderFields, cancellationToken);
+            var includeValues = await RepositoryHelper.ReadListAsync(navigationType, includeSegment.EntityType, reader, this.DbContext, cancellationToken);
             Action<object> includeValuesSetter = f => this.SetIncludeValueToTarget(targetType, firstMember, includeSegment, f, includeValues);
             deferredInitializers.Add((includeValues, includeValuesSetter));
         }
@@ -1161,9 +1161,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             //实体类型是成员的声明类型，映射类型不一定是成员的声明类型，一定是成员的Map类型
             //如：成员是UserInfo类型，对应的模型是User类型，UserInfo类型只是User类型的一个子集，成员名称和映射关系完全一致
             var targetType = memberMapper.NavigationType;
-            var entityMapper = this.EntityMapProvider.GetEntityMap(targetType, memberMapper.MapType);
+            var entityMapper = this.EntityMapProvider.GetEntityMap(targetType, memberMapper.MapEntityType);
             if (entityMapper.KeyMembers.Count > 1)
-                throw new NotSupportedException($"导航属性表，暂时不支持多个主键字段，实体：{memberMapper.MapType.FullName}");
+                throw new NotSupportedException($"导航属性表，暂时不支持多个主键字段，实体：{memberMapper.MapEntityType.FullName}");
 
             memberVisits.Add(currentExpr.Member);
             var tableAlias = $"{(char)(this.TableAliasStart + this.Tables.Count)}";
@@ -1241,16 +1241,20 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var foreignKeyMember = includeSegment.FromTable.Mapper.KeyMembers[0];
             Expression foreignKeyValueExpr = Expression.PropertyOrField(parentExpr, foreignKeyMember.MemberName);
             //includeMany支持分表，UNION SQL处理
-            foreignKeyValueExpr = Expression.Convert(foreignKeyValueExpr, typeof(object));
+            if (foreignKeyMember.MemberType != typeof(object))
+                foreignKeyValueExpr = Expression.Convert(foreignKeyValueExpr, typeof(object));
             var methedInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetQuotedValue));
-            var fieldTypeExpr = Expression.Constant(foreignKeyMember.MemberType);
+            var fieldTypeExpr = Expression.Constant(foreignKeyMember.UnderlyingType);
             foreignKeyValueExpr = Expression.Call(ormProviderExpr, methedInfo, fieldTypeExpr, foreignKeyValueExpr);
             methedInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)]);
             blockBodies.Add(Expression.Call(builderExpr, methedInfo, foreignKeyValueExpr));
 
             var foreignKey = this.OrmProvider.GetFieldName(includeSegment.FromMember.ForeignKey);
+            var tableName = this.OrmProvider.GetTableName(includeSegment.Mapper.TableName);
             var fields = RepositoryHelper.BuildSelectFieldsSqlPart(this.DbContext, includeSegment.Mapper, includeSegment.EntityType);
-            var headSql = $"SELECT {fields} FROM {{0}} WHERE {foreignKey} IN (";
+
+
+            var headSql = $"SELECT {fields} FROM {tableName} WHERE {foreignKey} IN (";
             var sqlInitializer = Expression.Lambda<Action<StringBuilder, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), builderExpr, ormProviderExpr, targetExpr).Compile();
             return (headSql, sqlInitializer);
         });
@@ -1804,7 +1808,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         //sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
                         //sqlSegment.TypeHandler = memberMapper.TypeHandler;
                         sqlSegment.MemberName = memberMapper.MemberName;
-                        sqlSegment.Value = fromSegment.AliasName + "." + fieldName;
+                        //Include 1:N时，fromSegment.AliasName为null
+                        if (!string.IsNullOrEmpty(fromSegment.AliasName))
+                            fieldName = fromSegment.AliasName + "." + fieldName;
+                        sqlSegment.Value = fieldName;
                         sqlSegment.IsEnum = memberMapper.UnderlyingType.IsEnum;
                     }
                 }

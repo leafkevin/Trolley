@@ -133,7 +133,7 @@ public class DialectProvider
     {
         if (command == null) return this.CreateQueryVisitor(tableAsStart);
         return this.ormProvider.NewQueryVisitor(this.DbContext, tableAsStart, command);
-    }
+    } 
     #endregion
 
     #region CreateQueryCommand

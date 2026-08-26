@@ -70,10 +70,10 @@ public static class Extensions
                 throw new Exception($"实体类型{entityType.FullName}没有配置映射，请在IModelConfiguration.OnModelCreating方法中配置映射");
             return mapper;
         }
-        public EntityMap GetEntityMap(Type targetType, Type mapToType)
+        public EntityMap GetEntityMap(Type targetType, Type mapEntityType)
         {
-            if (!entityMapProvider.TryGetEntityMap(mapToType, out var mapper))
-                throw new Exception($"实体类型{mapToType.FullName}没有配置映射，请在IModelConfiguration.Configure方法中配置映射");
+            if (!entityMapProvider.TryGetEntityMap(mapEntityType, out var mapper))
+                throw new Exception($"实体类型{mapEntityType.FullName}没有配置映射，请在IModelConfiguration.Configure方法中配置映射");
             var entityMapper = mapper.CreateDefaultMap(targetType);
             entityMapProvider.UseEntityMap(targetType, entityMapper);
             return entityMapper;

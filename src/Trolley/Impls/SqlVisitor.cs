@@ -1908,35 +1908,6 @@ public class SqlVisitor : ISqlVisitor
         else targetFields.AddRange(tableSegment.Fields);
         return targetFields;
     }
-    public List<ReaderField> GenerateReaderFields(Type entityType, Type targetType = null)
-    {
-        var targetFields = new List<ReaderField>();
-        var entityMapper = this.EntityMapProvider.GetEntityMap(entityType, targetType);
-        if (tableSegment.Mapper != null)
-        {
-            //Select参数时，Flatten实体表
-            foreach (var memberMapper in tableSegment.Mapper.MemberMaps)
-            {
-                if (memberMapper.IsIgnore || memberMapper.IsNavigation)
-                    continue;
-                var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
-                if (isNeedAlias) fieldName = tableSegment.AliasName + "." + fieldName;
-                targetFields.Add(new ReaderField
-                {
-                    FieldType = ReaderFieldType.Field,
-                    TableSegment = tableSegment,
-                    ReaderType = memberMapper.MemberType,
-                    MemberName = memberMapper.FieldName,
-                    MemberMapper = memberMapper,
-                    TargetMember = memberMapper.Member,
-                    Value = fieldName
-                });
-            }
-        }
-        //Select参数时，Flatten子查询表
-        else targetFields.AddRange(tableSegment.Fields);
-        return targetFields;
-    }
     public virtual bool IsStringConcatOperator(SqlSegment sqlSegment, BinaryExpression binaryExpr, out SqlSegment result)
     {
         if (binaryExpr.NodeType == ExpressionType.Add && (binaryExpr.Left.Type == typeof(string) || binaryExpr.Right.Type == typeof(string)))
@@ -2394,20 +2365,30 @@ public class SqlVisitor : ISqlVisitor
         var readerField = visitor.Build(sqlSegment.Expression);
         return sqlSegment.Change(readerField, SqlType.ReaderField);
     }
+    /// <summary>
+    /// 引用已有子查询对象
+    /// </summary>
+    /// <param name="targetType"></param>
+    /// <param name="subQueryObj"></param>
+    /// <param name="isClearTables"></param>
+    /// <returns></returns>
     public TableSegment UseQuery(Type targetType, IQuery subQueryObj, bool isClearTables)
     {
         //包含该查询对象引用，就说明当前visitor对象已经包含了该子查询引用到的参数，只需要添加表即可
         var isCurrentVisitor = ReferenceEquals(this, subQueryObj.Visitor);
         if (!isCurrentVisitor && !this.RefQueries.Contains(subQueryObj))
         {
+            //引用的Connection设置为null
+            if (subQueryObj.Visitor.Connection != null)
+            {
+                subQueryObj.Visitor.Connection?.Dispose();
+                subQueryObj.Visitor.Connection = null;
+            }
+            //引用的参数拷贝过来，并把Connection设null
             if (subQueryObj.Visitor.DbParameters != null && subQueryObj.Visitor.DbParameters.Count > 0)
             {
-                this.DbParameters ??= new TheaDbParameterCollection();
                 foreach (var dbParameter in subQueryObj.Visitor.DbParameters)
-                {
-                    if (this.DbParameters.Contains(dbParameter)) continue;
                     this.DbParameters.Add(dbParameter);
-                }
             }
             if (subQueryObj.Visitor.NextDbParameters != null && subQueryObj.Visitor.NextDbParameters.Count > 0)
             {
@@ -2520,11 +2501,9 @@ public class SqlVisitor : ISqlVisitor
                 readerField.Value = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
                 readerField.IsRefField = false;
                 if (readerField.FieldType == ReaderFieldType.Expression)
-                {
-                    readerField.IsNeedAlias = false;
-                    readerField.AliasName = null;
                     readerField.FieldType = ReaderFieldType.Field;
-                }
+                readerField.IsNeedAlias = false;
+                readerField.AliasName = null;
             }
         }
     }

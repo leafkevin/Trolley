@@ -13,6 +13,6 @@ public class Navigation<TEntity> where TEntity : class
         memberMapper.ForeignKey = memberExpr.Member.Name;
         return this;
     }
-    public void MapTo<TModel>() => this.memberMapper.MapType = typeof(TModel);
-    public void MapTo(Type mapType) => this.memberMapper.MapType = mapType;
+    public void MapTo<TModel>() => this.memberMapper.MapEntityType = typeof(TModel);
+    public void MapTo(Type mapType) => this.memberMapper.MapEntityType = mapType;
 }

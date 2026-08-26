@@ -73,7 +73,7 @@ public class EntityTypeBuilder<TEntity> where TEntity : class
         memberMapper.IsNavigation = true;
         memberMapper.IsToOne = true;
         memberMapper.NavigationType = typeof(TMember);
-        memberMapper.MapType = typeof(TMember);
+        memberMapper.MapEntityType = typeof(TMember);
         return new Navigation<TEntity>(memberMapper);
     }
     public virtual Navigation<TElement> HasMany<TElement>(Expression<Func<TEntity, IEnumerable<TElement>>> memberSelector) where TElement : class
@@ -88,7 +88,7 @@ public class EntityTypeBuilder<TEntity> where TEntity : class
         memberMapper.IsNavigation = true;
         memberMapper.IsToOne = false;
         memberMapper.NavigationType = typeof(TElement);
-        memberMapper.MapType = typeof(TElement);
+        memberMapper.MapEntityType = typeof(TElement);
         return new Navigation<TElement>(memberMapper);
     }
 }

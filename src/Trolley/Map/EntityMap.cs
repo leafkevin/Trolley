@@ -158,6 +158,11 @@ public class EntityMap
         this.memberMappers.Sort((x, y) => x.Position.CompareTo(y.Position));
         this.isBuild = true;
     }
+    /// <summary>
+    /// include导航属性用到的映射
+    /// </summary>
+    /// <param name="targetType"></param>
+    /// <returns></returns>
     public EntityMap CreateDefaultMap(Type targetType)
     {
         if (targetType == this.EntityType)
@@ -178,15 +183,12 @@ public class EntityMap
                 mapper.UnderlyingType = targetType;
         }
         var memberInfos = RepositoryHelper.GetMembers(targetType);
-        if (memberInfos != null && memberInfos.Count > 0)
+        foreach (var memberMapper in this.memberMappers)
         {
-            foreach (var memberInfo in memberInfos)
-            {
-                //瘦身版模型映射，直接引用模型映射的原成员映射，这样原映射更改，瘦身版模型映射也会随之更改
-                var memberMapper = this.GetMemberMap(memberInfo.Name);
-                mapper.AddMemberMap(memberMapper.MemberName, memberMapper);
-                mapper.AddFieldMap(memberMapper.FieldName, memberMapper);
-            }
+            if (!memberInfos.Exists(f => f.Name == memberMapper.MemberName))
+                continue;
+            mapper.AddMemberMap(memberMapper.MemberName, memberMapper);
+            mapper.AddFieldMap(memberMapper.FieldName, memberMapper);
         }
         return mapper;
     }

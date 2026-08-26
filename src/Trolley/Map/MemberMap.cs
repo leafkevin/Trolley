@@ -36,7 +36,7 @@ public class MemberMap
     /// 当前属性是导航属性，映射的实体类不是真实的模型，瘦身版的模型Type，
     /// 与真正的模型属性名都一样，只是属性较少
     /// </summary>
-    public Type MapType { get; set; }
+    public Type MapEntityType { get; set; }
     /// <summary>
     /// 是否是1:1关系
     /// </summary>

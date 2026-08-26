@@ -111,7 +111,7 @@ public class Repository : DialectProvider, IRepository
     #region FromQuery
     public virtual IQuery<T> FromQuery<T>(IQuery<T> subQuery)
     {
-        var visitor = this.CreateQueryVisitor('a', subQuery.Visitor.Command);
+        var visitor = this.CreateQueryVisitor();
         visitor.UseQuery(typeof(T), subQuery, true);
         return this.ormProvider.NewQuery<T>(this.DbContext, visitor);
     }
@@ -404,7 +404,7 @@ public class Repository : DialectProvider, IRepository
             queryVisitor.SelectRaw(typeof(int), "1");
             queryVisitor.Take(1);
             queryVisitor.IsScalar = true;
-            command.CommandText = queryVisitor.BuildSql(out _); 
+            command.CommandText = queryVisitor.BuildSql(out _);
         }
         else
         {
