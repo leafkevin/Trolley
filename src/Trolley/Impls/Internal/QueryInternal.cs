@@ -6,6 +6,7 @@ namespace Trolley;
 
 public class QueryInternal : DialectProvider
 {
+    private bool isDisposed = false;
     #region Properties
     public IQueryVisitor Visitor { get; set; }
     public virtual bool IsCteTable => false;
@@ -333,5 +334,14 @@ public class QueryInternal : DialectProvider
 
         this.Visitor.Select(fieldsExpr);
     }
-    #endregion  
+    #endregion
+
+    public void Dispose()
+    {
+        if (this.isDisposed)
+            return;
+        this.Visitor.Dispose();
+        this.DbContext = null;
+        this.isDisposed = true;
+    }
 }

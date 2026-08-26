@@ -11,7 +11,7 @@ namespace Trolley;
 /// <summary>
 /// 查询对象
 /// </summary>
-public interface IQuery
+public interface IQuery : IDisposable
 {
     #region Properties
     /// <summary>
