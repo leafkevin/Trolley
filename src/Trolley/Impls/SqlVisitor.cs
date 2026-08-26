@@ -822,7 +822,7 @@ public class SqlVisitor : ISqlVisitor
             TableSegment = fromSegment,
             ReaderType = fromSegment.EntityType,
             Fields = this.FlattenTableFields(fromSegment),
-            Path = parameterExpr.Name
+            Path = fromSegment.Path
         };
         //include表的ReaderField字段，紧跟在主表ReaderField后面
         List<ReaderField> readerFields = [readerField];
@@ -847,7 +847,7 @@ public class SqlVisitor : ISqlVisitor
                     Parent = parent,
                     Fields = this.FlattenTableFields(includedSegment),
                     //更换path，方便后续Include成员赋值时，能够找到parent对象
-                    Path = includedSegment.Path.Replace(parent.TableSegment.Path, parent.Path)
+                    Path = includedSegment.Path
                 };
                 readerFields.Add(readerField);
                 if (this.Tables.Exists(f => f.TableType == TableType.Include && f.FromTable == includedSegment))
@@ -1898,7 +1898,36 @@ public class SqlVisitor : ISqlVisitor
                     TableSegment = tableSegment,
                     ReaderType = memberMapper.MemberType,
                     MemberName = memberMapper.FieldName,
-                    MemberMapper = memberMapper, 
+                    MemberMapper = memberMapper,
+                    TargetMember = memberMapper.Member,
+                    Value = fieldName
+                });
+            }
+        }
+        //Select参数时，Flatten子查询表
+        else targetFields.AddRange(tableSegment.Fields);
+        return targetFields;
+    }
+    public List<ReaderField> GenerateReaderFields(Type entityType, Type targetType = null)
+    {
+        var targetFields = new List<ReaderField>();
+        var entityMapper = this.EntityMapProvider.GetEntityMap(entityType, targetType);
+        if (tableSegment.Mapper != null)
+        {
+            //Select参数时，Flatten实体表
+            foreach (var memberMapper in tableSegment.Mapper.MemberMaps)
+            {
+                if (memberMapper.IsIgnore || memberMapper.IsNavigation)
+                    continue;
+                var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
+                if (isNeedAlias) fieldName = tableSegment.AliasName + "." + fieldName;
+                targetFields.Add(new ReaderField
+                {
+                    FieldType = ReaderFieldType.Field,
+                    TableSegment = tableSegment,
+                    ReaderType = memberMapper.MemberType,
+                    MemberName = memberMapper.FieldName,
+                    MemberMapper = memberMapper,
                     TargetMember = memberMapper.Member,
                     Value = fieldName
                 });
@@ -2629,5 +2658,5 @@ public class SqlVisitor : ISqlVisitor
         this.TailRawSql = null;
         this.ShardingTables = null;
         this.ShardingTableJointMark = null;
-    }  
+    }
 }

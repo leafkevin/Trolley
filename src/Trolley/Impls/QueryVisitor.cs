@@ -871,7 +871,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual bool BuildIncludeSql(Type targetType, object target, bool isMultiResult, out string sql)
     {
         sql = null;
-        if (this.IncludeTables == null) return false;
+        if (this.IncludeTables == null || this.IncludeTables.Count == 0)
+            return false;
 
         if (target == null) return false;
         ICollection targets = null;
@@ -912,6 +913,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var includeTableSegment = this.IncludeTables[i];
             var rootPath = includeTableSegment.Path.Substring(0, 1);
             var rootReaderField = this.ReaderFields.Find(f => f.Path == rootPath);
+
             if (rootReaderField == null)
                 continue;
             //throw new NotSupportedException("Include导航属性成员，一定要Select对应的实体表，如：\r\nrepository.From<Order>()\r\n    .InnerJoin<User>((x, y) => x.SellerId == y.Id)\r\n    .Include((x, y) => x.Buyer)\r\n    .Include((x, y) => y.Company)\r\n    .Select((x, y) => new { Order = x, Seller = y, ... })");
@@ -964,7 +966,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var rootReaderField = this.ReaderFields.Find(f => f.Path == rootPath);
             //当最外层实体是参数访问时，此值为null
             var firstMember = rootReaderField.TargetMember;
-            var includeValues = RepositoryHelper.ReadList(navigationType, includeSegment.EntityType, reader, this.DbContext);
+            var includeValues = RepositoryHelper.ReadList(navigationType, includeSegment.EntityType, reader, this.DbContext, this.ReaderFields);
             Action<object> includeValuesSetter = f => this.SetIncludeValueToTarget(targetType, firstMember, includeSegment, f, includeValues);
             deferredInitializers.Add((includeValues, includeValuesSetter));
         }
@@ -999,7 +1001,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var rootPath = includeSegment.Path.Substring(0, 1);
             var rootReaderField = this.ReaderFields.Find(f => f.Path == rootPath);
             var firstMember = rootReaderField.TargetMember;
-            var includeValues = await RepositoryHelper.ReadListAsync(navigationType, reader, this.DbContext, cancellationToken);
+            var includeValues = await RepositoryHelper.ReadListAsync(navigationType, reader, this.DbContext, this.ReaderFields, cancellationToken);
             Action<object> includeValuesSetter = f => this.SetIncludeValueToTarget(targetType, firstMember, includeSegment, f, includeValues);
             deferredInitializers.Add((includeValues, includeValuesSetter));
         }

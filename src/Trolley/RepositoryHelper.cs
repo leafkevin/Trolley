@@ -1182,12 +1182,13 @@ public static class RepositoryHelper
         });
         return creator.Invoke(parameters);
     }
-    public static object ReadList(Type targetType, Type entityType, ITheaDataReader reader, DbContext dbContext)
+    public static object ReadList(Type targetType, Type entityType, ITheaDataReader reader, DbContext dbContext, List<ReaderField> readerFields)
     {
         var cacheKey = HashCode.Combine(targetType, entityType, dbContext.OrmProvider.OrmProviderType);
         var typedReaderDeserializer = readerDeserializerGetters.GetOrAdd(cacheKey, f =>
         {
-            //TODO: 根据映射获取ReaderFields列表，两个场景，1. targetType=entityType，2. targetType!=entityType            
+            //TODO: 根据映射获取ReaderFields列表，两个场景，1. targetType=entityType，2. targetType!=entityType
+
             var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
             var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
             var readerFieldsExpr = Expression.Parameter(typeof(List<ReaderField>), "readerFields");
@@ -1198,18 +1199,19 @@ public static class RepositoryHelper
             var resultLabelExpr = Expression.Label(resultType);
             blockBodies.Add(Expression.Return(resultLabelExpr, Expression.Call(methodInfo, readerExpr, dbContextExpr, readerFieldsExpr)));
             blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(resultType)));
-            var delegateType = typeof(Func<,,>).MakeGenericType(typeof(ITheaDataReader), typeof(DbContext), resultType);
-            return Expression.Lambda(delegateType, Expression.Block(blockBodies), readerExpr, dbContextExpr).Compile();
+            var delegateType = typeof(Func<,,,>).MakeGenericType(typeof(ITheaDataReader), typeof(DbContext), typeof(List<ReaderField>), resultType);
+            return Expression.Lambda(delegateType, Expression.Block(blockBodies), readerExpr, dbContextExpr, readerFieldsExpr).Compile();
         });
-        return typedReaderDeserializer.DynamicInvoke(reader, dbContext);
+        return typedReaderDeserializer.DynamicInvoke(reader, dbContext, readerFields);
     }
-    public static Task<object> ReadListAsync(Type entityType, ITheaDataReader reader, DbContext dbContext, CancellationToken cancellationToken)
+    public static Task<object> ReadListAsync(Type entityType, ITheaDataReader reader, DbContext dbContext, List<ReaderField> readerFields, CancellationToken cancellationToken)
     {
         var cacheKey = HashCode.Combine(entityType, dbContext.OrmProvider.OrmProviderType);
         var typedReaderDeserializer = readerDeserializerAsyncGetters.GetOrAdd(cacheKey, f =>
         {
             var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
             var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
+            var readerFieldsExpr = Expression.Parameter(typeof(List<ReaderField>), "readerFields");
             var cancellationTokenExpr = Expression.Parameter(typeof(CancellationToken), "cancellationToken");
             var blockBodies = new List<Expression>();
             var methodInfo = typeof(RepositoryHelper).GetMethod(nameof(ReadTypedListAsync));
@@ -1217,12 +1219,12 @@ public static class RepositoryHelper
             var listType = typeof(List<>).MakeGenericType(entityType);
             var targetType = typeof(Task<>).MakeGenericType(listType);
             var resultLabelExpr = Expression.Label(targetType);
-            blockBodies.Add(Expression.Return(resultLabelExpr, Expression.Call(methodInfo, readerExpr, dbContextExpr, cancellationTokenExpr)));
+            blockBodies.Add(Expression.Return(resultLabelExpr, Expression.Call(methodInfo, readerExpr, dbContextExpr, readerFieldsExpr, cancellationTokenExpr)));
             blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(targetType)));
-            var delegateType = typeof(Func<,,,>).MakeGenericType(typeof(ITheaDataReader), typeof(DbContext), typeof(CancellationToken), targetType);
-            return Expression.Lambda(delegateType, Expression.Block(blockBodies), readerExpr, dbContextExpr, cancellationTokenExpr).Compile();
+            var delegateType = typeof(Func<,,,,>).MakeGenericType(typeof(ITheaDataReader), typeof(DbContext), typeof(List<ReaderField>), typeof(CancellationToken), targetType);
+            return Expression.Lambda(delegateType, Expression.Block(blockBodies), readerExpr, dbContextExpr, readerFieldsExpr, cancellationTokenExpr).Compile();
         });
-        return (Task<object>)typedReaderDeserializer.DynamicInvoke(reader, cancellationToken);
+        return (Task<object>)typedReaderDeserializer.DynamicInvoke(reader, dbContext, readerFields, cancellationToken);
     }
     public static List<TTarget> ReadTypedList<TTarget>(ITheaDataReader reader, DbContext dbContext, List<ReaderField> readerFields)
     {
