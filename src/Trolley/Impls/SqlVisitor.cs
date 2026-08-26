@@ -33,7 +33,7 @@ public class SqlVisitor : ISqlVisitor
     public IDataParameterCollection DbParameters { get; set; }
     public IDataParameterCollection NextDbParameters { get; set; }
     public char TableAliasStart { get; set; }
-    public bool IsRefQurey { get; set; }
+    public bool IsRefQuery { get; set; }
 
     /// <summary>
     /// 所有表都是扁平化的，主表、1:1关系Include子表，也在这里
@@ -2384,7 +2384,7 @@ public class SqlVisitor : ISqlVisitor
             {
                 subQueryObj.Visitor.Connection?.Dispose();
                 subQueryObj.Visitor.Connection = null;
-                subQueryObj.Visitor.IsRefQurey = true;
+                subQueryObj.Visitor.IsRefQuery = true;
             }
             //引用的参数拷贝过来，并把Connection设null
             if (subQueryObj.Visitor.DbParameters != null && subQueryObj.Visitor.DbParameters.Count > 0)
@@ -2423,17 +2423,17 @@ public class SqlVisitor : ISqlVisitor
         }
         string tableName = null;
         TableType tableType = default;
-        var readerFields = new List<ReaderField>(); ;
+        List<ReaderField> readerFields = null;
         if (subQueryObj is ICteQuery cteQueryObj)
         {
             tableName = cteQueryObj.TableName;
             tableType = TableType.CteSelfRef;
+            readerFields = new List<ReaderField>();
             cteQueryObj.ReaderFields.ForEach(f => readerFields.Add(f.Clone()));
         }
         else
         {
-            var sql = subQueryObj.Visitor.BuildSql(false, out var myReaderFields);
-            myReaderFields.ForEach(f => readerFields.Add(f.Clone()));
+            var sql = subQueryObj.Visitor.BuildSql(false, out readerFields);
             tableName = $"({sql})";
             tableType = TableType.FromQuery;
         }
@@ -2614,6 +2614,8 @@ public class SqlVisitor : ISqlVisitor
         this.isDisposed = true;
 
         this.Connection = null;
+        if (this.IsRefQuery && this.Command != null)
+            this.Command.Dispose();
         this.Command = null;
         this.Tables = null;
         this.TableAliases = null;

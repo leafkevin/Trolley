@@ -55,7 +55,8 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     string ShardingTableJointMark { get; set; }
     bool IsNeedPaging { get; set; }
     bool IsScalar { get; set; }
-    bool IsRefQurey { get; set; }
+    bool IsRefQuery { get; set; }
+    string RefSql { get; set; }
 
 
     string BuildSql(bool isBuildCteSql, out List<ReaderField> readerFields);

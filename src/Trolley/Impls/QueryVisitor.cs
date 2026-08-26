@@ -37,6 +37,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public int PageSize => this.limit ?? 0;
     public bool IsNeedPaging { get; set; }
     public bool IsScalar { get; set; }
+    public string RefSql { get; set; }
 
     public QueryVisitor(DbContext dbContext, char tableAliasStart = 'a', ITheaCommand command = null)
     {
@@ -53,30 +54,31 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
     public override string BuildSql(out List<ReaderField> readerFields)
     {
-        string sql = null;
+        var sql = this.BuildSql(true, out readerFields);
         if (this.IsScalar)
         {
-            sql = this.BuildSql(true, out readerFields);
             if (this.IsManyShardingTables)
             {
                 sql = this.BuildShardingTablesSqlByFormat(sql, this.ShardingTableJointMark);
                 sql = this.BuildShardingScalarSql(sql);
             }
         }
-        else
+        else if (this.IsManyShardingTables)
         {
-            sql = this.BuildSql(true, out readerFields);
-            if (this.IsManyShardingTables)
-            {
-                sql = this.BuildShardingTablesSqlByFormat(sql, this.ShardingTableJointMark);
-                if (this.IsNeedChangeUnionShardingTables)
-                    sql = this.BuildShardingSql(sql);
-            }
+            sql = this.BuildShardingTablesSqlByFormat(sql, this.ShardingTableJointMark);
+            if (this.IsNeedChangeUnionShardingTables)
+                sql = this.BuildShardingSql(sql);
         }
         return sql;
     }
     public virtual string BuildSql(bool isBuildCteSql, out List<ReaderField> readerFields)
     {
+        if (this.IsRefQuery && !string.IsNullOrEmpty(this.RefSql))
+        {
+            readerFields = this.ReaderFields;
+            return this.RefSql;
+        }
+
         var builder = new StringBuilder();
         if (isBuildCteSql && this.RefQueries != null && this.RefQueries.Count > 0)
         {
@@ -306,6 +308,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         sql = builder.ToString();
         builder.Clear();
+        if (this.IsRefQuery)
+            this.RefSql = sql;
         return sql;
     }
     public virtual string BuildCommandSql(Type entityType, out IDataParameterCollection dbParameters)
@@ -2280,6 +2284,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.LastIncludeSegment = null;
         this.GroupByFields = null;
         this.OrderByFields = null;
+        this.RefSql = null;
 
         base.Dispose();
     }
