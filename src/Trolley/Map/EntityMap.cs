@@ -185,10 +185,11 @@ public class EntityMap
         var memberInfos = RepositoryHelper.GetMembers(targetType);
         foreach (var memberMapper in this.memberMappers)
         {
-            if (!memberInfos.Exists(f => f.Name == memberMapper.MemberName))
-                continue;
-            mapper.AddMemberMap(memberMapper.MemberName, memberMapper);
-            mapper.AddFieldMap(memberMapper.FieldName, memberMapper);
+            var memberInfo = memberInfos.Find(f => f.Name == memberMapper.MemberName);
+            if (memberInfo == null) continue;
+            var newMemberMapper = new MemberMap(mapper, memberInfo);
+            mapper.AddMemberMap(memberMapper.MemberName, newMemberMapper);
+            mapper.AddFieldMap(memberMapper.FieldName, newMemberMapper);
         }
         return mapper;
     }

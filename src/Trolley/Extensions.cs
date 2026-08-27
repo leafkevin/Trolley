@@ -72,11 +72,13 @@ public static class Extensions
         }
         public EntityMap GetEntityMap(Type targetType, Type mapEntityType)
         {
-            if (!entityMapProvider.TryGetEntityMap(mapEntityType, out var mapper))
+            if (entityMapProvider.TryGetEntityMap(targetType, out var myEntityMapper))
+                return myEntityMapper;
+            if (!entityMapProvider.TryGetEntityMap(mapEntityType, out var entityMapper))
                 throw new Exception($"实体类型{mapEntityType.FullName}没有配置映射，请在IModelConfiguration.Configure方法中配置映射");
-            var entityMapper = mapper.CreateDefaultMap(targetType);
-            entityMapProvider.UseEntityMap(targetType, entityMapper);
-            return entityMapper;
+            myEntityMapper = entityMapper.CreateDefaultMap(targetType);
+            entityMapProvider.UseEntityMap(targetType, myEntityMapper);
+            return myEntityMapper;
         }
     }
     extension(Type type)
@@ -453,6 +455,9 @@ public static class Extensions
     public static bool HasNotOperation(this Stack<DeferredOperation> deferredOperations, out DeferredOperation lastOperation)
     {
         lastOperation = DeferredOperation.None;
+        if (deferredOperations == null || deferredOperations.Count == 0)
+            return false;
+
         int notIndex = 0;
         while (deferredOperations.Count > 0)
         {

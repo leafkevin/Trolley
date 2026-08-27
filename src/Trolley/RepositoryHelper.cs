@@ -1465,7 +1465,7 @@ public static class RepositoryHelper
         var current = root;
         var parent = root;
         var readerBuilders = new Dictionary<ReaderField, EntityBuilder>();
-        var deferredBuilds = new Stack<EntityBuilder>();
+        var deferredBuilders = new Stack<EntityBuilder>();
         var entityMapProvider = dbContext.EntityMapProvider;
 
         foreach (var readerField in readerFields)
@@ -1635,7 +1635,7 @@ public static class RepositoryHelper
                         //有include对象
                         if (readerField.HasNextInclude)
                         {
-                            deferredBuilds.Push(current);
+                            deferredBuilders.Push(current);
                             readerBuilders.Add(readerField, current);
                         }
                         else if (current.Parent != null)
@@ -1651,10 +1651,12 @@ public static class RepositoryHelper
                                     instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
                                 else instanceExpr = Expression.New(current.Constructor, current.Arguments);
                                 current.InstanceExpr = instanceExpr;
+
+                                if (current.Parent == null) break;
                                 if (!current.Parent.IsDefault) current.Parent.Arguments.Add(instanceExpr);
                                 else if (current.FromMember.CanWrite) current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
                             }
-                            while (deferredBuilds.TryPop(out nextBuilder));
+                            while (deferredBuilders.TryPop(out nextBuilder));
                             current = current.Parent;
                         }
                     }
