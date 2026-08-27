@@ -133,7 +133,7 @@ public class DialectProvider
     {
         if (command == null) return this.CreateQueryVisitor(tableAsStart);
         return this.ormProvider.NewQueryVisitor(this.DbContext, tableAsStart, command);
-    } 
+    }
     #endregion
 
     #region CreateQueryCommand
@@ -384,14 +384,14 @@ public class DialectProvider
         while (reader.Read())
             result.Add((TTarget)deserializer.Invoke(reader, readerFields));
 
-        if (visitor.BuildIncludeSql(entityType, result, false, out sql))
+        if (visitor.BuildIncludeSql(entityType, result, true, out sql))
         {
             reader.Dispose();
             command.CommandText = sql;
             command.Parameters.Clear();
             visitor.NextDbParameters.CopyTo(command.Parameters);
             reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-            visitor.SetIncludeValues(entityType, result, reader, false);
+            visitor.SetIncludeValues(entityType, result, reader, true);
         }
 
         reader.Dispose();
@@ -416,14 +416,14 @@ public class DialectProvider
         while (await reader.ReadAsync(cancellationToken))
             result.Add((TTarget)deserializer.Invoke(reader, readerFields));
 
-        if (visitor.BuildIncludeSql(entityType, result, false, out sql))
+        if (visitor.BuildIncludeSql(entityType, result, true, out sql))
         {
             await reader.DisposeAsync();
             command.CommandText = sql;
             command.Parameters.Clear();
             visitor.NextDbParameters.CopyTo(command.Parameters);
             reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
-            visitor.SetIncludeValues(entityType, result, reader, false);
+            visitor.SetIncludeValues(entityType, result, reader, true);
         }
 
         await reader.DisposeAsync();
@@ -488,14 +488,14 @@ public class DialectProvider
         while (reader.Read())
             result.Data.Add((TTarget)deserializer.Invoke(reader, readerFields));
         result.Count = result.Data.Count;
-        if (visitor.BuildIncludeSql(entityType, result.Data, false, out sql))
+        if (visitor.BuildIncludeSql(entityType, result.Data, true, out sql))
         {
             reader.Dispose();
             command.CommandText = sql;
             command.Parameters.Clear();
             visitor.NextDbParameters.CopyTo(command.Parameters);
             reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-            visitor.SetIncludeValues(entityType, result.Data, reader, false);
+            visitor.SetIncludeValues(entityType, result.Data, reader, true);
         }
 
         reader.Dispose();
@@ -531,14 +531,14 @@ public class DialectProvider
             result.Data.Add((TResult)deserializer.Invoke(reader, readerFields));
 
         result.Count = result.Data.Count;
-        if (visitor.BuildIncludeSql(entityType, result.Data, false, out sql))
+        if (visitor.BuildIncludeSql(entityType, result.Data, true, out sql))
         {
             await reader.DisposeAsync();
             command.CommandText = sql;
             command.Parameters.Clear();
             visitor.NextDbParameters.CopyTo(command.Parameters);
             reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
-            await visitor.SetIncludeValuesAsync(entityType, result.Data, reader, false, cancellationToken);
+            await visitor.SetIncludeValuesAsync(entityType, result.Data, reader, true, cancellationToken);
         }
 
         await reader.DisposeAsync();
@@ -567,40 +567,6 @@ public class DialectProvider
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;
-    }
-    #endregion
-
-    #region Build Query Sql
-    //public (string, List<ReaderField>) BuildSql(IQueryVisitor visitor)
-    //{
-    //    var sql = visitor.BuildSql(true, out var readerFields);
-    //    if (visitor.IsManyShardingTables)
-    //    {
-    //        sql = visitor.BuildShardingTablesSqlByFormat(sql, visitor.ShardingTableJointMark);
-    //        if (visitor.IsNeedChangeUnionShardingTables)
-    //            sql = visitor.BuildShardingSql(sql);
-    //    }
-    //    return (sql, readerFields);
-    //}
-    //public string BuildScalarSql(IQueryVisitor visitor)
-    //{
-    //    var sql = visitor.BuildSql(true, out _);
-    //    if (visitor.IsManyShardingTables)
-    //    {
-    //        sql = visitor.BuildShardingTablesSqlByFormat(sql, visitor.ShardingTableJointMark);
-    //        sql = visitor.BuildShardingScalarSql(sql);
-    //    }
-    //    return sql;
-    //}
-    public string GetShardingTable(Type entityType, params object[] fieldValues)
-    {
-        if (fieldValues == null || fieldValues.Length == 0)
-            throw new ArgumentNullException(nameof(fieldValues), "参数fieldValues不能为null或是空元素");
-        if (this.tableShardingProvider == null || !this.tableShardingProvider.TryGetTableSharding(entityType, out var shardingTableInfo))
-            throw new InvalidOperationException($"实体表{entityType.FullName}没有配置分表，无需调用此方法");
-        if (!this.entityMapProvider.TryGetEntityMap(entityType, out var entityMap))
-            throw new InvalidOperationException($"实体表{entityType.FullName}没有配置映射关系，无法获取分表信息");
-        return shardingTableInfo.Rule.Invoke(entityMap.TableName, fieldValues);
     }
     #endregion
 
@@ -1249,6 +1215,19 @@ public class DialectProvider
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;
+    }
+    #endregion
+
+    #region GetShardingTable
+    public string GetShardingTable(Type entityType, params object[] fieldValues)
+    {
+        if (fieldValues == null || fieldValues.Length == 0)
+            throw new ArgumentNullException(nameof(fieldValues), "参数fieldValues不能为null或是空元素");
+        if (this.tableShardingProvider == null || !this.tableShardingProvider.TryGetTableSharding(entityType, out var shardingTableInfo))
+            throw new InvalidOperationException($"实体表{entityType.FullName}没有配置分表，无需调用此方法");
+        if (!this.entityMapProvider.TryGetEntityMap(entityType, out var entityMap))
+            throw new InvalidOperationException($"实体表{entityType.FullName}没有配置映射关系，无法获取分表信息");
+        return shardingTableInfo.Rule.Invoke(entityMap.TableName, fieldValues);
     }
     #endregion
 

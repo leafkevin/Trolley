@@ -1469,6 +1469,7 @@ public class SqlVisitor : ISqlVisitor
         queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableIndex, this.Command);
         if (currentExpr != null && currentExpr is MemberExpression memberExpr)
         {
+            //直接引用子查询对象，并执行Where/
             var subQueryObj = memberExpr.Evaluate<IQuery>();
             entityType = currentExpr.Type.GenericTypeArguments[0];
             //在CTE表基础上，又做了WHERE/SELECT...其他操作

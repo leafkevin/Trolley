@@ -1248,7 +1248,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             if (foreignKeyMember.MemberType != typeof(object))
                 foreignKeyValueExpr = Expression.Convert(foreignKeyValueExpr, typeof(object));
             var methedInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetQuotedValue));
-            var fieldTypeExpr = Expression.Constant(foreignKeyMember.UnderlyingType);
+            var fieldTypeExpr = Expression.Constant(foreignKeyMember.MemberType);
             foreignKeyValueExpr = Expression.Call(ormProviderExpr, methedInfo, fieldTypeExpr, foreignKeyValueExpr);
             methedInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)]);
             blockBodies.Add(Expression.Call(builderExpr, methedInfo, foreignKeyValueExpr));
