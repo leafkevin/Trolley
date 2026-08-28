@@ -427,7 +427,7 @@ public static class Extensions
             //return result;
         }
     }
-#if !NETCOREAPP2_0_OR_GREATER || !NETSTANDARD2_1_OR_GREATER
+#if !NETCOREAPP2_0_OR_GREATER && !NETSTANDARD2_1_OR_GREATER
     extension<TElement>(Stack<TElement> stack)
     {
         public bool TryPop(out TElement element)
@@ -449,6 +449,16 @@ public static class Extensions
             }
             element = default;
             return false;
+        }
+    }
+    extension<TKey, TValue>(Dictionary<TKey, TValue> dict)
+    {
+        public bool TryAdd(TKey key, TValue value)
+        {
+            if (dict.ContainsKey(key))
+                return false;
+            dict.Add(key, value);
+            return true;
         }
     }
 #endif

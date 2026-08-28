@@ -1481,8 +1481,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     FieldType = ReaderFieldType.Field,
                     ReaderType = toTargetExpr.Body.Type,
                     MemberMapper = sqlSegment.MemberMapper,
-                    //MappedTargetType = sqlSegment.MappedTargetType,
-                    //TypeHandler = sqlSegment.TypeHandler,
                     MemberName = sqlSegment.MemberName,
                     Value = sqlSegment.Value
                 }];
@@ -1494,8 +1492,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 this.ReaderFields = [readerField];
                 break;
             case SqlType.ReaderFields:
-                if (this.ReaderFields == null)
-                    this.ReaderFields = sqlSegment.Value as List<ReaderField>;
+                this.ReaderFields = sqlSegment.Value as List<ReaderField>;
                 break;
             default:
                 //常量、变量、表达式、方法调用、静态成员访问、原始SQL、延迟属性、延迟方法调用等场景
@@ -1737,12 +1734,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
                             //if (memberExprs.Count > 0 && !memberMapper.IsToOne)
                             //    throw new NotSupportedException("暂时不支持引用1:N关系Include导航属性成员访问");
-
-                            //最后一级成员访问，如果是导航属性，且没有下转成员访问，如：f.Order.Seller.Company.Products，直接访问Products集合对象
-                            var myTables = memberMapper.IsToOne ? this.Tables : this.IncludeTables;
-                            //不是最后一个成员访问
                             if (memberExprs.Count == 0)
                                 break;
+                            //最后一级成员访问，如果是导航属性，且没有下转成员访问，如：f.Order.Seller.Company.Products，直接访问Products集合对象
+                            var myTables = memberMapper.IsToOne ? this.Tables : this.IncludeTables;
                             var nextTableSegment = myTables.Find(f => f.TableType == TableType.Include && f.Path == path);
                             if (nextTableSegment == null)
                                 throw new NotSupportedException($"无法访问成员{lastMemberExpr.Member.Name}，请确认是否已经使用Include访问了导航属性{lastMemberExpr.Member.Name}的主表实体");
@@ -1776,35 +1771,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     //真实表字段访问
                     if (memberMapper.IsNavigation)
                     {
-                        ReaderField refReaderField = null;
-                        if (memberMapper.IsToOne)
+                        var fieldType = memberMapper.IsToOne ? ReaderFieldType.IncludeRef : ReaderFieldType.DeferredIncludeRef;
+                        sqlSegment.Change(new ReaderField
                         {
-                            //有参数访问过，ReaderFields中包含引用的readerField                         
-                            refReaderField = this.ReaderFields.Find(f => f.Path == path);
-                            if (refReaderField == null)
-                            {
-                                //没参数访问过，找不到readerField，直接引用实体中的导航属性，需要构造一个readerField
-                                refReaderField = new ReaderField
-                                {
-                                    FieldType = ReaderFieldType.IncludeRef,
-                                    Fields = this.FlattenTableFields(fromSegment),
-                                    Expression = memberExpr,
-                                    Path = path
-                                };
-                            }
-                        }
-                        else
-                        {
-                            //直接引用 Select(f => new { f.Orders, f.Products })
-                            refReaderField = new ReaderField
-                            {
-                                FieldType = ReaderFieldType.DeferredIncludeRef,
-                                Fields = this.FlattenTableFields(fromSegment),
-                                Expression = memberExpr,
-                                Path = path
-                            };
-                        }
-                        sqlSegment.Change(refReaderField, SqlType.ReaderField);
+                            FieldType = fieldType,
+                            Path = path
+                        }, SqlType.ReaderField);
                     }
                     else
                     {
@@ -1812,8 +1784,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
                         sqlSegment.SqlType = SqlType.OnlyField;
                         sqlSegment.MemberMapper = memberMapper;
-                        //sqlSegment.MappedTargetType = memberMapper.MappedTargetType;
-                        //sqlSegment.TypeHandler = memberMapper.TypeHandler;
                         sqlSegment.MemberName = memberMapper.MemberName;
                         //Include 1:N时，fromSegment.AliasName为null
                         if (!string.IsNullOrEmpty(fromSegment.AliasName))
@@ -1850,17 +1820,17 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         {
             this.IsSelectMember = true;
             //当有Include导航属性，并且在Select中，有直接访问x.Buyer导航属性访问时，会使用前面用到的x表映射
-            this.ReaderFields = new List<ReaderField>();
+            var readerFields = new List<ReaderField>();
             //为给里面的成员访问提供数据，有参数访问、引用Include成员访问的场景提供数据参数访问的ReaderField查询
             for (int i = 0; i < newExpr.Arguments.Count; i++)
             {
                 var mySelectObj = this.AddSelectElement(newExpr.Arguments[i], newExpr.Members[i]);
                 if (mySelectObj is ReaderField myReaderField)
-                    this.ReaderFields.Add(myReaderField);
-                else this.ReaderFields.AddRange(mySelectObj as List<ReaderField>);
+                    readerFields.Add(myReaderField);
+                else readerFields.AddRange(mySelectObj as List<ReaderField>);
             }
             this.IsSelectMember = false;
-            return sqlSegment.Change(this.ReaderFields, SqlType.ReaderFields);
+            return sqlSegment.Change(readerFields, SqlType.ReaderFields);
         }
         var sqlType = newExpr.HasVariable() ? SqlType.Variable : SqlType.Constant;
         return sqlSegment.Change(ValueEvalutor.Evaluate(newExpr), sqlType);
@@ -1873,7 +1843,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         {
             this.IsSelectMember = true;
             //当有Include导航属性，并且在Select中，有直接访问x.Buyer导航属性访问时，会使用前面用到的x表映射
-            this.ReaderFields = new List<ReaderField>();
+            var readerFields = new List<ReaderField>();
             //为给里面的成员访问提供数据，有参数访问、引用Include成员访问的场景提供数据参数访问的ReaderField查询
             for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
             {
@@ -1882,11 +1852,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
                 var mySelectObj = this.AddSelectElement(memberAssignment.Expression, memberAssignment.Member);
                 if (mySelectObj is ReaderField myReaderField)
-                    this.ReaderFields.Add(myReaderField);
-                else this.ReaderFields.AddRange(mySelectObj as List<ReaderField>);
+                    readerFields.Add(myReaderField);
+                else readerFields.AddRange(mySelectObj as List<ReaderField>);
             }
             this.IsSelectMember = false;
-            return sqlSegment.Change(this.ReaderFields, SqlType.ReaderFields);
+            return sqlSegment.Change(readerFields, SqlType.ReaderFields);
         }
         var sqlType = memberInitExpr.HasVariable() ? SqlType.Variable : SqlType.Constant;
         return sqlSegment.Change(ValueEvalutor.Evaluate(memberInitExpr), sqlType);

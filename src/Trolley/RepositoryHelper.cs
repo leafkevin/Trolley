@@ -1464,7 +1464,7 @@ public static class RepositoryHelper
         var root = NewBuildInfo(targetType);
         var current = root;
         var parent = root;
-        var readerBuilders = new Dictionary<ReaderField, EntityBuilder>();
+        var readerBuilders = new Dictionary<string, EntityBuilder>();
         var deferredBuilders = new Stack<EntityBuilder>();
         var entityMapProvider = dbContext.EntityMapProvider;
 
@@ -1481,7 +1481,7 @@ public static class RepositoryHelper
                             && entityNodeTypes.Contains(readerField.Expression.NodeType))
                         {
                             current = NewBuildInfo(readerField.ReaderType, readerField.TargetMember, parent);
-                            readerBuilders.Add(readerField, current);
+                            readerBuilders.TryAdd(readerField.Path, current);
                         }
                         //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
                         //f.TotalAmount.ToString("C")
@@ -1559,7 +1559,7 @@ public static class RepositoryHelper
                     {
                         isEntityType = true;
                         current = NewBuildInfo(readerField.ReaderType, readerField.TargetMember, parent);
-                        readerBuilders.Add(readerField, current);
+                        readerBuilders.TryAdd(readerField.Path, current);
                         myTargetType = readerField.ReaderType;
                     }
                     var memberInfos = myTargetType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
@@ -1605,8 +1605,7 @@ public static class RepositoryHelper
                     {
                         //Include导航属性引用不能单独Select，前面一定有Parameter访问
                         //Include导航属性引用单独处理，先设置默认值，在整个实体初始化完后，再SELECT a.`Id`,a.`BuyerId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1设置具体值，初始化Action在成员访问的时候，已经构建好了
-                        var refReaderField = readerField.Value as ReaderField;
-                        var instanceExpr = readerBuilders[refReaderField].InstanceExpr;
+                        var instanceExpr = readerBuilders[readerField.Path].InstanceExpr;
                         //此处生成的副本，从新new的一个对象
                         if (!parent.IsDefault) parent.Arguments.Add(instanceExpr);
                         else if (readerField.TargetMember.CanWrite) parent.Bindings.Add(Expression.Bind(readerField.TargetMember, instanceExpr));
@@ -1617,7 +1616,7 @@ public static class RepositoryHelper
                         if (readerIndex > 0 || readerIndex == 0 && readerField.ReaderType != targetType)
                         {
                             if (readerField.Parent != null)
-                                parent = readerBuilders[readerField.Parent];
+                                parent = readerBuilders[readerField.Parent.Path];
                             else parent = root;
                             current = NewBuildInfo(readerField.ReaderType, readerField.TargetMember, parent);
                         }
@@ -1636,7 +1635,7 @@ public static class RepositoryHelper
                         if (readerField.HasNextInclude)
                         {
                             deferredBuilders.Push(current);
-                            readerBuilders.Add(readerField, current);
+                            readerBuilders.TryAdd(readerField.Path, current);
                         }
                         else if (current.Parent != null)
                         {
