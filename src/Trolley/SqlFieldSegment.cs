@@ -44,11 +44,9 @@ public struct SqlSegment
     public bool IsNull { get; set; }
     public string ParameterName { get; set; }
     public TableSegment TableSegment { get; set; }
-    //public Type MappedTargetType { get; set; }
     public string MemberName { get; set; }
     //where条件时候，需要用于添加参数
     public MemberMap MemberMapper { get; set; }
-    //public ITypeHandler TypeHandler { get; set; }
     public MemberInfo TargetMember { get; set; }
     public List<ReaderField> Fields { get; set; }
     public bool IsRawSqlFields { get; set; }
@@ -144,7 +142,6 @@ public class ReaderField
     /// 成员访问时是成员名称，临时表、多分表多次包装时也是成员名称
     /// </summary>
     public string MemberName { get; set; }
-    //public ITypeHandler TypeHandler { get; set; }
     public MemberInfo TargetMember { get; set; }
     public bool IsDeferredFields { get; set; }
     /// <summary>

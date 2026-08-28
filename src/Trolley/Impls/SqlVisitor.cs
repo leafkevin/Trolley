@@ -1025,10 +1025,13 @@ public class SqlVisitor : ISqlVisitor
 
                     var enumerable = rightSegment.Value as IEnumerable;
                     var builder = new StringBuilder();
+                    var isParameterized = sqlSegment.SqlType == SqlType.Constant && sqlSegment.IsParameterized
+                        || sqlSegment.SqlType == SqlType.Variable || this.DbContext.Options.IsConstantParameterized;
+                    Func<object, string> wrapSql = isParameterized ? f => this.WrapParameterSql(f) : f => this.OrmProvider.GetQuotedValue(f);
                     foreach (var item in enumerable)
                     {
                         if (builder.Length > 0) builder.Append(',');
-                        builder.Append(this.WrapParameterSql(item));
+                        builder.Append(wrapSql(item));
                     }
                     inSql = builder.ToString();
                 }

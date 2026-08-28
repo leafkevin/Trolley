@@ -1816,7 +1816,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         var newExpr = sqlSegment.Expression as NewExpression;
         //Select场景
-        if (this.IsSelect && newExpr.Type.Name.StartsWith("<>"))
+        if (newExpr.Type.Name.StartsWith("<>"))
         {
             this.IsSelectMember = true;
             //当有Include导航属性，并且在Select中，有直接访问x.Buyer导航属性访问时，会使用前面用到的x表映射
