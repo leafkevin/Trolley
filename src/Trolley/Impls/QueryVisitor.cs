@@ -186,13 +186,16 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 foreach (var orderByField in this.OrderByFields)
                 {
                     var fieldName = orderByField.Field.Value.ToString();
-                    if (!this.TryFindReaderFieldByValue(this.ReaderFields, fieldName, out var readerField))
-                        continue;
-                    if (orderByField.Field != readerField)
+                    if (!orderByField.IsReaderField)
                     {
-                        readerField.IsOrderingField = true;
-                        orderByField.Field.RefField = readerField;
-                        continue;
+                        if (!this.TryFindReaderFieldByValue(this.ReaderFields, fieldName, out var readerField))
+                            continue;
+                        if (orderByField.Field != readerField)
+                        {
+                            readerField.IsOrderingField = true;
+                            orderByField.Field.RefField = readerField;
+                            continue;
+                        }
                     }
                     orderByField.Field.IsIgnore = true;
                     this.ReaderFields.Add(orderByField.Field);
@@ -230,23 +233,24 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         {
             builder.Clear();
             //当有多分表时，有排序，Select字段中，没有完全的排序字段，则需要补全所有排序字段
+            int index = 0;
             foreach (var orderByField in this.OrderByFields)
             {
-                var fieldName = orderByField.Field.Value.ToString();
-                if (!this.TryFindReaderFieldByValue(this.ReaderFields, fieldName, out var readerField))
-                    continue;
+                var readerField = orderByField.Field;
+                var fieldName = readerField.Value.ToString();
+                //Select之前的OrderBy，优先使用Select后的ReaderField
+                if (!orderByField.IsReaderField && this.TryFindReaderFieldByValue(this.ReaderFields, fieldName, out var myReaderField))
+                    readerField = myReaderField;
                 //OrderBy字段，优先使用SELECT字段别名
+                if (index > 0) builder.Append(',');
                 if (readerField.IsNeedAlias)
                     builder.Append(readerField.AliasName);
                 else builder.Append(fieldName);
+                if (!string.IsNullOrEmpty(orderByField.Suffix))
+                    builder.Append(orderByField.Suffix);
+                index++;
             }
             orderBy = $"ORDER BY {builder.ToString()}";
-            //if (!this.IsManyShardingTables || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue))
-            //{
-            //    orderBy = $"ORDER BY {orderBy}";
-            //    if (!this.offset.HasValue && !this.limit.HasValue)
-            //        builder.Append(" " + orderBy);
-            //}
         }
         builder.Clear();
         if (!string.IsNullOrEmpty(headSql))
@@ -434,8 +438,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //当有多分表时，有排序，Select字段中，没有完全的排序字段，则需要补全所有排序字段
                 foreach (var orderByField in this.OrderByFields)
                 {
-                    var fieldName = orderByField.Field.Value.ToString();
-                    if (!this.TryFindReaderFieldByValue(this.ReaderFields, fieldName, out var readerField))
+                    var readerField = orderByField.Field;
+                    var fieldName = readerField.Value.ToString();
+                    if (!orderByField.IsReaderField && !this.TryFindReaderFieldByValue(this.ReaderFields, fieldName, out readerField))
                         continue;
                     if (orderByField.Field != readerField)
                     {
@@ -1388,7 +1393,22 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var lambdaExpr = expr as LambdaExpression;
         this.ClearUnionSql();
         this.OrderByFields ??= new();
-        this.InitTableAlias(lambdaExpr);
+        bool isReaderField = false;
+
+        //OrderBy操作，可以选择Select别名字段，此时优先使用别名
+        if (this.ReaderFields != null && this.ReaderFields.Count > 0)
+        {
+            this.TableAliases.Clear();
+            lambdaExpr.Body.TryGetParameterNames(out var parameterNames);
+            this.TableAliases.Add(parameterNames[0], new TableSegment
+            {
+                TableType = TableType.SelectReaderFields,
+                Fields = this.ReaderFields,
+            });
+            isReaderField = true;
+        }
+        else this.InitTableAlias(lambdaExpr);
+
         this.IsOrderBy = true;
         var sqlSegment = this.Visit(new SqlSegment { Expression = expr });
         switch (sqlSegment.SqlType)
@@ -1397,12 +1417,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 var readerField = sqlSegment.Value as ReaderField;
                 //Grouping分组字段
                 if (readerField.FieldType == ReaderFieldType.Entity)
-                    readerField.Fields.ForEach(f => this.AddOrderByField(f, orderType));
-                else this.AddOrderByField(readerField, orderType);
+                    readerField.Fields.ForEach(f => this.AddOrderByField(f, orderType, isReaderField));
+                else this.AddOrderByField(readerField, orderType, isReaderField);
                 break;
             case SqlType.ReaderFields:
                 var readerFields = sqlSegment.Value as List<ReaderField>;
-                readerFields.ForEach(f => this.AddOrderByField(f, orderType));
+                readerFields.ForEach(f => this.AddOrderByField(f, orderType, isReaderField));
                 break;
             default:
                 //成员访问、表达式、方法调用、原始SQL等场景
@@ -1412,18 +1432,18 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     FieldType = readerFieldType,
                     Value = this.WrapSql(sqlSegment),
                     TargetMember = sqlSegment.TargetMember
-                }, orderType);
+                }, orderType, isReaderField);
                 break;
         }
         this.IsOrderBy = false;
     }
-    private void AddOrderByField(ReaderField readerField, string orderType)
+    private void AddOrderByField(ReaderField readerField, string orderType, bool isReaderField)
     {
         string suffix = null;
         if (orderType == "DESC")
             suffix = " DESC";
         readerField.IsOrderingField = true;
-        this.OrderByFields.Add(new OrderByField { Field = readerField, Suffix = suffix });
+        this.OrderByFields.Add(new OrderByField { Field = readerField, Suffix = suffix, IsReaderField = isReaderField });
     }
     public virtual void Having(Expression havingExpr)
     {
@@ -1759,7 +1779,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         lastReaderField = new ReaderField
                         {
                             FieldType = ReaderFieldType.Field,
-                            Value = fieldName
+                            Value = this.OrmProvider.GetFieldName(fieldName)
                         };
                     }
                     //子查询中的字段，后续操作可能会更改MemberName，先标识是引用已有ReaderField字段，需要时再做克隆副本                    
@@ -1971,17 +1991,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (parameterNames == null || parameterNames.Count <= 0)
             return tableSegment;
 
-        //有加新表操作或是Join操作就要清空ReaderFields，以免后续的解析字段时找不到字段
-        //OrderBy操作，可以选择Select别名字段，此时优先使用别名
-        if (this.ReaderFields != null && this.ReaderFields.Count > 0)
-        {
-            this.TableAliases.Add(parameterNames[0], tableSegment = new TableSegment
-            {
-                TableType = TableType.SelectReaderFields,
-                Fields = this.ReaderFields,
-            });
-            return tableSegment;
-        }
+        //有加新表操作或是Join操作就要清空ReaderFields，以免后续的解析字段时找不到字段       
         var masterTables = this.Tables.FindAll(f => f.IsMaster);
         if (masterTables.Count > 0)
         {
@@ -2284,4 +2294,5 @@ public class OrderByField
 {
     public ReaderField Field { get; set; }
     public string Suffix { get; set; }
+    public bool IsReaderField { get; set; }
 }
