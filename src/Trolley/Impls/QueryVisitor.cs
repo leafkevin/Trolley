@@ -1684,15 +1684,23 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //在子查询中，Select了Group分组对象，为了避免在Clear时，把GroupFields元素清掉，放到一个新列表中
                 if (this.GroupByFields.Count > 1)
                 {
+                    var readerFields = new List<ReaderField>();
+                    var builder = new StringBuilder();
+                    for (int i = 0; i < this.GroupByFields.Count; i++)
+                    {
+                        readerFields.Add(this.GroupByFields[i]);
+                        if (i > 0) builder.Append(',');
+                        builder.Append(this.GroupByFields[i].Value.ToString());
+                    }
                     readerField = new ReaderField
                     {
                         IsGroupingField = true,
                         FieldType = ReaderFieldType.Entity,
                         //后续的OrderBy子句不需要，Select子句会设置
                         //ReaderType = memberInfo.GetMemberType(),
-                        Fields = new List<ReaderField>()
+                        Fields = readerFields,
+                        Value = builder.ToString()
                     };
-                    this.GroupByFields.ForEach(f => readerField.Fields.Add(f));
                 }
                 else readerField = this.GroupByFields[0];
                 return sqlSegment.Change(readerField, SqlType.ReaderField);
