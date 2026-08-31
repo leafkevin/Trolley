@@ -4,6 +4,12 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
+public enum ShardingType
+{
+    WriteAndRead,
+    WriteOnly,
+    ReadOnly
+}
 public class TableShardingBuilder
 {
     private readonly ITableShardingProvider shardingProvider;

@@ -1502,6 +1502,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     ReaderType = toTargetExpr.Body.Type,
                     MemberMapper = sqlSegment.MemberMapper,
                     MemberName = sqlSegment.MemberName,
+                    TargetMember= sqlSegment.MemberMapper.Member,
                     Value = sqlSegment.Value
                 }];
                 break;

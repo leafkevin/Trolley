@@ -762,9 +762,10 @@ public class SqlVisitor : ISqlVisitor
         var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
         var declaringType = methodCallExpr.Method.DeclaringType;
         if (declaringType == typeof(Sql)
-           || typeof(IRepository).IsAssignableFrom(declaringType)
-           || typeof(IAggregateSelect).IsAssignableFrom(declaringType)
-           || typeof(IQueryBase).IsAssignableFrom(declaringType))
+            || typeof(IRepository).IsAssignableFrom(declaringType)
+            || typeof(IAggregateSelect).IsAssignableFrom(declaringType)
+            || typeof(IQueryBase).IsAssignableFrom(declaringType)
+            || declaringType.FullName.StartsWith("Trolley.IGroupingQuery"))
             return this.VisitSqlMethodCall(sqlSegment);
         //TODO: 
         //sqlSegment.TargetType = methodCallExpr.Type;
@@ -1061,19 +1062,22 @@ public class SqlVisitor : ISqlVisitor
                     var removeTables = new List<TableSegment>();
                     var builder = new StringBuilder("SELECT * FROM ");
                     int index = 0;
+                    int tableIndex = 'a' + this.Tables.Count;
                     lambdaExpr = this.EnsureLambda(methodCallExpr.Arguments[0]);
                     var genericArguments = methodCallExpr.Method.GetGenericArguments();
                     foreach (var tableType in genericArguments)
                     {
                         var aliasName = lambdaExpr.Parameters[index].Name;
                         if (this.TableAliases.ContainsKey(aliasName))
+                        {
+                            tableIndex++;
                             continue;
-
+                        }
                         var tableMapper = this.EntityMapProvider.GetEntityMap(tableType);
                         var tableSegment = new TableSegment
                         {
                             EntityType = tableType,
-                            AliasName = aliasName,
+                            AliasName = $"{(char)tableIndex}",
                             Mapper = tableMapper
                         };
                         this.Tables.Add(tableSegment);
@@ -1083,6 +1087,7 @@ public class SqlVisitor : ISqlVisitor
                         builder.Append(this.OrmProvider.GetTableName(tableMapper.TableName));
                         builder.Append($" {tableSegment.AliasName}");
                         index++;
+                        tableIndex++;
                     }
                     builder.Append(" WHERE ");
                     builder.Append(this.VisitConditionExpr(lambdaExpr.Body, out _));
@@ -1473,12 +1478,16 @@ public class SqlVisitor : ISqlVisitor
         if (currentExpr != null && currentExpr is MemberExpression memberExpr)
         {
             //直接引用子查询对象，并执行Where/
-            var subQueryObj = memberExpr.Evaluate<IQuery>();
-            entityType = currentExpr.Type.GenericTypeArguments[0];
-            //在CTE表基础上，又做了WHERE/SELECT...其他操作
-            if (subQueryObj is ICteQuery cteQueryObj)
-                this.RefQueries.Add(cteQueryObj);
-            queryVisitor.UseQuery(entityType, subQueryObj, false);
+            var fromObj = memberExpr.Evaluate();
+            if (fromObj is IQuery subQueryObj)
+            {
+                entityType = currentExpr.Type.GenericTypeArguments[0];
+                //在CTE表基础上，又做了WHERE/SELECT...其他操作
+                if (subQueryObj is ICteQuery cteQueryObj)
+                    this.RefQueries.Add(cteQueryObj);
+                queryVisitor.UseQuery(entityType, subQueryObj, false);
+            }
+            //IRepository对象，直接使用queryVisitor重新执行
         }
 
         //引用现有子查询对象不做任何处理场景，在最外层直接处理
@@ -1740,7 +1749,9 @@ public class SqlVisitor : ISqlVisitor
                     else entityType = callExpr.Object.Type.GenericTypeArguments[0];
                     //repository.From<Company>('b').Where(t => ...).Exists()
                     //Sql.From<Company>().Where(t => ...).Exists()
-                    queryVisitor.SelectRaw(entityType, "*");
+                    if (queryVisitor.GroupByFields != null && queryVisitor.GroupByFields.Count > 0)
+                        queryVisitor.SelectGrouping();
+                    else queryVisitor.SelectRaw(entityType, "*");
                     sql = queryVisitor.BuildSql(true, out _);
                     return (sql, null);
                 case "AsCteTable":

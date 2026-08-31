@@ -38,6 +38,7 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     /// 当前子查询最后AsCteTable后生成的对象，或是CTE表构建的子查询中的自引用对象，此时IsRecursive=true
     /// </summary>
     ICteQuery CteQueryObj { get; set; }
+    List<ReaderField> GroupByFields { get; set; }
     bool IsRecursive { get; set; }
     string UnionSql { get; set; }
 
