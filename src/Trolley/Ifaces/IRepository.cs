@@ -305,21 +305,6 @@ public interface IRepository
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回查询结果，没有数据返回默认值null</returns>
     Task<TEntity> QueryByIdAsync<TEntity>(object whereKey, CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 主键查询，不支持分表，返回第一条数据，如：.QueryById&lt;User&gt;(new[] { 1, 2, 3 }) 或是 .QueryById&lt;User&gt;(new[] { new { Id = 1 }, new { Id = 2 }, new { Id = 3 } })，whereKeys不能为null
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="whereKeys">主键值或是包含主键的对象集合，不能为null</param>
-    /// <returns>返回查询结果，没有数据返回默认值null</returns>
-    TEntity QueryById<TEntity>(IEnumerable whereKeys);
-    /// <summary>
-    /// 主键查询，不支持分表，返回第一条数据，如：.QueryByIdAsync&lt;User&gt;(new[] { 1, 2, 3 }) 或是 .QueryByIdAsync&lt;User&gt;(new[] { new { Id = 1 }, new { Id = 2 }, new { Id = 3 } })，whereKeys不能为null
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="whereKeys">主键值或是包含主键的对象集合，不能为null</param>   
-    /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回查询结果，没有数据返回默认值null</returns>
-    Task<TEntity> QueryByIdAsync<TEntity>(IEnumerable whereKeys, CancellationToken cancellationToken = default);
     #endregion
 
     #region QueryFirst
@@ -377,37 +362,20 @@ public interface IRepository
     /// <returns>返回查询结果，没有数据返回默认值null</returns>
     Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 条件查询，同名属性值作为查询条件，没有数据返回null，whereObj为null时返回表中第一条记录，不支持分表，如：.QueryFirst&lt;User&gt;(new { Name = "kevin" })
+    /// 条件查询，同名属性值作为查询条件，没有数据返回null，whereObj为null时返回表中第一条记录，不支持分表，如：.QueryFirst&lt;User&gt;(new { Name = "kevin" })，.QueryFirst&lt;User&gt;([new { Name = "kevin" },new { Name = "cindy" }])
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="whereObj">条件参数，可以是命名对象、匿名对象或是字典类型对象，可为null</param>
+    /// <param name="whereObj">条件参数，可以是命名对象、匿名对象或是字典类型对象或是对应的对象集合，可为null</param>
     /// <returns>返回查询结果，没有数据返回默认值null</returns>
     TEntity QueryFirst<TEntity>(object whereObj = null);
     /// <summary>
-    /// 条件查询，同名属性值作为查询条件，没有数据返回null，whereObj为null时返回表中第一条记录，不支持分表，如：.QueryFirstAsync&lt;User&gt;(new { Name = "kevin" })
+    /// 条件查询，同名属性值作为查询条件，没有数据返回null，whereObj为null时返回表中第一条记录，不支持分表，如：.QueryFirstAsync&lt;User&gt;(new { Name = "kevin" })，.QueryFirstAsync&lt;User&gt;([new { Name = "kevin" },new { Name = "cindy" }])
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="whereObj">条件参数，可以是命名对象、匿名对象或是字典类型对象，可为null</param>
+    /// <param name="whereObj">条件参数，可以是命名对象、匿名对象或是字典类型对象或是对应的对象集合，可为null</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回查询结果，没有数据返回默认值null</returns>
     Task<TEntity> QueryFirstAsync<TEntity>(object whereObj = null, CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 条件查询，同名属性值作为查询条件，没有数据返回null，返回满足条件的第一条数据，whereObjs不可为null，不支持分表，如：.QueryFirst&lt;User&gt;([new { Name = "kevin" }, new { Name = "Cindy" }])
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="whereObjs">条件参数，可以是命名对象、匿名对象或是字典类型对象的集合，不可为null</param>
-    /// <returns>返回查询结果，没有数据返回默认值null</returns>
-    TEntity QueryFirst<TEntity>(IEnumerable whereObjs);
-    /// <summary>
-    /// 条件查询，同名属性值作为查询条件，没有数据返回null，返回满足条件的第一条数据，whereObjs不可为null，不支持分表，如：.QueryFirstAsync&lt;User&gt;([new { Name = "kevin" }, new { Name = "Cindy" }])
-    /// </summary>
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="whereObjs">条件参数，可以是命名对象、匿名对象或是字典类型对象的集合，不可为null</param>
-    /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回查询结果，没有数据返回默认值null</returns>
-    Task<TEntity> QueryFirstAsync<TEntity>(IEnumerable whereObjs, CancellationToken cancellationToken = default);
-
     #endregion
 
     #region QueryByIds
@@ -497,21 +465,6 @@ public interface IRepository
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回查询结果，没有数据返回List&lt;<typeparamref name="TEntity"/>&gt;类型空列表</returns>
     Task<List<TEntity>> QueryAsync<TEntity>(object whereObj = null, CancellationToken cancellationToken = default);
-    /// <summary>
-    ///  条件查询，同名属性值作为查询条件，没有数据返回List&lt;<typeparamref name="TEntity"/>&gt;类型空列表，不支持分表，如：.Query&lt;User&gt;(new[] { new { Name = "leafkevin" }, new { Name = "cindy" } })
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="whereObjs">条件对象，同名属性值作为查询条件，可以是命名对象、匿名对象或是字典类型对象集合，不可为null</param>
-    /// <returns>返回查询结果，没有数据返回List&lt;<typeparamref name="TEntity"/>&gt;类型空列表</returns>
-    List<TEntity> Query<TEntity>(IEnumerable whereObjs);
-    /// <summary>
-    /// 条件查询，同名属性值作为查询条件，没有数据返回List&lt;<typeparamref name="TEntity"/>&gt;类型空列表，不支持分表，如：.QueryAsync&lt;User&gt;(new[] { new { Name = "leafkevin" }, new { Name = "cindy" } })
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="whereObjs">条件对象，同名属性值作为查询条件，可以是命名对象、匿名对象或是字典类型对象集合，不可为null</param>
-    /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回查询结果，没有数据返回List&lt;<typeparamref name="TEntity"/>&gt;类型空列表</returns>
-    Task<List<TEntity>> QueryAsync<TEntity>(IEnumerable whereObjs, CancellationToken cancellationToken = default);
     #endregion
 
     #region Exists
@@ -530,21 +483,6 @@ public interface IRepository
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回是否存在</returns>
     Task<bool> ExistsAsync<TEntity>(object whereObj = null, CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 判断是否存在，同名属性值作为查询条件，满足任一条件都将返回true，不支持分表，如：.ExistsBy&lt;User&gt;(new[] { new { Name = "leafkevin" }, new { Name = "cindy" } })，whereObjs不能为null
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="whereObjs">条件对象，同名属性值作为查询条件，可以是命名对象、匿名对象或是字典类型对象集合，不可为null</param>
-    /// <returns>返回是否存在</returns>
-    bool Exists<TEntity>(IEnumerable whereObjs);
-    /// <summary>
-    /// 判断是否存在，同名属性值作为查询条件，满足任一条件都将返回true，不支持分表，如：.ExistsByAsync&lt;User&gt;(new[] { new { Name = "leafkevin" }, new { Name = "cindy" } })，whereObjs不能为null
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="whereObjs">条件对象，同名属性值作为查询条件，可以是命名对象、匿名对象或是字典类型对象集合，不能为null</param>
-    /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回是否存在</returns>
-    Task<bool> ExistsAsync<TEntity>(IEnumerable whereObjs, CancellationToken cancellationToken = default);
     /// <summary>
     /// 根据主键判断是否存在，不支持分表，如：.ExistsById&lt;User&gt;(1) 或是 .ExistsById&lt;User&gt;(new { Id = 1 })，whereKey不能为null
     /// </summary>

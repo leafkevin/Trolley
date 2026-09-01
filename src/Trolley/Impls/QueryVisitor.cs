@@ -1667,15 +1667,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             }
 
             //各种OrmProvider提供的类型实例成员访问，如：DateTime,TimeSpan,String.Length
+            //Where(f=>... && f.CreatedAt.Month<5 && ...)
+            //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
             if (this.OrmProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
-            {
-                //Where(f=>... && f.CreatedAt.Month<5 && ...)
-                //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
-                var targetSegment = sqlSegment.Next(memberExpr.Expression);
-                sqlSegment = formatter.Invoke(this, targetSegment);
-                //sqlSegment.TargetMember = memberInfo;
-                return sqlSegment;
-            }
+                return formatter.Invoke(this, sqlSegment.Next(memberExpr.Expression));
 
             //此场景一定是select
             //Select((x, a, b, ... ) => new { x.Grouping, ... });
@@ -1780,15 +1775,16 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //子查询临时表字段访问或是OrderBy使用Select字段访问
                 if (lastReaderField != null)
                 {
+                    //Select之后的OrderBy字段，直接使用别名字段
                     if (this.IsOrderBy && fromSegment.TableType == TableType.SelectReaderFields)
                     {
                         var fieldName = lastReaderField.Value.ToString();
                         if (this.IsNeedAlias(lastReaderField))
-                            fieldName = lastReaderField.TargetMember.Name;
+                            fieldName = this.OrmProvider.GetFieldName(lastReaderField.TargetMember.Name);
                         lastReaderField = new ReaderField
                         {
                             FieldType = ReaderFieldType.Field,
-                            Value = this.OrmProvider.GetFieldName(fieldName)
+                            Value = fieldName
                         };
                     }
                     //子查询中的字段，后续操作可能会更改MemberName，先标识是引用已有ReaderField字段，需要时再做克隆副本                    

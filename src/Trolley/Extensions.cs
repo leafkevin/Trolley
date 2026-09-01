@@ -531,19 +531,16 @@ public static class Extensions
             hashCode.Add(reader.GetName(i));
         }
         hashCode.Add(readerFields.Count);
-        int index = 0;
         foreach (var readerField in readerFields)
         {
             hashCode.Add(readerField.FieldType);
             if (readerField.FieldType == ReaderFieldType.Entity)
-                hashCode.Add(readerField.ReaderType);
-            else if (readerField.FieldType == ReaderFieldType.RawSql)
-                hashCode.Add($"RawSql:{readerField.Value}");
-            else if (readerField.IsDeferredFields)
             {
-                string fieldName = readerField.TargetMember?.Name ?? $"DeferredField{index++}";
-                hashCode.Add($"{fieldName}:{readerField.Expression.ToString()}");
+                if (readerField.Value != null)
+                    hashCode.Add(readerField.Value);
+                else hashCode.Add(readerField.ReaderType);
             }
+            else if (readerField.Value != null) hashCode.Add(readerField.Value);
             else hashCode.Add(readerField.TargetMember.Name);
         }
         return hashCode.ToHashCode();
