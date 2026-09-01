@@ -734,32 +734,34 @@ public static class RepositoryHelper
             var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)]);
             var concatMethodInfo = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string)]);
 
-            ParameterExpression valueBuilderExpr = null;
+            ParameterExpression valueOrWhereBuilderExpr = null;
             if (commandType == 1)
             {
                 if (isFunc)
                 {
-                    valueBuilderExpr = Expression.Variable(typeof(StringBuilder), "valueBuilder");
-                    blockParameters.AddRange([fieldBuilderExpr, valueBuilderExpr]);
+                    valueOrWhereBuilderExpr = Expression.Variable(typeof(StringBuilder), "valueBuilder");
+                    blockParameters.AddRange([fieldBuilderExpr, valueOrWhereBuilderExpr]);
                     var constructor = typeof(StringBuilder).GetConstructor(Type.EmptyTypes);
                     blockBodies.Add(Expression.Assign(fieldBuilderExpr, Expression.New(constructor)));
-                    blockBodies.Add(Expression.Assign(valueBuilderExpr, Expression.New(constructor)));
+                    blockBodies.Add(Expression.Assign(valueOrWhereBuilderExpr, Expression.New(constructor)));
 
                     var headSql = $"INSERT INTO {ormProvider.GetTableName(entityMapper.TableName)} (";
                     blockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Constant(headSql)));
-                    blockBodies.Add(Expression.Call(valueBuilderExpr, appendMethodInfo, Expression.Constant(") VALUES (")));
+                    blockBodies.Add(Expression.Call(valueOrWhereBuilderExpr, appendMethodInfo, Expression.Constant(") VALUES (")));
                 }
-                else valueBuilderExpr = Expression.Parameter(typeof(StringBuilder), "valueBuilder");
+                else valueOrWhereBuilderExpr = Expression.Parameter(typeof(StringBuilder), "valueBuilder");
             }
             else if (isFunc)
             {
-                blockParameters.Add(valueBuilderExpr);
+                valueOrWhereBuilderExpr = Expression.Parameter(typeof(StringBuilder), "valueBuilder");
+                blockParameters.AddRange([fieldBuilderExpr, valueOrWhereBuilderExpr]);
                 var constructor = typeof(StringBuilder).GetConstructor(Type.EmptyTypes);
-                blockBodies.Add(Expression.Assign(valueBuilderExpr, Expression.New(constructor)));
+                blockBodies.Add(Expression.Assign(fieldBuilderExpr, Expression.New(constructor)));
+                blockBodies.Add(Expression.Assign(valueOrWhereBuilderExpr, Expression.New(constructor)));
 
                 var headSql = $"UPDATE {ormProvider.GetTableName(entityMapper.TableName)} SET ";
                 blockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Constant(headSql)));
-                blockBodies.Add(Expression.Call(valueBuilderExpr, appendMethodInfo, Expression.Constant(" WHERE ")));
+                blockBodies.Add(Expression.Call(valueOrWhereBuilderExpr, appendMethodInfo, Expression.Constant(" WHERE ")));
             }
 
             int index = 0, whereIndex = 0;
@@ -784,7 +786,7 @@ public static class RepositoryHelper
                 if (commandType == 1)
                 {
                     var addExpr1 = Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Constant(","));
-                    var addExpr2 = Expression.Call(valueBuilderExpr, appendMethodInfo, Expression.Constant(","));
+                    var addExpr2 = Expression.Call(valueOrWhereBuilderExpr, appendMethodInfo, Expression.Constant(","));
                     if (index > 0) blockBodies.AddRange([addExpr1, addExpr2]);
                     else
                     {
@@ -794,7 +796,7 @@ public static class RepositoryHelper
                     }
                     var fieldNameExpr = Expression.Constant(ormProvider.GetFieldName(memberMapper.FieldName));
                     blockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, fieldNameExpr));
-                    blockBodies.Add(Expression.Call(valueBuilderExpr, appendMethodInfo, parameterNameExpr));
+                    blockBodies.Add(Expression.Call(valueOrWhereBuilderExpr, appendMethodInfo, parameterNameExpr));
                     index++;
                 }
                 else
@@ -804,8 +806,8 @@ public static class RepositoryHelper
                     {
                         if (memberMapper.IsKey)
                         {
-                            if (whereIndex > 0) blockBodies.Add(Expression.Call(valueBuilderExpr, appendMethodInfo, Expression.Constant(" AND ")));
-                            blockBodies.Add(Expression.Call(valueBuilderExpr, appendMethodInfo, setSqlExpr));
+                            if (whereIndex > 0) blockBodies.Add(Expression.Call(valueOrWhereBuilderExpr, appendMethodInfo, Expression.Constant(" AND ")));
+                            blockBodies.Add(Expression.Call(valueOrWhereBuilderExpr, appendMethodInfo, setSqlExpr));
                             whereIndex++;
                         }
                         else
@@ -842,16 +844,16 @@ public static class RepositoryHelper
                 methodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.ToString), Type.EmptyTypes);
                 if (commandType == 1)
                 {
-                    blockBodies.Add(Expression.Call(valueBuilderExpr, appendMethodInfo, Expression.Constant(")")));
+                    blockBodies.Add(Expression.Call(valueOrWhereBuilderExpr, appendMethodInfo, Expression.Constant(")")));
                     if (hasIdentity)
                     {
                         var keyFieldName = ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName);
                         var tailSql = ormProvider.GetIdentitySql(ormProvider.GetFieldName(keyFieldName));
-                        blockBodies.Add(Expression.Call(valueBuilderExpr, appendMethodInfo, Expression.Constant(tailSql)));
+                        blockBodies.Add(Expression.Call(valueOrWhereBuilderExpr, appendMethodInfo, Expression.Constant(tailSql)));
                     }
-                    blockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Call(valueBuilderExpr, methodInfo)));
+                    blockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Call(valueOrWhereBuilderExpr, methodInfo)));
                 }
-                else blockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Call(valueBuilderExpr, methodInfo)));
+                else blockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Call(valueOrWhereBuilderExpr, methodInfo)));
 
                 var returnExpr = Expression.Call(fieldBuilderExpr, methodInfo);
                 var resultLabelExpr = Expression.Label(typeof(string));
@@ -862,7 +864,7 @@ public static class RepositoryHelper
             if (isFunc) return Expression.Lambda<Func<IDataParameterCollection, DbContext, object, string>>(
                 Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, parameterExpr).Compile();
             if (commandType == 1) return Expression.Lambda<Action<IDataParameterCollection, StringBuilder, StringBuilder, DbContext, object>>(
-                Expression.Block(blockParameters, blockBodies), dbParametersExpr, fieldBuilderExpr, valueBuilderExpr, dbContextExpr, parameterExpr).Compile();
+                Expression.Block(blockParameters, blockBodies), dbParametersExpr, fieldBuilderExpr, valueOrWhereBuilderExpr, dbContextExpr, parameterExpr).Compile();
             else return Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, object>>(
                 Expression.Block(blockParameters, blockBodies), dbParametersExpr, fieldBuilderExpr, dbContextExpr, parameterExpr).Compile();
         });
