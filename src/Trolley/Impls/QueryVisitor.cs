@@ -809,7 +809,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             this.UseQuery(targetType, subQueryObj, true);
             return;
         }
-        (var sql, _) = this.VisitFromQuery(lambdaExpr.Body);
+        (var sql, _) = this.VisitFromQuery(lambdaExpr.Body, isUnion: true);
         this.Union(union, targetType, sql);
     }
     private void Union(string union, Type targetType, string subQuerySql)
@@ -843,7 +843,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.CteQueryObj = selfQueryObj;
         this.IsRecursive = true;
 
-        (var sql, _) = this.VisitFromQuery(subQueryExpr, selfQueryObj);
+        (var sql, _) = this.VisitFromQuery(subQueryExpr, selfQueryObj, true);
         rawSql += union + Environment.NewLine + sql;
         //先放到UnionSql中，在AsCteTable方法中，BuildCteTableSql时能得到这个SQL
         this.UnionSql = rawSql;

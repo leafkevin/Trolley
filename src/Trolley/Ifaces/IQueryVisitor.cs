@@ -39,7 +39,7 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     /// </summary>
     ICteQuery CteQueryObj { get; set; }
     List<ReaderField> GroupByFields { get; set; }
-    bool IsRecursive { get; set; }
+    bool IsRecursive { get; set; } 
     string UnionSql { get; set; }
 
     bool IsSecondUnion { get; set; }
@@ -130,4 +130,5 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     List<ReaderField> FlattenTableFields(TableSegment tableSegment, bool isNeedAlias = true);
     void Clear(bool isClearReaderFields = false);
     void CloneTo(IQueryVisitor visitor);
+    void RefQueryObj(IQuery subQueryObj);
 }

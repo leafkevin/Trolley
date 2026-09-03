@@ -1456,7 +1456,7 @@ public class SqlVisitor : ISqlVisitor
             builder.Append(this.WrapSql(sqlSegment));
         }
     }
-    public virtual (string, List<ReaderField>) VisitFromQuery(Expression methodCallExpr, ICteQuery selfQueryObj = null)
+    public virtual (string, List<ReaderField>) VisitFromQuery(Expression methodCallExpr, ICteQuery selfQueryObj = null, bool isUnion = false)
     {
         string sql = null;
         Type entityType = null;
@@ -1489,7 +1489,7 @@ public class SqlVisitor : ISqlVisitor
             }
             //IRepository对象，直接使用queryVisitor重新执行
         }
-
+        queryVisitor.IsUnion = isUnion;
         //引用现有子查询对象不做任何处理场景，在最外层直接处理
         //引用现有子查询对象，并做了一些处理，比如：Where/And/Or等
 
