@@ -23,7 +23,6 @@ public static class Extensions
 #endif
         typeof(BitArray),typeof(DBNull)
     };
-
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<ITheaDataReader, object>>> valueTupleReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<ITheaDataReader, object>>> simpleReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<ITheaDataReader, List<ReaderField>, object>>> queryReaderDeserializerCache = new();
@@ -253,10 +252,8 @@ public static class Extensions
         {
             var targetType = typeof(TValue);
             var fieldType = reader.GetFieldType(0);
-            if (fieldType == targetType)
-                return (TValue)reader.GetValue(0);
-            var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, isNullable, dbContext.Options);
-            return (TValue)valueGetter.Invoke(reader.GetValue(0));
+            var readerValueDeserializer = RepositoryHelper.GetReaderValueDeserializer(targetType, fieldType, dbContext, true, true);
+            return (TValue)readerValueDeserializer.DynamicInvoke(reader, 0);
         }
         public Func<ITheaDataReader, object> GetReaderDeserializer(Type targetType, DbContext dbContext)
         {
@@ -265,13 +262,8 @@ public static class Extensions
             if (reader.FieldCount == 1 && !targetType.IsEntityType(out _))
             {
                 var fieldType = reader.GetFieldType(0);
-                if (fieldType == targetType)
-                    return reader => reader.GetValue(0);
-                else
-                {
-                    var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, true, dbContext.Options);
-                    return reader => valueGetter.Invoke(reader.GetValue(0));
-                }
+                var readerValueDeserializer = RepositoryHelper.GetReaderValueDeserializer(targetType, fieldType, dbContext, true, false);
+                return reader => readerValueDeserializer.DynamicInvoke(reader, 0);
             }
             else if (targetType.FullName.StartsWith("System.ValueTuple`"))
             {
@@ -329,27 +321,21 @@ public static class Extensions
                     else
                     {
                         var fieldType = reader.GetFieldType(0);
-                        if (fieldType != targetType)
+                        Delegate readerValueDeserializer = null;
+                        var memberMapper = readerFields[0].MemberMapper;
+                        if (memberMapper != null)
                         {
-                            var memberMapper = readerFields[0].MemberMapper;
-                            if (memberMapper != null)
-                            {
-                                var typeHandler = memberMapper.TypeHandler;
-                                if (typeHandler != null)
-                                    return (reader, readerFields) => typeHandler.Parse(readerFields[0].ReaderType, reader.GetValue(0));
-                                else
-                                {
-                                    var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, !memberMapper.IsRequired, dbContext.Options);
-                                    return (reader, readerFields) => valueGetter.Invoke(reader.GetValue(0));
-                                }
-                            }
+                            var typeHandler = memberMapper.TypeHandler;
+                            if (typeHandler != null)
+                                return (reader, readerFields) => typeHandler.Parse(readerFields[0].ReaderType, reader.GetValue(0));
                             else
                             {
-                                var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, true, dbContext.Options);
-                                return (reader, readerFields) => valueGetter.Invoke(reader.GetValue(0));
+                                readerValueDeserializer = RepositoryHelper.GetReaderValueDeserializer(targetType, fieldType, dbContext, !memberMapper.IsRequired, false);
+                                return (reader, readerFields) => readerValueDeserializer.DynamicInvoke(reader, 0);
                             }
                         }
-                        return (reader, readerFields) => reader.GetValue(0);
+                        readerValueDeserializer = RepositoryHelper.GetReaderValueDeserializer(targetType, fieldType, dbContext, true, false);
+                        return (reader, readerFields) => readerValueDeserializer.DynamicInvoke(reader, 0);
                     }
                 }
                 else
