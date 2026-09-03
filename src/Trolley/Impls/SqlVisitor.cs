@@ -783,11 +783,7 @@ public class SqlVisitor : ISqlVisitor
             return this.VisitDeferredSqlSegment(sqlSegment);
 
         if (this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formatter))
-        {
-            sqlSegment = formatter.Invoke(this, methodCallExpr, sqlSegment.DeferredOperations);
-            //sqlSegment.TargetType = methodCallExpr.Type;
-            return sqlSegment;
-        }
+            return formatter.Invoke(this, methodCallExpr, sqlSegment.DeferredOperations);
         //如果是Select，并且有参数访问，当作延迟方法调用
         if (this.IsSelect && sqlSegment.Expression.HasParameter())
         {
@@ -1483,13 +1479,15 @@ public class SqlVisitor : ISqlVisitor
             {
                 entityType = currentExpr.Type.GenericTypeArguments[0];
                 //在CTE表基础上，又做了WHERE/SELECT...其他操作
-                if (subQueryObj is ICteQuery cteQueryObj)
-                    this.RefQueries.Add(cteQueryObj);
+                //if (subQueryObj is ICteQuery cteQueryObj)
+                //    this.RefQueries.Add(cteQueryObj);
+                //TODO: 
                 queryVisitor.UseQuery(entityType, subQueryObj, false);
+                //subQueryObj.Visitor.CloneTo(queryVisitor);
             }
             //IRepository对象，直接使用queryVisitor重新执行
         }
-        queryVisitor.IsUnion = isUnion;
+        queryVisitor.IsSecondUnion = isUnion;
         //引用现有子查询对象不做任何处理场景，在最外层直接处理
         //引用现有子查询对象，并做了一些处理，比如：Where/And/Or等
 
@@ -1775,11 +1773,6 @@ public class SqlVisitor : ISqlVisitor
                 default: throw new NotSupportedException("不支持的表达式解析");
             }
         }
-        //if (readerFields == null || readerFields.Count == 0)
-        //{
-        //    entityType = methodInfo.DeclaringType.GetGenericArguments()[0];
-        //    readerFields = queryVisitor.FlattenTableFields(queryVisitor.Tables[0]);
-        //}
         sql = queryVisitor.BuildSql(false, out readerFields);
         return (sql, readerFields);
     }
@@ -2390,7 +2383,7 @@ public class SqlVisitor : ISqlVisitor
     /// <returns></returns>
     public TableSegment UseQuery(Type targetType, IQuery subQueryObj, bool isClearTables)
     {
-        //包含该查询对象引用，就说明当前visitor对象已经包含了该子查询引用到的参数，只需要添加表即可
+        //包含该查询对象引用，就说明当前visitor对象已经包含了该子查询引用到的参数，只需要添加表即可            
         var isCurrentVisitor = ReferenceEquals(this, subQueryObj.Visitor);
         if (!isCurrentVisitor && !this.RefQueries.Contains(subQueryObj))
         {
@@ -2436,6 +2429,7 @@ public class SqlVisitor : ISqlVisitor
             }
             this.RefQueries.Add(subQueryObj);
         }
+
         string tableName = null;
         TableType tableType = default;
         List<ReaderField> readerFields = null;

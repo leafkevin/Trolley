@@ -30,7 +30,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public List<ReaderField> IncludeReaderFields { get; set; }
     public TableSegment LastIncludeSegment { get; set; }
     public List<ReaderField> GroupByFields { get; set; }
-    public List<ReaderField> HavingFields { get; set; }
     public List<OrderByField> OrderByFields { get; set; }
     public bool IsCteTable { get; set; }
     public int PageNumber => this.pageNumber;
@@ -305,7 +304,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         //UNION的子查询中有OrderBy/Offset/Limit，就需要包装一下SELECT * FROM，否则数据结果不正确
         //多分表场景下，在处理多分表时再做包装，这里不包装，包装就错了
-        if (this.IsUnion && (hasOrderBy || this.offset.HasValue || this.limit.HasValue))
+        if ((this.IsUnion || this.IsSecondUnion) && (hasOrderBy || this.offset.HasValue || this.limit.HasValue))
         {
             builder.Insert(0, "SELECT * FROM (");
             builder.Append($") a");
@@ -766,8 +765,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (lambdaExpr.Body.NodeType == ExpressionType.MemberAccess)
         {
             //直接引用子查询，也可以是CTE表
-            var subQueryObj = lambdaExpr.Body.Evaluate() as IQuery;
-            this.UseQuery(targetType, subQueryObj, isClearTables);
+            var fromObj = lambdaExpr.Body.Evaluate();
+            if (fromObj is IQuery subQueryObj)
+            {
+                //this.RefQueryObj(subQueryObj);
+                this.UseQuery(targetType, subQueryObj, isClearTables);
+            }
             return;
         }
         (var sql, var readerFields) = this.VisitFromQuery(lambdaExpr.Body);
@@ -805,8 +808,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var lambdaExpr = this.EnsureLambda(subQueryExpr);
         if (lambdaExpr.Body.NodeType == ExpressionType.MemberAccess)
         {
-            var subQueryObj = lambdaExpr.Body.Evaluate() as IQuery;
-            this.UseQuery(targetType, subQueryObj, true);
+            //TODO: 
+            var fromObj = lambdaExpr.Body.Evaluate();
+            if (fromObj is IQuery subQueryObj)
+            {
+                //this.RefQueryObj(subQueryObj);
+                this.UseQuery(targetType, subQueryObj, true);
+            }
             return;
         }
         (var sql, _) = this.VisitFromQuery(lambdaExpr.Body, isUnion: true);
@@ -2058,10 +2066,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         }
                         break;
                     case ReaderFieldType.Expression:
-                        readerField.IsNeedAlias = true;
-                        readerField.AliasName = this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
                         if (this.IsManyShardingTables && readerField.IsAggField)
                         {
+                            readerField.IsNeedAlias = true;
+                            readerField.AliasName = this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
                             var aliasName = readerField.TargetMember.Name;
                             if (readerField.IsAvgField)
                             {
@@ -2077,7 +2085,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         else
                         {
                             builder.Append(readerField.Value.ToString());
-                            builder.Append($" AS {readerField.AliasName}");
+                            if (this.IsNeedAlias(readerField))
+                            {
+                                readerField.IsNeedAlias = true;
+                                readerField.AliasName = this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
+                                builder.Append($" AS {readerField.AliasName}");
+                            }
                         }
                         break;
                     default:
@@ -2214,15 +2227,40 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var queryVisitor = visitor as QueryVisitor;
         queryVisitor.RefTableAliases = this.RefTableAliases;
         queryVisitor.IsNeedTableAlias = this.IsNeedTableAlias;
-        queryVisitor.WhereBuilder = this.WhereBuilder;
+        if (this.WhereBuilder != null && this.WhereBuilder.Length > 0)
+        {
+            queryVisitor.WhereBuilder = new();
+            queryVisitor.WhereBuilder.Append(this.WhereBuilder.ToString());
+        }
         queryVisitor.LastWhereOperationType = this.LastWhereOperationType;
         queryVisitor.IncludeTables = this.IncludeTables;
-        queryVisitor.RefQueries = this.RefQueries;
+        if (this.RefQueries != null && this.RefQueries.Count > 0)
+        {
+            queryVisitor.RefQueries ??= new();
+            this.RefQueries.ForEach(f => queryVisitor.RefQueries.Add(f));
+        }
         queryVisitor.IsNeedChangeUnionShardingTables = this.IsNeedChangeUnionShardingTables;
         queryVisitor.IsManyShardingTables = this.IsManyShardingTables;
         queryVisitor.ShardingTables = this.ShardingTables;
-        queryVisitor.GroupByFields = this.GroupByFields;
-        queryVisitor.OrderByFields = this.OrderByFields;
+        if (this.ShardingTables != null && this.ShardingTables.Count > 0)
+        {
+            this.ShardingTables ??= new();
+            foreach (var shardingTable in this.ShardingTables)
+            {
+                if (queryVisitor.ShardingTables.Contains(shardingTable)) continue;
+                queryVisitor.ShardingTables.Add(shardingTable);
+            }
+        }
+        if (this.GroupByFields != null && this.GroupByFields.Count > 0)
+        {
+            queryVisitor.GroupByFields ??= new();
+            this.GroupByFields.ForEach(f => queryVisitor.GroupByFields.Add(f));
+        }
+        if (this.OrderByFields != null && this.OrderByFields.Count > 0)
+        {
+            queryVisitor.OrderByFields ??= new();
+            this.OrderByFields.ForEach(f => queryVisitor.OrderByFields.Add(f));
+        }
         queryVisitor.UnionSql = this.UnionSql;
         queryVisitor.GroupBySql = this.GroupBySql;
         queryVisitor.HavingSql = this.HavingSql;
@@ -2238,28 +2276,41 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         if (this.DbParameters != null && this.DbParameters.Count > 0)
         {
-            visitor.DbParameters = new TheaDbParameterCollection();
             foreach (var dbParameter in this.DbParameters)
             {
                 if (dbParameter is ICloneable cloneable)
-                    visitor.DbParameters.Add(cloneable.Clone());
+                    queryVisitor.DbParameters.Add(cloneable.Clone());
             }
         }
         if (this.NextDbParameters != null && this.NextDbParameters.Count > 0)
         {
-            visitor.NextDbParameters = new TheaDbParameterCollection();
+            queryVisitor.NextDbParameters = new TheaDbParameterCollection();
             foreach (var dbParameter in this.NextDbParameters)
             {
                 if (dbParameter is ICloneable cloneable)
-                    visitor.NextDbParameters.Add(cloneable.Clone());
+                    queryVisitor.NextDbParameters.Add(cloneable.Clone());
             }
         }
         if (this.ReaderFields != null && this.ReaderFields.Count > 0)
         {
-            queryVisitor.ReaderFields = new();
-            foreach (var readerField in this.ReaderFields)
-                queryVisitor.ReaderFields.Add(readerField.Clone());
+            queryVisitor.ReaderFields ??= new();
+            this.ReaderFields.ForEach(f => queryVisitor.ReaderFields.Add(f.Clone()));
         }
+    }
+    public void RefQueryObj(IQuery subQueryObj)
+    {
+        var isCurrentVisitor = ReferenceEquals(this, subQueryObj.Visitor);
+        if (!isCurrentVisitor && !this.RefQueries.Contains(subQueryObj))
+        {
+            //引用的Connection设置为null
+            if (subQueryObj.Visitor.Connection != null)
+            {
+                subQueryObj.Visitor.Connection?.Dispose();
+                subQueryObj.Visitor.Connection = null;
+                subQueryObj.Visitor.IsRefQuery = true;
+            }
+        }
+        subQueryObj.Visitor.CloneTo(this);
     }
     public override void Dispose()
     {
