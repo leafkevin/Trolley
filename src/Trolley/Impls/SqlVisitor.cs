@@ -1479,11 +1479,9 @@ public class SqlVisitor : ISqlVisitor
             {
                 entityType = currentExpr.Type.GenericTypeArguments[0];
                 //在CTE表基础上，又做了WHERE/SELECT...其他操作
-                //if (subQueryObj is ICteQuery cteQueryObj)
-                //    this.RefQueries.Add(cteQueryObj);
-                //TODO: 
-                queryVisitor.UseQuery(entityType, subQueryObj, false);
-                //subQueryObj.Visitor.CloneTo(queryVisitor);
+                if (subQueryObj is ICteQuery cteQueryObj)
+                    this.RefQueries.Add(cteQueryObj);
+                queryVisitor.RefQueryObj(subQueryObj.Visitor);
             }
             //IRepository对象，直接使用queryVisitor重新执行
         }
@@ -2373,91 +2371,6 @@ public class SqlVisitor : ISqlVisitor
         var visitor = new DeferredExpressionVisitor(this);
         var readerField = visitor.Build(sqlSegment.Expression);
         return sqlSegment.Change(readerField, SqlType.ReaderField);
-    }
-    /// <summary>
-    /// 引用已有子查询对象
-    /// </summary>
-    /// <param name="targetType"></param>
-    /// <param name="subQueryObj"></param>
-    /// <param name="isClearTables"></param>
-    /// <returns></returns>
-    public TableSegment UseQuery(Type targetType, IQuery subQueryObj, bool isClearTables)
-    {
-        //包含该查询对象引用，就说明当前visitor对象已经包含了该子查询引用到的参数，只需要添加表即可            
-        var isCurrentVisitor = ReferenceEquals(this, subQueryObj.Visitor);
-        if (!isCurrentVisitor && !this.RefQueries.Contains(subQueryObj))
-        {
-            //引用的Connection设置为null
-            if (subQueryObj.Visitor.Connection != null)
-            {
-                subQueryObj.Visitor.Connection?.Dispose();
-                subQueryObj.Visitor.Connection = null;
-                subQueryObj.Visitor.IsRefQuery = true;
-            }
-            //引用的参数拷贝过来，并把Connection设null
-            if (subQueryObj.Visitor.DbParameters != null && subQueryObj.Visitor.DbParameters.Count > 0)
-            {
-                foreach (var dbParameter in subQueryObj.Visitor.DbParameters)
-                    this.DbParameters.Add(dbParameter);
-            }
-            if (subQueryObj.Visitor.NextDbParameters != null && subQueryObj.Visitor.NextDbParameters.Count > 0)
-            {
-                this.NextDbParameters ??= new TheaDbParameterCollection();
-                foreach (var dbParameter in subQueryObj.Visitor.NextDbParameters)
-                {
-                    if (this.NextDbParameters.Contains(dbParameter)) continue;
-                    this.NextDbParameters.Add(dbParameter);
-                }
-            }
-            if (subQueryObj.Visitor.ShardingTables != null && subQueryObj.Visitor.ShardingTables.Count > 0)
-            {
-                this.ShardingTables ??= new();
-                foreach (var shardingTable in subQueryObj.Visitor.ShardingTables)
-                {
-                    if (this.ShardingTables.Contains(shardingTable)) continue;
-                    this.ShardingTables.Add(shardingTable);
-                }
-            }
-            if (subQueryObj.Visitor.RefQueries != null && subQueryObj.Visitor.RefQueries.Count > 0)
-            {
-                this.RefQueries ??= new();
-                foreach (var refQuery in subQueryObj.Visitor.RefQueries)
-                {
-                    if (this.RefQueries.Contains(refQuery)) continue;
-                    this.RefQueries.Add(refQuery);
-                }
-            }
-            this.RefQueries.Add(subQueryObj);
-        }
-
-        string tableName = null;
-        TableType tableType = default;
-        List<ReaderField> readerFields = null;
-        if (subQueryObj is ICteQuery cteQueryObj)
-        {
-            tableName = cteQueryObj.TableName;
-            tableType = TableType.CteSelfRef;
-            readerFields = new List<ReaderField>();
-            cteQueryObj.ReaderFields.ForEach(f => readerFields.Add(f.Clone()));
-        }
-        else
-        {
-            var sql = subQueryObj.Visitor.BuildSql(false, out readerFields);
-            tableName = $"({sql})";
-            tableType = TableType.FromQuery;
-        }
-        //第一个表是子查询表或是Union场景时，需要清零表，Join场景不需要清表
-        if (isClearTables) this.Tables.Clear();
-        var tableSegment = this.AddJoinTable(targetType, null, tableType, tableName, readerFields);
-        this.InitUseQueryReaderFields(tableSegment, readerFields);
-        if (!isCurrentVisitor)
-        {
-            if (subQueryObj.Visitor.IsNeedChangeUnionShardingTables)
-                this.IsNeedChangeUnionShardingTables = true;
-            if (subQueryObj.Visitor.IsManyShardingTables)
-                this.IsManyShardingTables = true;
-        }
-        return tableSegment;
     }
     public TableSegment AddJoinTable(Type entityType, string joinType = null, TableType tableType = TableType.Entity, string body = null, List<ReaderField> readerFields = null)
     {

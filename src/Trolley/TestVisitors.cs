@@ -140,10 +140,11 @@ public class HasParameterVisitor : ExpressionVisitor
     public bool HasVariable => this.hasMemberAccess && !this.HasParameter;
     public List<ParameterExpression> Parameters { get; private set; }
 
+    public HasParameterVisitor() => this.Parameters = new();
+
     protected override Expression VisitParameter(ParameterExpression node)
     {
         this.HasParameter = true;
-        this.Parameters ??= new();
         if (!this.Parameters.Contains(node))
             this.Parameters.Add(node);
         return node;
