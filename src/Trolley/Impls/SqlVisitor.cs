@@ -1479,9 +1479,8 @@ public class SqlVisitor : ISqlVisitor
             {
                 entityType = currentExpr.Type.GenericTypeArguments[0];
                 //在CTE表基础上，又做了WHERE/SELECT...其他操作
-                if (subQueryObj is ICteQuery cteQueryObj)
-                    this.RefQueries.Add(cteQueryObj);
                 queryVisitor.RefQueryObj(subQueryObj.Visitor);
+                if (isUnion) subQueryObj.Visitor.Tables.ForEach(f => queryVisitor.Tables.Add(f));
             }
             //IRepository对象，直接使用queryVisitor重新执行
         }
