@@ -120,7 +120,7 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     void Page(int pageNumber, int pageSize);
     void Skip(int skip);
     void Take(int limit);
-    void AsCteTable(Type targetType, string tableName);
+    ICteQuery AsCteTable(Type targetType, string tableName);
     void AsRefQueryObj();
 
     void WithLeadingSql(string rawSql);
@@ -129,6 +129,6 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     TableSegment InitTableAlias(LambdaExpression lambdaExpr);
     List<ReaderField> FlattenTableFields(TableSegment tableSegment, bool isNeedAlias = true);
     void Clear(bool isClearReaderFields = false);
-    void CloneTo(QueryVisitor queryVisitor);
-    void RefQueryObj(IQueryVisitor refQueryVisitor);
+    void CloneTo(QueryVisitor queryVisitor, bool isCteQuery = false);
+    void RefQueryObj(IQueryVisitor refQueryVisitor, bool isCteQuery = false);
 }

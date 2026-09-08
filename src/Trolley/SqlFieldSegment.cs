@@ -176,7 +176,7 @@ public class ReaderField
             result.Fields = new();
             this.Fields.ForEach(f =>
             {
-                result.Fields.Add(f);
+                result.Fields.Add(f.Clone());
                 //暂时标识为引用，需要克隆副本时，再克隆
                 f.IsRefField = true;
             });

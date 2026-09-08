@@ -58,6 +58,11 @@ public class WhereSqlBuilder : IDisposable, ICloneable
     {
         this.lastOperationType = OperationType.None;
         this.whereBuilder.Clear();
+        if (this.dbParametersIndex > 0)
+        {
+            while (this.dbParameters.Count > this.dbParametersIndex)
+                this.dbParameters.RemoveAt(this.dbParametersIndex);
+        }
     }
     public WhereSqlBuilder Clone()
     {

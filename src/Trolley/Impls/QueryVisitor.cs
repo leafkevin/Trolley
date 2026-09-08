@@ -804,9 +804,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         {
             tableName = cteQueryObj.TableName;
             tableType = TableType.CteSelfRef;
-            readerFields = new List<ReaderField>();
-            cteQueryObj.ReaderFields.ForEach(f => readerFields.Add(f.Clone()));
-            this.RefQueryObj(cteQueryObj.Visitor);
+            this.RefQueryObj(cteQueryObj.Visitor, true);
+            this.RefQueries.Add(cteQueryObj);
+            readerFields = this.ReaderFields;
         }
         else
         {
@@ -823,19 +823,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.InitUseQueryReaderFields(tableSegment, readerFields);
         return tableSegment;
     }
-    public void RefQueryObj(IQueryVisitor refQueryVisitor)
+    public void RefQueryObj(IQueryVisitor refQueryVisitor, bool isCteQuery = false)
     {
         if (ReferenceEquals(this, refQueryVisitor))
             return;
-        //引用的Connection设置为null
-        //if (refQueryVisitor.Connection != null)
-        //{
-        //    refQueryVisitor.Connection.Dispose();
-        //    refQueryVisitor.Connection = null;
-        //    refQueryVisitor.IsRefQuery = true;
-        //}
-        refQueryVisitor.CloneTo(this);
-        refQueryVisitor.WhereBuilder.Dirty();
+        refQueryVisitor.CloneTo(this, isCteQuery);
+        if (isCteQuery) refQueryVisitor.WhereBuilder.Clear();
+        else refQueryVisitor.WhereBuilder.Dirty();
     }
 
     public virtual void Union(string union, Type targetType, IQuery subQuery)
@@ -885,7 +879,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var selfQueryObj = RepositoryHelper.CreateInstance(entityType,
             [typeof(DbContext), typeof(IQueryVisitor)], this.DbContext, this) as ICteQuery;
         selfQueryObj.TableName = $"__CTE_TABLE_{Guid.NewGuid():N}__";
-        selfQueryObj.ReaderFields = readerFields;
+        //selfQueryObj.ReaderFields = readerFields;
         selfQueryObj.IsRecursive = true;
         this.CteQueryObj = selfQueryObj;
         this.IsRecursive = true;
@@ -1920,10 +1914,16 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var sqlType = memberInitExpr.HasVariable() ? SqlType.Variable : SqlType.Constant;
         return sqlSegment.Change(ValueEvalutor.Evaluate(memberInitExpr), sqlType);
     }
-    public virtual void AsCteTable(Type targetType, string tableName)
+    public virtual ICteQuery AsCteTable(Type targetType, string tableName)
     {
         if (this.ShardingTables != null && this.ShardingTables.Count > 0)
             throw new NotSupportedException("CTE暂时不支持多分表，只支持单个分表");
+
+        if (this.Connection != null)
+        {
+            this.Connection.Dispose();
+            this.Connection = null;
+        }
 
         this.IsCteTable = true;
         //每次要新建一个CteQuery对象，避免多次使用同一个对象
@@ -1939,8 +1939,22 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             this.UnionSql = this.UnionSql.Replace(tempTableName, tableName);
         }
         this.CteQueryObj.Body = this.BuildCteTableSql(tableName, out var readerFields);
-        this.CteQueryObj.ReaderFields = readerFields;
         this.CteQueryObj.TableName = tableName;
+        this.Tables.Clear();
+        var tableSegment = new TableSegment
+        {
+            EntityType = targetType,
+            AliasName = "a",
+            Path = "a",
+            TableType = TableType.CteSelfRef,
+            Body = tableName,
+            Fields = readerFields,
+            IsMaster = true
+        };
+        this.Tables.Add(tableSegment);
+        this.InitUseQueryReaderFields(tableSegment, readerFields);
+        this.WhereBuilder.Clear();
+        return this.CteQueryObj;
     }
     public virtual void AsRefQueryObj()
     {
@@ -2269,20 +2283,66 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.CloneTo(visitor);
         return visitor;
     }
-    public virtual void CloneTo(QueryVisitor queryVisitor)
+    public virtual void CloneTo(QueryVisitor queryVisitor, bool isCteQuery = false)
     {
         //此方法只适合刚创建一个QueryVisitor对象，后续的属性值都没有设置过的场景
         //不克隆表
         //queryVisitor.Tables ??= new();
         //this.Tables.ForEach(f => queryVisitor.Tables.Add(f));
-        queryVisitor.RefTableAliases = this.RefTableAliases;
-        queryVisitor.IsNeedTableAlias = this.IsNeedTableAlias;
-        if (this.WhereBuilder.HasSql)
-            queryVisitor.WhereBuilder = this.WhereBuilder.Clone();
-        queryVisitor.IncludeTables = this.IncludeTables;
+        if (!isCteQuery)
+        {
+            queryVisitor.RefTableAliases = this.RefTableAliases;
+            queryVisitor.IsNeedTableAlias = this.IsNeedTableAlias;
+            if (this.WhereBuilder.HasSql)
+                queryVisitor.WhereBuilder = this.WhereBuilder.Clone();
+            queryVisitor.IncludeTables = this.IncludeTables;
+            queryVisitor.IsNeedChangeUnionShardingTables = this.IsNeedChangeUnionShardingTables;
+            queryVisitor.IsManyShardingTables = this.IsManyShardingTables;
+            queryVisitor.ShardingTables = this.ShardingTables;
+            if (this.ShardingTables != null && this.ShardingTables.Count > 0)
+            {
+                this.ShardingTables ??= new();
+                foreach (var shardingTable in this.ShardingTables)
+                {
+                    if (queryVisitor.ShardingTables.Contains(shardingTable)) continue;
+                    queryVisitor.ShardingTables.Add(shardingTable);
+                }
+            }
+            if (this.GroupByFields != null && this.GroupByFields.Count > 0)
+            {
+                queryVisitor.GroupByFields ??= new();
+                this.GroupByFields.ForEach(f => queryVisitor.GroupByFields.Add(f));
+            }
+            if (this.OrderByFields != null && this.OrderByFields.Count > 0)
+            {
+                queryVisitor.OrderByFields ??= new();
+                this.OrderByFields.ForEach(f => queryVisitor.OrderByFields.Add(f));
+            }
+            queryVisitor.UnionSql = this.UnionSql;
+            queryVisitor.GroupBySql = this.GroupBySql;
+            queryVisitor.HavingSql = this.HavingSql;
+            queryVisitor.IsDistinct = this.IsDistinct;
+            queryVisitor.IsCteTable = this.IsCteTable;
+            queryVisitor.IsUnion = this.IsUnion;
+            queryVisitor.IsSecondUnion = this.IsSecondUnion;
+            queryVisitor.LastIncludeSegment = this.LastIncludeSegment;
+
+            queryVisitor.IsRecursive = this.IsRecursive;
+            queryVisitor.CteQueryObj = this.CteQueryObj;
+            queryVisitor.IsNeedPaging = this.IsNeedPaging;
+
+            if (this.NextDbParameters != null && this.NextDbParameters.Count > 0)
+            {
+                queryVisitor.NextDbParameters = new TheaDbParameterCollection();
+                foreach (var dbParameter in this.NextDbParameters)
+                {
+                    if (dbParameter is ICloneable cloneable)
+                        queryVisitor.NextDbParameters.Add(cloneable.Clone());
+                }
+            }
+        }
         if (this.RefQueries != null && this.RefQueries.Count > 0)
         {
-            queryVisitor.RefQueries ??= new();
             foreach (var refSubQuery in this.RefQueries)
             {
                 if (queryVisitor.RefQueries.Contains(refSubQuery))
@@ -2290,41 +2350,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 queryVisitor.RefQueries.Add(refSubQuery);
             }
         }
-        queryVisitor.IsNeedChangeUnionShardingTables = this.IsNeedChangeUnionShardingTables;
-        queryVisitor.IsManyShardingTables = this.IsManyShardingTables;
-        queryVisitor.ShardingTables = this.ShardingTables;
-        if (this.ShardingTables != null && this.ShardingTables.Count > 0)
-        {
-            this.ShardingTables ??= new();
-            foreach (var shardingTable in this.ShardingTables)
-            {
-                if (queryVisitor.ShardingTables.Contains(shardingTable)) continue;
-                queryVisitor.ShardingTables.Add(shardingTable);
-            }
-        }
-        if (this.GroupByFields != null && this.GroupByFields.Count > 0)
-        {
-            queryVisitor.GroupByFields ??= new();
-            this.GroupByFields.ForEach(f => queryVisitor.GroupByFields.Add(f));
-        }
-        if (this.OrderByFields != null && this.OrderByFields.Count > 0)
-        {
-            queryVisitor.OrderByFields ??= new();
-            this.OrderByFields.ForEach(f => queryVisitor.OrderByFields.Add(f));
-        }
-        queryVisitor.UnionSql = this.UnionSql;
-        queryVisitor.GroupBySql = this.GroupBySql;
-        queryVisitor.HavingSql = this.HavingSql;
-        queryVisitor.IsDistinct = this.IsDistinct;
-        queryVisitor.IsCteTable = this.IsCteTable;
-        queryVisitor.IsUnion = this.IsUnion;
-        queryVisitor.IsSecondUnion = this.IsSecondUnion;
-        queryVisitor.LastIncludeSegment = this.LastIncludeSegment;
-
-        queryVisitor.IsRecursive = this.IsRecursive;
-        queryVisitor.CteQueryObj = this.CteQueryObj;
-        queryVisitor.IsNeedPaging = this.IsNeedPaging;
-
         if (this.DbParameters != null && this.DbParameters.Count > 0)
         {
             foreach (var dbParameter in this.DbParameters)
@@ -2333,18 +2358,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     queryVisitor.DbParameters.Add(cloneable.Clone());
             }
         }
-        if (this.NextDbParameters != null && this.NextDbParameters.Count > 0)
-        {
-            queryVisitor.NextDbParameters = new TheaDbParameterCollection();
-            foreach (var dbParameter in this.NextDbParameters)
-            {
-                if (dbParameter is ICloneable cloneable)
-                    queryVisitor.NextDbParameters.Add(cloneable.Clone());
-            }
-        }
         if (this.ReaderFields != null && this.ReaderFields.Count > 0)
         {
-            queryVisitor.ReaderFields ??= new();
+            queryVisitor.ReaderFields = new();
             this.ReaderFields.ForEach(f => queryVisitor.ReaderFields.Add(f.Clone()));
         }
     }

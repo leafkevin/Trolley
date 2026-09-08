@@ -92,7 +92,7 @@ public class SqlVisitor : ISqlVisitor
     public string UnionSql { get; set; }
     public string HeadRawSql { get; set; }
     public string TailRawSql { get; set; }
-     
+
 
     public (bool, ITheaConnection, ITheaCommand) UseCommand()
     {
@@ -1455,8 +1455,10 @@ public class SqlVisitor : ISqlVisitor
             {
                 entityType = currentExpr.Type.GenericTypeArguments[0];
                 //在CTE表基础上，又做了WHERE/SELECT...其他操作
-                queryVisitor.RefQueryObj(subQueryObj.Visitor);
-                if (isUnion) subQueryObj.Visitor.Tables.ForEach(f => queryVisitor.Tables.Add(f));
+                var isCteQuery = subQueryObj is ICteQuery;
+                queryVisitor.RefQueryObj(subQueryObj.Visitor, isCteQuery);
+                subQueryObj.Visitor.Tables.ForEach(f => queryVisitor.Tables.Add(f));
+                if (isCteQuery) this.RefQueries.Add(subQueryObj);
             }
             //IRepository对象，直接使用queryVisitor重新执行
         }
@@ -1734,13 +1736,12 @@ public class SqlVisitor : ISqlVisitor
                     entityType = callExpr.Type.GenericTypeArguments[0];
                     //每次要新建一个CteQuery对象，避免多次使用同一个对象
                     queryVisitor.AsCteTable(entityType, cteTableName);
-                    queryVisitor.UseQuery(entityType, queryVisitor.CteQueryObj, true);
-
-                    readerFields = new();
-                    queryVisitor.CteQueryObj.ReaderFields.ForEach(f => readerFields.Add(f.Clone()));
-                    var tableSegment = this.AddJoinTable(entityType, null, TableType.CteSelfRef, queryVisitor.CteQueryObj.TableName, readerFields);
-                    this.InitUseQueryReaderFields(tableSegment, readerFields);
-                    this.RefQueries.Add(queryVisitor.CteQueryObj);
+                    //queryVisitor.UseQuery(entityType, queryVisitor.CteQueryObj, true);
+                    //readerFields = new();
+                    //queryVisitor.CteQueryObj.ReaderFields.ForEach(f => readerFields.Add(f.Clone()));
+                    //var tableSegment = this.AddJoinTable(entityType, null, TableType.CteSelfRef, queryVisitor.CteQueryObj.TableName, readerFields);
+                    //this.InitUseQueryReaderFields(tableSegment, readerFields);
+                    //this.RefQueries.Add(queryVisitor.CteQueryObj);
                     return (sql, readerFields);
 
                 default: throw new NotSupportedException("不支持的表达式解析");

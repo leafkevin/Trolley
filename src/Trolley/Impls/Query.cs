@@ -739,21 +739,10 @@ public class Query<T> : QueryBase, IQuery<T>
     #region AsCteTable
     public virtual ICteQuery<T> AsCteTable(string tableName)
     {
-        //TODO: 清除Command对象，参数列表单独整理出来，方便后面引用
-        if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
-            throw new NotSupportedException("CTE暂时不支持多分表，只支持单个分表");
-
-        this.Visitor.IsCteTable = true;
-        if (this.Visitor.CteQueryObj != null && this.Visitor.IsRecursive && !string.IsNullOrEmpty(this.Visitor.UnionSql))
-        {
-            var tempTableName = this.Visitor.CteQueryObj.TableName;
-            this.Visitor.UnionSql = this.Visitor.UnionSql.Replace(tempTableName, tableName);
-        }
-        this.Visitor.CteQueryObj ??= new CteQuery<T>(this.DbContext, this.Visitor);
-        this.Visitor.CteQueryObj.Body = this.Visitor.BuildCteTableSql(tableName, out var readerFields);
-        this.Visitor.CteQueryObj.ReaderFields = readerFields;
-        this.Visitor.CteQueryObj.TableName = tableName;
-        return this.Visitor.CteQueryObj as ICteQuery<T>;
+        if (string.IsNullOrEmpty(tableName))
+            throw new ArgumentNullException(nameof(tableName));
+        var cteQuery = this.Visitor.AsCteTable(typeof(T), tableName);
+        return cteQuery as ICteQuery<T>;
     }
     #endregion
 
@@ -784,7 +773,6 @@ public class CteQuery<T> : Query<T>, ICteQuery<T>
 {
     #region Properties
     public string TableName { get; set; }
-    public List<ReaderField> ReaderFields { get; set; }
     public override bool IsCteTable => true;
     public bool IsRecursive { get; set; }
     #endregion
