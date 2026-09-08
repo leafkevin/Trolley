@@ -68,30 +68,27 @@ public class WhereSqlBuilder : IDisposable, ICloneable
         clone.whereBuilder = new StringBuilder(this.whereBuilder.ToString());
         return clone;
     }
-    public override string ToString() => this.Build();
-    object ICloneable.Clone() => this.Clone();
-    public void Dispose()
+    public void Dirty()
     {
-        this.whereBuilder.Clear();
-        this.whereBuilder = null;
-    }
-    public void Initialize()
-    {
-        if (!this.isRefQueryObj || this.isInitialized) return;
-        if (this.whereIndex > 0)
+        if (!this.isRefQueryObj) return;
+        this.isInitialized = false;
+        if (this.whereIndex > 0 && this.whereBuilder.Length > this.whereIndex)
         {
             this.lastOperationType = this.operationType;
-            if (this.whereBuilder.Length > this.whereIndex)
-            {
-                var length = this.whereBuilder.Length - this.whereIndex;
-                this.whereBuilder.Remove(whereIndex, length);
-            }
+            var length = this.whereBuilder.Length - this.whereIndex;
+            this.whereBuilder.Remove(whereIndex, length);
         }
         if (this.dbParametersIndex > 0)
         {
             while (this.dbParameters.Count > this.dbParametersIndex)
                 this.dbParameters.RemoveAt(this.dbParametersIndex);
         }
-        this.isInitialized = true;
+    }
+    public override string ToString() => this.Build();
+    object ICloneable.Clone() => this.Clone();
+    public void Dispose()
+    {
+        this.whereBuilder.Clear();
+        this.whereBuilder = null;
     }
 }
