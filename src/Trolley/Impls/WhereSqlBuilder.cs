@@ -1,54 +1,97 @@
-﻿using System.Text;
+﻿using System;
+using System.Data;
+using System.Text;
 
 namespace Trolley;
 
-public class WhereSqlBuilder
+public class WhereSqlBuilder : IDisposable, ICloneable
 {
-    private int startIndex;
-    private OperationType operationType { get; set; }
-
-    public OperationType LastWhereOperationType { get; set; } = OperationType.None;
-    public StringBuilder WhereBuilder { get; set; } = new();
-
-    public WhereSqlBuilder()
-    {
-        this.WhereBuilder = new();
-    }
+    private bool isRefQueryObj;
+    private bool isInitialized;
+    protected int dbParametersIndex;
+    private int whereIndex;
+    private OperationType operationType;
+    private OperationType lastOperationType = OperationType.None;
+    private StringBuilder whereBuilder = new();
+    private IDataParameterCollection dbParameters;
+    public bool HasSql => this.whereBuilder?.Length > 0;
 
     public virtual void AndSql(string whereSql, OperationType operationType = OperationType.None)
     {
-        var lastOperationType = this.WhereBuilder.Length > 0 ? OperationType.And : operationType;
-        if (this.LastWhereOperationType == OperationType.Or)
+        var lastOperationType = this.whereBuilder.Length > 0 ? OperationType.And : operationType;
+        if (this.lastOperationType == OperationType.Or)
         {
-            this.WhereBuilder.Insert(0, '(');
-            this.WhereBuilder.Append(')');
+            this.whereBuilder.Insert(0, '(');
+            this.whereBuilder.Append(')');
         }
-        if (this.WhereBuilder.Length > 0)
+        if (this.whereBuilder.Length > 0)
         {
-            this.WhereBuilder.Append(" AND ");
+            this.whereBuilder.Append(" AND ");
             if (operationType == OperationType.Or)
                 whereSql = $"({whereSql})";
         }
-        this.WhereBuilder.Append(whereSql);
-        this.LastWhereOperationType = lastOperationType;
+        this.whereBuilder.Append(whereSql);
+        this.lastOperationType = lastOperationType;
     }
     public virtual void OrSql(string whereSql, OperationType operationType = OperationType.None)
     {
-        var lastOperationType = this.WhereBuilder.Length > 0 ? OperationType.Or : operationType;
-        if (this.WhereBuilder.Length > 0)
-            this.WhereBuilder.Append(" OR ");
-        this.WhereBuilder.Append(whereSql);
-        this.LastWhereOperationType = lastOperationType;
+        var lastOperationType = this.whereBuilder.Length > 0 ? OperationType.Or : operationType;
+        if (this.whereBuilder.Length > 0)
+            this.whereBuilder.Append(" OR ");
+        this.whereBuilder.Append(whereSql);
+        this.lastOperationType = lastOperationType;
     }
-    public string Build() => this.WhereBuilder.ToString();
-    public void AsRefQueryObj()
+    public string Build()
     {
-        this.startIndex = this.WhereBuilder.Length;
-        this.operationType = this.LastWhereOperationType;
+        this.isInitialized = false;
+        return this.whereBuilder.ToString();
+    }
+    public void AsRefQueryObj(IDataParameterCollection dbParameters)
+    {
+        this.whereIndex = this.whereBuilder.Length;
+        this.operationType = this.lastOperationType;
+        this.dbParameters = dbParameters;
+        this.dbParametersIndex = dbParameters.Count;
+        this.isRefQueryObj = true;
     }
     public void Clear()
     {
-        this.LastWhereOperationType = OperationType.None;
-        this.WhereBuilder.Clear();
+        this.lastOperationType = OperationType.None;
+        this.whereBuilder.Clear();
+    }
+    public WhereSqlBuilder Clone()
+    {
+        var clone = new WhereSqlBuilder();
+        clone.whereIndex = this.whereIndex;
+        clone.operationType = this.operationType;
+        clone.lastOperationType = this.lastOperationType;
+        clone.whereBuilder = new StringBuilder(this.whereBuilder.ToString());
+        return clone;
+    }
+    public override string ToString() => this.Build();
+    object ICloneable.Clone() => this.Clone();
+    public void Dispose()
+    {
+        this.whereBuilder.Clear();
+        this.whereBuilder = null;
+    }
+    public void Initialize()
+    {
+        if (!this.isRefQueryObj || this.isInitialized) return;
+        if (this.whereIndex > 0)
+        {
+            this.lastOperationType = this.operationType;
+            if (this.whereBuilder.Length > this.whereIndex)
+            {
+                var length = this.whereBuilder.Length - this.whereIndex;
+                this.whereBuilder.Remove(whereIndex, length);
+            }
+        }
+        if (this.dbParametersIndex > 0)
+        {
+            while (this.dbParameters.Count > this.dbParametersIndex)
+                this.dbParameters.RemoveAt(this.dbParametersIndex);
+        }
+        this.isInitialized = true;
     }
 }

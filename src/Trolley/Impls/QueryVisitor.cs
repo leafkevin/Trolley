@@ -72,12 +72,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual string BuildSql(bool isBuildCteSql, out List<ReaderField> readerFields)
     {
-        //if (this.IsRefQuery && !string.IsNullOrEmpty(this.RefSql))
-        //{
-        //    readerFields = this.ReaderFields;
-        //    return this.RefSql;
-        //}
-
         var builder = new StringBuilder();
         if (isBuildCteSql && this.RefQueries != null && this.RefQueries.Count > 0)
         {
@@ -210,8 +204,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else selectSql = builder.ToString();
         builder.Clear();
 
-        if (this.WhereBuilder != null && this.WhereBuilder.Length > 0)
-            builder.Append($"WHERE {this.WhereBuilder.ToString()}");
+        if (this.WhereBuilder.HasSql)
+            builder.Append($"WHERE {this.WhereBuilder.Build()}");
         //有多分表还有Group By操作，每个分表语句中做Group By操作，Union All语句后，还要再做Group By操作
         if (hasGroupBy)
         {
@@ -311,8 +305,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         sql = builder.ToString();
         builder.Clear();
-        if (this.IsRefQuery)
-            this.RefSql = sql;
         return sql;
     }
     public virtual string BuildCommandSql(Type entityType, out IDataParameterCollection dbParameters)
@@ -461,8 +453,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else selectSql = builder.ToString();
         builder.Clear();
 
-        if (this.WhereBuilder != null && this.WhereBuilder.Length > 0)
-            builder.Append($" WHERE {this.WhereBuilder.ToString()}");
+        if (this.WhereBuilder.HasSql)
+            builder.Append($" WHERE {this.WhereBuilder.Build()}");
         //有多分表还有Group By操作，每个分表语句中做Group By操作，Union All语句后，还要再做Group By操作
         if (hasGroupBy)
         {
@@ -843,6 +835,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 refQueryVisitor.IsRefQuery = true;
             }
             refQueryVisitor.CloneTo(this);
+            refQueryVisitor.WhereBuilder.
         }
     }
 
@@ -1325,16 +1318,19 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual void AndBy(object whereObj)
     {
+        this.WhereBuilder.Initialize();
         var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, this.Tables[0].EntityType, whereObj, 4, false, false, false);
         this.VisitAndSql(commandInitializer.Invoke(this.DbParameters, this.DbContext, whereObj));
     }
     public virtual void AndById(object whereKey)
     {
+        this.WhereBuilder.Initialize();
         var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, this.Tables[0].EntityType, whereKey, 4, true, false, false);
         this.VisitAndSql(commandInitializer.Invoke(this.DbParameters, this.DbContext, whereKey));
     }
     public virtual void AndByIds(object whereKeys)
     {
+        this.WhereBuilder.Initialize();
         var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, this.Tables[0].EntityType, whereKeys, 4, true, false, true);
         this.VisitAndSql(commandInitializer.Invoke(this.DbParameters, this.DbContext, whereKeys));
     }
@@ -1344,6 +1340,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var lambdaExpr = whereExpr as LambdaExpression;
         this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
+        this.WhereBuilder.Initialize();
         //不能更改LastWhereOperationType，如果是引用已有子查询，LastWhereOperationType是有值的
         var whereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
         this.IsWhere = false;
@@ -1351,16 +1348,19 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual void OrBy(object whereObj)
     {
+        this.WhereBuilder.Initialize();
         var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, this.Tables[0].EntityType, whereObj, 4, false, false, false);
         this.VisitOrSql(commandInitializer.Invoke(this.DbParameters, this.DbContext, whereObj));
     }
     public virtual void OrById(object whereKey)
     {
+        this.WhereBuilder.Initialize();
         var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, this.Tables[0].EntityType, whereKey, 4, true, false, false);
         this.VisitOrSql(commandInitializer.Invoke(this.DbParameters, this.DbContext, whereKey));
     }
     public virtual void OrByIds(object whereKeys)
     {
+        this.WhereBuilder.Initialize();
         var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, this.Tables[0].EntityType, whereKeys, 4, true, false, true);
         this.VisitOrSql(commandInitializer.Invoke(this.DbParameters, this.DbContext, whereKeys));
     }
@@ -1370,6 +1370,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var lambdaExpr = whereExpr as LambdaExpression;
         this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
+        this.WhereBuilder.Initialize();
         var whereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
         this.IsWhere = false;
         this.VisitOrSql(whereSql, operationType);
@@ -1950,6 +1951,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.CteQueryObj.ReaderFields = readerFields;
         this.CteQueryObj.TableName = tableName;
     }
+    public virtual void AsRefQueryObj()
+    {
+        this.WhereBuilder.AsRefQueryObj(this.DbParameters);
+    }
     public virtual object AddSelectElement(Expression elementExpr, MemberInfo memberInfo)
     {
         SqlSegment sqlSegment = default;
@@ -2275,12 +2280,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //this.Tables.ForEach(f => queryVisitor.Tables.Add(f));
         queryVisitor.RefTableAliases = this.RefTableAliases;
         queryVisitor.IsNeedTableAlias = this.IsNeedTableAlias;
-        if (this.WhereBuilder != null && this.WhereBuilder.Length > 0)
-        {
-            queryVisitor.WhereBuilder = new();
-            queryVisitor.WhereBuilder.Append(this.WhereBuilder.ToString());
-        }
-        queryVisitor.LastWhereOperationType = this.LastWhereOperationType;
+        if (this.WhereBuilder.HasSql)
+            queryVisitor.WhereBuilder = this.WhereBuilder.Clone();
         queryVisitor.IncludeTables = this.IncludeTables;
         if (this.RefQueries != null && this.RefQueries.Count > 0)
         {

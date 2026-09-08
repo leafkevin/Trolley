@@ -112,7 +112,7 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             }
             if (this.FieldsBuilder.Length > 0)
                 fixedHeadSql = $"SET {this.FieldsBuilder.ToString()},";
-            if (this.WhereBuilder.Length > 0)
+            if (this.WhereBuilder.HasSql)
                 fixedTailSql = $" AND {this.WhereBuilder.ToString()};";
             this.DbParameters = command.Parameters;
         }

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,7 +21,7 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     IDataParameterCollection NextDbParameters { get; set; }
     List<ReaderField> ReaderFields { get; set; }
 
-    StringBuilder WhereBuilder { get; }
+    WhereSqlBuilder WhereBuilder { get; }
     List<TableSegment> IncludeTables { get; set; }
     Dictionary<string, TableSegment> TableAliases { get; }
     /// <summary>
@@ -122,6 +121,7 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     void Skip(int skip);
     void Take(int limit);
     void AsCteTable(Type targetType, string tableName);
+    void AsRefQueryObj();
 
     void WithLeadingSql(string rawSql);
     void WithTrailingSql(string rawSql);

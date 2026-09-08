@@ -57,8 +57,7 @@ public class SqlVisitor : ISqlVisitor
     public bool IsNeedTableAlias { get; set; }
     public List<ReaderField> ReaderFields { get; set; }
 
-    public StringBuilder WhereBuilder { get; set; }
-    public OperationType LastWhereOperationType { get; set; } = OperationType.None;
+    public WhereSqlBuilder WhereBuilder { get; set; } = new();
 
     public List<TableSegment> IncludeTables { get; set; }
     /// <summary>
@@ -93,7 +92,7 @@ public class SqlVisitor : ISqlVisitor
     public string UnionSql { get; set; }
     public string HeadRawSql { get; set; }
     public string TailRawSql { get; set; }
-
+     
 
     public (bool, ITheaConnection, ITheaCommand) UseCommand()
     {
@@ -358,32 +357,9 @@ public class SqlVisitor : ISqlVisitor
     }
 
     public virtual void VisitAndSql(string whereSql, OperationType operationType = OperationType.None)
-    {
-        this.WhereBuilder ??= new();
-        var lastOperationType = this.WhereBuilder.Length > 0 ? OperationType.And : operationType;
-        if (this.LastWhereOperationType == OperationType.Or)
-        {
-            this.WhereBuilder.Insert(0, '(');
-            this.WhereBuilder.Append(')');
-        }
-        if (this.WhereBuilder.Length > 0)
-        {
-            this.WhereBuilder.Append(" AND ");
-            if (operationType == OperationType.Or)
-                whereSql = $"({whereSql})";
-        }
-        this.WhereBuilder.Append(whereSql);
-        this.LastWhereOperationType = lastOperationType;
-    }
+        => this.WhereBuilder.AndSql(whereSql, operationType);
     public virtual void VisitOrSql(string whereSql, OperationType operationType = OperationType.None)
-    {
-        this.WhereBuilder ??= new();
-        var lastOperationType = this.WhereBuilder.Length > 0 ? OperationType.Or : operationType;
-        if (this.WhereBuilder.Length > 0)
-            this.WhereBuilder.Append(" OR ");
-        this.WhereBuilder.Append(whereSql);
-        this.LastWhereOperationType = lastOperationType;
-    }
+        => this.WhereBuilder.OrSql(whereSql, operationType);
     public virtual void WithLeadingSql(string rawSql)
     {
         if (string.IsNullOrEmpty(rawSql))
@@ -2542,6 +2518,7 @@ public class SqlVisitor : ISqlVisitor
         this.TableAliases = null;
         this.RefTableAliases = null;
         this.ReaderFields = null;
+        this.WhereBuilder?.Dispose();
         this.WhereBuilder = null;
         this.IncludeTables = null;
 

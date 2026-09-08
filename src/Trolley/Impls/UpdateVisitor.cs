@@ -54,7 +54,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         readerFields = null;
         this.hasOnlyFields = this.OnlyFieldNames != null && this.OnlyFieldNames.Count > 0;
         this.hasIgnoreFields = this.IgnoreFieldNames != null && this.IgnoreFieldNames.Count > 0;
-        if (this.HasWhere) this.WhereBuilder = new();
+        //if (this.HasWhere) this.WhereBuilder = new();
 
         var builder = new StringBuilder();
         var tableSegment = this.Tables[0];
@@ -198,10 +198,10 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
                 builder.Append(" SET ");
                 builder.Append(this.FieldsBuilder.ToString());
-                if (this.WhereBuilder != null && this.WhereBuilder.Length > 0)
+                if (this.WhereBuilder.HasSql)
                 {
                     builder.Append(" WHERE ");
-                    builder.Append(this.WhereBuilder);
+                    builder.Append(this.WhereBuilder.Build());
                 }
                 sql = builder.ToString();
                 if (this.ShardingTables != null && this.ShardingTables.Count > 0)
@@ -304,8 +304,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             }
             if (this.FieldsBuilder.Length > 0)
                 fixedHeadSql = $"SET {this.FieldsBuilder.ToString()},";
-            if (this.WhereBuilder.Length > 0)
-                fixedTailSql = $" AND {this.WhereBuilder.ToString()};";
+            if (this.WhereBuilder.HasSql)
+                fixedTailSql = $" AND {this.WhereBuilder.Build()};";
             this.DbParameters.Clear();
         }
 

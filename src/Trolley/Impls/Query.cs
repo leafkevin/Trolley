@@ -757,6 +757,14 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     #endregion
 
+    #region AsRefQueryObj
+    public virtual IQuery<T> AsRefQueryObj()
+    {
+        this.Visitor.AsRefQueryObj();
+        return this;
+    }
+    #endregion
+
     #region ToSql
     public override string ToSql(out List<IDbDataParameter> dbParameters)
     {

@@ -47,7 +47,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding)
             throw new NotSupportedException($"实体表{entityType.FullName}已设置分表，但未指定分表，请使用UseTable/UseTableBy/UseTableByRange方法手动指定分表，原始表：{tableSegment.Mapper.TableName}");
 
-        if (this.HasWhere) this.WhereBuilder = new();
+        //if (this.HasWhere) this.WhereBuilder = new();
         Func<IDataParameterCollection, DbContext, object, string> whereSqlInitializer = null;
         foreach (var deferredSegment in this.deferredSegments)
         {
@@ -85,10 +85,10 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                     break;
             }
         }
-        var whereSql = this.WhereBuilder.ToString();
+        var whereSql = this.WhereBuilder.Build();
         this.WhereBuilder.Clear();
 
-        var builder = this.WhereBuilder;
+        var builder = new StringBuilder();
         builder.Append($"DELETE FROM {this.GetFormatTableName(tableSegment)}");
         if (this.HasWhere) builder.Append($" WHERE {whereSql}");
         if (!string.IsNullOrEmpty(this.OutputSql))

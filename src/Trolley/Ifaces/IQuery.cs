@@ -959,6 +959,10 @@ public interface IQuery<T> : IQueryBase
     ICteQuery<T> AsCteTable(string tableName);
     #endregion
 
+    #region AsRefQueryObj
+    IQuery<T> AsRefQueryObj();
+    #endregion
+
     #region ToCreate
     /// <summary>
     /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
