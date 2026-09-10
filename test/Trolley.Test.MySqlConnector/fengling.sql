@@ -14,9 +14,9 @@
  Date: 29/04/2023 22:53:19
 */
 
-CREATE DATABASE `fengling` CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
-CREATE DATABASE `fengling1` CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
-CREATE DATABASE `fengling2` CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+CREATE DATABASE `fengling` CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_0900_ai_ci';
+CREATE DATABASE `fengling1` CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_0900_ai_ci';
+CREATE DATABASE `fengling2` CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_0900_ai_ci';
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
