@@ -16,9 +16,9 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
     public override string BuildSql(out List<SqlSegment> readerFields)
     {
         var builder = new StringBuilder();
-        if (this.IsUseCteTable && this.RefQueries != null && this.RefQueries.Count > 0)
+        if (this.IsUseCteTable && this.SharedQueryObjs != null && this.SharedQueryObjs.Count > 0)
         {
-            var cteQueries = this.FlattenRefCteTables(this.RefQueries);
+            var cteQueries = this.FlattenRefCteTables(this.SharedQueryObjs);
             if (cteQueries.Count > 0)
             {
                 for (int i = 0; i < cteQueries.Count; i++)
@@ -210,11 +210,11 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         builder.Append(' ');
 
         //有CTE表
-        if (this.IsUseCteTable && this.RefQueries != null && this.RefQueries.Count > 0)
+        if (this.IsUseCteTable && this.SharedQueryObjs != null && this.SharedQueryObjs.Count > 0)
         {
             var fieldsSql = builder.ToString();
             builder.Clear();
-            var cteQueries = this.FlattenRefCteTables(this.RefQueries);
+            var cteQueries = this.FlattenRefCteTables(this.SharedQueryObjs);
             if (cteQueries.Count > 0)
             {
                 for (int i = 0; i < cteQueries.Count; i++)

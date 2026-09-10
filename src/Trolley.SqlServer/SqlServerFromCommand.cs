@@ -175,7 +175,7 @@ public class SqlServerFromCommand<TEntity, T> : FromCommand<TEntity, T>, ISqlSer
         createVisiter.Tables = this.Visitor.Tables;
         createVisiter.IsMultiple = this.Visitor.IsMultiple;
         createVisiter.CommandIndex = this.Visitor.CommandIndex;
-        createVisiter.RefQueries = this.Visitor.RefQueries;
+        createVisiter.SharedQueryObjs = this.Visitor.RefQueries;
         createVisiter.ShardingTables = this.Visitor.ShardingTables;
         createVisiter.DbParameters = this.Visitor.DbParameters;
         return createVisiter;

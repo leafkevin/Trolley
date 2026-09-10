@@ -20,10 +20,10 @@ public class PostgreSqlQueryVisitor : QueryVisitor
     public override string BuildSql(bool isBuildCteSql, out List<SqlSegment> readerFields)
     {
         var builder = new StringBuilder();
-        if (isBuildCteSql && this.RefQueries != null && this.RefQueries.Count > 0)
+        if (isBuildCteSql && this.SharedQueryObjs != null && this.SharedQueryObjs.Count > 0)
         {
             bool isRecursive = false;
-            var cteQueries = this.FlattenRefCteTables(this.RefQueries);
+            var cteQueries = this.FlattenRefCteTables(this.SharedQueryObjs);
             if (cteQueries.Count > 0)
             {
                 for (int i = 0; i < cteQueries.Count; i++)
@@ -215,12 +215,12 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         }
         builder.Append(") ");
         //有CTE表
-        if (isBuildCteSql && this.RefQueries != null && this.RefQueries.Count > 0)
+        if (isBuildCteSql && this.SharedQueryObjs != null && this.SharedQueryObjs.Count > 0)
         {
             var fieldsSql = builder.ToString();
             builder.Clear();
             bool isRecursive = false;
-            var cteQueries = this.FlattenRefCteTables(this.RefQueries);
+            var cteQueries = this.FlattenRefCteTables(this.SharedQueryObjs);
             if (cteQueries.Count > 0)
             {
                 for (int i = 0; i < cteQueries.Count; i++)

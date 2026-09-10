@@ -218,7 +218,7 @@ public class QueryBase : QueryInternal, IQueryBase
     {
         var createVisiter = this.OrmProvider.NewCreateVisitor(entityType, this.DbContext, 'a', this.Visitor.Command);
         createVisiter.Tables = this.Visitor.Tables;
-        createVisiter.RefQueries = this.Visitor.RefQueries;
+        createVisiter.SharedQueryObjs = this.Visitor.SharedQueryObjs;
         createVisiter.ShardingTables = this.Visitor.ShardingTables;
         //createVisiter.RefTableAliases = this.Visitor.RefTableAliases;
         createVisiter.IsRecursive = this.Visitor.IsRecursive;
@@ -749,7 +749,7 @@ public class Query<T> : QueryBase, IQuery<T>
     #region AsRefQueryObj
     public virtual IQuery<T> AsRefQueryObj()
     {
-        this.Visitor.AsRefQueryObj();
+        this.Visitor.AsSharedQueryObj();
         return this;
     }
     #endregion

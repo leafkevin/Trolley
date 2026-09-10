@@ -21,7 +21,7 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     IDataParameterCollection NextDbParameters { get; set; }
     List<ReaderField> ReaderFields { get; set; }
 
-    WhereSqlBuilder WhereBuilder { get; }
+    RefWhereBuilder WhereBuilder { get; }
     List<TableSegment> IncludeTables { get; set; }
     Dictionary<string, TableSegment> TableAliases { get; }
     /// <summary>
@@ -32,7 +32,7 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     /// <summary>
     /// 在SQL查询中，引用到子查询或是CTE表对象，防止重复添加参数，同时也为了解析CTE表引用SQL
     /// </summary>
-    List<IQuery> RefQueries { get; set; }
+    List<IQuery> SharedQueryObjs { get; set; }
     /// <summary>
     /// 当前子查询最后AsCteTable后生成的对象，或是CTE表构建的子查询中的自引用对象，此时IsRecursive=true
     /// </summary>
@@ -55,8 +55,6 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     string ShardingTableJointMark { get; set; }
     bool IsNeedPaging { get; set; }
     bool IsScalar { get; set; }
-    bool IsRefQuery { get; set; }
-    string RefSql { get; set; }
 
 
     string BuildSql(bool isBuildCteSql, out List<ReaderField> readerFields);
@@ -121,7 +119,7 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     void Skip(int skip);
     void Take(int limit);
     ICteQuery AsCteTable(Type targetType, string tableName);
-    void AsRefQueryObj();
+    void AsSharedQueryObj();
 
     void WithLeadingSql(string rawSql);
     void WithTrailingSql(string rawSql);
@@ -130,5 +128,5 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     List<ReaderField> FlattenTableFields(TableSegment tableSegment, bool isNeedAlias = true);
     void Clear(bool isClearReaderFields = false);
     void CloneTo(QueryVisitor queryVisitor, bool isCteQuery = false);
-    void RefQueryObj(IQueryVisitor refQueryVisitor, bool isCteQuery = false);
+    void UseSharedQueryObj(IQueryVisitor refQueryVisitor, bool isCteQuery);
 }

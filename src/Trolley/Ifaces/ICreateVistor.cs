@@ -18,7 +18,7 @@ public interface ICreateVisitor : ICommandVisitor, IDisposable
     ActionMode ActionMode { get; set; }
     bool IsReturnIdentity { get; set; }
 
-    List<IQuery> RefQueries { get; set; }
+    List<IQuery> SharedQueryObjs { get; set; }
     List<TableSegment> ShardingTables { get; set; }
     Dictionary<string, TableSegment> RefTableAliases { get; set; }
     ICteQuery CteQueryObj { get; set; }

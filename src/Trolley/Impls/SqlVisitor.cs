@@ -33,7 +33,6 @@ public class SqlVisitor : ISqlVisitor
     public IDataParameterCollection DbParameters { get; set; }
     public IDataParameterCollection NextDbParameters { get; set; }
     public char TableAliasStart { get; set; }
-    public bool IsRefQuery { get; set; }
 
     /// <summary>
     /// 所有表都是扁平化的，主表、1:1关系Include子表，也在这里
@@ -57,13 +56,13 @@ public class SqlVisitor : ISqlVisitor
     public bool IsNeedTableAlias { get; set; }
     public List<ReaderField> ReaderFields { get; set; }
 
-    public WhereSqlBuilder WhereBuilder { get; set; } = new();
+    public RefWhereBuilder WhereBuilder { get; set; } = new();
 
     public List<TableSegment> IncludeTables { get; set; }
     /// <summary>
     /// 引用的CTE子查询或是子查询对象引用列表
     /// </summary>
-    public List<IQuery> RefQueries { get; set; } = new();
+    public List<IQuery> SharedQueryObjs { get; set; } = new();
     /// <summary>
     /// 当前子查询最后AsCteTable后生成的对象，或是CTE表UnionRecursive语句解析中使用的自引用对象，此时IsRecursive=true
     /// </summary>
@@ -1456,9 +1455,9 @@ public class SqlVisitor : ISqlVisitor
                 entityType = currentExpr.Type.GenericTypeArguments[0];
                 //在CTE表基础上，又做了WHERE/SELECT...其他操作
                 var isCteQuery = subQueryObj is ICteQuery;
-                queryVisitor.RefQueryObj(subQueryObj.Visitor, isCteQuery);
+                queryVisitor.UseSharedQueryObj(subQueryObj.Visitor, isCteQuery);
                 subQueryObj.Visitor.Tables.ForEach(f => queryVisitor.Tables.Add(f));
-                if (isCteQuery) this.RefQueries.Add(subQueryObj);
+                if (isCteQuery) this.SharedQueryObjs.Add(subQueryObj);
             }
             //IRepository对象，直接使用queryVisitor重新执行
         }
@@ -1854,7 +1853,7 @@ public class SqlVisitor : ISqlVisitor
         //Union的时候，tableAsStart会传入'a'，表示从'a'开始
         //Join的时候，tableAsStart不传值，使用当前Visitor中的
         var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAliasStart, this.Command);
-        queryVisitor.RefQueries = this.RefQueries;
+        queryVisitor.SharedQueryObjs = this.SharedQueryObjs;
         queryVisitor.ShardingTables = this.ShardingTables;
         queryVisitor.RefTableAliases = this.RefTableAliases;
         queryVisitor.IncludeTables = this.IncludeTables;
@@ -2512,8 +2511,7 @@ public class SqlVisitor : ISqlVisitor
         this.isDisposed = true;
 
         this.Connection = null;
-        if (this.IsRefQuery && this.Command != null)
-            this.Command.Dispose();
+        this.Command?.Dispose();
         this.Command = null;
         this.Tables = null;
         this.TableAliases = null;
@@ -2530,7 +2528,7 @@ public class SqlVisitor : ISqlVisitor
 
         //应用子查询表，只删除元素，不能dispose，后续操作可能还会用到子查询
         this.CteQueryObj = null;
-        this.RefQueries = null;
+        this.SharedQueryObjs = null;
         this.UnionSql = null;
         this.HeadRawSql = null;
         this.TailRawSql = null;

@@ -36,7 +36,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public int PageSize => this.limit ?? 0;
     public bool IsNeedPaging { get; set; }
     public bool IsScalar { get; set; }
-    public string RefSql { get; set; }
 
     public QueryVisitor(DbContext dbContext, char tableAliasStart = 'a', ITheaCommand command = null)
     {
@@ -73,11 +72,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual string BuildSql(bool isBuildCteSql, out List<ReaderField> readerFields)
     {
         var builder = new StringBuilder();
-        if (isBuildCteSql && this.RefQueries != null && this.RefQueries.Count > 0)
+        if (isBuildCteSql && this.SharedQueryObjs != null && this.SharedQueryObjs.Count > 0)
         {
             bool isRecursive = false;
             int index = 0;
-            foreach (var refQueryObj in this.RefQueries)
+            foreach (var refQueryObj in this.SharedQueryObjs)
             {
                 if (!refQueryObj.IsCteTable || refQueryObj is not ICteQuery cteQueryObj)
                     continue;
@@ -326,14 +325,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         builder.Append(") ");
         //有CTE表
-        if (this.RefQueries != null && this.RefQueries.Count > 0)
+        if (this.SharedQueryObjs != null && this.SharedQueryObjs.Count > 0)
         {
             var fieldsSql = builder.ToString();
             builder.Clear();
             bool isRecursive = false;
 
             index = 0;
-            foreach (var refQueryObj in this.RefQueries)
+            foreach (var refQueryObj in this.SharedQueryObjs)
             {
                 if (!refQueryObj.IsCteTable || refQueryObj is not ICteQuery cteQueryObj)
                     continue;
@@ -804,15 +803,15 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         {
             tableName = cteQueryObj.TableName;
             tableType = TableType.CteSelfRef;
-            this.RefQueryObj(cteQueryObj.Visitor, true);
-            this.RefQueries.Add(cteQueryObj);
+            this.UseSharedQueryObj(cteQueryObj.Visitor, true);
+            this.SharedQueryObjs.Add(cteQueryObj);
             readerFields = this.ReaderFields;
         }
         else
         {
             var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, 'a', this.Command);
             subQueryObj.Visitor.Tables.ForEach(f => queryVisitor.Tables.Add(f));
-            queryVisitor.RefQueryObj(subQueryObj.Visitor);
+            queryVisitor.UseSharedQueryObj(subQueryObj.Visitor, false);
             var sql = queryVisitor.BuildSql(false, out readerFields);
             tableName = $"({sql})";
             tableType = TableType.FromQuery;
@@ -823,13 +822,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.InitUseQueryReaderFields(tableSegment, readerFields);
         return tableSegment;
     }
-    public void RefQueryObj(IQueryVisitor refQueryVisitor, bool isCteQuery = false)
+    public void UseSharedQueryObj(IQueryVisitor sharedVisitor, bool isCteQuery)
     {
-        if (ReferenceEquals(this, refQueryVisitor))
+        if (ReferenceEquals(this, sharedVisitor))
             return;
-        refQueryVisitor.CloneTo(this, isCteQuery);
-        if (isCteQuery) refQueryVisitor.WhereBuilder.Clear();
-        else refQueryVisitor.WhereBuilder.Dirty();
+        sharedVisitor.CloneTo(this, isCteQuery);
+        sharedVisitor.WhereBuilder.Release();
     }
 
     public virtual void Union(string union, Type targetType, IQuery subQuery)
@@ -1953,18 +1951,19 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         };
         this.Tables.Add(tableSegment);
         this.InitUseQueryReaderFields(tableSegment, readerFields);
-        this.WhereBuilder.Clear();
+        this.WhereBuilder.Save(this.DbParameters);
         return this.CteQueryObj;
     }
-    public virtual void AsRefQueryObj()
+    public virtual void AsSharedQueryObj()
     {
+        if (this.ShardingTables != null && this.ShardingTables.Count > 0)
+            throw new NotSupportedException("共享子查询暂时不支持多分表，只支持单个分表");
         if (this.Connection != null)
         {
             this.Connection.Dispose();
             this.Connection = null;
-            this.IsRefQuery = true;
         }
-        this.WhereBuilder.AsRefQueryObj(this.DbParameters);
+        this.WhereBuilder.Save(this.DbParameters);
     }
     public virtual object AddSelectElement(Expression elementExpr, MemberInfo memberInfo)
     {
@@ -2341,13 +2340,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 }
             }
         }
-        if (this.RefQueries != null && this.RefQueries.Count > 0)
+        if (this.SharedQueryObjs != null && this.SharedQueryObjs.Count > 0)
         {
-            foreach (var refSubQuery in this.RefQueries)
+            foreach (var refSubQuery in this.SharedQueryObjs)
             {
-                if (queryVisitor.RefQueries.Contains(refSubQuery))
+                if (queryVisitor.SharedQueryObjs.Contains(refSubQuery))
                     continue;
-                queryVisitor.RefQueries.Add(refSubQuery);
+                queryVisitor.SharedQueryObjs.Add(refSubQuery);
             }
         }
         if (this.DbParameters != null && this.DbParameters.Count > 0)
@@ -2377,7 +2376,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.LastIncludeSegment = null;
         this.GroupByFields = null;
         this.OrderByFields = null;
-        this.RefSql = null;
 
         base.Dispose();
     }
