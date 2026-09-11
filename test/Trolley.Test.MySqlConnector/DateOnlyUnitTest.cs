@@ -1,31 +1,25 @@
 ﻿#if NET6_0_OR_GREATER
-using Microsoft.Extensions.DependencyInjection;
+using NUnit.Framework;
 using System;
 using System.Globalization;
 using System.Threading.Tasks;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Trolley.Test.MySqlConnector;
 
 public class DateOnlyUnitTest : UnitTestBase
 {
-    public DateOnlyUnitTest(ITestOutputHelper output)
+    [SetUp]
+    public void Setup()
     {
-        var services = new ServiceCollection();
-        services.AddSingleton(f =>
-        {
-            var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
-            var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.MySql, "fengling", f => f.Use(connectionString), true)
-                .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
-                .UseInterceptor(new MyDbInterceptor(output));
-            return builder.Build();
-        });
-        var serviceProvider = services.BuildServiceProvider();
-        this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+        var connectionString = "Server=192.168.61.67;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+        var builder = new OrmDbFactoryBuilder()
+            .Register(OrmProviderType.MySql, "fengling", f => f.Use(connectionString), true)
+            .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
+            .UseInterceptor(new MyDbInterceptor());
+        this.dbFactory = builder.Build();
+        this.Initialize(1);
     }
-    [Fact]
+    [Test]
     public async Task MemberAccess()
     {
         this.Initialize(1);
@@ -50,12 +44,12 @@ public class DateOnlyUnitTest : UnitTestBase
                 DateOnly.FromDateTime(DateTime.Now).DayOfWeek
             })
             .ToSql(out var dbParameters);
-        Assert.Equal("SELECT CURDATE() AS `Today`,DATE(NOW()) AS `Today1`,'2024-07-15' AS `FromDayNumber`,@p0 AS `localDate`,'0001-01-01' AS `MinValue`,'9999-12-31' AS `MaxValue`,(a.`UpdatedAt`='2023-03-25') AS `IsEquals`,(a.`UpdatedAt`=@p1) AS `IsEquals1`,DATEDIFF(DATE(NOW()),'0001-01-01') AS `DayNumber`,DAYOFMONTH(DATE(NOW())) AS `Day`,MONTH(DATE(NOW())) AS `Month`,YEAR(DATE(NOW())) AS `Year`,(DAYOFWEEK(DATE(NOW()))-1) AS `DayOfWeek` FROM `sys_user` a WHERE a.`Id`=1", sql);
-        Assert.Equal(2, dbParameters.Count);
-        Assert.True(dbParameters[0].Value.GetType() == typeof(DateOnly));
-        Assert.True(dbParameters[1].Value.GetType() == typeof(DateOnly));
-        Assert.Equal(localDate, (DateOnly)dbParameters[0].Value);
-        Assert.Equal(localDate, (DateOnly)dbParameters[1].Value);
+        Assert.AreEqual("SELECT CURDATE() AS `Today`,DATE(NOW()) AS `Today1`,'2024-07-15' AS `FromDayNumber`,@p0 AS `localDate`,'0001-01-01' AS `MinValue`,'9999-12-31' AS `MaxValue`,(a.`UpdatedAt`='2023-03-25') AS `IsEquals`,(a.`UpdatedAt`=@p1) AS `IsEquals1`,DATEDIFF(DATE(NOW()),'0001-01-01') AS `DayNumber`,DAYOFMONTH(DATE(NOW())) AS `Day`,MONTH(DATE(NOW())) AS `Month`,YEAR(DATE(NOW())) AS `Year`,(DAYOFWEEK(DATE(NOW()))-1) AS `DayOfWeek` FROM `sys_user` a WHERE a.`Id`=1", sql);
+        Assert.AreEqual(2, dbParameters.Count);
+        Assert.That(dbParameters[0].Value, Is.TypeOf<DateOnly>());
+        Assert.That(dbParameters[1].Value, Is.TypeOf<DateOnly>());
+        Assert.AreEqual(localDate, (DateOnly)dbParameters[0].Value);
+        Assert.AreEqual(localDate, (DateOnly)dbParameters[1].Value);
 
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
@@ -77,20 +71,20 @@ public class DateOnlyUnitTest : UnitTestBase
                 DateOnly.FromDateTime(DateTime.Now).DayOfWeek
             })
             .FirstAsync();
-        Assert.Equal(DateOnly.MinValue, result.MinValue);
-        Assert.Equal(DateOnly.MaxValue, result.MaxValue);
-        Assert.Equal(DateTime.Now.Date, result.Today);
-        Assert.Equal(DateOnly.FromDateTime(DateTime.Now), result.Today1);
-        Assert.Equal(localDate, result.localDate);
-        Assert.Equal(result.UpdatedAt.Equals(DateTime.Parse("2023-03-25")), result.IsEquals);
-        Assert.Equal(result.UpdatedAt.Equals(localDate), result.IsEquals1);
-        Assert.Equal(DateOnly.FromDateTime(DateTime.Now).DayNumber, result.DayNumber);
-        Assert.Equal(DateOnly.FromDateTime(DateTime.Now).Day, result.Day);
-        Assert.Equal(DateOnly.FromDateTime(DateTime.Now).Month, result.Month);
-        Assert.Equal(DateOnly.FromDateTime(DateTime.Now).Year, result.Year);
-        Assert.Equal(result.DayOfWeek, DateOnly.FromDateTime(DateTime.Now).DayOfWeek);
+        Assert.AreEqual(DateOnly.MinValue, result.MinValue);
+        Assert.AreEqual(DateOnly.MaxValue, result.MaxValue);
+        Assert.AreEqual(DateTime.Now.Date, result.Today);
+        Assert.AreEqual(DateOnly.FromDateTime(DateTime.Now), result.Today1);
+        Assert.AreEqual(localDate, result.localDate);
+        Assert.AreEqual(result.UpdatedAt.Equals(DateTime.Parse("2023-03-25")), result.IsEquals);
+        Assert.AreEqual(result.UpdatedAt.Equals(localDate), result.IsEquals1);
+        Assert.AreEqual(DateOnly.FromDateTime(DateTime.Now).DayNumber, result.DayNumber);
+        Assert.AreEqual(DateOnly.FromDateTime(DateTime.Now).Day, result.Day);
+        Assert.AreEqual(DateOnly.FromDateTime(DateTime.Now).Month, result.Month);
+        Assert.AreEqual(DateOnly.FromDateTime(DateTime.Now).Year, result.Year);
+        Assert.AreEqual(result.DayOfWeek, DateOnly.FromDateTime(DateTime.Now).DayOfWeek);
     }
-    [Fact]
+    [Test]
     public async Task AddCompareTo()
     {
         this.Initialize(1);
@@ -108,7 +102,7 @@ public class DateOnlyUnitTest : UnitTestBase
                 ParseExact = DateOnly.ParseExact("05-07/2023", "MM-dd/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None)
             })
             .ToSql(out _);
-        Assert.Equal("SELECT DATE_ADD(a.`DateOnlyField`,INTERVAL 30 DAY) AS `AddDays`,DATE_ADD(a.`DateOnlyField`,INTERVAL 5 MONTH) AS `AddMonths`,DATE_ADD(a.`DateOnlyField`,INTERVAL 2 YEAR) AS `AddYears`,(CASE WHEN a.`DateOnlyField`=@p0 THEN 0 WHEN a.`DateOnlyField`>@p0 THEN 1 ELSE -1 END) AS `CompareTo`,@p1 AS `Parse`,'2023-05-07' AS `ParseExact` FROM `sys_update_entity` a WHERE a.`Id`=1", sql);
+        Assert.AreEqual("SELECT DATE_ADD(a.`DateOnlyField`,INTERVAL 30 DAY) AS `AddDays`,DATE_ADD(a.`DateOnlyField`,INTERVAL 5 MONTH) AS `AddMonths`,DATE_ADD(a.`DateOnlyField`,INTERVAL 2 YEAR) AS `AddYears`,(CASE WHEN a.`DateOnlyField`=@p0 THEN 0 WHEN a.`DateOnlyField`>@p0 THEN 1 ELSE -1 END) AS `CompareTo`,@p1 AS `Parse`,'2023-05-07' AS `ParseExact` FROM `sys_update_entity` a WHERE a.`Id`=1", sql);
 
         var now = DateTime.Now;
         var result = await repository.From<UpdateEntity1>()
@@ -124,12 +118,12 @@ public class DateOnlyUnitTest : UnitTestBase
                 ParseExact = DateOnly.ParseExact("05-07/2023", "MM-dd/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None)
             })
             .FirstAsync();
-        Assert.Equal(result.DateOnlyField.AddDays(30), result.AddDays);
-        Assert.Equal(result.DateOnlyField.AddMonths(5), result.AddMonths);
-        Assert.Equal(result.DateOnlyField.AddYears(2), result.AddYears);
-        Assert.Equal(result.DateOnlyField.CompareTo(localDate), result.CompareTo);
-        Assert.Equal(DateOnly.Parse(localDate.ToString("yyyy-MM-dd")), result.Parse);
-        Assert.Equal(DateOnly.ParseExact("05-07/2023", "MM-dd/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None), result.ParseExact);
+        Assert.AreEqual(result.DateOnlyField.AddDays(30), result.AddDays);
+        Assert.AreEqual(result.DateOnlyField.AddMonths(5), result.AddMonths);
+        Assert.AreEqual(result.DateOnlyField.AddYears(2), result.AddYears);
+        Assert.AreEqual(result.DateOnlyField.CompareTo(localDate), result.CompareTo);
+        Assert.AreEqual(DateOnly.Parse(localDate.ToString("yyyy-MM-dd")), result.Parse);
+        Assert.AreEqual(DateOnly.ParseExact("05-07/2023", "MM-dd/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None), result.ParseExact);
     }
 }
 #endif

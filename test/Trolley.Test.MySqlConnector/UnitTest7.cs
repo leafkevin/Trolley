@@ -1,32 +1,27 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using NUnit.Framework;
 using System.Linq;
 using System.Threading.Tasks;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Trolley.Test.MySqlConnector;
 
+[TestFixture]
 public class UnitTest7 : UnitTestBase
 {
-    public UnitTest7(ITestOutputHelper output)
+    [SetUp]
+    public void Setup()
     {
-        var services = new ServiceCollection();
-        services.AddSingleton(f =>
-        {
-            var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
-            var connectionString1 = "Server=localhost;Database=fengling1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
-            var connectionString2 = "Server=localhost;Database=fengling2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
-            var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.MySql, "fengling", f => f.Use(connectionString)
-                    .UseSlave(connectionString1, connectionString2), true)
-                .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
-                .UseInterceptor(new MyDbInterceptor(output));
-            return builder.Build();
-        });
-        var serviceProvider = services.BuildServiceProvider();
-        this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+        var connectionString = "Server=192.168.61.67;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+        var connectionString1 = "Server=192.168.61.67;Database=fengling1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+        var connectionString2 = "Server=192.168.61.67;Database=fengling2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+        var builder = new OrmDbFactoryBuilder()
+            .Register(OrmProviderType.MySql, "fengling", f => f.Use(connectionString)
+                .UseSlave(connectionString1, connectionString2), true)
+            .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
+            .UseInterceptor(new MyDbInterceptor());
+        this.dbFactory = builder.Build();
+        this.Initialize(1);
     }
-    [Fact]
+    [Test]
     public void TableSchema()
     {
         var repository = this.dbFactory.Create();
@@ -47,7 +42,7 @@ public class UnitTest7 : UnitTestBase
                 x.ProductCount
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `myschema`.`sys_order_detail` a INNER JOIN `myschema`.`sys_order` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `myschema`.`sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1", sql);
+        Assert.AreEqual("SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `myschema`.`sys_order_detail` a INNER JOIN `myschema`.`sys_order` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `myschema`.`sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1", sql);
 
         var result = repository
             .FromQuery(f => f.From<OrderDetail>()
@@ -66,15 +61,15 @@ public class UnitTest7 : UnitTestBase
                 x.ProductCount
             })
             .ToList();
-        if (result.Count > 0)
+        Assert.IsNotEmpty(result);
         {
-            Assert.NotNull(result[0]);
-            Assert.NotNull(result[0].Group);
-            Assert.NotNull(result[0].Buyer);
-            Assert.True(result[0].ProductCount > 1);
+            Assert.IsNotNull(result[0]);
+            Assert.IsNotNull(result[0].Group);
+            Assert.IsNotNull(result[0].Buyer);
+            Assert.Greater(result[0].ProductCount, 1);
         }
     }
-    [Fact]
+    [Test]
     public async Task Query_WithNextCte()
     {
         this.Initialize(1);
@@ -102,7 +97,7 @@ public class UnitTest7 : UnitTestBase
             .InnerJoin(myCteTable2, (a, b) => a.Id == b.Id)
             .Select((a, b) => new { b.Id, a.Name, b.ParentId, b.Url })
             .ToSql(out _);
-        Assert.Equal(@"WITH RECURSIVE `myCteTable1`(`Id`,`Name`,`ParentId`) AS 
+        Assert.AreEqual(@"WITH RECURSIVE `myCteTable1`(`Id`,`Name`,`ParentId`) AS 
 (
 SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a WHERE a.`Id`=@p0 UNION ALL
 SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN `myCteTable1` b ON a.`ParentId`=b.`Id`
@@ -119,8 +114,7 @@ SELECT b.`Id`,a.`Name`,b.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .InnerJoin(myCteTable2, (a, b) => a.Id == b.Id)
             .Select((a, b) => new { b.Id, a.Name, b.ParentId, b.Url })
             .ToList();
-        Assert.NotNull(result1);
-        Assert.True(result1.Count > 0);
+        Assert.IsNotEmpty(result1);
 
         var menuList = repository
             .From<Menu>()
@@ -145,7 +139,7 @@ SELECT b.`Id`,a.`Name`,b.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .InnerJoin((a, b) => a.Id == b.Id)
             .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
             .ToSql(out _);
-        Assert.Equal(@"WITH RECURSIVE `MenuList`(`Id`,`Name`,`ParentId`) AS 
+        Assert.AreEqual(@"WITH RECURSIVE `MenuList`(`Id`,`Name`,`ParentId`) AS 
 (
 SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a WHERE a.`Id`=@RootId UNION ALL
 SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`Id`
@@ -165,8 +159,7 @@ SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id`
             .InnerJoin((a, b) => a.Id == b.Id)
             .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
             .ToListAsync();
-        Assert.NotNull(result2);
-        Assert.True(result2.Count > 0);
+        Assert.IsNotEmpty(result2);
 
         //        sql = repository
         //            .FromQuery(f => f.UseQuery(menuList))
@@ -182,7 +175,7 @@ SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id`
         //            .InnerJoin((a, b) => a.Id == b.Id)
         //            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
         //            .ToSql(out _);
-        //        Assert.Equal(@"WITH RECURSIVE `MenuList`(`Id`,`Name`,`ParentId`) AS 
+        //        Assert.AreEqual(@"WITH RECURSIVE `MenuList`(`Id`,`Name`,`ParentId`) AS 
         //(
         //SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a WHERE a.`Id`=@RootId UNION ALL
         //SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`Id`
@@ -209,9 +202,9 @@ SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id`
         //            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
         //            .ToListAsync();
         //        Assert.NotNull(result3);
-        //        Assert.True(result3.Count > 0);
+        //        Assert.IsTrue(result3.Count > 0);
     }
-    [Fact]
+    [Test]
     public async Task Update_SetBulk_OnlyFields()
     {
         this.Initialize(1);
@@ -237,13 +230,13 @@ SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id`
                 f.Quantity
             })
             .ToSql(out var dbParameters);
-        Assert.Equal("UPDATE `sys_order_detail` SET `Price`=@Price0,`Quantity`=@Quantity0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price1,`Quantity`=@Quantity1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price2,`Quantity`=@Quantity2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price3,`Quantity`=@Quantity3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price4,`Quantity`=@Quantity4 WHERE `Id`=@kId4", sql);
-        Assert.Equal(parameters.Count * 3, dbParameters.Count);
+        Assert.AreEqual("UPDATE `sys_order_detail` SET `Price`=@Price0,`Quantity`=@Quantity0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price1,`Quantity`=@Quantity1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price2,`Quantity`=@Quantity2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price3,`Quantity`=@Quantity3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price4,`Quantity`=@Quantity4 WHERE `Id`=@kId4", sql);
+        Assert.AreEqual(parameters.Count * 3, dbParameters.Count);
         for (int i = 0; i < parameters.Count; i++)
         {
-            Assert.Equal($"@Price{i}", dbParameters[i * 3].ParameterName);
-            Assert.Equal($"@Quantity{i}", dbParameters[i * 3 + 1].ParameterName);
-            Assert.Equal($"@kId{i}", dbParameters[i * 3 + 2].ParameterName);
+            Assert.AreEqual($"@Price{i}", dbParameters[i * 3].ParameterName);
+            Assert.AreEqual($"@Quantity{i}", dbParameters[i * 3 + 1].ParameterName);
+            Assert.AreEqual($"@kId{i}", dbParameters[i * 3 + 2].ParameterName);
         }
 
         var ids = parameters.Select(f => f.Id).ToList();
@@ -261,12 +254,12 @@ SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id`
             .OrderBy(f => f.Id)
             .ToListAsync();
         repository.Commit();
-        Assert.True(result == parameters.Count);
+        Assert.AreEqual(parameters.Count, result);
         for (int i = 0; i < parameters.Count; i++)
         {
-            Assert.True(updatedDetails[i].Price == parameters[i].Price);
-            Assert.True(updatedDetails[i].Quantity == parameters[i].Quantity);
-            Assert.True(updatedDetails[i].Amount != parameters[i].Amount);
+            Assert.AreEqual(parameters[i].Price, updatedDetails[i].Price);
+            Assert.AreEqual(parameters[i].Quantity, updatedDetails[i].Quantity);
+            Assert.AreNotEqual(parameters[i].Amount, updatedDetails[i].Amount);
         }
     }
 }

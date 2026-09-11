@@ -13,7 +13,7 @@ namespace Trolley.Test.SqlServer;
 public class UnitTest5 : UnitTestBase
 {
     private readonly ITestOutputHelper output;
-    public UnitTest5(ITestOutputHelper output)
+    public UnitTest5()
     {
         this.output = output;
         var services = new ServiceCollection();
@@ -64,7 +64,7 @@ public class UnitTest5 : UnitTestBase
         var serviceProvider = services.BuildServiceProvider();
         this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
     }
-    [Fact]
+    [Test]
     public async Task MultipleQuery_UseMaster()
     {
         this.Initialize(3);
@@ -101,14 +101,14 @@ public class UnitTest5 : UnitTestBase
         var products = await reader.ReadAsync<Product>();
         var groupedOrderInfo = await reader.ReadFirstAsync<dynamic>();
         Assert.NotNull(userInfo);
-        Assert.Equal(1, userInfo.Id);
-        Assert.NotEmpty(userInfos);
-        Assert.True(userInfos.Count > 1);
-        Assert.Equal("1", orderInfo.Id);
-        Assert.Equal("1", groupedOrderInfo.Id);
-        Assert.Equal("1", groupedOrderInfo.Grouping.OrderId);
+        Assert.AreEqual(1, userInfo.Id);
+       Assert.Greater(userInfos);
+        Assert.IsTrue(userInfos.Count > 1);
+        Assert.AreEqual("1", orderInfo.Id);
+        Assert.AreEqual("1", groupedOrderInfo.Id);
+        Assert.AreEqual("1", groupedOrderInfo.Grouping.OrderId);
     }
-    [Fact]
+    [Test]
     public async Task MultipleCommand()
     {
         var repository = this.dbFactory.Create();
@@ -211,6 +211,6 @@ public class UnitTest5 : UnitTestBase
 
         commands.AddRange(new[] { deleteCommand, insertCommand, insertCommand2, updateCommand, bulkUpdateCommand });
         var count = repository.MultipleExecute(commands);
-        Assert.True(count > 0);
+        Assert.IsTrue(count > 0);
     }
 }

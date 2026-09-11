@@ -1,33 +1,28 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Trolley.MySqlConnector;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Trolley.Test.MySqlConnector;
 
+[TestFixture]
 public class UnitTest3 : UnitTestBase
 {
-    public UnitTest3(ITestOutputHelper output)
+    [SetUp]
+    public void Setup()
     {
-        var services = new ServiceCollection();
-        services.AddSingleton(f =>
-        {
-            var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
-            var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.MySql, "fengling", f => f.Use(connectionString), true)
-                .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
-                .UseInterceptor(new MyDbInterceptor(output));
-            return builder.Build();
-        });
-        var serviceProvider = services.BuildServiceProvider();
-        this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+        var connectionString = "Server=192.168.61.67;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+        var builder = new OrmDbFactoryBuilder()
+            .Register(OrmProviderType.MySql, "fengling", f => f.Use(connectionString), true)
+            .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
+            .UseInterceptor(new MyDbInterceptor());
+        this.dbFactory = builder.Build();
+        this.Initialize(1);
     }
-    [Fact]
+    [Test]
     public void Update_AnonymousObject()
     {
         this.Initialize(1);
@@ -38,10 +33,10 @@ public class UnitTest3 : UnitTestBase
         user.SourceType = null;
         var count = repository.Update<User>(user);
         var changedUser = repository.QueryById<User>(1);
-        Assert.True(count > 0);
-        Assert.NotNull(changedUser);
-        Assert.True(changedUser.Name == user.Name);
-        Assert.True(changedUser.SourceType == changedUser.SourceType);
+        Assert.Greater(count, 0);
+        Assert.IsNotNull(changedUser);
+        Assert.AreEqual(user.Name, changedUser.Name);
+        Assert.AreEqual(changedUser.SourceType, changedUser.SourceType);
 
         count = repository.Update<User>(new
         {
@@ -51,12 +46,12 @@ public class UnitTest3 : UnitTestBase
             SourceType = UserSourceType.Douyin
         });
         var result = repository.QueryById<User>(1);
-        Assert.True(count > 0);
-        Assert.NotNull(result);
-        Assert.Null(result.Name);
-        Assert.Equal(UserSourceType.Douyin, result.SourceType);
+        Assert.Greater(count, 0);
+        Assert.IsNotNull(result);
+        Assert.IsNull(result.Name);
+        Assert.AreEqual(UserSourceType.Douyin, result.SourceType);
     }
-    [Fact]
+    [Test]
     public async Task Update_AnonymousObjects()
     {
         this.Initialize(1);
@@ -75,15 +70,15 @@ public class UnitTest3 : UnitTestBase
         var ids = parameters.Select(f => f.Id).ToList();
         var orders = await repository.QueryAsync<Order>(f => ids.Contains(f.Id));
         repository.Commit();
-        Assert.True(count > 0);
-        Assert.True(parameters.Count == orders.Count);
+        Assert.Greater(count, 0);
+        Assert.AreEqual(orders.Count, parameters.Count);
         orders.Sort((x, y) => x.Id.CompareTo(y.Id));
         for (int i = 0; i < orders.Count; i++)
         {
-            Assert.True((decimal)orders[i].TotalAmount == parameters[i].TotalAmount);
+            Assert.AreEqual(parameters[i].TotalAmount, (decimal)orders[i].TotalAmount);
         }
     }
-    [Fact]
+    [Test]
     public async Task Update_SetBulk()
     {
         this.Initialize(1);
@@ -99,15 +94,15 @@ public class UnitTest3 : UnitTestBase
         var sql = repository.Update<OrderDetail>()
             .SetBulk(parameters)
             .ToSql(out var dbParameters);
-        Assert.Equal("UPDATE `sys_order_detail` SET `Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Amount`=@Amount2 WHERE `Id`=@kId2", sql);
-        Assert.True(dbParameters.Count == parameters.Count * 2);
+        Assert.AreEqual("UPDATE `sys_order_detail` SET `Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Amount`=@Amount2 WHERE `Id`=@kId2", sql);
+        Assert.AreEqual(parameters.Count * 2, dbParameters.Count);
         for (int i = 0; i < parameters.Count; i++)
         {
-            Assert.True(dbParameters[i * 2].ParameterName == $"@Amount{i}");
-            Assert.True(dbParameters[i * 2 + 1].ParameterName == $"@kId{i}");
+            Assert.AreEqual($"@Amount{i}", dbParameters[i * 2].ParameterName);
+            Assert.AreEqual($"@kId{i}", dbParameters[i * 2 + 1].ParameterName);
         }
     }
-    [Fact]
+    [Test]
     public async Task Update_SetBulk_OnlyFields()
     {
         this.Initialize(1);
@@ -133,13 +128,13 @@ public class UnitTest3 : UnitTestBase
                 f.Quantity
             })
             .ToSql(out var dbParameters);
-        Assert.Equal("UPDATE `sys_order_detail` SET `Price`=@Price0,`Quantity`=@Quantity0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price1,`Quantity`=@Quantity1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price2,`Quantity`=@Quantity2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price3,`Quantity`=@Quantity3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price4,`Quantity`=@Quantity4 WHERE `Id`=@kId4", sql);
-        Assert.Equal(parameters.Count * 3, dbParameters.Count);
+        Assert.AreEqual("UPDATE `sys_order_detail` SET `Price`=@Price0,`Quantity`=@Quantity0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price1,`Quantity`=@Quantity1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price2,`Quantity`=@Quantity2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price3,`Quantity`=@Quantity3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price4,`Quantity`=@Quantity4 WHERE `Id`=@kId4", sql);
+        Assert.AreEqual(parameters.Count * 3, dbParameters.Count);
         for (int i = 0; i < parameters.Count; i++)
         {
-            Assert.Equal($"@Price{i}", dbParameters[i * 3].ParameterName);
-            Assert.Equal($"@Quantity{i}", dbParameters[i * 3 + 1].ParameterName);
-            Assert.Equal($"@kId{i}", dbParameters[i * 3 + 2].ParameterName);
+            Assert.AreEqual($"@Price{i}", dbParameters[i * 3].ParameterName);
+            Assert.AreEqual($"@Quantity{i}", dbParameters[i * 3 + 1].ParameterName);
+            Assert.AreEqual($"@kId{i}", dbParameters[i * 3 + 2].ParameterName);
         }
 
         var ids = parameters.Select(f => f.Id).ToList();
@@ -157,15 +152,15 @@ public class UnitTest3 : UnitTestBase
             .OrderBy(f => f.Id)
             .ToListAsync();
         repository.Commit();
-        Assert.True(result == parameters.Count);
+        Assert.AreEqual(parameters.Count, result);
         for (int i = 0; i < parameters.Count; i++)
         {
-            Assert.True(updatedDetails[i].Price == parameters[i].Price);
-            Assert.True(updatedDetails[i].Quantity == parameters[i].Quantity);
-            Assert.True(updatedDetails[i].Amount != parameters[i].Amount);
+            Assert.AreEqual(parameters[i].Price, updatedDetails[i].Price);
+            Assert.AreEqual(parameters[i].Quantity, updatedDetails[i].Quantity);
+            Assert.AreNotEqual(parameters[i].Amount, updatedDetails[i].Amount);
         }
     }
-    [Fact]
+    [Test]
     public async Task Update_SetBulk_IgnoreFields()
     {
         this.Initialize(1);
@@ -187,14 +182,14 @@ public class UnitTest3 : UnitTestBase
             .SetBulk(parameters)
             .IgnoreFields(f => f.Price)
             .ToSql(out var dbParameters);
-        Assert.Equal("UPDATE `sys_order_detail` SET `Quantity`=@Quantity0,`Amount`=@Amount0,`UpdatedAt`=@UpdatedAt0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Quantity`=@Quantity1,`Amount`=@Amount1,`UpdatedAt`=@UpdatedAt1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Quantity`=@Quantity2,`Amount`=@Amount2,`UpdatedAt`=@UpdatedAt2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Quantity`=@Quantity3,`Amount`=@Amount3,`UpdatedAt`=@UpdatedAt3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Quantity`=@Quantity4,`Amount`=@Amount4,`UpdatedAt`=@UpdatedAt4 WHERE `Id`=@kId4", sql);
-        Assert.True(dbParameters.Count == parameters.Count * 4);
+        Assert.AreEqual("UPDATE `sys_order_detail` SET `Quantity`=@Quantity0,`Amount`=@Amount0,`UpdatedAt`=@UpdatedAt0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Quantity`=@Quantity1,`Amount`=@Amount1,`UpdatedAt`=@UpdatedAt1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Quantity`=@Quantity2,`Amount`=@Amount2,`UpdatedAt`=@UpdatedAt2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Quantity`=@Quantity3,`Amount`=@Amount3,`UpdatedAt`=@UpdatedAt3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Quantity`=@Quantity4,`Amount`=@Amount4,`UpdatedAt`=@UpdatedAt4 WHERE `Id`=@kId4", sql);
+        Assert.AreEqual(parameters.Count * 4, dbParameters.Count);
         for (int i = 0; i < parameters.Count; i++)
         {
-            Assert.True(dbParameters[i * 4].ParameterName == $"@Quantity{i}");
-            Assert.True(dbParameters[i * 4 + 1].ParameterName == $"@Amount{i}");
-            Assert.True(dbParameters[i * 4 + 2].ParameterName == $"@UpdatedAt{i}");
-            Assert.True(dbParameters[i * 4 + 3].ParameterName == $"@kId{i}");
+            Assert.AreEqual($"@Quantity{i}", dbParameters[i * 4].ParameterName);
+            Assert.AreEqual($"@Amount{i}", dbParameters[i * 4 + 1].ParameterName);
+            Assert.AreEqual($"@UpdatedAt{i}", dbParameters[i * 4 + 2].ParameterName);
+            Assert.AreEqual($"@kId{i}", dbParameters[i * 4 + 3].ParameterName);
         }
         var ids = parameters.Select(f => f.Id).ToList();
         repository.BeginTransaction();
@@ -204,17 +199,17 @@ public class UnitTest3 : UnitTestBase
             .Execute();
         var updatedDetails = await repository.QueryAsync<OrderDetail>(f => ids.Contains(f.Id));
         repository.Commit();
-        Assert.True(result == parameters.Count);
+        Assert.AreEqual(parameters.Count, result);
         for (int i = 0; i < parameters.Count; i++)
         {
-            Assert.True(updatedDetails[i].Price != parameters[i].Price);
-            Assert.True(updatedDetails[i].Quantity == parameters[i].Quantity);
-            Assert.True(updatedDetails[i].Amount == parameters[i].Amount);
-            Assert.True(updatedDetails[i].UpdatedAt == parameters[i].UpdatedAt);
-            Assert.True(updatedDetails[i].Id == parameters[i].Id);
+            Assert.AreNotEqual(parameters[i].Price, updatedDetails[i].Price);
+            Assert.AreEqual(parameters[i].Quantity, updatedDetails[i].Quantity);
+            Assert.AreEqual(parameters[i].Amount, updatedDetails[i].Amount);
+            Assert.AreEqual(parameters[i].UpdatedAt, updatedDetails[i].UpdatedAt);
+            Assert.AreEqual(parameters[i].Id, updatedDetails[i].Id);
         }
     }
-    [Fact]
+    [Test]
     public async Task Update_SetBulk_SetFields()
     {
         this.Initialize(1);
@@ -236,8 +231,8 @@ public class UnitTest3 : UnitTestBase
             .Set(new { Quantity = 5 })
             .Set(f => new { Price = f.Price + 10 })
             .ToSql(out var dbParameters);
-        Assert.Equal("UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount0,`UpdatedAt`=@UpdatedAt0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount1,`UpdatedAt`=@UpdatedAt1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount2,`UpdatedAt`=@UpdatedAt2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount3,`UpdatedAt`=@UpdatedAt3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount4,`UpdatedAt`=@UpdatedAt4 WHERE `Id`=@kId4", sql);
-        Assert.True(dbParameters.Count == parameters.Count * 3 + 2);
+        Assert.AreEqual("UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount0,`UpdatedAt`=@UpdatedAt0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount1,`UpdatedAt`=@UpdatedAt1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount2,`UpdatedAt`=@UpdatedAt2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount3,`UpdatedAt`=@UpdatedAt3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount4,`UpdatedAt`=@UpdatedAt4 WHERE `Id`=@kId4", sql);
+        Assert.AreEqual(parameters.Count * 3 + 2, dbParameters.Count);
 
         var ids = parameters.Select(f => f.Id).ToList();
         repository.BeginTransaction();
@@ -249,16 +244,16 @@ public class UnitTest3 : UnitTestBase
             .Execute();
         var updatedDetails = await repository.QueryAsync<OrderDetail>(f => ids.Contains(f.Id));
         repository.Commit();
-        Assert.True(result == parameters.Count);
+        Assert.AreEqual(parameters.Count, result);
         for (int i = 0; i < parameters.Count; i++)
         {
-            Assert.Equal(3, updatedDetails[i].ProductId);
-            Assert.Equal(5, updatedDetails[i].Quantity);
-            Assert.True(updatedDetails[i].Amount == parameters[i].Amount);
-            Assert.True(updatedDetails[i].UpdatedAt == parameters[i].UpdatedAt);
+            Assert.AreEqual(3, updatedDetails[i].ProductId);
+            Assert.AreEqual(5, updatedDetails[i].Quantity);
+            Assert.AreEqual(parameters[i].Amount, updatedDetails[i].Amount);
+            Assert.AreEqual(parameters[i].UpdatedAt, updatedDetails[i].UpdatedAt);
         }
     }
-    [Fact]
+    [Test]
     public void Update_Fields_Where()
     {
         this.Initialize(1);
@@ -270,10 +265,10 @@ public class UnitTest3 : UnitTestBase
             SourceType = DBNull.Value
         }, t => t.Id == 1);
         var result1 = repository.QueryById<User>(1);
-        Assert.True(result > 0);
-        Assert.NotNull(result1);
-        Assert.Equal("leafkevin_1", result1.Name);
-        Assert.False(result1.SourceType.HasValue);
+        Assert.Greater(result, 0);
+        Assert.IsNotNull(result1);
+        Assert.AreEqual("leafkevin_1", result1.Name);
+        Assert.IsFalse(result1.SourceType.HasValue);
 
         var result2 = repository.Update<User>(new
         {
@@ -283,12 +278,12 @@ public class UnitTest3 : UnitTestBase
             SourceType = DBNull.Value
         });
         var result3 = repository.QueryById<User>(1);
-        Assert.True(result2 > 0);
-        Assert.NotNull(result3);
-        Assert.Equal("kevin", result3.Name);
-        Assert.False(result3.SourceType.HasValue);
+        Assert.Greater(result2, 0);
+        Assert.IsNotNull(result3);
+        Assert.AreEqual("kevin", result3.Name);
+        Assert.IsFalse(result3.SourceType.HasValue);
     }
-    [Fact]
+    [Test]
     public void Update_Set_Fields_Where()
     {
         this.Initialize(1);
@@ -303,29 +298,29 @@ public class UnitTest3 : UnitTestBase
             .Where(f => f.Id == 1)
             .Execute();
         var result2 = repository.QueryById<User>(1);
-        Assert.True(result > 0);
-        Assert.NotNull(result2);
-        Assert.Equal("leafkevin22", result2.Name);
-        Assert.Equal(25, result2.Age);
-        Assert.Equal(0, result2.CompanyId);
+        Assert.Greater(result, 0);
+        Assert.IsNotNull(result2);
+        Assert.AreEqual("leafkevin22", result2.Name);
+        Assert.AreEqual(25, result2.Age);
+        Assert.AreEqual(0, result2.CompanyId);
     }
-    [Fact]
+    [Test]
     public void Update_Fields_Parameters()
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create();
         var result = repository.Update<User>(new { id = 1, name = "leafkevin11" });
         var result1 = repository.QueryById<User>(1);
-        Assert.True(result > 0);
-        Assert.NotNull(result1);
-        Assert.Equal("leafkevin11", result1.Name);
+        Assert.Greater(result, 0);
+        Assert.IsNotNull(result1);
+        Assert.AreEqual("leafkevin11", result1.Name);
         result = repository.Update<User>(new Dictionary<string, object> { { "id", 1 }, { "name", "leafkevin22" } });
         result1 = repository.QueryById<User>(1);
-        Assert.True(result > 0);
-        Assert.NotNull(result1);
-        Assert.Equal("leafkevin22", result1.Name);
+        Assert.Greater(result, 0);
+        Assert.IsNotNull(result1);
+        Assert.AreEqual("leafkevin22", result1.Name);
     }
-    [Fact]
+    [Test]
     public void Update_Set_AnonymousObject_Where()
     {
         this.Initialize(1);
@@ -339,11 +334,11 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(f => f.Id == 1)
             .ToSql(out var dbParameters);
-        Assert.Equal("UPDATE `sys_user` SET `Name`=@Name,`Age`=@Age,`CompanyId`=@CompanyId WHERE `Id`=1", sql);
-        Assert.Equal(3, dbParameters.Count);
-        Assert.Equal("leafkevin22", (string)dbParameters[0].Value);
-        Assert.Equal(25, (int)dbParameters[1].Value);
-        Assert.True(dbParameters[2].Value == DBNull.Value);
+        Assert.AreEqual("UPDATE `sys_user` SET `Name`=@Name,`Age`=@Age,`CompanyId`=@CompanyId WHERE `Id`=1", sql);
+        Assert.AreEqual(3, dbParameters.Count);
+        Assert.AreEqual("leafkevin22", (string)dbParameters[0].Value);
+        Assert.AreEqual(25, (int)dbParameters[1].Value);
+        Assert.AreEqual(DBNull.Value, dbParameters[2].Value);
 
         repository.Update<User>()
            .Set(f => new
@@ -355,11 +350,11 @@ public class UnitTest3 : UnitTestBase
            .Where(f => f.Id == 1)
            .Execute();
         var result = repository.QueryById<User>(1);
-        Assert.Equal("leafkevin22", result.Name);
-        Assert.Equal(25, result.Age);
-        Assert.Equal(0, result.CompanyId);
+        Assert.AreEqual("leafkevin22", result.Name);
+        Assert.AreEqual(25, result.Age);
+        Assert.AreEqual(0, result.CompanyId);
     }
-    [Fact]
+    [Test]
     public void Update_Set_AnonymousObject_Where_OnlyFields()
     {
         this.Initialize(1);
@@ -375,9 +370,9 @@ public class UnitTest3 : UnitTestBase
             .OnlyFields(f => f.Name)
             .Where(f => f.Id == 1)
             .ToSql(out var dbParameters);
-        Assert.Equal("UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=1", sql);
-        Assert.Single(dbParameters);
-        Assert.Equal("leafkevinabc", (string)dbParameters[0].Value);
+        Assert.AreEqual("UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=1", sql);
+        Assert.AreEqual(1, dbParameters.Count);
+        Assert.AreEqual("leafkevinabc", (string)dbParameters[0].Value);
 
         repository.Update<User>()
             .Set(new
@@ -390,11 +385,11 @@ public class UnitTest3 : UnitTestBase
             .Where(f => f.Id == 1)
             .Execute();
         var result = repository.QueryById<User>(1);
-        Assert.Equal("leafkevinabc", result.Name);
-        Assert.True(result.Age == user.Age);
-        Assert.True(result.CompanyId == user.CompanyId);
+        Assert.AreEqual("leafkevinabc", result.Name);
+        Assert.AreEqual(user.Age, result.Age);
+        Assert.AreEqual(user.CompanyId, result.CompanyId);
     }
-    [Fact]
+    [Test]
     public void Update_Set_AnonymousObject_Where_IgnoreFields()
     {
         this.Initialize(1);
@@ -409,10 +404,10 @@ public class UnitTest3 : UnitTestBase
             .IgnoreFields(f => f.Name)
             .Where(f => f.Id == 1)
             .ToSql(out var dbParameters);
-        Assert.Equal("UPDATE `sys_user` SET `Age`=@Age,`CompanyId`=@CompanyId WHERE `Id`=1", sql);
-        Assert.Equal(2, dbParameters.Count);
-        Assert.Equal(25, (int)dbParameters[0].Value);
-        Assert.True(dbParameters[1].Value == DBNull.Value);
+        Assert.AreEqual("UPDATE `sys_user` SET `Age`=@Age,`CompanyId`=@CompanyId WHERE `Id`=1", sql);
+        Assert.AreEqual(2, dbParameters.Count);
+        Assert.AreEqual(25, (int)dbParameters[0].Value);
+        Assert.AreEqual(DBNull.Value, dbParameters[1].Value);
 
         repository.Update<User>()
             .Set(new
@@ -425,11 +420,11 @@ public class UnitTest3 : UnitTestBase
             .Where(f => f.Id == 1)
             .Execute();
         var result = repository.QueryById<User>(1);
-        Assert.NotEqual("leafkevin22", result.Name);
-        Assert.Equal(25, result.Age);
-        Assert.Equal(0, result.CompanyId);
+        Assert.AreNotEqual("leafkevin22", result.Name);
+        Assert.AreEqual(25, result.Age);
+        Assert.AreEqual(0, result.CompanyId);
     }
-    [Fact]
+    [Test]
     public void Update_SetWith_Parameters()
     {
         this.Initialize(1);
@@ -444,9 +439,9 @@ public class UnitTest3 : UnitTestBase
         repository.Commit();
         if (result > 0)
         {
-            Assert.NotNull(result1);
-            Assert.Equal("1", result1.Id);
-            Assert.Equal(10, result1.ProductCount);
+            Assert.IsNotNull(result1);
+            Assert.AreEqual("1", result1.Id);
+            Assert.AreEqual(10, result1.ProductCount);
         }
         repository.BeginTransaction();
         result = repository.Update<Order>()
@@ -457,9 +452,9 @@ public class UnitTest3 : UnitTestBase
         repository.Commit();
         if (result > 0)
         {
-            Assert.NotNull(result2);
-            Assert.Equal("1", result2.Id);
-            Assert.Equal(11, result2.ProductCount);
+            Assert.IsNotNull(result2);
+            Assert.AreEqual("1", result2.Id);
+            Assert.AreEqual(11, result2.ProductCount);
         }
         var updateObj = new Dictionary<string, object>
         {
@@ -475,13 +470,13 @@ public class UnitTest3 : UnitTestBase
         repository.Commit();
         if (result > 0)
         {
-            Assert.NotNull(result3);
-            Assert.Equal("1", result3.Id);
-            Assert.True(result3.ProductCount == result2.ProductCount + 1);
-            Assert.True(result3.TotalAmount == result2.TotalAmount + 100);
+            Assert.IsNotNull(result3);
+            Assert.AreEqual("1", result3.Id);
+            Assert.AreEqual(result2.ProductCount + 1, result3.ProductCount);
+            Assert.AreEqual(result2.TotalAmount + 100, result3.TotalAmount);
         }
     }
-    [Fact]
+    [Test]
     public async Task Update_MultiParameters()
     {
         this.Initialize(1);
@@ -499,15 +494,15 @@ public class UnitTest3 : UnitTestBase
             .Select()
             .ToListAsync();
         repository.Commit();
-        Assert.True(count > 0);
+        Assert.Greater(count, 0);
         for (int i = 0; i < orderDetails.Count; i++)
         {
-            Assert.True(orderDetails[i].Price == parameters[i].Price);
-            Assert.True(orderDetails[i].Quantity == parameters[i].Quantity);
-            Assert.True(orderDetails[i].Amount == parameters[i].Amount);
+            Assert.AreEqual(parameters[i].Price, orderDetails[i].Price);
+            Assert.AreEqual(parameters[i].Quantity, orderDetails[i].Quantity);
+            Assert.AreEqual(parameters[i].Amount, orderDetails[i].Amount);
         }
     }
-    [Fact]
+    [Test]
     public void Update_Set_Expression()
     {
         this.Initialize(1);
@@ -520,14 +515,14 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(f => f.Id == "1")
           .ToSql(out var dbParameters);
-        Assert.Equal("UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@p0,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1", sql);
-        Assert.NotNull(dbParameters);
-        Assert.Equal("@p0", dbParameters[0].ParameterName);
-        Assert.Equal(200.56, (double)dbParameters[0].Value);
-        Assert.Equal("@Products", dbParameters[1].ParameterName);
-        Assert.True((string)dbParameters[1].Value == JsonSerializer.Serialize(new List<int> { 1, 2, 3 }));
+        Assert.AreEqual("UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@p0,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1", sql);
+        Assert.IsNotNull(dbParameters);
+        Assert.AreEqual("@p0", dbParameters[0].ParameterName);
+        Assert.AreEqual(200.56, (double)dbParameters[0].Value);
+        Assert.AreEqual("@Products", dbParameters[1].ParameterName);
+        Assert.AreEqual(JsonSerializer.Serialize(new List<int> { 1, 2, 3 }), (string)dbParameters[1].Value);
     }
-    [Fact]
+    [Test]
     public void Update_Set_MethodCall()
     {
         this.Initialize(1);
@@ -548,12 +543,12 @@ public class UnitTest3 : UnitTestBase
         repository.Commit();
         if (result > 0)
         {
-            Assert.NotEmpty(order.Products);
-            Assert.Equal(3, order.Products.Count);
-            Assert.Equal(1, order.Products[0]);
-            Assert.Equal(2, order.Products[1]);
-            Assert.Equal(3, order.Products[2]);
-            Assert.True(order.TotalAmount == this.CalcAmount(parameter.TotalAmount, 3));
+            Assert.IsNotEmpty(order.Products);
+            Assert.AreEqual(3, order.Products.Count);
+            Assert.AreEqual(1, order.Products[0]);
+            Assert.AreEqual(2, order.Products[1]);
+            Assert.AreEqual(3, order.Products[2]);
+            Assert.AreEqual(this.CalcAmount(parameter.TotalAmount, 3), order.TotalAmount);
         }
 
         var updateObj = repository.QueryById<Order>("1");
@@ -577,16 +572,16 @@ public class UnitTest3 : UnitTestBase
             })
             .WhereBy(new { updateObj.Id })
             .ToSql(out var dbParameters);
-        Assert.Equal("UPDATE `sys_order` SET `TotalAmount`=@p0,`Products`=@p1,`Disputes`=@p2,`UpdatedAt`=NOW() WHERE `Id`=@kId", sql);
-        Assert.Equal(4, dbParameters.Count);
-        Assert.Equal("@p0", dbParameters[0].ParameterName);
-        Assert.True((double)dbParameters[0].Value == this.CalcAmount(updateObj.TotalAmount + increasedAmount, 3));
-        Assert.Equal("@p1", dbParameters[1].ParameterName);
-        Assert.True((string)dbParameters[1].Value == new JsonTypeHandler().ToFieldValue(this.GetProducts()).ToString());
-        Assert.Equal("@p2", dbParameters[2].ParameterName);
-        Assert.True((string)dbParameters[2].Value == new JsonTypeHandler().ToFieldValue(updateObj.Disputes).ToString());
-        Assert.Equal("@kId", dbParameters[3].ParameterName);
-        Assert.True((string)dbParameters[3].Value == updateObj.Id);
+        Assert.AreEqual("UPDATE `sys_order` SET `TotalAmount`=@p0,`Products`=@p1,`Disputes`=@p2,`UpdatedAt`=NOW() WHERE `Id`=@kId", sql);
+        Assert.AreEqual(4, dbParameters.Count);
+        Assert.AreEqual("@p0", dbParameters[0].ParameterName);
+        Assert.AreEqual(this.CalcAmount(updateObj.TotalAmount + increasedAmount, 3), (double)dbParameters[0].Value);
+        Assert.AreEqual("@p1", dbParameters[1].ParameterName);
+        Assert.AreEqual(new JsonTypeHandler().ToFieldValue(this.GetProducts()).ToString(), (string)dbParameters[1].Value);
+        Assert.AreEqual("@p2", dbParameters[2].ParameterName);
+        Assert.AreEqual(new JsonTypeHandler().ToFieldValue(updateObj.Disputes).ToString(), (string)dbParameters[2].Value);
+        Assert.AreEqual("@kId", dbParameters[3].ParameterName);
+        Assert.AreEqual(updateObj.Id, (string)dbParameters[3].Value);
 
         repository.BeginTransaction();
         result = repository.Update<Order>()
@@ -604,19 +599,19 @@ public class UnitTest3 : UnitTestBase
         repository.Commit();
         if (result > 0)
         {
-            Assert.NotEmpty(updatedOrder.Products);
-            Assert.Equal(3, updatedOrder.Products.Count);
-            Assert.Equal(1, updatedOrder.Products[0]);
-            Assert.Equal(2, updatedOrder.Products[1]);
-            Assert.Equal(3, updatedOrder.Products[2]);
-            Assert.True(updatedOrder.TotalAmount == this.CalcAmount(updateObj.TotalAmount + increasedAmount, 3));
+            Assert.IsNotEmpty(updatedOrder.Products);
+            Assert.AreEqual(3, updatedOrder.Products.Count);
+            Assert.AreEqual(1, updatedOrder.Products[0]);
+            Assert.AreEqual(2, updatedOrder.Products[1]);
+            Assert.AreEqual(3, updatedOrder.Products[2]);
+            Assert.AreEqual(this.CalcAmount(updateObj.TotalAmount + increasedAmount, 3), updatedOrder.TotalAmount);
             //TODO:两个对象的hash值是不同的，各属性值都是一样
-            Assert.True(JsonSerializer.Serialize(updatedOrder.Disputes) == JsonSerializer.Serialize(updateObj.Disputes));
+            Assert.AreEqual(JsonSerializer.Serialize(updateObj.Disputes), JsonSerializer.Serialize(updatedOrder.Disputes));
             //TODO:两个日期的ticks是不同的，MySqlConnector驱动保存时间就到秒
-            //Assert.True(updatedOrder.UpdatedAt == updateObj.UpdatedAt);
+            //Assert.IsTrue(updatedOrder.UpdatedAt == updateObj.UpdatedAt);
         }
     }
-    [Fact]
+    [Test]
     public void Update_Set_FromQuery_Multi()
     {
         this.Initialize(1);
@@ -632,12 +627,12 @@ public class UnitTest3 : UnitTestBase
             .Set(x => x.Products, new List<int> { 1, 2, 3 })
             .Where((a, b) => a.BuyerId == 1)
           .ToSql(out var dbParameters);
-        Assert.Equal("UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@p0,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1", sql);
-        Assert.NotNull(dbParameters);
-        Assert.Equal("@p0", dbParameters[0].ParameterName);
-        Assert.Equal(200.56, (double)dbParameters[0].Value);
-        Assert.Equal("@Products", dbParameters[1].ParameterName);
-        Assert.True((string)dbParameters[1].Value == JsonSerializer.Serialize(new List<int> { 1, 2, 3 }));
+        Assert.AreEqual("UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@p0,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1", sql);
+        Assert.IsNotNull(dbParameters);
+        Assert.AreEqual("@p0", dbParameters[0].ParameterName);
+        Assert.AreEqual(200.56, (double)dbParameters[0].Value);
+        Assert.AreEqual("@Products", dbParameters[1].ParameterName);
+        Assert.AreEqual(JsonSerializer.Serialize(new List<int> { 1, 2, 3 }), (string)dbParameters[1].Value);
 
         var count = repository.Update<Order>()
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
@@ -650,7 +645,7 @@ public class UnitTest3 : UnitTestBase
             .Set(x => x.Products, new List<int> { 1, 2, 3 })
             .Where((a, b) => a.BuyerId == 1)
             .Execute();
-        Assert.True(count > 0);
+        Assert.Greater(count, 0);
 
         sql = repository.Update<Order>()
             .SetFrom((a, b) => new
@@ -663,7 +658,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.Equal("UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT IFNULL(SUM(b.`Amount`),0) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1", sql);
+        Assert.AreEqual("UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT IFNULL(SUM(b.`Amount`),0) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1", sql);
 
         count = repository.Update<Order>()
             .SetFrom((a, b) => new
@@ -676,9 +671,9 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(a => a.BuyerId == 1)
             .Execute();
-        Assert.True(count > 0);
+        Assert.Greater(count, 0);
     }
-    [Fact]
+    [Test]
     public async Task Update_SetFrom()
     {
         this.Initialize(1);
@@ -694,7 +689,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.Equal("UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT IFNULL(SUM(b.`Amount`),0) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1", sql);
+        Assert.AreEqual("UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT IFNULL(SUM(b.`Amount`),0) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1", sql);
 
         var count = await repository.Update<Order>()
             .SetFrom((a, b) => new
@@ -707,7 +702,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(a => a.BuyerId == 1)
             .ExecuteAsync();
-        Assert.True(count > 0);
+        Assert.Greater(count, 0);
 
         var orderAmounts = repository.From<OrderDetail>()
             .GroupBy(x => x.OrderId)
@@ -718,7 +713,7 @@ public class UnitTest3 : UnitTestBase
             })
             .ToList();
     }
-    [Fact]
+    [Test]
     public void Update_Set_Join()
     {
         this.Initialize(1);
@@ -734,12 +729,12 @@ public class UnitTest3 : UnitTestBase
             .Set(x => x.Products, new List<int> { 1, 2, 3 })
             .Where((a, b) => a.BuyerId == 1)
             .ToSql(out var dbParameters);
-        Assert.Equal("UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@p0,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1", sql);
-        Assert.NotNull(dbParameters);
-        Assert.Equal("@p0", dbParameters[0].ParameterName);
-        Assert.Equal(200.56, (double)dbParameters[0].Value);
-        Assert.Equal("@Products", dbParameters[1].ParameterName);
-        Assert.True((string)dbParameters[1].Value == JsonSerializer.Serialize(new List<int> { 1, 2, 3 }));
+        Assert.AreEqual("UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@p0,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1", sql);
+        Assert.IsNotNull(dbParameters);
+        Assert.AreEqual("@p0", dbParameters[0].ParameterName);
+        Assert.AreEqual(200.56, (double)dbParameters[0].Value);
+        Assert.AreEqual("@Products", dbParameters[1].ParameterName);
+        Assert.AreEqual(JsonSerializer.Serialize(new List<int> { 1, 2, 3 }), (string)dbParameters[1].Value);
 
         var result = repository.Update<Order>()
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
@@ -752,7 +747,7 @@ public class UnitTest3 : UnitTestBase
             .Set(x => x.Products, new List<int> { 1, 2, 3 })
             .Where((a, b) => a.BuyerId == 1)
             .Execute();
-        Assert.True(result > 0);
+        Assert.Greater(result, 0);
 
         sql = repository.Update<Order>()
             .SetFrom((a, b) => new
@@ -765,7 +760,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.Equal("UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT IFNULL(SUM(b.`Amount`),0) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1", sql);
+        Assert.AreEqual("UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT IFNULL(SUM(b.`Amount`),0) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1", sql);
 
         result = repository.Update<Order>()
             .SetFrom((a, b) => new
@@ -778,9 +773,9 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(a => a.BuyerId == 1)
             .Execute();
-        Assert.True(result > 0);
+        Assert.Greater(result, 0);
     }
-    [Fact]
+    [Test]
     public async Task Update_Set_FromQuery_One()
     {
         this.Initialize(1);
@@ -798,9 +793,9 @@ public class UnitTest3 : UnitTestBase
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.Id == "1")
             .ToSql(out var dbParameters);
-        Assert.Equal("UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT IFNULL(SUM(b.`Amount`),0) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`Id`='1'", sql);
-        Assert.Single(dbParameters);
-        Assert.Equal("ON_111", (string)dbParameters[0].Value);
+        Assert.AreEqual("UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT IFNULL(SUM(b.`Amount`),0) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`Id`='1'", sql);
+        Assert.AreEqual(1, dbParameters.Count);
+        Assert.AreEqual("ON_111", (string)dbParameters[0].Value);
 
         var count = await repository.Update<Order>()
             .SetFrom(f => f.TotalAmount, (x, y) => x
@@ -812,9 +807,9 @@ public class UnitTest3 : UnitTestBase
             .Where(a => a.Id == "1")
             .ExecuteAsync();
         var reult = repository.QueryById<Order>("1");
-        Assert.True(count > 0);
-        Assert.True((decimal)reult.TotalAmount == totalAmount);
-        Assert.True(reult.TotalAmount != order.TotalAmount);
+        Assert.Greater(count, 0);
+        Assert.AreEqual(totalAmount, (decimal)reult.TotalAmount);
+        Assert.AreNotEqual(order.TotalAmount, reult.TotalAmount);
 
         sql = repository.Update<Order>()
             .SetFrom((a, b) => new
@@ -827,7 +822,7 @@ public class UnitTest3 : UnitTestBase
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.Equal("UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT IFNULL(SUM(b.`Amount`),0) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`BuyerId`=1", sql);
+        Assert.AreEqual("UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT IFNULL(SUM(b.`Amount`),0) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`BuyerId`=1", sql);
 
         count = await repository.Update<Order>()
             .SetFrom((a, b) => new
@@ -840,9 +835,9 @@ public class UnitTest3 : UnitTestBase
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ExecuteAsync();
-        Assert.True(count > 0);
+        Assert.Greater(count, 0);
     }
-    [Fact]
+    [Test]
     public void Update_Set_FromQuery_One_Enum()
     {
         this.Initialize(1);
@@ -856,7 +851,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(f => f.Nature != CompanyNature.Internet)
             .ToSql(out _);
-        Assert.Equal("UPDATE `sys_company` a SET a.`Nature`=(SELECT b.`Nature` FROM `sys_company` b WHERE b.`Id`=1) WHERE a.`Nature`<>'Internet'", sql);
+        Assert.AreEqual("UPDATE `sys_company` a SET a.`Nature`=(SELECT b.`Nature` FROM `sys_company` b WHERE b.`Id`=1) WHERE a.`Nature`<>'Internet'", sql);
         repository.BeginTransaction();
         repository.Update<Company>()
             .Set(f => f.Nature, CompanyNature.Industry)
@@ -876,13 +871,13 @@ public class UnitTest3 : UnitTestBase
             .First();
         var companies = repository.Query<Company>(f => f.Id > 1);
         repository.Commit();
-        Assert.True(result > 0);
+        Assert.Greater(result, 0);
         foreach (var company in companies)
         {
-            Assert.True(company.Nature == microCompany.Nature);
+            Assert.AreEqual(microCompany.Nature, company.Nature);
         }
     }
-    [Fact]
+    [Test]
     public async Task Update_Set_FromQuery_Fields()
     {
         this.Initialize(1);
@@ -898,7 +893,7 @@ public class UnitTest3 : UnitTestBase
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.Equal("UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT IFNULL(SUM(b.`Amount`),0) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`BuyerId`=1", sql);
+        Assert.AreEqual("UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT IFNULL(SUM(b.`Amount`),0) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`BuyerId`=1", sql);
 
         var origValues = await repository.From<Order, OrderDetail>()
             .InnerJoin((x, y) => x.Id == y.OrderId)
@@ -925,16 +920,16 @@ public class UnitTest3 : UnitTestBase
            .Select((x, a, b) => new { x.Grouping.Id, x.Grouping.OrderNo, x.Grouping.BuyerId, TotalAmount = x.Sum(b.Amount) })
            .ToListAsync();
         await repository.CommitAsync();
-        Assert.True(result > 0);
+        Assert.Greater(result, 0);
         foreach (var updatedValue in updatedValues)
         {
             var origValue = origValues.Find(f => f.Grouping.Id == updatedValue.Id);
-            Assert.True(updatedValue.TotalAmount == origValue.TotalAmount);
-            Assert.True(updatedValue.OrderNo == origValue.Grouping.OrderNo + "_111");
-            Assert.True(updatedValue.BuyerId == default);
+            Assert.AreEqual(origValue.TotalAmount, updatedValue.TotalAmount);
+            Assert.AreEqual(origValue.Grouping.OrderNo + "_111", updatedValue.OrderNo);
+            Assert.AreEqual(default(int), updatedValue.BuyerId);
         }
     }
-    [Fact]
+    [Test]
     public void Update_InnerJoin_One()
     {
         this.Initialize(1);
@@ -949,7 +944,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where((a, b) => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.Equal("UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1", sql);
+        Assert.AreEqual("UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1", sql);
         var result = repository.Update<Order>()
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
             .Set(x => x.TotalAmount, 200.56)
@@ -960,9 +955,9 @@ public class UnitTest3 : UnitTestBase
             })
             .Where((a, b) => a.BuyerId == 1)
             .Execute();
-        Assert.True(result > 0);
+        Assert.Greater(result, 0);
     }
-    [Fact]
+    [Test]
     public async Task Update_InnerJoin_Multi()
     {
         this.Initialize(1);
@@ -977,7 +972,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where((a, b) => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.Equal("UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=b.`Amount`,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1", sql);
+        Assert.AreEqual("UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=b.`Amount`,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1", sql);
 
         var origValues = await repository.From<Order, OrderDetail>()
            .InnerJoin((x, y) => x.Id == y.OrderId)
@@ -1004,16 +999,16 @@ public class UnitTest3 : UnitTestBase
            .Select((x, a, b) => new { x.Grouping.Id, x.Grouping.OrderNo, x.Grouping.BuyerId, TotalAmount = x.Sum(b.Amount) })
            .ToListAsync();
         await repository.CommitAsync();
-        Assert.True(result > 0);
+        Assert.Greater(result, 0);
         foreach (var updatedValue in updatedValues)
         {
             var origValue = origValues.Find(f => f.Grouping.Id == updatedValue.Id);
-            Assert.True(updatedValue.TotalAmount == origValue.TotalAmount);
-            Assert.True(updatedValue.OrderNo == origValue.Grouping.OrderNo + "_111");
-            Assert.True(updatedValue.BuyerId == default);
+            Assert.AreEqual(origValue.TotalAmount, updatedValue.TotalAmount);
+            Assert.AreEqual(origValue.Grouping.OrderNo + "_111", updatedValue.OrderNo);
+            Assert.AreEqual(default(int), updatedValue.BuyerId);
         }
     }
-    [Fact]
+    [Test]
     public async Task Update_InnerJoin_Fields()
     {
         this.Initialize(1);
@@ -1030,7 +1025,7 @@ public class UnitTest3 : UnitTestBase
             .Set((x, y) => new { BuyerId = DBNull.Value })
             .Where((a, b) => a.Id == "1")
             .ToSql(out _);
-        Assert.Equal("UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=(SELECT IFNULL(SUM(c.`Amount`),0) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,' - ',CAST(b.`Id` AS CHAR)),a.`BuyerId`=NULL WHERE a.`Id`='1'", sql);
+        Assert.AreEqual("UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=(SELECT IFNULL(SUM(c.`Amount`),0) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,' - ',CAST(b.`Id` AS CHAR)),a.`BuyerId`=NULL WHERE a.`Id`='1'", sql);
 
         var origValues = await repository.From<Order, User>()
             .InnerJoin((x, y) => x.BuyerId == y.Id)
@@ -1053,10 +1048,10 @@ public class UnitTest3 : UnitTestBase
         var order = await repository.QueryByIdAsync<Order>("1");
         var orderDetails = await repository.QueryAsync<OrderDetail>(f => f.OrderId == "1");
         await repository.CommitAsync();
-        Assert.True(result > 0);
-        Assert.True(order.TotalAmount == orderDetails.Where(f => f.OrderId == order.Id).Sum(f => f.Amount));
-        Assert.True(order.OrderNo == origValues.OrderNo + " - " + origValues.Id.ToString());
-        Assert.True(order.BuyerId == default);
+        Assert.Greater(result, 0);
+        Assert.AreEqual(orderDetails.Where(f => f.OrderId == order.Id).Sum(f => f.Amount), order.TotalAmount);
+        Assert.AreEqual(origValues.OrderNo + " - " + origValues.Id.ToString(), order.OrderNo);
+        Assert.AreEqual(default(int), order.BuyerId);
 
         var sql1 = repository.Update<Order>()
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
@@ -1067,7 +1062,7 @@ public class UnitTest3 : UnitTestBase
             .Set((x, y) => new { BuyerId = DBNull.Value })
             .Where((x, y) => x.Id == "2")
             .ToSql(out _);
-        Assert.Equal("UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=(SELECT IFNULL(SUM(c.`Amount`),0) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,' - ',CAST(b.`Id` AS CHAR)),a.`BuyerId`=NULL WHERE a.`Id`='2'", sql1);
+        Assert.AreEqual("UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=(SELECT IFNULL(SUM(c.`Amount`),0) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,' - ',CAST(b.`Id` AS CHAR)),a.`BuyerId`=NULL WHERE a.`Id`='2'", sql1);
 
         origValues = await repository.From<Order, User>()
             .InnerJoin((x, y) => x.BuyerId == y.Id)
@@ -1088,12 +1083,12 @@ public class UnitTest3 : UnitTestBase
         orderDetails = await repository.QueryAsync<OrderDetail>(f => f.OrderId == "2");
         await repository.CommitAsync();
 
-        Assert.True(result > 0);
-        Assert.True(order.TotalAmount == orderDetails.Where(f => f.OrderId == order.Id).Sum(f => f.Amount));
-        Assert.True(order.OrderNo == origValues.OrderNo + " - " + origValues.Id.ToString());
-        Assert.True(order.BuyerId == default);
+        Assert.Greater(result, 0);
+        Assert.AreEqual(orderDetails.Where(f => f.OrderId == order.Id).Sum(f => f.Amount), order.TotalAmount);
+        Assert.AreEqual(origValues.OrderNo + " - " + origValues.Id.ToString(), order.OrderNo);
+        Assert.AreEqual(default(int), order.BuyerId);
     }
-    [Fact]
+    [Test]
     public void Update_SetNull_WhereNull()
     {
         var repository = this.dbFactory.Create();
@@ -1105,9 +1100,9 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(x => x.OrderNo == null)
             .ToSql(out _);
-        Assert.Equal("UPDATE `sys_order` SET `BuyerId`=NULL,`Seller`=NULL WHERE `OrderNo` IS NULL", sql);
+        Assert.AreEqual("UPDATE `sys_order` SET `BuyerId`=NULL,`Seller`=NULL WHERE `OrderNo` IS NULL", sql);
     }
-    [Fact]
+    [Test]
     public void Update_Set()
     {
         var repository = this.dbFactory.Create();
@@ -1134,12 +1129,12 @@ public class UnitTest3 : UnitTestBase
         repository.Commit();
         if (result > 0)
         {
-            Assert.NotEmpty(order.Products);
-            Assert.Equal(3, order.Products.Count);
-            Assert.Equal(1, order.Products[0]);
-            Assert.Equal(2, order.Products[1]);
-            Assert.Equal(3, order.Products[2]);
-            Assert.True(order.TotalAmount == parameter.TotalAmount);
+            Assert.IsNotEmpty(order.Products);
+            Assert.AreEqual(3, order.Products.Count);
+            Assert.AreEqual(1, order.Products[0]);
+            Assert.AreEqual(2, order.Products[1]);
+            Assert.AreEqual(3, order.Products[2]);
+            Assert.AreEqual(parameter.TotalAmount, order.TotalAmount);
         }
 
         repository.BeginTransaction();
@@ -1165,15 +1160,15 @@ public class UnitTest3 : UnitTestBase
         repository.Commit();
         if (result > 0)
         {
-            Assert.NotEmpty(order.Products);
-            Assert.Equal(3, order.Products.Count);
-            Assert.Equal(1, order.Products[0]);
-            Assert.Equal(2, order.Products[1]);
-            Assert.Equal(3, order.Products[2]);
-            Assert.True(order.TotalAmount == parameter.TotalAmount);
+            Assert.IsNotEmpty(order.Products);
+            Assert.AreEqual(3, order.Products.Count);
+            Assert.AreEqual(1, order.Products[0]);
+            Assert.AreEqual(2, order.Products[1]);
+            Assert.AreEqual(3, order.Products[2]);
+            Assert.AreEqual(parameter.TotalAmount, order.TotalAmount);
         }
     }
-    [Fact]
+    [Test]
     public void Update_SetJson()
     {
         var repository = this.dbFactory.Create();
@@ -1197,14 +1192,14 @@ public class UnitTest3 : UnitTestBase
         repository.Commit();
         if (result > 0)
         {
-            Assert.NotEmpty(order.Products);
-            Assert.Equal(3, order.Products.Count);
-            Assert.Equal(1, order.Products[0]);
-            Assert.Equal(2, order.Products[1]);
-            Assert.Equal(3, order.Products[2]);
+            Assert.IsNotEmpty(order.Products);
+            Assert.AreEqual(3, order.Products.Count);
+            Assert.AreEqual(1, order.Products[0]);
+            Assert.AreEqual(2, order.Products[1]);
+            Assert.AreEqual(3, order.Products[2]);
         }
     }
-    [Fact]
+    [Test]
     public void Update_SetJson1()
     {
         var repository = this.dbFactory.Create();
@@ -1230,14 +1225,14 @@ public class UnitTest3 : UnitTestBase
         repository.Commit();
         if (result > 0)
         {
-            Assert.NotEmpty(order.Products);
-            Assert.Equal(3, order.Products.Count);
-            Assert.Equal(1, order.Products[0]);
-            Assert.Equal(2, order.Products[1]);
-            Assert.Equal(3, order.Products[2]);
+            Assert.IsNotEmpty(order.Products);
+            Assert.AreEqual(3, order.Products.Count);
+            Assert.AreEqual(1, order.Products[0]);
+            Assert.AreEqual(2, order.Products[1]);
+            Assert.AreEqual(3, order.Products[2]);
         }
     }
-    [Fact]
+    [Test]
     public void Update_Enum_Fields()
     {
         this.Initialize(1);
@@ -1253,31 +1248,31 @@ public class UnitTest3 : UnitTestBase
             .Set(x => x.Products, new List<int> { 1, 2, 3 })
             .Where((a, b) => a.BuyerId == 1)
             .ToSql(out var parameters);
-        Assert.Equal("UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@p0,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1", sql);
-        Assert.Equal("@p0", parameters[0].ParameterName);
-        Assert.True(parameters[0].Value.GetType() == typeof(double));
-        Assert.Equal(200.56, (double)parameters[0].Value);
-        Assert.Equal("@Products", parameters[1].ParameterName);
-        Assert.True(parameters[1].Value.GetType() == typeof(string));
-        Assert.True((string)parameters[1].Value == new JsonTypeHandler().ToFieldValue(new List<int> { 1, 2, 3 }).ToString());
+        Assert.AreEqual("UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@p0,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1", sql);
+        Assert.AreEqual("@p0", parameters[0].ParameterName);
+        Assert.That(parameters[0].Value, Is.TypeOf<double>());
+        Assert.AreEqual(200.56, (double)parameters[0].Value);
+        Assert.AreEqual("@Products", parameters[1].ParameterName);
+        Assert.That(parameters[1].Value, Is.TypeOf<string>());
+        Assert.AreEqual(new JsonTypeHandler().ToFieldValue(new List<int> { 1, 2, 3 }).ToString(), (string)parameters[1].Value);
 
         var sql1 = repository.Update<User>()
             .Set(new { Gender = Gender.Male })
             .WhereBy(new { Id = 1 })
             .ToSql(out var parameters1);
-        Assert.Equal("UPDATE `sys_user` SET `Gender`=@Gender WHERE `Id`=@kId", sql1);
-        Assert.Equal("@Gender", parameters1[0].ParameterName);
-        Assert.True(parameters1[0].Value.GetType() == typeof(string));
-        Assert.True((string)parameters1[0].Value == Gender.Male.ToString());
+        Assert.AreEqual("UPDATE `sys_user` SET `Gender`=@Gender WHERE `Id`=@kId", sql1);
+        Assert.AreEqual("@Gender", parameters1[0].ParameterName);
+        Assert.That(parameters1[0].Value, Is.TypeOf<string>());
+        Assert.AreEqual(Gender.Male.ToString(), (string)parameters1[0].Value);
 
         var sql2 = repository.Update<User>()
             .Set(f => new { Gender = Gender.Male })
             .Where(f => f.Id == 1)
             .ToSql(out var parameters2);
-        Assert.Equal("UPDATE `sys_user` SET `Gender`=@p0 WHERE `Id`=1", sql2);
-        Assert.Equal("@p0", parameters2[0].ParameterName);
-        Assert.True(parameters2[0].Value.GetType() == typeof(string));
-        Assert.True((string)parameters2[0].Value == Gender.Male.ToString());
+        Assert.AreEqual("UPDATE `sys_user` SET `Gender`=@p0 WHERE `Id`=1", sql2);
+        Assert.AreEqual("@p0", parameters2[0].ParameterName);
+        Assert.That(parameters2[0].Value, Is.TypeOf<string>());
+        Assert.AreEqual(Gender.Male.ToString(), (string)parameters2[0].Value);
 
         var user = new User { Gender = Gender.Female };
         var sql3 = repository.Update<User>()
@@ -1285,10 +1280,10 @@ public class UnitTest3 : UnitTestBase
             .Set(f => f.Age, 20)
             .WhereBy(new { Id = 1 })
             .ToSql(out var parameters3);
-        Assert.Equal("UPDATE `sys_user` SET `Age`=@Age,`Gender`=@Gender WHERE `Id`=@kId", sql3);
-        Assert.Equal("@Gender", parameters3[1].ParameterName);
-        Assert.True(parameters3[1].Value.GetType() == typeof(string));
-        Assert.True((string)parameters3[1].Value == Gender.Female.ToString());
+        Assert.AreEqual("UPDATE `sys_user` SET `Age`=@Age,`Gender`=@Gender WHERE `Id`=@kId", sql3);
+        Assert.AreEqual("@Gender", parameters3[1].ParameterName);
+        Assert.That(parameters3[1].Value, Is.TypeOf<string>());
+        Assert.AreEqual(Gender.Female.ToString(), (string)parameters3[1].Value);
 
         int age = 20;
         var sql7 = repository.Update<User>()
@@ -1296,58 +1291,58 @@ public class UnitTest3 : UnitTestBase
             .Set(f => f.Age, age)
             .WhereBy(new { Id = 1 })
             .ToSql(out var parameters7);
-        Assert.Equal("UPDATE `sys_user` SET `Age`=@Age,`Gender`=@Gender WHERE `Id`=@kId", sql7);
-        Assert.Equal("@Gender", parameters7[1].ParameterName);
-        Assert.True(parameters7[1].Value.GetType() == typeof(string));
-        Assert.True((string)parameters7[1].Value == Gender.Male.ToString());
+        Assert.AreEqual("UPDATE `sys_user` SET `Age`=@Age,`Gender`=@Gender WHERE `Id`=@kId", sql7);
+        Assert.AreEqual("@Gender", parameters7[1].ParameterName);
+        Assert.That(parameters7[1].Value, Is.TypeOf<string>());
+        Assert.AreEqual(Gender.Male.ToString(), (string)parameters7[1].Value);
 
         var sql4 = repository.Update<Company>()
             .Set(new { Nature = CompanyNature.Internet })
             .WhereBy(new { Id = 1 })
             .ToSql(out var parameters4);
-        Assert.Equal("UPDATE `sys_company` SET `Nature`=@Nature WHERE `Id`=@kId", sql4);
-        Assert.Equal("@Nature", parameters4[0].ParameterName);
-        Assert.True(parameters4[0].Value.GetType() == typeof(string));
-        Assert.True((string)parameters4[0].Value == CompanyNature.Internet.ToString());
+        Assert.AreEqual("UPDATE `sys_company` SET `Nature`=@Nature WHERE `Id`=@kId", sql4);
+        Assert.AreEqual("@Nature", parameters4[0].ParameterName);
+        Assert.That(parameters4[0].Value, Is.TypeOf<string>());
+        Assert.AreEqual(CompanyNature.Internet.ToString(), (string)parameters4[0].Value);
 
         var sql5 = repository.Update<Company>()
             .Set(f => new { Nature = CompanyNature.Internet })
             .Where(f => f.Id == 1)
             .ToSql(out var parameters5);
-        Assert.Equal("UPDATE `sys_company` SET `Nature`=@p0 WHERE `Id`=1", sql5);
-        Assert.Equal("@p0", parameters5[0].ParameterName);
-        Assert.True(parameters5[0].Value.GetType() == typeof(string));
-        Assert.True((string)parameters5[0].Value == CompanyNature.Internet.ToString());
+        Assert.AreEqual("UPDATE `sys_company` SET `Nature`=@p0 WHERE `Id`=1", sql5);
+        Assert.AreEqual("@p0", parameters5[0].ParameterName);
+        Assert.That(parameters5[0].Value, Is.TypeOf<string>());
+        Assert.AreEqual(CompanyNature.Internet.ToString(), (string)parameters5[0].Value);
 
         var sql6 = repository.Update<Company>()
             .Set(f => f.Nature, CompanyNature.Internet)
             .WhereBy(new { Id = 1 })
             .ToSql(out var parameters6);
-        Assert.Equal("UPDATE `sys_company` SET `Nature`=@Nature WHERE `Id`=@kId", sql6);
-        Assert.Equal("@Nature", parameters6[0].ParameterName);
-        Assert.True(parameters6[0].Value.GetType() == typeof(string));
-        Assert.True((string)parameters6[0].Value == CompanyNature.Internet.ToString());
+        Assert.AreEqual("UPDATE `sys_company` SET `Nature`=@Nature WHERE `Id`=@kId", sql6);
+        Assert.AreEqual("@Nature", parameters6[0].ParameterName);
+        Assert.That(parameters6[0].Value, Is.TypeOf<string>());
+        Assert.AreEqual(CompanyNature.Internet.ToString(), (string)parameters6[0].Value);
 
         var company = new Company { Name = "facebook", Nature = CompanyNature.Internet };
         var sql8 = repository.Update<Company>()
             .Set(f => new { Name = f.Name + "_New", company.Nature })
             .Where(f => f.Id == 1)
             .ToSql(out var parameters8);
-        Assert.Equal("UPDATE `sys_company` SET `Name`=CONCAT(`Name`,'_New'),`Nature`=@p0 WHERE `Id`=1", sql8);
-        Assert.Equal("@p0", parameters8[0].ParameterName);
-        Assert.True(parameters8[0].Value.GetType() == typeof(string));
-        Assert.True((string)parameters8[0].Value == CompanyNature.Internet.ToString());
+        Assert.AreEqual("UPDATE `sys_company` SET `Name`=CONCAT(`Name`,'_New'),`Nature`=@p0 WHERE `Id`=1", sql8);
+        Assert.AreEqual("@p0", parameters8[0].ParameterName);
+        Assert.That(parameters8[0].Value, Is.TypeOf<string>());
+        Assert.AreEqual(CompanyNature.Internet.ToString(), (string)parameters8[0].Value);
 
         //批量表达式部分栏位更新
         var sql9 = repository.Update<Company>()
             .SetBulk(new[] { new { Id = 1, Name = "google" }, new { Id = 2, Name = "facebook" } })
             .Set(new { company.Nature })
             .ToSql(out var parameters9);
-        Assert.Equal("UPDATE `sys_company` SET `Nature`=@Nature,`Name`=@Name0 WHERE `Id`=@kId0;UPDATE `sys_company` SET `Nature`=@Nature,`Name`=@Name1 WHERE `Id`=@kId1", sql9);
-        Assert.Equal(5, parameters9.Count);
-        Assert.Equal("@Nature", parameters9[0].ParameterName);
-        Assert.True(parameters9[0].Value.GetType() == typeof(string));
-        Assert.True((string)parameters9[0].Value == CompanyNature.Internet.ToString());
+        Assert.AreEqual("UPDATE `sys_company` SET `Nature`=@Nature,`Name`=@Name0 WHERE `Id`=@kId0;UPDATE `sys_company` SET `Nature`=@Nature,`Name`=@Name1 WHERE `Id`=@kId1", sql9);
+        Assert.AreEqual(5, parameters9.Count);
+        Assert.AreEqual("@Nature", parameters9[0].ParameterName);
+        Assert.That(parameters9[0].Value, Is.TypeOf<string>());
+        Assert.AreEqual(CompanyNature.Internet.ToString(), (string)parameters9[0].Value);
 
         CompanyNature? nature = CompanyNature.Production;
         var sql10 = repository.Update<Company>()
@@ -1355,18 +1350,18 @@ public class UnitTest3 : UnitTestBase
             .Set(f => new { company.Name })
             .OnlyFields(f => f.Nature)
             .ToSql(out var parameters10);
-        Assert.Equal("UPDATE `sys_company` SET `Name`=@p0,`Nature`=@Nature0 WHERE `Id`=@kId0;UPDATE `sys_company` SET `Name`=@p0,`Nature`=@Nature1 WHERE `Id`=@kId1", sql10);
-        Assert.Equal("@Nature0", parameters10[1].ParameterName);
-        Assert.True(parameters10[1].Value.GetType() == typeof(string));
-        Assert.True((string)parameters10[1].Value == company.Nature.ToString());
-        Assert.Equal("@Nature1", parameters10[3].ParameterName);
-        Assert.True(parameters10[3].Value.GetType() == typeof(string));
-        Assert.True((string)parameters10[3].Value == CompanyNature.Production.ToString());
-        Assert.Equal("@p0", parameters10[0].ParameterName);
-        Assert.True(parameters10[0].Value.GetType() == typeof(string));
-        Assert.True((string)parameters10[0].Value == company.Name);
+        Assert.AreEqual("UPDATE `sys_company` SET `Name`=@p0,`Nature`=@Nature0 WHERE `Id`=@kId0;UPDATE `sys_company` SET `Name`=@p0,`Nature`=@Nature1 WHERE `Id`=@kId1", sql10);
+        Assert.AreEqual("@Nature0", parameters10[1].ParameterName);
+        Assert.That(parameters10[1].Value, Is.TypeOf<string>());
+        Assert.AreEqual(company.Nature.ToString(), (string)parameters10[1].Value);
+        Assert.AreEqual("@Nature1", parameters10[3].ParameterName);
+        Assert.That(parameters10[3].Value, Is.TypeOf<string>());
+        Assert.AreEqual(CompanyNature.Production.ToString(), (string)parameters10[3].Value);
+        Assert.AreEqual("@p0", parameters10[0].ParameterName);
+        Assert.That(parameters10[0].Value, Is.TypeOf<string>());
+        Assert.AreEqual(company.Name, (string)parameters10[0].Value);
     }
-    [Fact]
+    [Test]
     public async Task Update_TimeSpan_Fields()
     {
         var repository = this.dbFactory.Create();
@@ -1396,28 +1391,28 @@ public class UnitTest3 : UnitTestBase
             .Set(new { SomeTimes = timeSpan })
             .WhereBy(new { Id = 1 })
             .ToSql(out var parameters1);
-        Assert.Equal("UPDATE `sys_user` SET `SomeTimes`=@SomeTimes WHERE `Id`=@kId", sql1);
-        Assert.Equal("@SomeTimes", parameters1[0].ParameterName);
+        Assert.AreEqual("UPDATE `sys_user` SET `SomeTimes`=@SomeTimes WHERE `Id`=@kId", sql1);
+        Assert.AreEqual("@SomeTimes", parameters1[0].ParameterName);
 #if NET6_0_OR_GREATER
-        Assert.True(parameters1[0].Value.GetType() == typeof(TimeOnly));
-        Assert.True((TimeOnly)parameters1[0].Value == TimeOnly.FromTimeSpan(timeSpan));
+        Assert.That(parameters1[0].Value, Is.TypeOf<TimeOnly>());
+        Assert.AreEqual(TimeOnly.FromTimeSpan(timeSpan), (TimeOnly)parameters1[0].Value);
 #else
-        Assert.True(parameters1[0].Value.GetType() == typeof(TimeSpan));
-        Assert.True((TimeSpan)parameters1[0].Value == timeSpan);
+        Assert.That(parameters1[0].Value, Is.TypeOf<TimeSpan>());
+        Assert.AreEqual(timeSpan, (TimeSpan)parameters1[0].Value);
 #endif
 
         var sql2 = repository.Update<User>()
             .Set(f => new { SomeTimes = timeSpan })
             .Where(f => f.Id == 1)
             .ToSql(out var parameters2);
-        Assert.Equal("UPDATE `sys_user` SET `SomeTimes`=@p0 WHERE `Id`=1", sql2);
-        Assert.Equal("@p0", parameters2[0].ParameterName);
+        Assert.AreEqual("UPDATE `sys_user` SET `SomeTimes`=@p0 WHERE `Id`=1", sql2);
+        Assert.AreEqual("@p0", parameters2[0].ParameterName);
 #if NET6_0_OR_GREATER
-        Assert.True(parameters2[0].Value.GetType() == typeof(TimeOnly));
-        Assert.True((TimeOnly)parameters2[0].Value == TimeOnly.FromTimeSpan(timeSpan));
+        Assert.That(parameters2[0].Value, Is.TypeOf<TimeOnly>());
+        Assert.AreEqual(TimeOnly.FromTimeSpan(timeSpan), (TimeOnly)parameters2[0].Value);
 #else
-        Assert.True(parameters2[0].Value.GetType() == typeof(TimeSpan));
-        Assert.True((TimeSpan)parameters2[0].Value == timeSpan);
+        Assert.That(parameters2[0].Value, Is.TypeOf<TimeSpan>());
+        Assert.AreEqual(timeSpan, (TimeSpan)parameters2[0].Value);
 #endif
 
         repository.BeginTransaction();
@@ -1428,12 +1423,12 @@ public class UnitTest3 : UnitTestBase
         var userInfo = repository.QueryById<User>(1);
         repository.Commit();
 #if NET6_0_OR_GREATER
-        Assert.True(userInfo.SomeTimes.Value == TimeOnly.FromTimeSpan(timeSpan));
+        Assert.AreEqual(TimeOnly.FromTimeSpan(timeSpan), userInfo.SomeTimes.Value);
 #else
-        Assert.True(userInfo.SomeTimes.Value == timeSpan);
+        Assert.AreEqual(timeSpan, userInfo.SomeTimes.Value);
 #endif
     }
-    [Fact]
+    [Test]
     public async Task Update_BulkCopy()
     {
         var repository = this.dbFactory.Create();
@@ -1485,7 +1480,7 @@ public class UnitTest3 : UnitTestBase
             .SetBulkCopy(updateObjs)
             .ExecuteAsync();
 
-        Assert.True(count == orders.Count);
+        Assert.AreEqual(orders.Count, count);
     }
     private double CalcAmount(double price, double amount) => price * amount - 150;
     private int[] GetProducts() => new int[] { 1, 2, 3 };

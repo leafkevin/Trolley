@@ -1,61 +1,61 @@
-﻿using System;
+﻿using NUnit.Framework;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq.Expressions;
-using Xunit;
 
 namespace Trolley.Test;
 
+[TestFixture]
 public class UnitTest1
 {
-    [Fact]
+    [Test]
     public void IsEntityType()
     {
-        Assert.False(typeof(Sex).IsEntityType(out _));
-        Assert.False(typeof(Sex?).IsEntityType(out _));
-        Assert.True(typeof(Studuent).IsEntityType(out _));
-        Assert.False(typeof(string).IsEntityType(out _));
-        Assert.False(typeof(int).IsEntityType(out _));
-        Assert.False(typeof(int?).IsEntityType(out _));
-        Assert.False(typeof(Guid).IsEntityType(out _));
-        Assert.False(typeof(Guid?).IsEntityType(out _));
-        Assert.False(typeof(DateTime).IsEntityType(out _));
-        Assert.False(typeof(DateTime?).IsEntityType(out _));
-        Assert.False(typeof(byte[]).IsEntityType(out _));
-        Assert.False(typeof(int[]).IsEntityType(out _));
-        Assert.False(typeof(List<int>).IsEntityType(out _));
-        Assert.False(typeof(List<int[]>).IsEntityType(out _));
-        Assert.False(typeof(Collection<string>).IsEntityType(out _));
-        Assert.False(typeof(DBNull).IsEntityType(out _));
+        Assert.IsTrue(typeof(Sex).IsEntityType(out _));
+        Assert.IsFalse(typeof(Sex?).IsEntityType(out _));
+        Assert.IsTrue(typeof(Studuent).IsEntityType(out _));
+        Assert.IsFalse(typeof(string).IsEntityType(out _));
+        Assert.IsFalse(typeof(int).IsEntityType(out _));
+        Assert.IsFalse(typeof(int?).IsEntityType(out _));
+        Assert.IsFalse(typeof(Guid).IsEntityType(out _));
+        Assert.IsFalse(typeof(Guid?).IsEntityType(out _));
+        Assert.IsFalse(typeof(DateTime).IsEntityType(out _));
+        Assert.IsFalse(typeof(DateTime?).IsEntityType(out _));
+        Assert.IsFalse(typeof(byte[]).IsEntityType(out _));
+        Assert.IsFalse(typeof(int[]).IsEntityType(out _));
+        Assert.IsFalse(typeof(List<int>).IsEntityType(out _));
+        Assert.IsFalse(typeof(List<int[]>).IsEntityType(out _));
+        Assert.IsFalse(typeof(Collection<string>).IsEntityType(out _));
+        Assert.IsFalse(typeof(DBNull).IsEntityType(out _));
 
         var vt1 = ("kevin");
-        Assert.False(vt1.GetType().IsEntityType(out _));
+        Assert.IsFalse(vt1.GetType().IsEntityType(out _));
         var vt2 = (1, "kevin", 25, 30000.00d);
-        Assert.True(vt2.GetType().IsEntityType(out _));
-        Assert.True(typeof((string Name, int Age)).IsEntityType(out _));
-        Assert.True(typeof(Dictionary<string, int>).IsEntityType(out _));
-        Assert.True(typeof(Studuent).IsEntityType(out _));
-        Assert.True(typeof(Teacher).IsEntityType(out _));
+        Assert.IsTrue(vt2.GetType().IsEntityType(out _));
+        Assert.IsTrue(typeof((string Name, int Age)).IsEntityType(out _));
+        Assert.IsTrue(typeof(Dictionary<string, int>).IsEntityType(out _));
+        Assert.IsTrue(typeof(Studuent).IsEntityType(out _));
+        Assert.IsTrue(typeof(Teacher).IsEntityType(out _));
 
-        Assert.True(typeof(Dictionary<string, int>[]).IsEntityType(out _));
-        Assert.True(typeof(List<Dictionary<string, int>>).IsEntityType(out _));
-        Assert.True(typeof(List<Dictionary<string, int>[]>).IsEntityType(out _));
-        Assert.True(typeof(Collection<Dictionary<string, int>>).IsEntityType(out _));
-        Assert.True(typeof(Dictionary<string, Dictionary<string, int>>).IsEntityType(out _));
+        Assert.IsTrue(typeof(Dictionary<string, int>[]).IsEntityType(out _));
+        Assert.IsTrue(typeof(List<Dictionary<string, int>>).IsEntityType(out _));
+        Assert.IsTrue(typeof(List<Dictionary<string, int>[]>).IsEntityType(out _));
+        Assert.IsTrue(typeof(Collection<Dictionary<string, int>>).IsEntityType(out _));
+        Assert.IsTrue(typeof(Dictionary<string, Dictionary<string, int>>).IsEntityType(out _));
 
-        Assert.True(typeof(Teacher[]).IsEntityType(out _));
-        Assert.True(typeof(List<Teacher>).IsEntityType(out _));
-        Assert.True(typeof(List<Teacher[]>).IsEntityType(out _));
-        Assert.True(typeof(Collection<Teacher>).IsEntityType(out _));
-        Assert.True(typeof(Dictionary<string, Teacher>).IsEntityType(out _));
+        Assert.IsTrue(typeof(Teacher[]).IsEntityType(out _));
+        Assert.IsTrue(typeof(List<Teacher>).IsEntityType(out _));
+        Assert.IsTrue(typeof(List<Teacher[]>).IsEntityType(out _));
+        Assert.IsTrue(typeof(Collection<Teacher>).IsEntityType(out _));
+        Assert.IsTrue(typeof(Dictionary<string, Teacher>).IsEntityType(out _));
 
-        Assert.True(typeof(Studuent[]).IsEntityType(out _));
-        Assert.True(typeof(List<Studuent>).IsEntityType(out _));
-        Assert.True(typeof(List<Studuent[]>).IsEntityType(out _));
-        Assert.True(typeof(Collection<Studuent>).IsEntityType(out _));
-        Assert.True(typeof(Dictionary<string, Studuent>).IsEntityType(out _));
+        Assert.IsTrue(typeof(Studuent[]).IsEntityType(out _));
+        Assert.IsTrue(typeof(List<Studuent>).IsEntityType(out _));
+        Assert.IsTrue(typeof(List<Studuent[]>).IsEntityType(out _));
+        Assert.IsTrue(typeof(Collection<Studuent>).IsEntityType(out _));
+        Assert.IsTrue(typeof(Dictionary<string, Studuent>).IsEntityType(out _));
     }
-    //[Fact]
+    //[Test]
     //public void PredicateExpression()
     //{
     //    int productId = 1;
@@ -68,7 +68,7 @@ public class UnitTest1
     //        .Build();
     //    Expression<Func<User, Company, Order, bool>> predicate = (a, b, c) =>
     //        a.Name.Contains("kevin") && a.CompanyId == b.Id && c.CreatedAt.Date == DateTime.Parse("2023-12-01");
-    //    Assert.True(expression1.ToString() == predicate.ToString());
+    //   Assert.IsTrue(expression1.ToString() == predicate.ToString());
 
     //    productId = 2;
     //    var expression2 = Sql.Where<User, Company, Order>()
@@ -85,6 +85,6 @@ public class UnitTest1
     //        && a.Name.Contains("kevin") && a.CompanyId == b.Id && (a.CreatedAt.Date == DateTime.Parse("2023-12-01")
     //            || a.CreatedAt > DateTime.Today.AddDays(-7) && a.CreatedAt > DateTime.Parse("2023-12-01") && a.CreatedAt < DateTime.Parse("2023-12-07")
     //            || a.CreatedAt > DateTime.Today.AddDays(-30) && a.CreatedAt > DateTime.Parse("2023-12-01") && a.CreatedAt < DateTime.Parse("2023-12-31"));
-    //    Assert.True(expression2.ToString() == predicate.ToString());
+    //   Assert.IsTrue(expression2.ToString() == predicate.ToString());
     //}
 }
