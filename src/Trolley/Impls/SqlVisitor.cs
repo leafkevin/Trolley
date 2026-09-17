@@ -2441,22 +2441,26 @@ public class SqlVisitor : ISqlVisitor
     public Expression EnsureMemberVisit(Expression expr)
     {
         var myExpr = expr;
-        while (myExpr is not MemberExpression memberExpr)
+        while (myExpr.NodeType != ExpressionType.MemberAccess)
         {
             if (myExpr is UnaryExpression unaryExpr)
                 myExpr = unaryExpr.Operand;
-            else throw new NotSupportedException($"不支持的表达式解析:{myExpr}->MemberExpression");
+            else if (myExpr is MethodCallExpression callExpr)
+                myExpr = callExpr.Object;
+            else break;
         }
         return myExpr;
     }
     public bool IsMemberVisit(Expression expr)
     {
         var myExpr = expr;
-        while (myExpr is not MemberExpression memberExpr)
+        while (myExpr.NodeType != ExpressionType.MemberAccess)
         {
             if (myExpr is UnaryExpression unaryExpr)
                 myExpr = unaryExpr.Operand;
-            else throw new NotSupportedException($"不支持的表达式解析:{myExpr}->MemberExpression");
+            else if (myExpr is MethodCallExpression callExpr)
+                myExpr = callExpr.Object;
+            else break;
         }
         return myExpr.NodeType == ExpressionType.MemberAccess;
     }
