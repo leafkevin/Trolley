@@ -6,7 +6,7 @@ public sealed class OrmDbFactoryBuilder
 {
     private readonly IOrmDbFactory dbFactory = OrmDbFactory.Instance;
 
-    public OrmDbFactoryBuilder Register(OrmProviderType ormProviderType, string dbKey, Action<OrmDatabaseBuilder> databaseInitializer, bool isDefaultDatabase = false)
+    public OrmDbFactoryBuilder Register(string dbKey, OrmProviderType ormProviderType, Action<OrmDatabaseBuilder> databaseInitializer, bool isDefaultDatabase = false)
     {
         if (databaseInitializer == null)
             throw new ArgumentNullException(nameof(databaseInitializer));
@@ -72,6 +72,7 @@ public sealed class OrmDbFactoryBuilder
         if (!this.dbFactory.TryGetTableShardingProvider(dbKey, out var tableShardingProvider))
             this.dbFactory.UseTableShardingProvider(dbKey, tableShardingProvider = new TableShardingProvider());
         shardingInitializer.Invoke(new TableShardingBuilder(tableShardingProvider));
+        tableShardingProvider.Build();
         return this;
     }
     public OrmDbFactoryBuilder UseTableSharding(string dbKey, ITableShardingConfiguration configuration)

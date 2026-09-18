@@ -1048,7 +1048,7 @@ public static class RepositoryHelper
                 shardingValuesSetter.Invoke(parameter, shardingValues);
         }
     }
-    public static string GetShardingTableName(DbContext dbContext, TableShardingInfo tableShardingInfo, IDictionary<string, object> shardingValues)
+    public static string GetShardingTableName(DbContext dbContext, TableShardingInfo tableShardingInfo, TableUsageMode usageMode, IDictionary<string, object> shardingValues)
     {
         var fieldValues = new object[tableShardingInfo.DependOnMembers.Count];
         for (int i = 0; i < tableShardingInfo.DependOnMembers.Count; i++)
@@ -1060,9 +1060,11 @@ public static class RepositoryHelper
         }
         var entityMapProvider = dbContext.EntityMapProvider;
         var entityMapper = entityMapProvider.GetEntityMap(tableShardingInfo.EntityType);
-        return tableShardingInfo.Rule.Invoke(entityMapper.TableName, fieldValues);
+        return tableShardingInfo.Rules[usageMode].Rule
+            .DynamicInvoke(entityMapper.TableName, fieldValues) as string;
     }
-    public static Func<object, string> BuildShardingTableNameGetter(DbContext dbContext, TableShardingInfo tableShardingInfo, Type entityType, Type parameterType, object parameterSample, IDictionary<string, object> shardingValues)
+    public static Func<object, string> BuildShardingTableNameGetter(DbContext dbContext, TableShardingInfo tableShardingInfo,
+        TableUsageMode usageMode, Type entityType, Type parameterType, object parameterSample, IDictionary<string, object> shardingValues)
     {
         //批量实体或是字典参数，使用参数+字段来获取分表名
         int index = 0;
@@ -1092,7 +1094,8 @@ public static class RepositoryHelper
                     var fieldIndex = fieldMaps[itemKey];
                     fieldValues[fieldIndex] = dictParameter[itemKey];
                 }
-                return tableShardingInfo.Rule.Invoke(origName, fieldValues);
+                return tableShardingInfo.Rules[usageMode].Rule
+                    .DynamicInvoke(origName, fieldValues) as string;
             };
         }
         else
@@ -1133,7 +1136,7 @@ public static class RepositoryHelper
                     blockBodies.Add(Expression.Call(fieldValuesExpr, methodInfo, Expression.Constant(index), memberValueExpr));
                     index++;
                 }
-                var ruleExpr = Expression.Constant(tableShardingInfo.Rule);
+                var ruleExpr = Expression.Constant(tableShardingInfo.Rules[usageMode].Rule);
                 var entityMapper = entityMapProvider.GetEntityMap(entityType);
                 var origNameExpr = Expression.Constant(entityMapper.TableName);
                 var bodyExpr = Expression.Block(blockParameters, Expression.Invoke(ruleExpr, [origNameExpr, fieldValuesExpr]));

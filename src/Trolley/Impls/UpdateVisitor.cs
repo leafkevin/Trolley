@@ -45,7 +45,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 Mapper = this.EntityMapProvider.GetEntityMap(entityType)
             }
         };
-        if (this.TryGetTableShardingInfo(entityType, TableShardingType.WriteOnly, out var tableShardingInfo))
+        if (this.TryGetTableShardingInfo(entityType, out var tableShardingInfo))
             this.Tables[0].TableShardingInfo = tableShardingInfo;
     }
     public override string BuildSql(out List<ReaderField> readerFields)
@@ -353,7 +353,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, updateObjType, updateObjs, firstUpdateObj, this.ShardingValues);
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, TableUsageMode.WriteOnly, updateObjType, updateObjs, firstUpdateObj, this.ShardingValues);
             }
         }
         return (shardingType, shardingTables, updateObjs, bulkCount, firstSqlSetter, loopSqlSetter, null);
@@ -1101,7 +1101,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (tableSegment.TableShardingInfo != null)
         {
             if (tableSegment.IsSharding) tableName = tableSegment.Body;
-            else tableName = RepositoryHelper.GetShardingTableName(this.DbContext, tableSegment.TableShardingInfo, this.ShardingValues);
+            else tableName = RepositoryHelper.GetShardingTableName(this.DbContext, tableSegment.TableShardingInfo, TableUsageMode.WriteOnly, this.ShardingValues);
         }
         else tableName = tableSegment.Mapper.TableName;
         if (!string.IsNullOrEmpty(tableSegment.TableSchema))

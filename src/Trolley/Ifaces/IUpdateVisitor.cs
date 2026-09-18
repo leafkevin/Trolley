@@ -23,11 +23,11 @@ public interface IUpdateVisitor : ICommandVisitor, IDisposable
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>, Action<IDataParameterCollection,
          StringBuilder, DbContext, string, object, string>, List<ReaderField>) BuildSetBulk(ITheaCommand command);
 
-    void UseTable(TableShardingType usageMode, bool isIncludeMany, params string[] tableNames);
-    void UseTableByRange(TableShardingType usageMode, bool isIncludeMany, object[] fieldValues);
-    void UseTableMap(TableShardingType usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter);
-    void UseTableBy(TableShardingType usageMode, bool isIncludeMany, params object[] fieldValues);
-    void UseTable(TableShardingType usageMode, Func<object, string> tableNameGetter);
+    void UseTable(TableUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
+    void UseTableByRange(TableUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
+    void UseTableMap(TableUsageMode usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter);
+    void UseTableBy(TableUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
+    void UseTable(TableUsageMode usageMode, Func<object, string> tableNameGetter);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
     void WithTableAliasTrailing(bool isIncludeMany, string rawSql);
 

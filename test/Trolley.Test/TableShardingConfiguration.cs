@@ -11,14 +11,14 @@ public class TableShardingConfiguration : ITableShardingConfiguration
         builder
             .Table<Order>(t => t
                 .DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
-                .UseRule((origName, shardingType, fieldValues) =>
+                .UseRule(TableUsageMode.Default, (origName, fieldValues) =>
                 {
                     var tenantId = fieldValues[0] as string;
                     var createdAt = (DateTime)fieldValues[1];
                     return tenantId.Length >= 3 ? $"{origName}_{tenantId}_{createdAt:yyyyMM}" : origName;
                 }, "^sys_order_[1-9]\\d{3}(0[1-9]|1[0-2])$")
                 //时间分表，通常都是支持范围查询
-                .UseRangeRule((origName, fieldValues) =>
+                .UseRangeRule(TableUsageMode.Default, (origName, fieldValues) =>
                 {
                     var tenantId = fieldValues[0] as string;
                     var beginTime = (DateTime)fieldValues[1];
@@ -41,14 +41,14 @@ public class TableShardingConfiguration : ITableShardingConfiguration
             //按照租户+时间分表
             .Table<OrderDetail>(t => t
                 .DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
-                .UseRule((origName, fieldValues) =>
+                .UseRule(TableUsageMode.Default, (origName, fieldValues) =>
                 {
                     var tenantId = fieldValues[0] as string;
                     var createdAt = (DateTime)fieldValues[1];
                     return tenantId.Length >= 3 ? $"{origName}_{tenantId}_{createdAt:yyyyMM}" : origName;
                 }, "^sys_order_detail_[1-9]\\d{3}(0[1-9]|1[0-2])$")
                 //时间分表，通常都是支持范围查询
-                .UseRangeRule((origName, fieldValues) =>
+                .UseRangeRule(TableUsageMode.Default, (origName, fieldValues) =>
                 {
                     var tenantId = fieldValues[0] as string;
                     var beginTime = (DateTime)fieldValues[1];
@@ -77,7 +77,74 @@ public class TableShardingConfiguration : ITableShardingConfiguration
             ////按照Id字段哈希取模分表
             //.Table(t => t.DependOn(d => d.Id).UseRule((origName, id) => $"{origName}_{HashCode.Combine(id) % 5}", "^sys_order_\\S{24}$"))
             //按照租户ID分表
-            .Table<User>(t => t.DependOn(d => d.TenantId).UseRule((origName, fieldValues) =>
+            .Table<User>(t => t.DependOn(d => d.TenantId).UseRule(TableUsageMode.Default, (origName, fieldValues) =>
+            {
+                var tenantId = fieldValues[0] as string;
+                return tenantId.Length >= 3 ? $"{origName}_{tenantId}" : origName;
+            }, "^sys_user_[1-9]\\d{3}$"));
+    }
+}
+public class MultiTableShardingConfiguration : ITableShardingConfiguration
+{
+    public void Configure(TableShardingBuilder builder)
+    {
+        //按照租户+时间分表
+        builder
+            .Table<Order>(t => t
+                .DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
+                //写表是租户+时间分表
+                .UseRule(TableUsageMode.WriteOnly, (origName, fieldValues) =>
+                {
+                    var tenantId = fieldValues[0] as string;
+                    var createdAt = (DateTime)fieldValues[1];
+                    return tenantId.Length >= 3 ? $"{origName}_{tenantId}_{createdAt:yyyyMM}" : origName;
+                }, "^sys_order_[1-9]\\d{3}(0[1-9]|1[0-2])$")
+                //读表是归档表
+                .UseRule(TableUsageMode.ReadOnly, origName => $"{origName}_arc")
+                //时间分表，通常都是支持范围查询
+                .UseRangeRule(TableUsageMode.WriteOnly, (origName, fieldValues) =>
+                {
+                    var tenantId = fieldValues[0] as string;
+                    var beginTime = (DateTime)fieldValues[1];
+                    var endTime = (DateTime)fieldValues[2];
+                    var tableNames = new List<string>();
+                    var current = beginTime.AddDays(1 - beginTime.Day);
+                    while (current <= endTime)
+                    {
+                        var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
+                        if (tableNames.Contains(tableName))
+                        {
+                            current = current.AddMonths(1);
+                            continue;
+                        }
+                        tableNames.Add(tableName);
+                        current = current.AddMonths(1);
+                    }
+                    return tableNames;
+                })
+                .UseRangeRule(TableUsageMode.ReadOnly, (origName, fieldValues) => [$"{origName}_arc"]))
+            //按照租户+时间分表
+            .Table<OrderDetail>(t => t
+                .DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
+                .UseRule(TableUsageMode.WriteOnly, (origName, fieldValues) =>
+                {
+                    var tenantId = fieldValues[0] as string;
+                    var createdAt = (DateTime)fieldValues[1];
+                    return tenantId.Length >= 3 ? $"{origName}_{tenantId}_{createdAt:yyyyMM}" : origName;
+                }, "^sys_order_detail_[1-9]\\d{3}(0[1-9]|1[0-2])$")
+                //读表是归档表
+                .UseRule(TableUsageMode.ReadOnly, origName => $"{origName}_arc")
+                //时间分表，通常都是支持范围查询
+                .UseRangeRule(TableUsageMode.ReadOnly, (origName, fieldValues) => [$"{origName}_arc"]))
+            //按租户分表
+            //.Table<User>(t => t.DependOn(d => d.TenantId).UseRule((origName, fieldValues) => $"{origName}_{fieldValues[0]}", "^sys_order_\\d{1,4}$"))
+            ////按照Id字段分表，Id字段是带有时间属性的ObjectId
+            //.Table(t => t.DependOn(d => d.Id).UseRule((origName, id) => $"{origName}_{ObjectId.Parse(id).CreationTime:yyyyMM}", "^sys_order_[1-9]\\d{3}$"))
+            ////按照Id字段哈希取模分表
+            //.Table(t => t.DependOn(d => d.Id).UseRule((origName, id) => $"{origName}_{HashCode.Combine(id) % 5}", "^sys_order_\\S{24}$"))
+            //按照租户ID分表
+            .Table<User>(t => t.DependOn(d => d.TenantId)
+            .UseRule(TableUsageMode.Default, (origName, fieldValues) =>
             {
                 var tenantId = fieldValues[0] as string;
                 return tenantId.Length >= 3 ? $"{origName}_{tenantId}" : origName;

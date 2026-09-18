@@ -28,22 +28,22 @@ public class Update : DialectProvider, IUpdate
     #region Sharding
     public virtual IUpdate UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(TableShardingType.WriteOnly, false, tableNames);
+        this.Visitor.UseTable(TableUsageMode.WriteOnly, false, tableNames);
         return this;
     }
     public virtual IUpdate UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableShardingType.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IUpdate UseTable(Func<object, string> tableNameGetter)
     {
-        this.Visitor.UseTable(TableShardingType.WriteOnly, tableNameGetter);
+        this.Visitor.UseTable(TableUsageMode.WriteOnly, tableNameGetter);
         return this;
     }
     public virtual IUpdate UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(TableShardingType.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     #endregion
@@ -1237,22 +1237,22 @@ public class UpdateJoin<TEntity, T1> : Updated, IUpdateJoin<TEntity, T1>
     #region Sharding
     public virtual IUpdateJoin<TEntity, T1> UseTable(string tableName)
     {
-        this.Visitor.UseTable(TableShardingType.WriteOnly, false, tableName);
+        this.Visitor.UseTable(TableUsageMode.WriteOnly, false, tableName);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableShardingType.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(TableShardingType.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(TableShardingType.WriteOnly, false, tableNameGetter);
+        this.Visitor.UseTableMap(TableUsageMode.WriteOnly, false, tableNameGetter);
         return this;
     }
     #endregion
@@ -1434,22 +1434,22 @@ public class UpdateJoin<TEntity, T1, T2> : Updated, IUpdateJoin<TEntity, T1, T2>
     #region Sharding
     public virtual IUpdateJoin<TEntity, T1, T2> UseTable(string tableName)
     {
-        this.Visitor.UseTable(TableShardingType.WriteOnly, false, tableName);
+        this.Visitor.UseTable(TableUsageMode.WriteOnly, false, tableName);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableShardingType.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(TableShardingType.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(TableShardingType.WriteOnly, false, tableNameGetter);
+        this.Visitor.UseTableMap(TableUsageMode.WriteOnly, false, tableNameGetter);
         return this;
     }
     #endregion
@@ -1631,22 +1631,22 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated, IUpdateJoin<TEntity, T1,
     #region Sharding
     public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTable(string tableName)
     {
-        this.Visitor.UseTable(TableShardingType.WriteOnly, false, tableName);
+        this.Visitor.UseTable(TableUsageMode.WriteOnly, false, tableName);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableShardingType.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(TableShardingType.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(TableShardingType.WriteOnly, false, tableNameGetter);
+        this.Visitor.UseTableMap(TableUsageMode.WriteOnly, false, tableNameGetter);
         return this;
     }
     #endregion
@@ -1828,22 +1828,22 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated, IUpdateJoin<TEntity,
     #region Sharding
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTable(string tableName)
     {
-        this.Visitor.UseTable(TableShardingType.WriteOnly, false, tableName);
+        this.Visitor.UseTable(TableUsageMode.WriteOnly, false, tableName);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableShardingType.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(TableShardingType.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(TableShardingType.WriteOnly, false, tableNameGetter);
+        this.Visitor.UseTableMap(TableUsageMode.WriteOnly, false, tableNameGetter);
         return this;
     }
     #endregion
@@ -2025,22 +2025,22 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated, IUpdateJoin<TEnt
     #region Sharding
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTable(string tableName)
     {
-        this.Visitor.UseTable(TableShardingType.WriteOnly, false, tableName);
+        this.Visitor.UseTable(TableUsageMode.WriteOnly, false, tableName);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableShardingType.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(TableShardingType.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(TableShardingType.WriteOnly, false, tableNameGetter);
+        this.Visitor.UseTableMap(TableUsageMode.WriteOnly, false, tableNameGetter);
         return this;
     }
     #endregion

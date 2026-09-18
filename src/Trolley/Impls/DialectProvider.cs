@@ -1219,7 +1219,7 @@ public class DialectProvider
     #endregion
 
     #region GetShardingTable
-    public string GetShardingTable(Type entityType, params object[] fieldValues)
+    public string GetShardingTable(TableUsageMode usageMode, Type entityType, params object[] fieldValues)
     {
         if (fieldValues == null || fieldValues.Length == 0)
             throw new ArgumentNullException(nameof(fieldValues), "参数fieldValues不能为null或是空元素");
@@ -1227,7 +1227,8 @@ public class DialectProvider
             throw new InvalidOperationException($"实体表{entityType.FullName}没有配置分表，无需调用此方法");
         if (!this.entityMapProvider.TryGetEntityMap(entityType, out var entityMap))
             throw new InvalidOperationException($"实体表{entityType.FullName}没有配置映射关系，无法获取分表信息");
-        return shardingTableInfo.Rule.Invoke(entityMap.TableName, fieldValues);
+        if (fieldValues == null) return shardingTableInfo.Rules[usageMode].Rule.DynamicInvoke(entityMap.TableName) as string;
+        return shardingTableInfo.Rules[usageMode].Rule.DynamicInvoke(entityMap.TableName, fieldValues) as string;
     }
     #endregion
 

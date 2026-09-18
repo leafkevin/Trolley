@@ -19,17 +19,17 @@ public class Delete : Deleted, IDelete
     #region Sharding
     public virtual IDelete UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(TableShardingType.WriteOnly, false, tableNames);
+        this.Visitor.UseTable(TableUsageMode.WriteOnly, false, tableNames);
         return this;
     }
     public virtual IDelete UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableShardingType.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IDelete UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(TableShardingType.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     #endregion

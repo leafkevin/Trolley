@@ -34,7 +34,12 @@ public class MultipleQuery : DialectProvider, IMultipleQuery
     #region GetShardingTableName
     public virtual IMultipleQuery GetShardingTableName<TEntity>(params object[] fieldValues)
     {
-        this.GetShardingTable(typeof(TEntity), fieldValues);
+        this.GetShardingTable(TableUsageMode.WriteOnly, typeof(TEntity), fieldValues);
+        return this;
+    }
+    public virtual IMultipleQuery GetShardingTableName<TEntity>(TableUsageMode usageMode, params object[] fieldValues)
+    {
+        this.GetShardingTable(usageMode, typeof(TEntity), fieldValues);
         return this;
     }
     #endregion

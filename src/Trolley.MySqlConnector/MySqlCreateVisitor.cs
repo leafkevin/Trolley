@@ -270,7 +270,7 @@ public class MySqlCreateVisitor : CreateVisitor
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, insertObjType, insertObjs, firstInsertObj, this.ShardingValues);
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, TableUsageMode.WriteOnly, insertObjType, insertObjs, firstInsertObj, this.ShardingValues);
             }
         }
         string tailSql = null;
@@ -491,7 +491,7 @@ public class MySqlCreateVisitor : CreateVisitor
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, insertObjType, insertObjs, firstInsertObj, this.ShardingValues);
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, TableUsageMode.WriteOnly, insertObjType, insertObjs, firstInsertObj, this.ShardingValues);
             }
         }
         (var memberMappers, var valueGetters) = this.GetRefMemberMappers(insertObjType, tableSegment.Mapper, firstInsertObj, false);

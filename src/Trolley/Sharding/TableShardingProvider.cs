@@ -7,17 +7,26 @@ namespace Trolley;
 
 public class TableShardingProvider : ITableShardingProvider
 {
-    private ConcurrentDictionary<Type, ConcurrentDictionary<TableShardingType, TableShardingInfo>> tableShardingProviders = new();
+    private ConcurrentDictionary<Type, TableShardingInfo> tableShardingProviders = new();
+    private ConcurrentDictionary<Type, ConcurrentDictionary<TableUsageMode, TableRuleInfo>> tableRuleProviders = new();
     public ICollection<TableShardingInfo> TableShardings { get; private set; }
-    public bool TryGetTableSharding(Type entityType, TableShardingType shardingType, out TableShardingInfo tableShardingInfo)
+    public bool TryGetTableSharding(Type entityType, out TableShardingInfo tableShardingInfo)
+        => this.tableShardingProviders.TryGetValue(entityType, out tableShardingInfo);
+    public void AddTableSharding(Type entityType, TableShardingInfo tableShardingInfo)
+        => this.tableShardingProviders.TryAdd(entityType, tableShardingInfo);
+    public bool TryGetTableRule(Type entityType, TableUsageMode usageMode, out TableRuleInfo tableRuleInfo)
     {
-        var myTableShardingProviders = this.tableShardingProviders.GetOrAdd(entityType, f => new());
-        return myTableShardingProviders.TryGetValue(shardingType, out tableShardingInfo);
+        var myTableRuleProviders = this.tableRuleProviders.GetOrAdd(entityType, f => new());
+        return myTableRuleProviders.TryGetValue(usageMode, out tableRuleInfo);
     }
-    public void AddTableSharding(Type entityType, TableShardingType shardingType, TableShardingInfo tableShardingInfo)
+    public void AddTableRule(Type entityType, TableUsageMode usageMode, TableRuleInfo tableRuleInfo)
     {
-        var myTableShardingProviders = this.tableShardingProviders.GetOrAdd(entityType, f => new());
-        myTableShardingProviders.TryAdd(shardingType, tableShardingInfo);
+        var myTableRuleProviders = this.tableRuleProviders.GetOrAdd(entityType, f => new());
+        if (myTableRuleProviders.TryAdd(usageMode, tableRuleInfo))
+        {
+            if (this.TryGetTableSharding(entityType, out var tableShardingInfo))
+                tableShardingInfo.Rules[usageMode] = tableRuleInfo;
+        }
     }
-    internal void Build() => this.TableShardings = this.tableShardingProviders.Values.SelectMany(f => f.Values).ToList();
+    public void Build() => this.TableShardings = this.tableShardingProviders.Values.ToList();
 }

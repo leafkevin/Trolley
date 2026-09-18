@@ -245,17 +245,17 @@ public class Query<T> : QueryBase, IQuery<T>
     #region Sharding
     public virtual IQuery<T> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(TableShardingType.ReadOnly, false, tableNames);
+        this.Visitor.UseTable(TableUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IQuery<T> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableShardingType.ReadOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(TableShardingType.ReadOnly, false, fieldValues);
+        this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<T> UseUnionShardingTable()

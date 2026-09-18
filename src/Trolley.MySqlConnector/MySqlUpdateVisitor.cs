@@ -160,7 +160,7 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, updateObjType, updateObjs, firstUpdateObj, this.ShardingValues);
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, TableUsageMode.WriteOnly, updateObjType, updateObjs, firstUpdateObj, this.ShardingValues);
             }
         }
         return (shardingType, shardingTables, updateObjs, bulkCount, firstSqlSetter, loopSqlSetter, null);
@@ -194,7 +194,7 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             else
             {
                 shardingType = ShardingTableType.SplitTables;
-                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, updateObjType, updateObjs, firstUpdateObj, this.ShardingValues);
+                shardingTables = this.SplitShardingParameters(tableSegment.TableShardingInfo, TableUsageMode.WriteOnly, updateObjType, updateObjs, firstUpdateObj, this.ShardingValues);
             }
         }
         (var memberMappers, var valueGetters) = this.GetRefMemberMappers(updateObjType, entityMapper, firstUpdateObj, true);

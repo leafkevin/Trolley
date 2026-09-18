@@ -98,22 +98,22 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #region Sharding
     public virtual IMultiQuery<T> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(TableShardingType.ReadOnly, false, tableNames);
+        this.Visitor.UseTable(TableUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IMultiQuery<T> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(TableShardingType.ReadOnly, false, tableNameGetter);
+        this.Visitor.UseTableMap(TableUsageMode.ReadOnly, false, tableNameGetter);
         return this;
     }
     public virtual IMultiQuery<T> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableShardingType.ReadOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IMultiQuery<T> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(TableShardingType.ReadOnly, false, fieldValues);
+        this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IMultiQuery<T> UseUnionShardingTable()

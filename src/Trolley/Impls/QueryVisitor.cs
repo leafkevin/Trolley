@@ -720,7 +720,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 IsMaster = true
             };
             this.AddTable(tableSegment);
-            if (this.TryGetTableShardingInfo(entityType, TableShardingType.ReadOnly, out var tableShardingInfo))
+            if (this.TryGetTableShardingInfo(entityType, out var tableShardingInfo))
                 tableSegment.TableShardingInfo = tableShardingInfo;
         }
     }
@@ -740,7 +740,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 IsMaster = true
             };
             this.AddTable(tableSegment);
-            if (this.TryGetTableShardingInfo(entityType, TableShardingType.ReadOnly, out var tableShardingInfo))
+            if (this.TryGetTableShardingInfo(entityType, out var tableShardingInfo))
                 tableSegment.TableShardingInfo = tableShardingInfo;
         }
     }

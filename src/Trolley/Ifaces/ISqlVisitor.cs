@@ -12,11 +12,11 @@ public interface ISqlVisitor : IDisposable
     bool IsSelect { get; }
     bool IsWhere { get; }
 
-    void UseTable(TableShardingType usageMode, bool isIncludeMany, params string[] tableNames);
-    void UseTableByRange(TableShardingType usageMode, bool isIncludeMany, object[] fieldValues);
-    void UseTableMap(TableShardingType usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter);
-    void UseTableBy(TableShardingType usageMode, bool isIncludeMany, params object[] fieldValues);
-    void UseTable(TableShardingType usageMode, Func<object, string> tableNameGetter);
+    void UseTable(TableUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
+    void UseTableByRange(TableUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
+    void UseTableMap(TableUsageMode usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter);
+    void UseTableBy(TableUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
+    void UseTable(TableUsageMode usageMode, Func<object, string> tableNameGetter);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
     SqlSegment Visit(SqlSegment sqlSegment);

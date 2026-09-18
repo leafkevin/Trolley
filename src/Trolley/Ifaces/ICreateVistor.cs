@@ -30,9 +30,9 @@ public interface ICreateVisitor : ICommandVisitor, IDisposable
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<ReaderField>) BuildWithBulk(ITheaCommand command);
 
     IQueryVisitor CreateQueryVisitor(char? tableAsStart = null);
-    void UseTable(TableShardingType usageMode, bool isIncludeMany, params string[] tableNames);
-    void UseTableBy(TableShardingType usageMode, bool isIncludeMany, params object[] fieldValues);
-    void UseTable(TableShardingType usageMode, Func<object, string> tableNameGetter);
+    void UseTable(TableUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
+    void UseTableBy(TableUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
+    void UseTable(TableUsageMode usageMode, Func<object, string> tableNameGetter);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
     void WithTableAliasTrailing(bool isIncludeMany, string rawSql);
 
@@ -46,5 +46,5 @@ public interface ICreateVisitor : ICommandVisitor, IDisposable
 
     DataTable ToDataTable(string tableName, IEnumerable entities, List<MemberMap> memberMappers, List<Func<object, object>> valueGetters);
     (List<MemberMap>, List<Func<object, object>>) GetRefMemberMappers(Type parameterType, EntityMap entityMapper, object parameterSample, bool isUpdate = false);
-    Dictionary<string, List<object>> SplitShardingParameters(TableShardingInfo tableShardingInfo, Type paramterType, IEnumerable parameters, object parameterSample, IDictionary<string, object> shardingValues);
+    Dictionary<string, List<object>> SplitShardingParameters(TableShardingInfo tableShardingInfo, TableUsageMode usageMode, Type paramterType, IEnumerable parameters, object parameterSample, IDictionary<string, object> shardingValues);
 }

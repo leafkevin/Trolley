@@ -22,39 +22,42 @@ public class UnitTest6 : UnitTestBase
         var connectionString1 = "Server=localhost;Database=fengling1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
         var connectionString2 = "Server=localhost;Database=fengling2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
         var builder = new OrmDbFactoryBuilder()
-            //数据库：多租户，不分读写; 表：有单独分表
-            .Register(OrmProviderType.MySql, "mta", f => f.Use([connectionString, connectionString1, connectionString2], values =>
+            //使用不同的dbKey，切换不同的应用场景，每一个dbKey，就是一个应用场景
+            //数据库：多租户，不分读写，多写多读，表：有单独分表
+            .Register("mta", OrmProviderType.MySql, f => f.Use([connectionString, connectionString1, connectionString2], values =>
                 {
                     var tenantId = (int)values[0];
                     if (tenantId > 3) tenantId = 3;
+                    //每个租户有三个写数据库，轮询使用写库
                     var connectionStrings = new Dictionary<int, string[]>()
                     {
                         { 1, [connectionString, connectionString1, connectionString2] },
                         { 2, [connectionString, connectionString1, connectionString2] },
                         { 3, [connectionString, connectionString1, connectionString2] }
                     };
-                    int index = Interlocked.Increment(ref robinIndices[tenantId]) % 3;
-                    if (Volatile.Read(ref robinIndices[tenantId]) >= int.MaxValue - 1000)
-                        Interlocked.Exchange(ref robinIndices[tenantId], 0);
-                    return connectionStrings[tenantId][index];
+                    int index = Interlocked.Increment(ref robinIndices[tenantId]);
+                    if (index >= 1000) Interlocked.Exchange(ref robinIndices[tenantId], 0);
+                    return connectionStrings[tenantId][index % 3];
                 })
-                .UseTableSharding<TableShardingConfiguration>())
-            //数据库：多租户，分读写; 表：使用最外层类型分表
-            .Register(OrmProviderType.MySql, "mtwr", f => f.Use([connectionString, connectionString1, connectionString2], values =>
+                .UseSlave([connectionString1, connectionString2, connectionString2], values =>
                 {
                     var tenantId = (int)values[0];
                     if (tenantId > 3) tenantId = 3;
+                    //每个租户又有三个读数据库，轮询使用读库
                     var connectionStrings = new Dictionary<int, string[]>()
                     {
                         { 1, [connectionString, connectionString1, connectionString2] },
                         { 2, [connectionString, connectionString1, connectionString2] },
                         { 3, [connectionString, connectionString1, connectionString2] }
                     };
-                    int index = Interlocked.Increment(ref robinIndices[tenantId]) % 3;
-                    if (Volatile.Read(ref robinIndices[tenantId]) >= int.MaxValue - 1000)
-                        Interlocked.Exchange(ref robinIndices[tenantId], 0);
-                    return connectionStrings[tenantId][index];
+                    int index = Interlocked.Increment(ref robinIndices[tenantId]);
+                    if (index >= 1000) Interlocked.Exchange(ref robinIndices[tenantId], 0);
+                    return connectionStrings[tenantId][index % 3];
                 })
+                //单独分表规则，写表是分表，读表是归档表
+                .UseTableSharding<MultiTableShardingConfiguration>())
+            //数据库：多租户，分读写，单写多读 表：使用最外层类型分表
+            .Register("mtwr", OrmProviderType.MySql, f => f.Use(connectionString)
                 .UseSlave([connectionString1, connectionString2], values =>
                 {
                     var tenantId = (int)values[0];
@@ -64,25 +67,39 @@ public class UnitTest6 : UnitTestBase
                         { 1, [connectionString, connectionString1, connectionString2] },
                         { 2, [connectionString, connectionString1, connectionString2] }
                     };
-                    int index = Interlocked.Increment(ref robinIndices[tenantId]) % 2;
-                    if (Volatile.Read(ref robinIndices[tenantId]) >= int.MaxValue - 1000)
-                        Interlocked.Exchange(ref robinIndices[tenantId], 0);
-                    return connectionStrings[tenantId][index];
+                    int index = Interlocked.Increment(ref robinIndices[tenantId]);
+                    if (index >= 1000) Interlocked.Exchange(ref robinIndices[tenantId], 0);
+                    return connectionStrings[tenantId][index % 2];
                 }))
-            //数据库：不分租户，分读写; 表：使用最外层类型分表
-            .Register(OrmProviderType.MySql, "swr", f => f.Use([connectionString], values => connectionString)
+            //数据库：单独租户st1，分读写，单写双读，表：使用最外层类型分表
+            .Register("st1", OrmProviderType.MySql, f => f.Use(connectionString)
                 .UseSlave([connectionString1, connectionString2], values =>
                 {
                     string[] connectionStrings = [connectionString1, connectionString2];
-                    int index = Interlocked.Increment(ref robinIndex) % 2;
-                    if (Volatile.Read(ref robinIndex) >= int.MaxValue - 1000)
-                        Interlocked.Exchange(ref robinIndex, 0);
-                    return connectionStrings[index];
+                    int index = Interlocked.Increment(ref robinIndex);
+                    if (index >= 1000) Interlocked.Exchange(ref robinIndex, 0);
+                    return connectionStrings[index % 2];
                 }))
-            //数据库：不分租户，不分读写，单库
-            .Register(OrmProviderType.MySql, "sdb", f => f.Use(connectionString))
+            //数据库：单独租户st2，不分读写，存单库，表：使用最外层类型分表
+            .Register("st2", OrmProviderType.MySql, f => f.Use(connectionString))
+            //数据库：不分租户，分读写，单写双读 表：使用最外层类型分表
+            .Register("swr", OrmProviderType.MySql, f => f.Use([connectionString], values => connectionString)
+                .UseSlave([connectionString1, connectionString2], values =>
+                {
+                    string[] connectionStrings = [connectionString1, connectionString2];
+                    int index = Interlocked.Increment(ref robinIndex);
+                    if (index >= 1000) Interlocked.Exchange(ref robinIndex, 0);
+                    return connectionStrings[index % 2];
+                }))
+            //数据库：不分租户，不分读写，存单库
+            .Register("sdb", OrmProviderType.MySql, f => f.Use(connectionString))
             .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
+            //全局分表规则设置，也可以在各个dbKey中单独设置，根据后面的参数确定
+            //参数是OrmProviderType类型，就是这个OrmProviderType类型数据库全局生效，参数string dbKey，就是这个dbKey生效
+            //MySql类型数据库，分表规则生效，按照租户、租户+时间等分表，不分读写表
             .UseTableSharding<TableShardingConfiguration>(OrmProviderType.MySql)
+            //PostgreSql类型数据库，分表规则生效
+            .UseTableSharding<TableShardingConfiguration>(OrmProviderType.PostgreSql)
             .UseInterceptor<MyDbInterceptor>();
         this.dbFactory = builder.Build();
         this.Initialize(1);

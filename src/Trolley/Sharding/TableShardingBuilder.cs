@@ -31,16 +31,15 @@ public class TableShardingBuilder<TEntity>
 {
     private readonly Type entityType = typeof(TEntity);
     private readonly ITableShardingProvider shardingProvider = null;
-    private readonly Dictionary<TableShardingType, TableShardingInfo> shardingTableInfos = null;
+    private readonly TableShardingInfo shardingTableInfo = null;
     public TableShardingBuilder(ITableShardingProvider tableShardingProvider)
     {
         this.shardingProvider = tableShardingProvider;
-        if (!shardingProvider.TryGetTableSharding(entityType, out this.shardingTableInfos))
+        if (!shardingProvider.TryGetTableSharding(entityType, out this.shardingTableInfo))
         {
-            this.shardingProvider.AddTableSharding(entityType, this.shardingTableInfos = new TableShardingInfo
+            this.shardingProvider.AddTableSharding(entityType, this.shardingTableInfo = new TableShardingInfo
             {
-                EntityType = entityType,
-                UsageMode = TableShardingType.Default
+                EntityType = entityType
             });
         }
     }
@@ -59,42 +58,44 @@ public class TableShardingBuilder<TEntity>
 
         var memberExpr = fieldSelector.Body as MemberExpression;
         var memberName = memberExpr.Member.Name;
-        this.shardingTableInfos.DependOnMembers ??= new();
-        this.shardingTableInfos.DependOnMembers.Add(memberName);
+        this.shardingTableInfo.DependOnMembers ??= new();
+        this.shardingTableInfo.DependOnMembers.Add(memberName);
         return this;
     }
     /// <summary>
     /// 设置分表规则，不依赖任何参数值和字段值，只用于读写分表。
     /// </summary>
-    /// <param name="shardingType">读写类型</param>
+    /// <param name="usageMode">读写模式</param>
     /// <param name="tableNameGetter">分表名获取委托</param>
     /// <returns></returns>
     /// <exception cref="ArgumentNullException"></exception>
-    public TableShardingBuilder<TEntity> UseRule(TableShardingType shardingType, Func<string, string> tableNameGetter)
+    public TableShardingBuilder<TEntity> UseRule(TableUsageMode usageMode, Func<string, string> tableNameGetter)
     {
         if (tableNameGetter == null)
             throw new ArgumentNullException(nameof(tableNameGetter));
 
-        this.shardingTableInfos.Rule = tableNameGetter;
+        var tableRuleInfo = this.GetTableRule(usageMode);
+        tableRuleInfo.Rule = tableNameGetter;
         return this;
     }
     /// <summary>
     /// 设置分表规则和分表名称验证正则表达式，需要提供额外依赖参数值才能获取分表名称，需要手动传入参数值，可用于时间、商户...+读写复杂分表，必须提供分表名验证规则
     /// </summary>
-    /// <param name="shardingType">读写类型</param>
+    /// <param name="usageMode">读写模式</param>
     /// <param name="tableNameGetter">分表名获取委托</param>
     /// <param name="validateRegex">分表名验证规则</param>
     /// <returns></returns>
     /// <exception cref="ArgumentNullException"></exception>
-    public TableShardingBuilder<TEntity> UseRule(TableShardingType shardingType, Func<string, object[], string> tableNameGetter, string validateRegex)
+    public TableShardingBuilder<TEntity> UseRule(TableUsageMode usageMode, Func<string, object[], string> tableNameGetter, string validateRegex)
     {
         if (tableNameGetter == null)
             throw new ArgumentNullException(nameof(tableNameGetter));
         if (string.IsNullOrEmpty(validateRegex))
             throw new ArgumentNullException(nameof(validateRegex));
 
-        this.shardingTableInfos.Rule = tableNameGetter;
-        this.shardingTableInfos.ValidateRegex = validateRegex;
+        var tableRuleInfo = this.GetTableRule(usageMode);
+        tableRuleInfo.Rule = tableNameGetter;
+        tableRuleInfo.ValidateRegex = validateRegex;
         return this;
     }
     /// <summary>
@@ -123,13 +124,28 @@ public class TableShardingBuilder<TEntity>
     /// <param name="tableNamesGetter">分表名获取委托</param>
     /// <returns></returns>
     /// <exception cref="ArgumentNullException"></exception>
-    public TableShardingBuilder<TEntity> UseRangeRule(Func<string, object[], List<string>> tableNamesGetter)
+    public TableShardingBuilder<TEntity> UseRangeRule(TableUsageMode usageMode, Func<string, object[], List<string>> tableNamesGetter)
     {
         if (tableNamesGetter == null)
             throw new ArgumentNullException(nameof(tableNamesGetter));
-        this.shardingTableInfos.RangleRule = tableNamesGetter;
+        var tableRuleInfo = this.GetTableRule(usageMode);
+        tableRuleInfo.RangleRule = tableNamesGetter;
         return this;
     }
-    public void UseMode(TableShardingType usageMode = TableShardingType.Default)
-        => this.shardingTableInfos.UsageMode = usageMode;
+    private TableRuleInfo GetTableRule(TableUsageMode usageMode)
+    {
+        TableRuleInfo tableRuleInfo = null;
+        if (usageMode == TableUsageMode.Default)
+        {
+            if (!this.shardingProvider.TryGetTableRule(this.entityType, TableUsageMode.WriteOnly, out tableRuleInfo))
+                this.shardingProvider.AddTableRule(this.entityType, TableUsageMode.WriteOnly, tableRuleInfo = new TableRuleInfo());
+            this.shardingProvider.AddTableRule(this.entityType, TableUsageMode.ReadOnly, tableRuleInfo);
+        }
+        else
+        {
+            if (!this.shardingProvider.TryGetTableRule(this.entityType, usageMode, out tableRuleInfo))
+                this.shardingProvider.AddTableRule(this.entityType, usageMode, tableRuleInfo = new TableRuleInfo());
+        }
+        return tableRuleInfo;
+    }
 }
