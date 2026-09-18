@@ -173,7 +173,8 @@ public sealed class OrmDatabaseBuilder
         return this;
     }
     /// <summary>
-    /// 设置1个或多个主库连接串，同时设置连接串选择器，适用于多分库、多租户、多租户分库场景
+    /// 设置1个或多个主库连接串，同时设置连接串选择器，适用于多写主库、多租户、多租户多写主库场景，委托的第一个参数值是依赖的参数值数据，比如：租户ID，租户Id+时间，...等object[]数据
+    /// 如果传入的第一个参数为空数组，请返回默认的主写库连接串，如：在开始事务时，没有指定主库连接串，则无法开启事务。
     /// </summary>
     /// <param name="connectionStrings"></param>
     /// <param name="connectionStringSelector"></param>
@@ -194,7 +195,8 @@ public sealed class OrmDatabaseBuilder
         return this;
     }
     /// <summary>
-    /// 设置1个或多个从库连接串，同时设置连接串选择器，适用于多从库、多租户多从库分库场景
+    /// 设置1个或多个从库连接串，同时设置连接串选择器，适用于多从库、多租户多从库分库场景，委托的第一个参数值是依赖的参数值数据，比如：租户ID，租户Id+时间，...等object[]数据
+    /// 如果传入的第一个参数为空数组，请返回默认的从库连接串。
     /// </summary>
     /// <param name="connectionStrings"></param>
     /// <param name="connectionStringSelector"></param>

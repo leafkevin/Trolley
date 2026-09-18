@@ -1228,8 +1228,7 @@ public class DialectProvider
             throw new InvalidOperationException($"实体表{entityType.FullName}没有配置分表，无需调用此方法");
         if (!this.entityMapProvider.TryGetEntityMap(entityType, out var entityMap))
             throw new InvalidOperationException($"实体表{entityType.FullName}没有配置映射关系，无法获取分表信息");
-        if (fieldValues == null) return shardingTableInfo.Rules[usageMode].Rule.DynamicInvoke(entityMap.TableName) as string;
-        return shardingTableInfo.Rules[usageMode].Rule.DynamicInvoke(entityMap.TableName, fieldValues) as string;
+        return shardingTableInfo.Rules[usageMode].Rule.Invoke(entityMap.TableName, fieldValues);
     }
     #endregion
 

@@ -201,8 +201,7 @@ public class SqlVisitor : ISqlVisitor
             return;
 
         var origTableName = tableSegment.Mapper.TableName;
-        var tableNames = tableShardingInfo.Rules[usageMode].RangleRule
-            .DynamicInvoke(origTableName, fieldValues) as List<string>;
+        var tableNames = tableShardingInfo.Rules[usageMode].RangleRule.Invoke(origTableName, fieldValues);
         if (tableNames == null || tableNames.Count == 0)
             throw new Exception($"没有搜索到满足条件的{tableSegment.Mapper.TableName}分表");
         this.ShardingTables ??= new();

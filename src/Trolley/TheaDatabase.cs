@@ -38,7 +38,7 @@ public sealed class TheaDatabase
     {
         if (this.ConnectionStringSelector == null)
             throw new InvalidOperationException("主库连接串选择器未设置");
-        return this.ConnectionStringSelector.Invoke(selectorValues) as string;
+        return this.ConnectionStringSelector.Invoke(selectorValues);
     }
     public void UseSlave(params string[] connectionStrings)
     {
@@ -58,7 +58,7 @@ public sealed class TheaDatabase
     {
         if (this.SlaveConnectionStringSelector == null)
             throw new InvalidOperationException("从库连接串选择器未设置");
-        return this.SlaveConnectionStringSelector.Invoke(selectorValues) as string;
+        return this.SlaveConnectionStringSelector.Invoke(selectorValues);
     }
     public void UseOrmProvider(IOrmProvider ormProvider)
     {
@@ -94,18 +94,9 @@ public sealed class TheaDatabase
             {
                 this.ConnectionStringSelector = values =>
                 {
-                    int index = 0;
-                    unchecked
-                    {
-                        index = Interlocked.Increment(ref this.masterRoundRobin);
-                        // 溢出时为负数，重置为0
-                        if (index < 0)
-                        {
-                            Interlocked.Exchange(ref this.masterRoundRobin, 0);
-                            index = 0;
-                        }
-                    }
-                    return this.ConnectionStrings[index %= this.ConnectionStrings.Count];
+                    var index = Interlocked.Increment(ref this.masterRoundRobin);
+                    if (index > 1000) Interlocked.Exchange(ref this.masterRoundRobin, 0);
+                    return this.ConnectionStrings[index % this.ConnectionStrings.Count];
                 };
             }
         }
@@ -122,18 +113,9 @@ public sealed class TheaDatabase
         {
             this.SlaveConnectionStringSelector = values =>
             {
-                int index = 0;
-                unchecked
-                {
-                    index = Interlocked.Increment(ref this.slaveRoundRobin);
-                    // 溢出时为负数，重置为0
-                    if (index < 0)
-                    {
-                        Interlocked.Exchange(ref this.slaveRoundRobin, 0);
-                        index = 0;
-                    }
-                }
-                return this.SlaveConnectionStrings[index %= this.SlaveConnectionStrings.Count];
+                var index = Interlocked.Increment(ref this.slaveRoundRobin);
+                if (index > 1000) Interlocked.Exchange(ref this.slaveRoundRobin, 0);
+                return this.SlaveConnectionStrings[index % this.SlaveConnectionStrings.Count];
             };
         }
     }

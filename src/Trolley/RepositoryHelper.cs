@@ -1060,8 +1060,7 @@ public static class RepositoryHelper
         }
         var entityMapProvider = dbContext.EntityMapProvider;
         var entityMapper = entityMapProvider.GetEntityMap(tableShardingInfo.EntityType);
-        return tableShardingInfo.Rules[usageMode].Rule
-            .DynamicInvoke(entityMapper.TableName, fieldValues) as string;
+        return tableShardingInfo.Rules[usageMode].Rule.Invoke(entityMapper.TableName, fieldValues);
     }
     public static Func<object, string> BuildShardingTableNameGetter(DbContext dbContext, TableShardingInfo tableShardingInfo,
         TableUsageMode usageMode, Type entityType, Type parameterType, object parameterSample, IDictionary<string, object> shardingValues)
@@ -1094,8 +1093,7 @@ public static class RepositoryHelper
                     var fieldIndex = fieldMaps[itemKey];
                     fieldValues[fieldIndex] = dictParameter[itemKey];
                 }
-                return tableShardingInfo.Rules[usageMode].Rule
-                    .DynamicInvoke(origName, fieldValues) as string;
+                return tableShardingInfo.Rules[usageMode].Rule.Invoke(origName, fieldValues);
             };
         }
         else
