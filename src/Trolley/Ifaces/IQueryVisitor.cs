@@ -64,10 +64,10 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     string BuildShardingScalarSql(string formatSql);
     string BuildCteTableSql(string tableName, out List<ReaderField> readerFields);
 
-    void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
-    void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
-    void UseTableMap(TableShardingUsageMode usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter);
-    void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
+    void UseTable(TableShardingType usageMode, bool isIncludeMany, params string[] tableNames);
+    void UseTableByRange(TableShardingType usageMode, bool isIncludeMany, object[] fieldValues);
+    void UseTableMap(TableShardingType usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter);
+    void UseTableBy(TableShardingType usageMode, bool isIncludeMany, params object[] fieldValues);
     void UseUnionShardingTable();
     void UseTableSchema(bool isIncludeMany, string tableSchema);
     void WithTableAliasTrailing(bool isIncludeMany, string rawSql);

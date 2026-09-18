@@ -80,6 +80,15 @@ public static class Extensions
             return myEntityMapper;
         }
     }
+    extension(OrmDatabaseBuilder databaseBuilder)
+    {
+        public OrmDatabaseBuilder UseTableSharding<TTableShardingConfiguration>() where TTableShardingConfiguration : ITableShardingConfiguration, new()
+        {
+            databaseBuilder.UseTableSharding(new TTableShardingConfiguration());
+            return databaseBuilder;
+        }
+    }
+
     extension(Type type)
     {
 #if NETSTANDARD2_0

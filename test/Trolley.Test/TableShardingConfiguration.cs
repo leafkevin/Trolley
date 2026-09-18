@@ -11,7 +11,7 @@ public class TableShardingConfiguration : ITableShardingConfiguration
         builder
             .Table<Order>(t => t
                 .DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
-                .UseRule((origName, fieldValues) =>
+                .UseRule((origName, shardingType, fieldValues) =>
                 {
                     var tenantId = fieldValues[0] as string;
                     var createdAt = (DateTime)fieldValues[1];

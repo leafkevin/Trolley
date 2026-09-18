@@ -13,34 +13,77 @@ namespace Trolley.Test.MySqlConnector;
 public class UnitTest6 : UnitTestBase
 {
     private int[] robinIndices = [0, 0, 0];
+    private int robinIndex = 0;
 
     [SetUp]
     public void Setup()
     {
-        var connectionString = "Server=192.168.61.67;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
-        var connectionString1 = "Server=192.168.61.67;Database=fengling1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
-        var connectionString2 = "Server=192.168.61.67;Database=fengling2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+        var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+        var connectionString1 = "Server=localhost;Database=fengling1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+        var connectionString2 = "Server=localhost;Database=fengling2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
         var builder = new OrmDbFactoryBuilder()
-            .Register(OrmProviderType.MySql, "fengling", f => f.Use([connectionString, connectionString1, connectionString2], values =>
-            {
-                var tenantId = (int)values[0];
-                if (tenantId > 3) tenantId = 3;
-                var connectionStrings = new Dictionary<int, string[]>()
+            //数据库：多租户，不分读写; 表：有单独分表
+            .Register(OrmProviderType.MySql, "mta", f => f.Use([connectionString, connectionString1, connectionString2], values =>
                 {
+                    var tenantId = (int)values[0];
+                    if (tenantId > 3) tenantId = 3;
+                    var connectionStrings = new Dictionary<int, string[]>()
+                    {
                         { 1, [connectionString, connectionString1, connectionString2] },
                         { 2, [connectionString, connectionString1, connectionString2] },
                         { 3, [connectionString, connectionString1, connectionString2] }
-                };
-                int index = Interlocked.Increment(ref robinIndices[0]) % 3;
-                if (Volatile.Read(ref robinIndices[0]) >= int.MaxValue - 1000)
-                    Interlocked.Exchange(ref robinIndices[0], 0);
-                return connectionStrings[tenantId][Interlocked.Increment(ref robinIndices[0]) % 3];
-            }).UseSlave(connectionString1, connectionString2), true)
-            .Register(OrmProviderType.MySql, "fengling1", f => f.Use(connectionString1))
-            .Register(OrmProviderType.MySql, "fengling2", f => f.Use(connectionString2))
+                    };
+                    int index = Interlocked.Increment(ref robinIndices[tenantId]) % 3;
+                    if (Volatile.Read(ref robinIndices[tenantId]) >= int.MaxValue - 1000)
+                        Interlocked.Exchange(ref robinIndices[tenantId], 0);
+                    return connectionStrings[tenantId][index];
+                })
+                .UseTableSharding<TableShardingConfiguration>())
+            //数据库：多租户，分读写; 表：使用最外层类型分表
+            .Register(OrmProviderType.MySql, "mtwr", f => f.Use([connectionString, connectionString1, connectionString2], values =>
+                {
+                    var tenantId = (int)values[0];
+                    if (tenantId > 3) tenantId = 3;
+                    var connectionStrings = new Dictionary<int, string[]>()
+                    {
+                        { 1, [connectionString, connectionString1, connectionString2] },
+                        { 2, [connectionString, connectionString1, connectionString2] },
+                        { 3, [connectionString, connectionString1, connectionString2] }
+                    };
+                    int index = Interlocked.Increment(ref robinIndices[tenantId]) % 3;
+                    if (Volatile.Read(ref robinIndices[tenantId]) >= int.MaxValue - 1000)
+                        Interlocked.Exchange(ref robinIndices[tenantId], 0);
+                    return connectionStrings[tenantId][index];
+                })
+                .UseSlave([connectionString1, connectionString2], values =>
+                {
+                    var tenantId = (int)values[0];
+                    if (tenantId > 3) tenantId = 3;
+                    var connectionStrings = new Dictionary<int, string[]>()
+                    {
+                        { 1, [connectionString, connectionString1, connectionString2] },
+                        { 2, [connectionString, connectionString1, connectionString2] }
+                    };
+                    int index = Interlocked.Increment(ref robinIndices[tenantId]) % 2;
+                    if (Volatile.Read(ref robinIndices[tenantId]) >= int.MaxValue - 1000)
+                        Interlocked.Exchange(ref robinIndices[tenantId], 0);
+                    return connectionStrings[tenantId][index];
+                }))
+            //数据库：不分租户，分读写; 表：使用最外层类型分表
+            .Register(OrmProviderType.MySql, "swr", f => f.Use([connectionString], values => connectionString)
+                .UseSlave([connectionString1, connectionString2], values =>
+                {
+                    string[] connectionStrings = [connectionString1, connectionString2];
+                    int index = Interlocked.Increment(ref robinIndex) % 2;
+                    if (Volatile.Read(ref robinIndex) >= int.MaxValue - 1000)
+                        Interlocked.Exchange(ref robinIndex, 0);
+                    return connectionStrings[index];
+                }))
+            //数据库：不分租户，不分读写，单库
+            .Register(OrmProviderType.MySql, "sdb", f => f.Use(connectionString))
             .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
             .UseTableSharding<TableShardingConfiguration>(OrmProviderType.MySql)
-            .UseInterceptor(new MyDbInterceptor());
+            .UseInterceptor<MyDbInterceptor>();
         this.dbFactory = builder.Build();
         this.Initialize(1);
     }
@@ -968,6 +1011,28 @@ public class UnitTest6 : UnitTestBase
             .Returning<OrderInfo>("BuyerId,TotalAmount")
             .ExecuteAsync();
         await repository.CommitAsync();
+    }
+    [Test]
+    public async Task Query_Without_Sharding()
+    {
+        await this.InitSharding();
+        var productCount = 1;
+        var repository = this.dbFactory.Create();
+        var sql = repository.From<User>()
+            .UseTable("1")
+            .Where(f => f.TenantId == "1")
+            .ToSql(out _);
+        Assert.AreEqual("SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_104_202405` a WHERE a.`ProductCount`>@p0 UNION ALL SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_105_202405` a WHERE a.`ProductCount`>@p0", sql);
+
+        var result = repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .Where(f => f.ProductCount > productCount)
+            .ToList();
+        Assert.IsNotEmpty(result);
+        {
+            var tenantIds = result.Select(f => f.TenantId).ToList();
+            Assert.That(tenantIds, Has.Some.Matches<string>(f => f == "104" || f == "105"));
+        }
     }
     [Test]
     public async Task Query_ManySharding_SingleTable()

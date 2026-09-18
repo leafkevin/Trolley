@@ -4,12 +4,6 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-public enum ShardingType
-{
-    WriteAndRead,
-    WriteOnly,
-    ReadOnly
-}
 public class TableShardingBuilder
 {
     private readonly ITableShardingProvider shardingProvider;
@@ -37,16 +31,16 @@ public class TableShardingBuilder<TEntity>
 {
     private readonly Type entityType = typeof(TEntity);
     private readonly ITableShardingProvider shardingProvider = null;
-    private readonly TableShardingInfo shardingTableInfo = null;
+    private readonly Dictionary<TableShardingType, TableShardingInfo> shardingTableInfos = null;
     public TableShardingBuilder(ITableShardingProvider tableShardingProvider)
     {
         this.shardingProvider = tableShardingProvider;
-        if (!shardingProvider.TryGetTableSharding(entityType, out this.shardingTableInfo))
+        if (!shardingProvider.TryGetTableSharding(entityType, out this.shardingTableInfos))
         {
-            this.shardingProvider.AddTableSharding(entityType, this.shardingTableInfo = new TableShardingInfo
+            this.shardingProvider.AddTableSharding(entityType, this.shardingTableInfos = new TableShardingInfo
             {
                 EntityType = entityType,
-                UsageMode = TableShardingUsageMode.Default
+                UsageMode = TableShardingType.Default
             });
         }
     }
@@ -65,26 +59,42 @@ public class TableShardingBuilder<TEntity>
 
         var memberExpr = fieldSelector.Body as MemberExpression;
         var memberName = memberExpr.Member.Name;
-        this.shardingTableInfo.DependOnMembers ??= new();
-        this.shardingTableInfo.DependOnMembers.Add(memberName);
+        this.shardingTableInfos.DependOnMembers ??= new();
+        this.shardingTableInfos.DependOnMembers.Add(memberName);
         return this;
     }
     /// <summary>
-    /// 设置分表规则和分表名称验证正则表达式，需要手动传入参数值来获取分表名称，不使用任何依赖字段。
+    /// 设置分表规则，不依赖任何参数值和字段值，只用于读写分表。
     /// </summary>
+    /// <param name="shardingType">读写类型</param>
+    /// <param name="tableNameGetter">分表名获取委托</param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentNullException"></exception>
+    public TableShardingBuilder<TEntity> UseRule(TableShardingType shardingType, Func<string, string> tableNameGetter)
+    {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter));
+
+        this.shardingTableInfos.Rule = tableNameGetter;
+        return this;
+    }
+    /// <summary>
+    /// 设置分表规则和分表名称验证正则表达式，需要提供额外依赖参数值才能获取分表名称，需要手动传入参数值，可用于时间、商户...+读写复杂分表，必须提供分表名验证规则
+    /// </summary>
+    /// <param name="shardingType">读写类型</param>
     /// <param name="tableNameGetter">分表名获取委托</param>
     /// <param name="validateRegex">分表名验证规则</param>
     /// <returns></returns>
     /// <exception cref="ArgumentNullException"></exception>
-    public TableShardingBuilder<TEntity> UseRule(Func<string, object[], string> tableNameGetter, string validateRegex)
+    public TableShardingBuilder<TEntity> UseRule(TableShardingType shardingType, Func<string, object[], string> tableNameGetter, string validateRegex)
     {
         if (tableNameGetter == null)
             throw new ArgumentNullException(nameof(tableNameGetter));
         if (string.IsNullOrEmpty(validateRegex))
             throw new ArgumentNullException(nameof(validateRegex));
 
-        this.shardingTableInfo.Rule = tableNameGetter;
-        this.shardingTableInfo.ValidateRegex = validateRegex;
+        this.shardingTableInfos.Rule = tableNameGetter;
+        this.shardingTableInfos.ValidateRegex = validateRegex;
         return this;
     }
     /// <summary>
@@ -117,9 +127,9 @@ public class TableShardingBuilder<TEntity>
     {
         if (tableNamesGetter == null)
             throw new ArgumentNullException(nameof(tableNamesGetter));
-        this.shardingTableInfo.RangleRule = tableNamesGetter;
+        this.shardingTableInfos.RangleRule = tableNamesGetter;
         return this;
     }
-    public void UseMode(TableShardingUsageMode usageMode = TableShardingUsageMode.Default)
-        => this.shardingTableInfo.UsageMode = usageMode;
+    public void UseMode(TableShardingType usageMode = TableShardingType.Default)
+        => this.shardingTableInfos.UsageMode = usageMode;
 }

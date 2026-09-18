@@ -30,9 +30,9 @@ public interface ICreateVisitor : ICommandVisitor, IDisposable
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<ReaderField>) BuildWithBulk(ITheaCommand command);
 
     IQueryVisitor CreateQueryVisitor(char? tableAsStart = null);
-    void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
-    void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
-    void UseTable(TableShardingUsageMode usageMode, Func<object, string> tableNameGetter);
+    void UseTable(TableShardingType usageMode, bool isIncludeMany, params string[] tableNames);
+    void UseTableBy(TableShardingType usageMode, bool isIncludeMany, params object[] fieldValues);
+    void UseTable(TableShardingType usageMode, Func<object, string> tableNameGetter);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
     void WithTableAliasTrailing(bool isIncludeMany, string rawSql);
 

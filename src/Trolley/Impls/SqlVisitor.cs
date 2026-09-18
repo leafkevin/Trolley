@@ -161,7 +161,7 @@ public class SqlVisitor : ISqlVisitor
         builder.Clear();
         return result;
     }
-    public void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames)
+    public void UseTable(TableShardingType usageMode, bool isIncludeMany, params string[] tableNames)
     {
         if (tableNames == null || tableNames.Length == 0)
             throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
@@ -194,7 +194,7 @@ public class SqlVisitor : ISqlVisitor
             tableSegment.Body = tableNames[0];
         }
     }
-    public void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues)
+    public void UseTableByRange(TableShardingType usageMode, bool isIncludeMany, object[] fieldValues)
     {
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         if (!this.TrySetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
@@ -229,7 +229,7 @@ public class SqlVisitor : ISqlVisitor
         //范围分表，都当作多分表处理，方便后续表映射
         this.IsManyShardingTables = true;
     }
-    public void UseTableMap(TableShardingUsageMode usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter)
+    public void UseTableMap(TableShardingType usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter)
     {
         if (tableNameGetter == null)
             throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
@@ -249,7 +249,7 @@ public class SqlVisitor : ISqlVisitor
             this.ShardingTables.Add(tableSegment);
         }
     }
-    public void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues)
+    public void UseTableBy(TableShardingType usageMode, bool isIncludeMany, params object[] fieldValues)
     {
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         if (!this.TrySetTableShardingInfo(tableSegment, usageMode, out var tableShardingInfo))
@@ -300,13 +300,13 @@ public class SqlVisitor : ISqlVisitor
     /// </summary>
     /// <param name="tableNameGetter"></param>
     /// <exception cref="ArgumentNullException"></exception>
-    public void UseTable(TableShardingUsageMode usageMode, Func<object, string> tableNameGetter)
+    public void UseTable(TableShardingType usageMode, Func<object, string> tableNameGetter)
     {
         if (tableNameGetter == null)
             throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
         this.Tables[0].ShardingTableGetter = tableNameGetter;
     }
-    public bool TrySetTableShardingInfo(TableSegment tableSegment, TableShardingUsageMode usageMode, out TableShardingInfo tableShardingInfo)
+    public bool TrySetTableShardingInfo(TableSegment tableSegment, TableShardingType usageMode, out TableShardingInfo tableShardingInfo)
     {
         if (tableSegment.TableShardingInfo != null)
         {
@@ -321,12 +321,12 @@ public class SqlVisitor : ISqlVisitor
             var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(entityType);
             throw new Exception($"实体表{entityType.FullName}没有配置分表，原表名：{entityMapper?.TableName}");
         }
-        if (tableShardingInfo.UsageMode != TableShardingUsageMode.Default || tableShardingInfo.UsageMode != usageMode)
+        if (tableShardingInfo.UsageMode != TableShardingType.Default || tableShardingInfo.UsageMode != usageMode)
             throw new Exception($"实体表{entityType.FullName}的分表规则无法应用于当前操作，当前配置的应用范围为：TableShardingUsageMode.{tableShardingInfo.UsageMode}");
         tableSegment.TableShardingInfo = tableShardingInfo;
         return true;
     }
-    public bool TryGetTableShardingInfo(Type entityType, TableShardingUsageMode usageMode, out TableShardingInfo tableShardingInfo)
+    public bool TryGetTableShardingInfo(Type entityType, TableShardingType usageMode, out TableShardingInfo tableShardingInfo)
     {
         if (this.ShardingProvider == null)
         {
@@ -334,7 +334,7 @@ public class SqlVisitor : ISqlVisitor
             return false;
         }
         if (this.ShardingProvider.TryGetTableSharding(entityType, out tableShardingInfo)
-           && (tableShardingInfo.UsageMode == TableShardingUsageMode.Default || tableShardingInfo.UsageMode == usageMode))
+           && (tableShardingInfo.UsageMode == TableShardingType.Default || tableShardingInfo.UsageMode == usageMode))
             return true;
         tableShardingInfo = null;
         return false;
@@ -1479,21 +1479,21 @@ public class SqlVisitor : ISqlVisitor
                     entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
                     var parameterInfos = methodInfo.GetParameters();
                     var tableNames = callExpr.Arguments[0].Evaluate<string[]>();
-                    queryVisitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
+                    queryVisitor.UseTable(TableShardingType.ReadOnly, false, tableNames);
                     break;
                 case "UseTableMap":
                     var tableNameMapGetter = callExpr.Arguments[0].Evaluate<Func<string, string, string, string>>();
-                    queryVisitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameMapGetter);
+                    queryVisitor.UseTableMap(TableShardingType.ReadOnly, false, tableNameMapGetter);
                     break;
                 case "UseTableBy":
                     fieldValues = callExpr.Arguments[0].Evaluate<object[]>();
                     entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
-                    queryVisitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
+                    queryVisitor.UseTableBy(TableShardingType.ReadOnly, false, fieldValues);
                     break;
                 case "UseTableByRange":
                     fieldValues = callExpr.Arguments[0].Evaluate<object[]>();
                     entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
-                    queryVisitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
+                    queryVisitor.UseTableByRange(TableShardingType.ReadOnly, false, fieldValues);
                     break;
                 case "UseTableSchema":
                     queryVisitor.UseTableSchema(false, callExpr.Arguments[0].Evaluate<string>());

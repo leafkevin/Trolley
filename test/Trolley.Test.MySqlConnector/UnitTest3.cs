@@ -14,11 +14,11 @@ public class UnitTest3 : UnitTestBase
     [SetUp]
     public void Setup()
     {
-        var connectionString = "Server=192.168.61.67;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+        var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
         var builder = new OrmDbFactoryBuilder()
             .Register(OrmProviderType.MySql, "fengling", f => f.Use(connectionString), true)
             .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
-            .UseInterceptor(new MyDbInterceptor());
+            .UseInterceptor<MyDbInterceptor>();
         this.dbFactory = builder.Build();
         this.Initialize(1);
     }

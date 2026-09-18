@@ -45,7 +45,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 Mapper = this.EntityMapProvider.GetEntityMap(entityType)
             }
         };
-        if (this.TryGetTableShardingInfo(entityType, TableShardingUsageMode.WriteOnly, out var tableShardingInfo))
+        if (this.TryGetTableShardingInfo(entityType, TableShardingType.WriteOnly, out var tableShardingInfo))
             this.Tables[0].TableShardingInfo = tableShardingInfo;
     }
     public override string BuildSql(out List<ReaderField> readerFields)

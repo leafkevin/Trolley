@@ -17,9 +17,9 @@ public interface IDeleteVisitor : ICommandVisitor, IDisposable
     List<TableSegment> ShardingTables { get; }
 
 
-    void UseTable(TableShardingUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
-    void UseTableBy(TableShardingUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
-    void UseTableByRange(TableShardingUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
+    void UseTable(TableShardingType usageMode, bool isIncludeMany, params string[] tableNames);
+    void UseTableBy(TableShardingType usageMode, bool isIncludeMany, params object[] fieldValues);
+    void UseTableByRange(TableShardingType usageMode, bool isIncludeMany, object[] fieldValues);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
     void WithTableAliasTrailing(bool isIncludeMany, string rawSql);
 

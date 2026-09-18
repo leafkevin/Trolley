@@ -6,10 +6,10 @@ namespace Trolley;
 public interface ITableShardingProvider
 {
     ICollection<TableShardingInfo> TableShardings { get; }
-    bool TryGetTableSharding(Type entityType, out TableShardingInfo tableShardingInfo);
-    void AddTableSharding(Type entityType, TableShardingInfo shardingTableInfo);
+    bool TryGetTableSharding(Type entityType, TableShardingType shardingType, out TableShardingInfo tableShardingInfo);
+    void AddTableSharding(Type entityType, TableShardingType shardingType, TableShardingInfo shardingTableInfo);
 }
-public enum TableShardingUsageMode
+public enum TableShardingType
 {
     /// <summary>
     /// 所有操作类型，包括增、删、改、查所有操作
