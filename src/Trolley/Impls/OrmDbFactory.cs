@@ -134,13 +134,15 @@ public sealed class OrmDbFactory : IOrmDbFactory
     }
     public IRepository Create(string dbKey = null)
     {
+        TheaDatabase database = null;
         if (string.IsNullOrEmpty(dbKey))
         {
             if (this.defaultDatabase == null)
                 throw new ArgumentNullException(nameof(dbKey), "dbKey不可为null，也没有配置默认数据库");
-            dbKey = this.defaultDatabase.DbKey;
+            database = this.defaultDatabase;
+            dbKey = database.DbKey;
         }
-        var database = this.GetDatabase(dbKey);
+        else database = this.GetDatabase(dbKey);
         var defaultSchema = database.OrmProvider.GetDefaultSchema(database.ConnectionStrings.First());
         var dbContext = new DbContext
         {

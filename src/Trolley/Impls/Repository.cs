@@ -15,6 +15,12 @@ public class Repository : DialectProvider, IRepository
     #endregion
 
     #region ShardingDatabase
+    public IRepository Change(string dbKey)
+    {
+        this.DbContext.DbKey = dbKey;
+        this.DbContext.Database = this.DbFactory.GetDatabase(dbKey);
+        return this;
+    }
     public IRepository UseMaster(params object[] selectorValues)
     {
         this.DbContext.ConnectionString = this.DbContext.Database.Select(selectorValues);

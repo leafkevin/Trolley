@@ -201,7 +201,7 @@ public sealed class OrmDatabaseBuilder
     /// <returns></returns>
     public OrmDatabaseBuilder UseSlave(string[] connectionStrings, Func<object[], string> connectionStringSelector)
     {
-        this.database.Use(connectionStrings, connectionStringSelector);
+        this.database.UseSlave(connectionStrings, connectionStringSelector);
         return this;
     }
 

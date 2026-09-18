@@ -10,9 +10,9 @@ public sealed class TheaDatabase
     private int slaveRoundRobin;
     public string DbKey { get; internal set; }
     public List<string> ConnectionStrings { get; internal set; }
-    public Delegate ConnectionStringSelector { get; internal set; }
+    public Func<object[], string> ConnectionStringSelector { get; internal set; }
     public List<string> SlaveConnectionStrings { get; internal set; }
-    public Delegate SlaveConnectionStringSelector { get; internal set; }
+    public Func<object[], string> SlaveConnectionStringSelector { get; internal set; }
     public bool IsDefault { get; internal set; }
     public OrmProviderType OrmProviderType { get; internal set; }
     public IOrmProvider OrmProvider { get; internal set; }
@@ -38,7 +38,7 @@ public sealed class TheaDatabase
     {
         if (this.ConnectionStringSelector == null)
             throw new InvalidOperationException("主库连接串选择器未设置");
-        return this.ConnectionStringSelector.DynamicInvoke(selectorValues) as string;
+        return this.ConnectionStringSelector.Invoke(selectorValues) as string;
     }
     public void UseSlave(params string[] connectionStrings)
     {
@@ -58,7 +58,7 @@ public sealed class TheaDatabase
     {
         if (this.SlaveConnectionStringSelector == null)
             throw new InvalidOperationException("从库连接串选择器未设置");
-        return this.SlaveConnectionStringSelector.DynamicInvoke(selectorValues) as string;
+        return this.SlaveConnectionStringSelector.Invoke(selectorValues) as string;
     }
     public void UseOrmProvider(IOrmProvider ormProvider)
     {
@@ -89,10 +89,10 @@ public sealed class TheaDatabase
         if (this.ConnectionStrings.Count > 0 && this.ConnectionStringSelector == null)
         {
             if (this.ConnectionStrings.Count == 1)
-                this.ConnectionStringSelector = () => this.ConnectionStrings[0];
+                this.ConnectionStringSelector = values => this.ConnectionStrings[0];
             else
             {
-                this.ConnectionStringSelector = () =>
+                this.ConnectionStringSelector = values =>
                 {
                     int index = 0;
                     unchecked
@@ -117,10 +117,10 @@ public sealed class TheaDatabase
             return;
         }
         if (this.SlaveConnectionStrings.Count == 1)
-            this.SlaveConnectionStringSelector = () => this.SlaveConnectionStrings[0];
+            this.SlaveConnectionStringSelector = values => this.SlaveConnectionStrings[0];
         else
         {
-            this.SlaveConnectionStringSelector = () =>
+            this.SlaveConnectionStringSelector = values =>
             {
                 int index = 0;
                 unchecked

@@ -25,7 +25,7 @@ public class UnitTest6 : UnitTestBase
             var connectionString1 = "Host=localhost;Database=fengling1;Username=postgres;Password=123456;SearchPath=public";
             var connectionString2 = "Host=localhost;Database=fengling2;Username=postgres;Password=123456;SearchPath=public";
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.PostgreSql, "fengling", f => f.UseMaster(connectionString)
+                .Register("fengling", OrmProviderType.PostgreSql, f => f.UseMaster(connectionString)
                     .UseSlave(connectionString1, connectionString2), true)
                 .Register(OrmProviderType.PostgreSql, "fengling1", f => f.Use(connectionString1))
                 .Register(OrmProviderType.PostgreSql, "fengling2", f => f.Use(connectionString2))

@@ -264,9 +264,7 @@ public class SqlVisitor : ISqlVisitor
         tableSegment.IsSharding = true;
         tableSegment.IsIncludeManySharding = isIncludeMany;
         var origTableName = tableSegment.Mapper.TableName;
-        string tableName = null;
-        if (fieldValues == null) tableName = tableRule.DynamicInvoke(origTableName) as string;
-        else tableName = tableRule.DynamicInvoke(origTableName, fieldValues) as string;
+        var tableName = tableRule.Invoke(origTableName, fieldValues);
 
         //单个分表，直接设置body表名，当作不分表处理
         if (!string.IsNullOrEmpty(tableSegment.Body))

@@ -25,7 +25,7 @@ public class UnitTest1 : UnitTestBase
         {
             var connectionString = "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public";
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.PostgreSql, "fengling", f => f.Use(connectionString), true)
+                .Register("fengling", OrmProviderType.PostgreSql, f => f.Use(connectionString), true)
                 .Configure<ModelConfiguration>(OrmProviderType.PostgreSql)
                 .UseInterceptors(df =>
                 {
@@ -1040,7 +1040,7 @@ public class UnitTest1 : UnitTestBase
             .Returning<OrderInfo>("\"BuyerId\",\"TotalAmount\"")
             .ExecuteAsync();
         await repository.CommitAsync();
-       Assert.Greater(result);
+        Assert.Greater(result);
         Assert.Null(result[0].OrderNo);
     }
     [Test]
@@ -1135,8 +1135,8 @@ public class UnitTest1 : UnitTestBase
             .Returning<OrderInfo>("\"BuyerId\",\"TotalAmount\"")
             .ExecuteAsync();
         await repository.CommitAsync();
-       Assert.Greater(result);
-       Assert.Greater(newResult);
+        Assert.Greater(result);
+        Assert.Greater(newResult);
         Assert.AreEqual(newResult[0].TotalAmount, result[0].TotalAmount * 2);
     }
     [Test]
@@ -1230,7 +1230,7 @@ public class UnitTest1 : UnitTestBase
             .Execute();
         var order = repository.QueryById<Order>("4");
         repository.Commit();
-       Assert.Greater(order.Products);
+        Assert.Greater(order.Products);
         Assert.NotNull(order.Disputes);
         Assert.IsTrue(new JsonTypeHandler().ToFieldValue(order.Products).ToString() == new JsonTypeHandler().ToFieldValue(new List<int> { 1, 2 }).ToString());
         Assert.IsTrue(new JsonTypeHandler().ToFieldValue(order.Disputes).ToString() == new JsonTypeHandler().ToFieldValue(dispute).ToString());

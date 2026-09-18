@@ -75,7 +75,7 @@ public class TableShardingBuilder<TEntity>
             throw new ArgumentNullException(nameof(tableNameGetter));
 
         var tableRuleInfo = this.GetTableRule(usageMode);
-        tableRuleInfo.Rule = tableNameGetter;
+        tableRuleInfo.Rule = (tableName, values) => tableNameGetter.Invoke(tableName);
         return this;
     }
     /// <summary>

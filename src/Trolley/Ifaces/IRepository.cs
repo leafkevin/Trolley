@@ -64,13 +64,19 @@ public interface IRepository
 
     #region ShardingDatabase
     /// <summary>
-    /// 强制使用主库查询数据，根据选择器依赖参数值确定主库，适用于多主库，多租户、多租户多主库等场景，需要提供连接串选择器依赖参数值，如：租户Id、租户Id+游戏ID...等分库，不传任何值，适用于多主库，则默认使用轮询选择主库
+    /// 更换dbKey
+    /// </summary>
+    /// <param name="dbKey"></param>
+    /// <returns></returns>
+    IRepository Change(string dbKey);
+    /// <summary>
+    /// 强制使用主库，增删改操作都使用主库，根据selectorValues参数值，执行数据库选择器确定主库，适用于多写主库，多租户、多租户多写主库等各种各样场景，如：租户Id、时间、租户Id+游戏ID...等分库，不传任何值则使用默认null值返回的主库
     /// </summary>
     /// <param name="selectorValues">选择器依赖参数值，参数值要与设置的选择器参数相同，多主库场景，可为null，使用轮询选择主库</param>
     /// <returns></returns>
     IRepository UseMaster(params object[] selectorValues);
     /// <summary>
-    /// 强制使用从库查询数据，根据选择器依赖参数值确定从库，适用于多从库，多租户多从库等场景，需要提供连接串选择器依赖参数值，如：租户Id、租户Id+游戏ID...等分库，不传任何值，适用于多从库，则默认使用轮询选择从库
+    /// 强制使用从库查询数据，查询操作都使用从库，根据selectorValues参数值，执行数据库选择器确定从库，适用于多读从库，多租户、多租户多读从库等各种各样场景，如：租户Id、时间、租户Id+游戏ID...等分库，不传任何值则使用默认null值返回的从库
     /// </summary>
     /// <param name="selectorValues">选择器依赖参数值，参数值要与设置的选择器参数相同，多从库场景，可为null，使用轮询选择从库</param>
     /// <returns></returns>

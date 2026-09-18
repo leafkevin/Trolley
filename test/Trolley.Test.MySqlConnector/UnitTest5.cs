@@ -15,7 +15,7 @@ public class UnitTest5 : UnitTestBase
         var connectionString1 = "Server=localhost;Database=fengling1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
         var connectionString2 = "Server=localhost;Database=fengling2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
         var builder = new OrmDbFactoryBuilder()
-            .Register(OrmProviderType.MySql, "fengling", f => f.Use(connectionString)
+            .Register("fengling", OrmProviderType.MySql,f => f.Use(connectionString)
                 .UseSlave(connectionString1, connectionString2), true)
             .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
             .UseInterceptor<MyDbInterceptor>();

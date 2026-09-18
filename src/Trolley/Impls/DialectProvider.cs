@@ -23,6 +23,7 @@ public class DialectProvider
     protected internal bool isNeedClose => this.transaction == null;
 
     #region Properties
+    public IOrmDbFactory DbFactory => OrmDbFactory.Instance;
     public DbContext DbContext { get; set; }
     #endregion
 

@@ -12,7 +12,7 @@ public class ExpressionUnitTest : UnitTestBase
     {
         var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
         var builder = new OrmDbFactoryBuilder()
-            .Register(OrmProviderType.MySql, "fengling", f => f.Use(connectionString), true)
+            .Register("fengling", OrmProviderType.MySql,f => f.Use(connectionString), true)
             .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
             .UseInterceptor<MyDbInterceptor>();
         this.dbFactory = builder.Build();
