@@ -47,15 +47,13 @@ public class RefWhereBuilder : IDisposable, ICloneable
         this.current = OperationType.None;
         this.whereBuilder.Clear();
     }
-    public RefWhereBuilder Clone()
+    public RefWhereBuilder Clone() => new RefWhereBuilder
     {
-        var clone = new RefWhereBuilder();
-        clone.savedWhereIndex = this.savedWhereIndex;
-        clone.savedOperationType = this.savedOperationType;
-        clone.current = this.current;
-        clone.whereBuilder = new StringBuilder(this.whereBuilder.ToString());
-        return clone;
-    }
+        savedWhereIndex = this.savedWhereIndex,
+        savedOperationType = this.savedOperationType,
+        current = this.current,
+        whereBuilder = new StringBuilder(this.whereBuilder.ToString())
+    };
     public void Save(IDataParameterCollection dbParameters)
     {
         this.hasSavePoint = true;

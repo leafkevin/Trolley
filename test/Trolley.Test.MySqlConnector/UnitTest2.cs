@@ -186,7 +186,7 @@ public class UnitTest2 : UnitTestBase
             .Where(f => f.ProductCount > 1)
             .ToList();
         Assert.IsNotEmpty(result2);
-            result2.ForEach(f => Assert.Greater(f.ProductCount, 1));
+        result2.ForEach(f => Assert.Greater(f.ProductCount, 1));
 
         result1 = await repository.From<Order>()
            .Where(f => f.ProductCount > 1)
@@ -197,7 +197,7 @@ public class UnitTest2 : UnitTestBase
             .Where(f => f.ProductCount > 1)
             .ToListAsync();
         Assert.IsNotEmpty(result2);
-            result2.ForEach(f => Assert.Greater(f.ProductCount, 1));
+        result2.ForEach(f => Assert.Greater(f.ProductCount, 1));
     }
     [Test]
     public async Task FromQuery_Simple_HasSelect()
@@ -237,7 +237,7 @@ public class UnitTest2 : UnitTestBase
             })
             .ToList();
         Assert.IsNotEmpty(result2);
-            result2.ForEach(f => Assert.Greater(f.TotalAmount, 50));
+        result2.ForEach(f => Assert.Greater(f.TotalAmount, 50));
 
         result1 = await repository.From<Order>()
             .Where(f => f.TotalAmount > 50)
@@ -262,7 +262,7 @@ public class UnitTest2 : UnitTestBase
             })
             .ToListAsync();
         Assert.IsNotEmpty(result2);
-            result2.ForEach(f => Assert.Greater(f.TotalAmount, 50));
+        result2.ForEach(f => Assert.Greater(f.TotalAmount, 50));
     }
     [Test]
     public async Task FromQuery_Simple_HasGroupBy()
@@ -804,7 +804,7 @@ public class UnitTest2 : UnitTestBase
             .Union(f => menuPageList.Where(t => t.ParentId < parentId))
             .ToSql(out var dbParameters3);
         Assert.AreEqual(@"SELECT a.`Id` AS `MenuId`,a.`ParentId`,b.`Url` FROM `sys_menu` a INNER JOIN `sys_page` b ON a.`PageId`=b.`Id` AND b.`Id`>@p0 UNION
-SELECT b.`Id`,b.`ParentId`,a.`Url` FROM `sys_page` a,`sys_menu` b WHERE a.`Id`=b.`PageId` AND b.`Id`>@MenuId AND b.`ParentId`<@p1 AND b.`ParentId`<@p2 AND b.`ParentId`<@p4", sql3);
+SELECT b.`Id`,b.`ParentId`,a.`Url` FROM `sys_page` a,`sys_menu` b WHERE a.`Id`=b.`PageId` AND b.`Id`>@MenuId AND b.`ParentId`<@p2", sql3);
         Assert.AreEqual(3, dbParameters3.Count);
         Assert.AreEqual("@p0", dbParameters3[0].ParameterName);
         Assert.AreEqual("@MenuId", dbParameters3[1].ParameterName);
@@ -1027,7 +1027,7 @@ SELECT b.`Id`,b.`ParentId`,a.`Url` FROM `sys_page` a,`sys_menu` b WHERE a.`Id`=b
 (
 SELECT b.`Id`,b.`ParentId`,a.`Url` FROM `sys_page` a,`sys_menu` b WHERE a.`Id`=b.`PageId` AND b.`Id`>@MenuId
 )
-SELECT b.`MenuId`,a.`Name`,b.`ParentId`,a.`PageId`,b.`Url` FROM `sys_menu` a INNER JOIN `menuPageList` b ON a.`Id`=b.`MenuId` AND a.`PageId`>@p0", sql1);
+SELECT b.`MenuId`,a.`Name`,b.`ParentId`,a.`PageId`,b.`Url` FROM `sys_menu` a INNER JOIN `menuPageList` b ON a.`Id`=b.`MenuId` AND a.`PageId`>@p1", sql1);
         Assert.AreEqual(2, dbParameters1.Count);
         Assert.AreEqual("@MenuId", dbParameters1[0].ParameterName);
         Assert.AreEqual(menuId, (int)dbParameters1[0].Value);
@@ -1076,40 +1076,37 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
             Assert.Greater(f.MenuId, menuId);
             Assert.Less(f.ParentId, parentId);
         });
-        //var sql3 = repository.From<Menu>()
-        //    .InnerJoin<Page>((a, b) => a.PageId == b.Id && b.Id > pageId)
-        //    .Select((a, b) => new { MenuId = a.Id, a.ParentId, b.Url })
-        //    .Union(f => f.UseQuery(menuPageList)
-        //        .Where(t => t.ParentId < parentId)
-        //        .Select())
-        //    .ToSql(out var dbParameters3);
-        //Assert.AreEqual(@"WITH `menuPageList`(`MenuId`,`ParentId`,`Url`) AS 
-        //(
-        //SELECT b.`Id`,b.`ParentId`,a.`Url` FROM `sys_page` a,`sys_menu` b WHERE a.`Id`=b.`PageId` AND b.`Id`>@MenuId
-        //)
-        //SELECT a.`Id` AS `MenuId`,a.`ParentId`,b.`Url` FROM `sys_menu` a INNER JOIN `sys_page` b ON a.`PageId`=b.`Id` AND b.`Id`>@p0 UNION
-        //SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<@p2", sql3);
-        //Assert.AreEqual(3, dbParameters3.Count);
-        //Assert.AreEqual("@p0", dbParameters3[0].ParameterName);
-        //Assert.AreEqual("@MenuId", dbParameters3[1].ParameterName);
-        //Assert.AreEqual("@p2", dbParameters3[2].ParameterName);
-        //Assert.IsTrue((int)dbParameters3[0].Value == menuId);
-        //Assert.IsTrue((int)dbParameters3[1].Value == pageId);
-        //Assert.IsTrue((int)dbParameters3[2].Value == parentId);
 
-        //result1 = repository.From<Menu>()
-        //    .InnerJoin<Page>((a, b) => a.PageId == b.Id && b.Id > pageId)
-        //    .Select((a, b) => new { MenuId = a.Id, a.ParentId, b.Url })
-        //    .Union(f => f.UseQuery(menuPageList)
-        //        .Where(f => f.ParentId < parentId)
-        //        .Select())
-        //    .ToList();
-        //Assert.IsTrue(result1.Count > 0);
-        //foreach (var item in result1)
-        //{
-        //    Assert.IsTrue(item.MenuId > menuId);
-        //    Assert.IsTrue(item.ParentId < parentId);
-        //}
+        var sql3 = repository.From<Menu>()
+            .InnerJoin<Page>((a, b) => a.PageId == b.Id && b.Id > pageId)
+            .Select((a, b) => new { MenuId = a.Id, a.ParentId, b.Url })
+            .Union(menuPageList.Where(t => t.ParentId < parentId))
+            .ToSql(out var dbParameters3);
+        Assert.AreEqual(@"WITH `menuPageList`(`MenuId`,`ParentId`,`Url`) AS 
+(
+SELECT b.`Id`,b.`ParentId`,a.`Url` FROM `sys_page` a,`sys_menu` b WHERE a.`Id`=b.`PageId` AND b.`Id`>@MenuId
+)
+SELECT a.`Id` AS `MenuId`,a.`ParentId`,b.`Url` FROM `sys_menu` a INNER JOIN `sys_page` b ON a.`PageId`=b.`Id` AND b.`Id`>@p0 UNION
+SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<@p2", sql3);
+        Assert.AreEqual(3, dbParameters3.Count);
+        Assert.AreEqual("@p0", dbParameters3[0].ParameterName);
+        Assert.AreEqual("@MenuId", dbParameters3[1].ParameterName);
+        Assert.AreEqual("@p2", dbParameters3[2].ParameterName);
+        Assert.IsTrue((int)dbParameters3[0].Value == menuId);
+        Assert.IsTrue((int)dbParameters3[1].Value == pageId);
+        Assert.IsTrue((int)dbParameters3[2].Value == parentId);
+
+        var result3 = repository.From<Menu>()
+            .InnerJoin<Page>((a, b) => a.PageId == b.Id && b.Id > pageId)
+            .Select((a, b) => new { MenuId = a.Id, a.ParentId, b.Url })
+            .Union(menuPageList.Where(t => t.ParentId < parentId))
+            .ToList();
+        Assert.IsTrue(result3.Count > 0);
+        foreach (var item in result3)
+        {
+            Assert.IsTrue(item.MenuId > menuId);
+            Assert.IsTrue(item.ParentId < parentId);
+        }
     }
     [Test]
     public async Task FromQuery_Include()

@@ -1674,10 +1674,11 @@ public class SqlVisitor : ISqlVisitor
                     {
                         if (methodInfo.DeclaringType.IsAssignableFrom(typeof(IGroupingQuery<>)))
                             queryVisitor.SelectGrouping();
-                        else
+                        //Expression<Func<T, T>> defaultExpr = f => f;
+                        else if (queryVisitor.ReaderFields == null || queryVisitor.ReaderFields.Count == 0)
                         {
-                            //Expression<Func<T, T>> defaultExpr = f => f;
-                            entityType = genericArguments[0];
+                            //不一定有泛型参数，CTE表就没有泛型参数
+                            entityType = methodInfo.DeclaringType.GenericTypeArguments[0];
                             var parameter = Expression.Parameter(entityType, "f");
                             var funcType = typeof(Func<,>).MakeGenericType(entityType, entityType);
                             queryVisitor.SelectDefault(Expression.Lambda(funcType, parameter, parameter));
