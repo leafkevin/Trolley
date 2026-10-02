@@ -8,6 +8,7 @@ namespace Trolley.MySqlConnector;
 
 class MySqlTheaCommand : ITheaCommand
 {
+    private bool isDisposed = false;
     private readonly MySqlCommand command;
     private MySqlTheaConnection connection;
     private MySqlTheaTransaction transaction;
@@ -244,19 +245,23 @@ class MySqlTheaCommand : ITheaCommand
     }
     public void Dispose()
     {
+        if (this.isDisposed) return;
         this.Interceptor?.CommandDisposing(this);
         this.command.Dispose();
         this.Interceptor?.CommandDisposed(this);
         this.Parameters.Clear();
         this.CommandId = null;
+        this.isDisposed = true;
     }
     public async ValueTask DisposeAsync()
     {
+        if (this.isDisposed) return;
         this.Interceptor?.CommandDisposing(this);
         await this.command.DisposeAsync();
         this.Interceptor?.CommandDisposed(this);
         this.Parameters.Clear();
         this.CommandId = null;
+        this.isDisposed = true;
     }
     private bool OnExecuting(out object evtData)
     {

@@ -2261,7 +2261,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         if (isClearReaderFields)
             this.ReaderFields = null;
-        this.WhereBuilder = null;
+        this.WhereBuilder.Clear();
         this.TableAliasStart = 'a';
 
         this.offset = null;

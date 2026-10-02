@@ -8,6 +8,7 @@ namespace Trolley.PostgreSql;
 
 class PostgreSqlTheaCommand : ITheaCommand
 {
+    private bool isDisposed = false;
     private readonly NpgsqlCommand command;
     private PostgreSqlTheaConnection connection;
     private PostgreSqlTheaTransaction transaction;
@@ -244,20 +245,24 @@ class PostgreSqlTheaCommand : ITheaCommand
     }
     public void Dispose()
     {
+        if (this.isDisposed) return;
         this.Interceptor?.CommandDisposing(this);
         this.command.Dispose();
         this.Interceptor?.CommandDisposed(this);
         this.Parameters.Clear();
         this.CommandId = null;
+        this.isDisposed = true;
     }
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
     public async ValueTask DisposeAsync()
     {
+          if (this.isDisposed) return;
         this.Interceptor?.CommandDisposing(this);
         await this.command.DisposeAsync();
         this.Interceptor?.CommandDisposed(this);
         this.Parameters.Clear();
         this.CommandId = null;
+        this.isDisposed = true;
     }
 #else
     public ValueTask DisposeAsync()

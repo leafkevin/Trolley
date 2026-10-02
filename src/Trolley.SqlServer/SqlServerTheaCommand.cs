@@ -8,6 +8,7 @@ namespace Trolley.SqlServer;
 
 class SqlServerTheaCommand : ITheaCommand
 {
+    private bool isDisposed = false;
     private readonly SqlCommand command;
     private SqlServerTheaConnection connection;
     private SqlServerTheaTransaction transaction;
@@ -251,29 +252,35 @@ class SqlServerTheaCommand : ITheaCommand
     }
     public void Dispose()
     {
+        if (this.isDisposed) return;
         this.Interceptor?.CommandDisposing(this);
         this.command.Dispose();
         this.Interceptor?.CommandDisposed(this);
         this.Parameters.Clear();
         this.CommandId = null;
+        this.isDisposed = true;
     }
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
     public async ValueTask DisposeAsync()
     {
+        if (this.isDisposed) return;
         this.Interceptor?.CommandDisposing(this);
         await this.command.DisposeAsync();
         this.Interceptor?.CommandDisposed(this);
         this.Parameters.Clear();
         this.CommandId = null;
+        this.isDisposed = true;
     }
 #else
     public ValueTask DisposeAsync()
     {
+        if (this.isDisposed) return default;
         this.Interceptor?.CommandDisposing(this);
         this.command.Dispose();
         this.Interceptor?.CommandDisposed(this);
         this.Parameters.Clear();
         this.CommandId = null;
+        this.isDisposed = true;
         return default;
     }
 #endif
