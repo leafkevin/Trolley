@@ -746,10 +746,10 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     #endregion
 
-    #region AsRefQueryObj
-    public virtual IQuery<T> AsRefQueryObj()
+    #region AsSharedQuery
+    public virtual IQuery<T> AsSharedQuery()
     {
-        this.Visitor.AsSharedQueryObj();
+        this.Visitor.AsSharedQuery();
         return this;
     }
     #endregion

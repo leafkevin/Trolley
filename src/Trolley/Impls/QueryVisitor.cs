@@ -17,6 +17,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     protected static readonly ConcurrentDictionary<int, (string, Action<StringBuilder, IOrmProvider, object>)> includeSqlGetterCache = new();
     protected static readonly ConcurrentDictionary<int, Action<object, object>> targetIncludeValuesSetters = new();
     private bool isDisposed;
+    private bool hasSavePoint;
+    private int tableIndex = 0;
+    private int parametersIndex;
 
     protected int? offset;
     protected int? limit;
@@ -764,11 +767,15 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //    }
         //    return;
         //}
-        (var sql, var readerFields) = this.VisitFromQuery(lambdaExpr.Body);
-
-        //CTE表，在VisitFromQuery中已经做了处理
-        if (typeof(ICteQuery).IsAssignableFrom(lambdaExpr.Body.Type))
-            return;
+        (var sql, var readerFields, var isCteQuery, var tableName) = this.VisitFromQuery(lambdaExpr.Body);
+        TableType tableType;
+        if (isCteQuery)
+            tableType = TableType.CteSelfRef;
+        else
+        {
+            tableType = TableType.FromQuery;
+            tableName = $"({sql})";
+        }
 
         //TODO:子查询中，有多分表并且还有Group By + Having/Count(Distinct)操作，出子查询后，
         //需要把所有多分表都打开UNION ALL起来，合成新的子查询，并去掉分表属性，以单表处理后续操作
@@ -782,7 +789,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             this.Clear();
             this.Tables.Clear();
         }
-        var tableSegment = this.AddJoinTable(targetType, null, TableType.FromQuery, $"({sql})", readerFields);
+        var tableSegment = this.AddJoinTable(targetType, null, tableType, tableName, readerFields);
         //从FromQuery对象开始的场景，直接build和生成SQL，就可以，正常逻辑    
         this.InitUseQueryReaderFields(tableSegment, readerFields);
     }
@@ -803,15 +810,15 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         {
             tableName = cteQueryObj.TableName;
             tableType = TableType.CteSelfRef;
-            this.UseSharedQueryObj(cteQueryObj.Visitor, true);
-            this.SharedQueryObjs.Add(cteQueryObj);
+            this.UseSharedQueryObj(cteQueryObj);
             readerFields = this.ReaderFields;
         }
         else
         {
             var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, 'a', this.Command);
-            subQueryObj.Visitor.Tables.ForEach(f => queryVisitor.Tables.Add(f));
-            queryVisitor.UseSharedQueryObj(subQueryObj.Visitor, false);
+            queryVisitor.Tables.AddRange(subQueryObj.Visitor.Tables);
+            queryVisitor.UseSharedQueryObj(subQueryObj);
+            this.SharedQueryObjs.Add(subQueryObj);
             var sql = queryVisitor.BuildSql(false, out readerFields);
             tableName = $"({sql})";
             tableType = TableType.FromQuery;
@@ -822,18 +829,18 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.InitUseQueryReaderFields(tableSegment, readerFields);
         return tableSegment;
     }
-    public void UseSharedQueryObj(IQueryVisitor sharedVisitor, bool isCteQuery)
+    public void UseSharedQueryObj(IQuery refQueryObj)
     {
-        if (ReferenceEquals(this, sharedVisitor))
+        if (ReferenceEquals(this, refQueryObj.Visitor))
             return;
-        sharedVisitor.CloneTo(this, isCteQuery);
-        sharedVisitor.WhereBuilder.Release();
+        refQueryObj.Visitor.CloneTo(this, refQueryObj.IsCteTable);
+        this.SharedQueryObjs.Add(refQueryObj);
     }
 
     public virtual void Union(string union, Type targetType, IQuery subQuery)
     {
         this.IsUnion = true;
-        var rawSql = this.BuildSql(false, out var readerFields);
+        var rawSql = this.BuildSql(false, out _);
         this.UseQuery(targetType, subQuery, true);
         subQuery.Visitor.IsSecondUnion = true;
         var subQuerySql = subQuery.Visitor.BuildSql(false, out _);
@@ -845,8 +852,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         var lambdaExpr = this.EnsureLambda(subQueryExpr);
         this.IsUnion = true;
-        var rawSql = this.BuildSql(false, out var readerFields);
-        (var subQuerySql, _) = this.VisitFromQuery(lambdaExpr.Body, isUnion: true);
+        var rawSql = this.BuildSql(false, out _);
+        (var subQuerySql, _, _, _) = this.VisitFromQuery(lambdaExpr.Body, isUnion: true);
         rawSql += union + Environment.NewLine + subQuerySql;
         this.UnionSql = rawSql;
         this.IsUnion = false;
@@ -882,7 +889,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.CteQueryObj = selfQueryObj;
         this.IsRecursive = true;
 
-        (var sql, _) = this.VisitFromQuery(subQueryExpr, selfQueryObj, true);
+        (var sql, _, _, _) = this.VisitFromQuery(subQueryExpr, selfQueryObj, true);
         rawSql += union + Environment.NewLine + sql;
         //先放到UnionSql中，在AsCteTable方法中，BuildCteTableSql时能得到这个SQL
         this.UnionSql = rawSql;
@@ -1912,7 +1919,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var sqlType = memberInitExpr.HasVariable() ? SqlType.Variable : SqlType.Constant;
         return sqlSegment.Change(ValueEvalutor.Evaluate(memberInitExpr), sqlType);
     }
-    public virtual ICteQuery AsCteTable(Type targetType, string tableName)
+    public virtual ICteQuery AsCteTable(Type targetType, string tableName, bool hasSavePoint = true)
     {
         if (this.ShardingTables != null && this.ShardingTables.Count > 0)
             throw new NotSupportedException("CTE暂时不支持多分表，只支持单个分表");
@@ -1939,6 +1946,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.CteQueryObj.Body = this.BuildCteTableSql(tableName, out var readerFields);
         this.CteQueryObj.TableName = tableName;
         this.Tables.Clear();
+        this.WhereBuilder.Clear();
         var tableSegment = new TableSegment
         {
             EntityType = targetType,
@@ -1951,10 +1959,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         };
         this.Tables.Add(tableSegment);
         this.InitUseQueryReaderFields(tableSegment, readerFields);
-        this.WhereBuilder.Save(this.DbParameters);
+        if (hasSavePoint) this.Save();
         return this.CteQueryObj;
     }
-    public virtual void AsSharedQueryObj()
+    public virtual void AsSharedQuery()
     {
         if (this.ShardingTables != null && this.ShardingTables.Count > 0)
             throw new NotSupportedException("共享子查询暂时不支持多分表，只支持单个分表");
@@ -1963,7 +1971,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             this.Connection.Dispose();
             this.Connection = null;
         }
-        this.WhereBuilder.Save(this.DbParameters);
+        this.Save();
     }
     public virtual object AddSelectElement(Expression elementExpr, MemberInfo memberInfo)
     {
@@ -2376,7 +2384,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.LastIncludeSegment = null;
         this.GroupByFields = null;
         this.OrderByFields = null;
-
         base.Dispose();
     }
     public int GetIncludeKey(Type targetType, MemberInfo firstMember, TableSegment includeSegment)
@@ -2394,6 +2401,22 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         var path = builder.ToString();
         return HashCode.Combine(this.OrmProvider.OrmProviderType, targetType, pathLength, path);
+    }
+    public void Save()
+    {
+        this.tableIndex = this.Tables.Count;
+        this.parametersIndex = this.DbParameters.Count;
+        this.WhereBuilder.Save();
+        this.hasSavePoint = true;
+    }
+    public void Release()
+    {
+        if (!this.hasSavePoint) return;
+        while (this.Tables.Count > this.tableIndex)
+            this.Tables.RemoveAt(this.tableIndex);
+        while (this.DbParameters.Count > this.parametersIndex)
+            this.DbParameters.RemoveAt(this.parametersIndex);
+        this.WhereBuilder.Release();
     }
 }
 public class OrderByField

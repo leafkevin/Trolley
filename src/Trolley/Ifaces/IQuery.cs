@@ -956,7 +956,7 @@ public interface IQuery<T> : IQueryBase
     #endregion
 
     #region AsRefQueryObj
-    IQuery<T> AsRefQueryObj();
+    IQuery<T> AsSharedQuery();
     #endregion
 
     #region ToCreate

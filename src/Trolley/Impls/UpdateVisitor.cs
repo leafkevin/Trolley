@@ -780,7 +780,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         && argumentParameters.Exists(f => f.Type == typeof(IFromQuery)))
                     {
                         var newLambdaExpr = Expression.Lambda(argumentExpr, lambdaExpr.Parameters.ToList());
-                        (var sql, _) = this.VisitFromQuery(newLambdaExpr);
+                        (var sql, _, _, _) = this.VisitFromQuery(newLambdaExpr);
                         this.FieldsBuilder.Append($"{this.Tables[0].AliasName}.{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
                     }
                     else this.AddMemberElement(argumentExpr, memberMapper);
@@ -800,7 +800,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         && argumentParameters.Exists(f => f.Type == typeof(IFromQuery)))
                     {
                         var newLambdaExpr = Expression.Lambda(argumentExpr, lambdaExpr.Parameters.ToList());
-                        (var sql, _) = this.VisitFromQuery(newLambdaExpr);
+                        (var sql, _, _, _) = this.VisitFromQuery(newLambdaExpr);
                         this.FieldsBuilder.Append($"{this.Tables[0].AliasName}.{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
                     }
                     else this.AddMemberElement(argumentExpr, memberMapper);
@@ -822,7 +822,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             throw new NotSupportedException($"当前字段{memberMapper.FieldName}不允许更新，IsRowVersion：{memberMapper.IsRowVersion}");
 
         this.InitTableAlias(valueSelector as LambdaExpression);
-        (var sql, _) = this.VisitFromQuery(valueSelector as LambdaExpression);
+        (var sql, _, _, _) = this.VisitFromQuery(valueSelector as LambdaExpression);
         this.FieldsBuilder.Append($"{this.Tables[0].AliasName}.{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
     }
     public virtual void VisitAnd(Expression whereExpr)

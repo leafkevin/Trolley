@@ -118,8 +118,8 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     void Page(int pageNumber, int pageSize);
     void Skip(int skip);
     void Take(int limit);
-    ICteQuery AsCteTable(Type targetType, string tableName);
-    void AsSharedQueryObj();
+    ICteQuery AsCteTable(Type targetType, string tableName, bool hasSavePoint = true);
+    void AsSharedQuery();
 
     void WithLeadingSql(string rawSql);
     void WithTrailingSql(string rawSql);
@@ -128,5 +128,7 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     List<ReaderField> FlattenTableFields(TableSegment tableSegment, bool isNeedAlias = true);
     void Clear(bool isClearReaderFields = false);
     void CloneTo(QueryVisitor queryVisitor, bool isCteQuery = false);
-    void UseSharedQueryObj(IQueryVisitor refQueryVisitor, bool isCteQuery);
+    void UseSharedQueryObj(IQuery refQueryObj);
+    void Save();
+    void Release();
 }

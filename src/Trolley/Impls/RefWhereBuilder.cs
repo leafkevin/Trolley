@@ -7,13 +7,11 @@ namespace Trolley;
 public class RefWhereBuilder : IDisposable, ICloneable
 {
     private bool hasSavePoint;
-    private int savedParametersIndex;
-    private int savedWhereIndex;
+    private int whereIndex;
     private OperationType savedOperationType;
 
     private OperationType current = OperationType.None;
     private StringBuilder whereBuilder = new();
-    private IDataParameterCollection dbParameters;
     public bool HasSql => this.whereBuilder?.Length > 0;
 
     public virtual void AndSql(string whereSql, OperationType operationType = OperationType.None)
@@ -49,33 +47,26 @@ public class RefWhereBuilder : IDisposable, ICloneable
     }
     public RefWhereBuilder Clone() => new RefWhereBuilder
     {
-        savedWhereIndex = this.savedWhereIndex,
+        whereIndex = this.whereIndex,
         savedOperationType = this.savedOperationType,
         current = this.current,
         whereBuilder = new StringBuilder(this.whereBuilder.ToString())
     };
-    public void Save(IDataParameterCollection dbParameters)
+    public void Save()
     {
-        this.hasSavePoint = true;
-        this.savedWhereIndex = this.whereBuilder.Length;
+        if (this.whereBuilder.Length == 0) return;
+        this.whereIndex = this.whereBuilder.Length;
         this.savedOperationType = this.current;
-        this.dbParameters = dbParameters;
-        this.savedParametersIndex = dbParameters.Count;
+        this.hasSavePoint = true;
     }
     public void Release()
     {
         if (!this.hasSavePoint) return;
-        if (this.savedWhereIndex > 0 && this.whereBuilder.Length > this.savedWhereIndex)
-        {
-            this.current = this.savedOperationType;
-            var length = this.whereBuilder.Length - this.savedWhereIndex;
-            this.whereBuilder.Remove(savedWhereIndex, length);
-        }
-        if (this.savedParametersIndex > 0)
-        {
-            while (this.dbParameters.Count > this.savedParametersIndex)
-                this.dbParameters.RemoveAt(this.savedParametersIndex);
-        }
+        if (this.whereIndex < 0 || this.whereBuilder.Length <= this.whereIndex)
+            return;
+        this.current = this.savedOperationType;
+        var length = this.whereBuilder.Length - this.whereIndex;
+        this.whereBuilder.Remove(whereIndex, length);
     }
     public override string ToString() => this.Build();
     object ICloneable.Clone() => this.Clone();
@@ -83,6 +74,5 @@ public class RefWhereBuilder : IDisposable, ICloneable
     {
         this.whereBuilder.Clear();
         this.whereBuilder = null;
-        this.dbParameters = null;
     }
 }
