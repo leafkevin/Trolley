@@ -767,14 +767,15 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //    }
         //    return;
         //}
-        (var sql, var readerFields, var isCteQuery, var tableName) = this.VisitFromQuery(lambdaExpr.Body);
-        TableType tableType;
-        if (isCteQuery)
-            tableType = TableType.CteSelfRef;
+        var result = this.VisitFromQuery(lambdaExpr.Body);
+        var tableName = result.CteTableName;
+        var readerFields = result.ReaderFields;
+        if (result.TableType == TableType.FromQuery)
+            tableName = $"({result.Sql})";
         else
         {
-            tableType = TableType.FromQuery;
-            tableName = $"({sql})";
+            readerFields = new();
+            result.ReaderFields.ForEach(f => readerFields.Add(f.Clone()));
         }
 
         //TODO:子查询中，有多分表并且还有Group By + Having/Count(Distinct)操作，出子查询后，
@@ -789,7 +790,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             this.Clear();
             this.Tables.Clear();
         }
-        var tableSegment = this.AddJoinTable(targetType, null, tableType, tableName, readerFields);
+        var tableSegment = this.AddJoinTable(targetType, null, result.TableType, tableName, readerFields);
         //从FromQuery对象开始的场景，直接build和生成SQL，就可以，正常逻辑    
         this.InitUseQueryReaderFields(tableSegment, readerFields);
     }
@@ -811,7 +812,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             tableName = cteQueryObj.TableName;
             tableType = TableType.CteSelfRef;
             this.UseSharedQueryObj(cteQueryObj);
-            readerFields = this.ReaderFields;
+            readerFields = new();
+            var sql = cteQueryObj.Visitor.BuildSql(false, out var orgReaderFields);
+            orgReaderFields.ForEach(f => readerFields.Add(f.Clone()));
+            if (cteQueryObj.Visitor.WhereBuilder.HasSql)
+            {
+                tableName = $"({sql})";
+                tableType = TableType.FromQuery;
+            }
         }
         else
         {
@@ -853,8 +861,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var lambdaExpr = this.EnsureLambda(subQueryExpr);
         this.IsUnion = true;
         var rawSql = this.BuildSql(false, out _);
-        (var subQuerySql, _, _, _) = this.VisitFromQuery(lambdaExpr.Body, isUnion: true);
-        rawSql += union + Environment.NewLine + subQuerySql;
+        var result = this.VisitFromQuery(lambdaExpr.Body, isUnion: true);
+        rawSql += union + Environment.NewLine + result.Sql;
         this.UnionSql = rawSql;
         this.IsUnion = false;
     }
@@ -889,8 +897,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.CteQueryObj = selfQueryObj;
         this.IsRecursive = true;
 
-        (var sql, _, _, _) = this.VisitFromQuery(subQueryExpr, selfQueryObj, true);
-        rawSql += union + Environment.NewLine + sql;
+        var result = this.VisitFromQuery(subQueryExpr, selfQueryObj, true);
+        rawSql += union + Environment.NewLine + result.Sql;
         //先放到UnionSql中，在AsCteTable方法中，BuildCteTableSql时能得到这个SQL
         this.UnionSql = rawSql;
         this.IsUnion = false;

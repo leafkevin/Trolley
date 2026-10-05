@@ -54,7 +54,6 @@ public class RefWhereBuilder : IDisposable, ICloneable
     };
     public void Save()
     {
-        if (this.whereBuilder.Length == 0) return;
         this.whereIndex = this.whereBuilder.Length;
         this.savedOperationType = this.current;
         this.hasSavePoint = true;
