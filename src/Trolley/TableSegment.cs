@@ -30,7 +30,7 @@ public enum TableType : byte
     /// </summary>
     SelectReaderFields
 }
-public class TableSegment : ICloneable
+public class TableSegment
 {
     /// <summary>
     /// 关联类型，第一个表的JoinType为空字符串，后面的每个表都有关联类型
@@ -142,16 +142,4 @@ public class TableSegment : ICloneable
     /// 表别名后的原始SQL，比如：在polardbx数据库中，使用列存储索引FORCE INDEX(cc_i_seller),SQL SERVER数据库中，使用WITH (NOLOCK)
     /// </summary>
     public string TableAliasTrailing { get; set; }
-
-    public TableSegment Clone()
-    {
-        var result = this.MemberwiseClone() as TableSegment;
-        if (this.Fields != null && this.Fields.Count > 0)
-        {
-            result.Fields = new();
-            this.Fields.ForEach(f => result.Fields.Add(f));
-        }
-        return result;
-    }
-    object ICloneable.Clone() => Clone();
 }

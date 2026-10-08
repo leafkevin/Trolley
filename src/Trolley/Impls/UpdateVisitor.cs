@@ -827,20 +827,16 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public virtual void VisitAnd(Expression whereExpr)
     {
-        this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
         var whereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        this.IsWhere = false;
         this.VisitAndSql(whereSql, operationType);
     }
     public virtual void VisitOr(Expression whereExpr)
     {
-        this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
         var whereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        this.IsWhere = false;
         this.VisitOrSql(whereSql, operationType);
     }
     public virtual void VisitFieldsTo(Expression fieldsSelector, Action<MemberMap> fieldsAction)

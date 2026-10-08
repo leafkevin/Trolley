@@ -28,7 +28,7 @@ public interface IQueryVisitor : ICommandVisitor, IDisposable
     /// 在解析子查询中，会用到父查询中的所有表，父查询中所有表别名引用
     /// </summary>
     Dictionary<string, TableSegment> RefTableAliases { get; set; }
-    bool IsCteTable { get; set; }
+    bool IsCteQuery { get; set; }
     /// <summary>
     /// 在SQL查询中，引用到子查询或是CTE表对象，防止重复添加参数，同时也为了解析CTE表引用SQL
     /// </summary>
@@ -41,8 +41,10 @@ public interface IQueryVisitor : ICommandVisitor, IDisposable
     bool IsRecursive { get; set; }
     string UnionSql { get; set; }
 
-    bool IsSecondUnion { get; set; }
     char TableAliasStart { get; set; }
+    bool IsExists { get; set; }
+    bool IsSecondUnion { get; set; }
+  
     int PageNumber { get; }
     int PageSize { get; }
     bool IsManyShardingTables { get; }
@@ -127,6 +129,6 @@ public interface IQueryVisitor : ICommandVisitor, IDisposable
     ReusableList<ReaderField> FlattenTableFields(TableSegment tableSegment, bool isNeedAlias = true);
     void Clear(bool isClearReaderFields = false);
     IQueryVisitor Clone(DbContext dbContext, ITheaCommand command);
-    void Save(string sql = null);
+    void Save();
     void Reset();
 }

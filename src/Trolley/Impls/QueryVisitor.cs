@@ -35,7 +35,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public TableSegment LastIncludeSegment { get; set; }
     public ReusableList<ReaderField> GroupByFields { get; set; }
     public ReusableList<OrderByField> OrderByFields { get; set; }
-    public bool IsCteTable { get; set; }
+    public bool IsCteQuery { get; set; }
     public int PageNumber => this.pageNumber;
     public int PageSize => this.limit ?? 0;
     public bool IsNeedPaging { get; set; }
@@ -823,8 +823,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var sql = queryVisitor.BuildSql(false, out var readerFields);
         if (subQueryObj is ICteQuery cteQueryObj && !queryVisitor.HasChanged)
         {
-            //1. 先拷贝DbParameters，避免后续的参数被覆盖
-            //2. 再拷贝除DbParameters外的其他内容
             tableName = cteQueryObj.TableName;
             tableType = TableType.CteSelfRef;
         }
@@ -836,17 +834,32 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //第一个表是子查询表或是Union场景时，需要清零表，Join场景不需要清表
         if (isClearTables) this.Tables.Clear();
         var tableSegment = this.AddJoinTable(targetType, null, tableType, tableName, readerFields);
-        this.InitUseQueryReaderFields(tableSegment, readerFields);
+        //CTE别名不需要变化
+        if (!subQueryObj.IsCteQuery)
+            this.InitUseQueryReaderFields(tableSegment, readerFields);
     }
     public virtual void Union(string union, Type targetType, IQuery subQuery)
     {
         this.IsUnion = true;
         var rawSql = this.BuildSql(false, out _);
-        this.UseQuery(targetType, subQuery, true);
-        subQuery.Visitor.IsSecondUnion = true;
-        var subQuerySql = subQuery.Visitor.BuildSql(false, out _);
+        var queryVisitor = subQuery.Visitor.Clone(this.DbContext, this.Command);
+        if (queryVisitor.SharedQueryObjs != null && queryVisitor.SharedQueryObjs.Count > 0)
+        {
+            foreach (var refSubQuery in this.SharedQueryObjs)
+            {
+                if (this.SharedQueryObjs.Contains(refSubQuery))
+                    continue;
+                this.SharedQueryObjs.Add(refSubQuery);
+            }
+        }
+        if (!this.SharedQueryObjs.Contains(subQuery))
+            this.SharedQueryObjs.Add(subQuery);
+
+        queryVisitor.IsSecondUnion = true;
+        var subQuerySql = queryVisitor.BuildSql(false, out var readerFields);
         rawSql += union + Environment.NewLine + subQuerySql;
         this.UnionSql = rawSql;
+        this.Clear();
         this.IsUnion = false;
     }
     public virtual void Union(string union, Type targetType, Expression subQueryExpr)
@@ -854,9 +867,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var lambdaExpr = this.EnsureLambda(subQueryExpr);
         this.IsUnion = true;
         var rawSql = this.BuildSql(false, out _);
-        var result = this.VisitFromQuery(lambdaExpr.Body, isUnion: true);
+        this.IsSecondUnion = true;
+        var result = this.VisitFromQuery(lambdaExpr.Body);
+        this.IsSecondUnion = false;
         rawSql += union + Environment.NewLine + result.Sql;
         this.UnionSql = rawSql;
+        this.Clear();
         this.IsUnion = false;
     }
     public virtual void UnionRecursive(string union, Type targetType, Expression subQueryExpr)
@@ -871,12 +887,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var selfQueryObj = RepositoryHelper.CreateInstance(entityType,
             [typeof(DbContext), typeof(IQueryVisitor)], this.DbContext, this) as ICteQuery;
         selfQueryObj.TableName = $"__CTE_TABLE_{Guid.NewGuid():N}__";
-        //selfQueryObj.ReaderFields = readerFields;
         selfQueryObj.IsRecursive = true;
         this.CteQueryObj = selfQueryObj;
         this.IsRecursive = true;
-
-        var result = this.VisitFromQuery(subQueryExpr, selfQueryObj, true);
+        this.IsSecondUnion = true;
+        var result = this.VisitFromQuery(subQueryExpr);
+        this.IsSecondUnion = false;
         rawSql += union + Environment.NewLine + result.Sql;
         //先放到UnionSql中，在AsCteTable方法中，BuildCteTableSql时能得到这个SQL
         this.UnionSql = rawSql;
@@ -892,9 +908,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         var tableSegment = this.InitTableAlias(lambdaExpr);
         tableSegment.JoinType = joinType;
-        this.IsWhere = true;
         tableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body, out _);
-        this.IsWhere = false;
     }
     public virtual void Join(string joinType, Type newEntityType, Expression joinOn)
     {
@@ -907,9 +921,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.AddTable(newEntityType);
         var tableSegment = this.InitTableAlias(lambdaExpr);
         tableSegment.JoinType = joinType;
-        this.IsWhere = true;
         tableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body, out _);
-        this.IsWhere = false;
     }
     public virtual void Join(string joinType, Type newEntityType, IQuery subQuery, Expression joinOn)
     {
@@ -922,9 +934,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.UseQuery(newEntityType, subQuery, false);
         var tableSegment = this.InitTableAlias(lambdaExpr);
         tableSegment.JoinType = joinType;
-        this.IsWhere = true;
         tableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body, out _);
-        this.IsWhere = false;
     }
     public virtual void Join(string joinType, Type newEntityType, Expression subQueryExpr, Expression joinOn)
     {
@@ -937,9 +947,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.UseNewQuery(newEntityType, subQueryExpr, false);
         var tableSegment = this.InitTableAlias(lambdaExpr);
         tableSegment.JoinType = joinType;
-        this.IsWhere = true;
         tableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body, out _);
-        this.IsWhere = false;
     }
     public virtual bool Include(Expression memberSelector, Expression filter = null)
         => this.Include(memberSelector, (a, b) => this.InitTableAlias(a), filter);
@@ -1369,13 +1377,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual void And(Expression whereExpr)
     {
-        this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
         //不能更改LastWhereOperationType，如果是引用已有子查询，LastWhereOperationType是有值的
         var whereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        this.IsWhere = false;
         this.VisitAndSql(whereSql, operationType);
     }
     public virtual void OrBy(object whereObj)
@@ -1395,12 +1401,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual void Or(Expression whereExpr)
     {
-        this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
         var whereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        this.IsWhere = false;
         this.VisitOrSql(whereSql, operationType);
     }
     public virtual void GroupBy(Expression expr)
@@ -1880,21 +1884,29 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //子查询临时表字段访问或是OrderBy使用Select字段访问
                 if (lastReaderField != null)
                 {
-                    //Select之后的OrderBy字段，直接使用别名字段
-                    if (this.IsOrderBy && fromSegment.TableType == TableType.SelectReaderFields)
+                    if (this.IsExists && this.IsCteQuery)
                     {
-                        var fieldName = lastReaderField.Value.ToString();
-                        if (this.IsNeedAlias(lastReaderField))
-                            fieldName = this.OrmProvider.GetFieldName(lastReaderField.TargetMember.Name);
-                        lastReaderField = new ReaderField
-                        {
-                            FieldType = ReaderFieldType.Field,
-                            Value = fieldName
-                        };
+                        sqlSegment.SqlType = SqlType.OnlyField;
+                        sqlSegment.Value = fromSegment.AliasName + lastReaderField.Value.ToString().Substring(1);
                     }
-                    //子查询中的字段，后续操作可能会更改MemberName，先标识是引用已有ReaderField字段，需要时再做克隆副本                    
-                    else lastReaderField.IsRefField = true;
-                    sqlSegment.Change(lastReaderField, SqlType.ReaderField);
+                    else
+                    {
+                        //Select之后的OrderBy字段，直接使用别名字段
+                        if (this.IsOrderBy && fromSegment.TableType == TableType.SelectReaderFields)
+                        {
+                            var fieldName = lastReaderField.Value.ToString();
+                            if (this.IsNeedAlias(lastReaderField))
+                                fieldName = this.OrmProvider.GetFieldName(lastReaderField.TargetMember.Name);
+                            lastReaderField = new ReaderField
+                            {
+                                FieldType = ReaderFieldType.Field,
+                                Value = fieldName
+                            };
+                        }
+                        //子查询中的字段，后续操作可能会更改MemberName，先标识是引用已有ReaderField字段，需要时再做克隆副本                    
+                        else lastReaderField.IsRefField = true;
+                        sqlSegment.Change(lastReaderField, SqlType.ReaderField);
+                    }
                 }
                 else
                 {
@@ -2003,7 +2015,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             this.Connection = null;
         }
 
-        this.IsCteTable = true;
+        this.IsCteQuery = true;
         //每次要新建一个CteQuery对象，避免多次使用同一个对象
         if (this.CteQueryObj == null)
         {
@@ -2032,7 +2044,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         };
         this.Tables.Add(tableSegment);
         this.InitUseQueryReaderFields(tableSegment, readerFields);
-        this.Save(this.CteQueryObj.Body);
+        this.Save();
         return this.CteQueryObj;
     }
     public virtual void AsSharedQuery()
@@ -2135,14 +2147,22 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (parameterNames == null || parameterNames.Count <= 0)
             return tableSegment;
 
+        //进入表达式解析VisitFromQuery中，把引用的外参数名和表别名对应关系添加到当前TableAliases中
+        if (this.RefTableAliases != null)
+        {
+            foreach (var refKey in this.RefTableAliases.Keys)
+                this.TableAliases.Add(refKey, this.RefTableAliases[refKey]);
+        }
         //子查询引用并附加Where/GroupBy/OrderBy/Select等操作场景，或是Select操作后的OrderBy操作，使用Select后的字段
         if (this.ReaderFields != null && this.ReaderFields.Count > 0)
         {
-            this.TableAliases.Add(parameterNames[0], tableSegment = new TableSegment
+            if (this.IsCteQuery) tableSegment = this.Tables[0];
+            else tableSegment = new TableSegment
             {
                 TableType = TableType.SelectReaderFields,
-                Fields = this.ReaderFields,
-            });
+                Fields = this.ReaderFields
+            };
+            this.TableAliases.Add(parameterNames[0], tableSegment);
             return tableSegment;
         }
 
@@ -2166,17 +2186,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     continue;
                 this.TableAliases.Add(parameterExpr.Name, tableSegment = masterTables[index]);
                 index++;
-            }
-        }
-        if (this.RefTableAliases != null && parameterNames.Count > this.TableAliases.Count)
-        {
-            foreach (var parameterName in parameterNames)
-            {
-                if (this.TableAliases.ContainsKey(parameterName))
-                    continue;
-                if (!this.RefTableAliases.ContainsKey(parameterName))
-                    continue;
-                this.TableAliases.Add(parameterName, this.RefTableAliases[parameterName]);
             }
         }
         return tableSegment;
@@ -2330,7 +2339,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual bool IsNeedAlias(ReaderField readerField)
     {
-        if (this.IsSecondUnion || this.IsCteTable) return false;
+        if (this.IsSecondUnion || this.IsCteQuery) return false;
         //单个字段RawSql场景，需要加别名，多个字段RawSql不需要加别名
         if (readerField.FieldType == ReaderFieldType.RawSql)
             return readerField.FieldsCount == 1;
@@ -2347,11 +2356,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //有union操作的visitor，都是新New的，前面只有一个表
         this.Tables[0].Body = $"({this.UnionSql})";
         this.Tables[0].TableType = TableType.FromQuery;
-        this.UnionSql = null;
-        this.Clear(true);
+        this.Clear();
     }
     public virtual void Clear(bool isClearReaderFields = false)
     {
+        //有新加表，才需要清理ReaderFields，只有orderBy，groupBy，where等操作，不需要清理ReaderFields
         if (isClearReaderFields)
             this.ReaderFields = null;
         this.WhereBuilder.Clear();
@@ -2362,30 +2371,24 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.UnionSql = null;
         this.GroupBySql = null;
         this.HavingSql = null;
-        this.OrderByFields?.Clear();
+        this.GroupByFields = null;
+        this.OrderByFields = null;
         this.IsDistinct = false;
-        this.LastIncludeSegment = null;
-        this.GroupByFields?.Clear();
+
         this.IsSecondUnion = false;
         this.IsNeedTableAlias = true;
     }
     public IQueryVisitor Clone(DbContext dbContext, ITheaCommand command)
     {
         var result = this.OrmProvider.NewQueryVisitor(dbContext, 'a', command) as QueryVisitor;
-        result.IsRecursive = this.IsRecursive;
-        result.UnionSql = this.UnionSql;
-        result.HeadRawSql = this.HeadRawSql;
-        result.TailRawSql = this.TailRawSql;
         result.hasSavePoint = this.hasSavePoint;
         result.dbParametersIndex = this.dbParametersIndex;
         result.savedSql = this.savedSql;
-        result.offset = this.offset;
-        result.limit = this.limit;
-        result.pageNumber = this.pageNumber;
-        result.GroupBySql = this.GroupBySql;
-        result.HavingSql = this.HavingSql;
-        result.IsDistinct = this.IsDistinct;
+        result.IsCteQuery = this.IsCteQuery;
+        result.IsRecursive = this.IsRecursive;
+
         result.Command = command;
+        result.DbParameters = command.Parameters;
         if (this.DbParameters != null && this.DbParameters.Count > 0)
         {
             foreach (var dbParameter in this.DbParameters)
@@ -2394,14 +2397,25 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     result.DbParameters.Add(cloneable.Clone());
             }
         }
-        this.Tables.ForEach(f => result.Tables.Add(f.Clone()));
-        if (this.ReaderFields != null && this.ReaderFields.Count > 0)
+        //直接引用
+        result.Tables = this.Tables;
+        result.ReaderFields = this.ReaderFields;
+        if (!this.IsCteQuery)
         {
-            result.ReaderFields = new();
-            this.ReaderFields.ForEach(f => result.ReaderFields.Add(f.Clone()));
+            result.UnionSql = this.UnionSql;
+            result.HeadRawSql = this.HeadRawSql;
+            result.TailRawSql = this.TailRawSql;
+            result.offset = this.offset;
+            result.limit = this.limit;
+            result.pageNumber = this.pageNumber;
+            result.GroupBySql = this.GroupBySql;
+            result.HavingSql = this.HavingSql;
+            result.IsDistinct = this.IsDistinct;
+
+            result.WhereBuilder = this.WhereBuilder;
+            result.GroupByFields = this.GroupByFields;
+            result.OrderByFields = this.OrderByFields;
         }
-        if (this.WhereBuilder.HasSql)
-            this.WhereBuilder.CloneTo(result.WhereBuilder);
         if (this.SharedQueryObjs != null && this.SharedQueryObjs.Count > 0)
         {
             foreach (var refSubQuery in this.SharedQueryObjs)
@@ -2411,69 +2425,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 result.SharedQueryObjs.Add(refSubQuery);
             }
         }
-        //分组直接引用
-        result.GroupByFields = this.GroupByFields;
-        if (this.OrderByFields != null && this.OrderByFields.Count > 0)
-        {
-            result.OrderByFields = new();
-            result.OrderByFields.AddRange(this.OrderByFields);
-        }
         return result;
     }
-    //public virtual void CopyFrom(IQuery fromQueryObj)
-    //{
-    //    //此方法只适合新建一个QueryVisitor对象进行克隆，且不支持导航属性Include场景，多分表场景
-    //    //只用于UseQuery、VisitFromQuery两个方法中使用
-    //    var fromVisitor = fromQueryObj.Visitor as QueryVisitor;
-    //    fromVisitor.Clone();
-    //    var targetVisitor = this;
-    //    fromVisitor.Tables.ForEach(f => this.Tables.Add(f));
-    //    if (!fromQueryObj.IsCteQuery)
-    //    {
-    //        if (fromVisitor.WhereBuilder.HasSql)
-    //            targetVisitor.WhereBuilder = fromVisitor.WhereBuilder.Clone();
-    //        if (!string.IsNullOrEmpty(fromVisitor.GroupBySql))
-    //        {
-    //            targetVisitor.GroupBySql = fromVisitor.GroupBySql;
-    //            targetVisitor.GroupByFields = new();
-    //            fromVisitor.GroupByFields.ForEach(f => targetVisitor.GroupByFields.Add(f));
-    //        }
-    //        if (fromVisitor.OrderByFields != null && fromVisitor.OrderByFields.Count > 0)
-    //        {
-    //            targetVisitor.OrderByFields = new();
-    //            fromVisitor.OrderByFields.ForEach(f => targetVisitor.OrderByFields.Add(f));
-    //        }
-    //        targetVisitor.UnionSql = fromVisitor.UnionSql;
-    //        targetVisitor.HavingSql = fromVisitor.HavingSql;
-    //        targetVisitor.IsDistinct = fromVisitor.IsDistinct;
-    //        targetVisitor.IsNeedPaging = fromVisitor.IsNeedPaging;
-    //        targetVisitor.offset = fromVisitor.offset;
-    //        targetVisitor.limit = fromVisitor.limit;
-    //        targetVisitor.pageNumber = fromVisitor.pageNumber;
-    //    }
-    //    if (fromVisitor.SharedQueryObjs != null && fromVisitor.SharedQueryObjs.Count > 0)
-    //    {
-    //        foreach (var refSubQuery in fromVisitor.SharedQueryObjs)
-    //        {
-    //            if (targetVisitor.SharedQueryObjs.Contains(refSubQuery))
-    //                continue;
-    //            targetVisitor.SharedQueryObjs.Add(refSubQuery);
-    //        }
-    //    }
-    //    if (fromVisitor.DbParameters != null && fromVisitor.DbParameters.Count > 0)
-    //    {
-    //        foreach (var dbParameter in fromVisitor.DbParameters)
-    //        {
-    //            if (dbParameter is ICloneable cloneable)
-    //                targetVisitor.DbParameters.Add(cloneable.Clone());
-    //        }
-    //    }
-    //    if (fromVisitor.ReaderFields != null && fromVisitor.ReaderFields.Count > 0)
-    //    {
-    //        targetVisitor.ReaderFields = new();
-    //        fromVisitor.ReaderFields.ForEach(f => targetVisitor.ReaderFields.Add(f.Clone()));
-    //    }
-    //}
     public override void Dispose()
     {
         if (this.isDisposed)
@@ -2505,51 +2458,54 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var path = builder.ToString();
         return HashCode.Combine(this.OrmProvider.OrmProviderType, targetType, pathLength, path);
     }
-    public void Save(string sql = null)
+    public void Save()
     {
         this.hasSavePoint = true;
-        if (this.ReaderFields == null || this.ReaderFields.Count == 0)
+        if (!this.IsCteQuery)
         {
-            this.ReaderFields = [new ReaderField
+            if (this.ReaderFields == null || this.ReaderFields.Count == 0)
             {
-                FieldType = ReaderFieldType.RawSql,
-                Value = "*"
-            }];
-            sql = this.BuildSql(false, out _);
+                this.ReaderFields = [new ReaderField
+                {
+                    FieldType = ReaderFieldType.RawSql,
+                    Value = "*"
+                }];
+            }
+            this.WhereBuilder.Save();
+            this.GroupByFields?.Save();
+            this.OrderByFields?.Save();
         }
-        this.savedSql = sql;
+        this.savedSql = this.BuildSql(false, out _);
         this.dbParametersIndex = this.DbParameters.Count;
         this.Tables.Save();
-        this.WhereBuilder.Save();
         this.ReaderFields.Save();
         this.SharedQueryObjs?.Save();
-        this.GroupByFields?.Save();
-        this.OrderByFields?.Save();
     }
     public void Reset()
     {
         if (!this.hasSavePoint) return;
         while (this.DbParameters.Count > this.dbParametersIndex)
             this.DbParameters.RemoveAt(this.dbParametersIndex);
+        if (this.IsCteQuery)
+        {
+            this.WhereBuilder.Clear();
+            this.GroupByFields = null;
+            this.OrderByFields = null;
+        }
+        else
+        {
+            this.WhereBuilder.Reset();
+            this.GroupByFields?.Reset();
+            this.OrderByFields?.Reset();
+        }
         this.Tables.Reset();
-        this.WhereBuilder.Reset();
         this.ReaderFields.Reset();
         this.SharedQueryObjs?.Reset();
-        this.GroupByFields?.Reset();
-        this.OrderByFields?.Reset();
     }
 }
-public class OrderByField : ICloneable
+public class OrderByField
 {
     public ReaderField Field { get; set; }
     public string Suffix { get; set; }
     public bool IsReaderField { get; set; }
-
-    public OrderByField Clone()
-    {
-        var result = this.MemberwiseClone() as OrderByField;
-        result.Field = this.Field.Clone();
-        return result;
-    }
-    object ICloneable.Clone() => Clone();
 }

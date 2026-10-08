@@ -119,7 +119,7 @@ public enum ReaderFieldType : byte
     /// </summary>
     Expression
 }
-public class ReaderField : ICloneable
+public class ReaderField
 {
     public ReaderFieldType FieldType { get; set; }
     public TableSegment TableSegment { get; set; }
@@ -183,5 +183,4 @@ public class ReaderField : ICloneable
         }
         return result;
     }
-    object ICloneable.Clone() => Clone();
 }

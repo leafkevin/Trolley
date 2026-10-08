@@ -10,7 +10,6 @@ public interface ISqlVisitor : IDisposable
 {
     DbContext DbContext { get; }
     bool IsSelect { get; }
-    bool IsWhere { get; }
 
     void UseTable(TableUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
     void UseTableByRange(TableUsageMode usageMode, bool isIncludeMany, object[] fieldValues);

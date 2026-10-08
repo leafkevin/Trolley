@@ -183,18 +183,14 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     }
     public virtual void VisitAnd(Expression whereExpr)
     {
-        this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         var whereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        this.IsWhere = false;
         this.VisitAndSql(whereSql, operationType);
     }
     public virtual void VisitOr(Expression whereExpr)
     {
-        this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         var whereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        this.IsWhere = false;
         this.VisitOrSql(whereSql, operationType);
     }
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)

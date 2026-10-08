@@ -220,7 +220,6 @@ public class QueryBase : QueryInternal, IQueryBase
         createVisiter.Tables = this.Visitor.Tables;
         createVisiter.SharedQueryObjs = this.Visitor.SharedQueryObjs;
         createVisiter.ShardingTables = this.Visitor.ShardingTables;
-        //createVisiter.RefTableAliases = this.Visitor.RefTableAliases;
         createVisiter.IsRecursive = this.Visitor.IsRecursive;
         //createVisiter.CteQueryObj = this.Visitor.CteQueryObj;
         createVisiter.FromSql = this.Visitor.BuildCommandSql(entityType, out _);

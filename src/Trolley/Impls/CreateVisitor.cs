@@ -782,19 +782,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.FieldsBuilder = null;
         this.ValuesBuilder = null;
     }
-    //public override IQueryVisitor CreateQueryVisitor(char? tableAsStart = null)
-    //{
-    //    var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAliasStart, this.Command);
-    //    queryVisitor.SharedQueryObjs = this.SharedQueryObjs;
-    //    queryVisitor.ShardingTables = this.ShardingTables;
-    //    queryVisitor.RefTableAliases = this.RefTableAliases;
-    //    queryVisitor.IncludeTables = this.IncludeTables;
-    //    queryVisitor.IsRecursive = this.IsRecursive;
-    //    queryVisitor.CteQueryObj = this.CteQueryObj;
-
-    //    queryVisitor.Tables = this.Tables;
-    //    return queryVisitor;
-    //}
     public virtual void InitTableAlias(LambdaExpression lambdaExpr)
     {
         if (!lambdaExpr.Body.TryGetParameters(out var parameters))
