@@ -54,64 +54,64 @@ public class Repository : DialectProvider, IRepository
     #endregion     
 
     #region From
-    public virtual IQuery<T> From<T>(char tableAsStart = 'a')
+    public virtual IQuery<T> From<T>()
     {
-        var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, typeof(T));
+        var visitor = this.CreateQueryVisitor();
+        visitor.AddTable(typeof(T));
         return this.ormProvider.NewQuery<T>(this.DbContext, visitor);
     }
-    public virtual IQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
+    public virtual IQuery<T1, T2> From<T1, T2>()
     {
-        var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, typeof(T1), typeof(T2));
+        var visitor = this.CreateQueryVisitor();
+        visitor.AddTable(typeof(T1), typeof(T2));
         return this.ormProvider.NewQuery<T1, T2>(this.DbContext, visitor);
     }
-    public virtual IQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a')
+    public virtual IQuery<T1, T2, T3> From<T1, T2, T3>()
     {
-        var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3));
+        var visitor = this.CreateQueryVisitor();
+        visitor.AddTable(typeof(T1), typeof(T2), typeof(T3));
         return this.ormProvider.NewQuery<T1, T2, T3>(this.DbContext, visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart = 'a')
+    public virtual IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>()
     {
-        var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
+        var visitor = this.CreateQueryVisitor();
+        visitor.AddTable(typeof(T1), typeof(T2), typeof(T3), typeof(T4));
         return this.ormProvider.NewQuery<T1, T2, T3, T4>(this.DbContext, visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(char tableAsStart = 'a')
+    public virtual IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
     {
-        var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
+        var visitor = this.CreateQueryVisitor();
+        visitor.AddTable(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
         return this.ormProvider.NewQuery<T1, T2, T3, T4, T5>(this.DbContext, visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>(char tableAsStart = 'a')
+    public virtual IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
     {
-        var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
+        var visitor = this.CreateQueryVisitor();
+        visitor.AddTable(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
         return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6>(this.DbContext, visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>(char tableAsStart = 'a')
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>()
     {
-        var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
+        var visitor = this.CreateQueryVisitor();
+        visitor.AddTable(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
         return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7>(this.DbContext, visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>(char tableAsStart = 'a')
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>()
     {
-        var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
+        var visitor = this.CreateQueryVisitor();
+        visitor.AddTable(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
         return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this.DbContext, visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(char tableAsStart = 'a')
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>()
     {
-        var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
+        var visitor = this.CreateQueryVisitor();
+        visitor.AddTable(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
         return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.DbContext, visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a')
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>()
     {
-        var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
+        var visitor = this.CreateQueryVisitor();
+        visitor.AddTable(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
         return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.DbContext, visitor);
     }
     #endregion
@@ -344,8 +344,8 @@ public class Repository : DialectProvider, IRepository
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         if (wherePredicate != null)
         {
-            using var queryVisitor = this.CreateQueryVisitor('a', command);
-            queryVisitor.From('a', entityType);
+            using var queryVisitor = this.CreateQueryVisitor(command);
+            queryVisitor.AddTable(entityType);
             queryVisitor.And(wherePredicate);
             queryVisitor.SelectRaw(typeof(int), "1");
             queryVisitor.Take(1);
@@ -376,8 +376,8 @@ public class Repository : DialectProvider, IRepository
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         if (wherePredicate != null)
         {
-            using var queryVisitor = this.CreateQueryVisitor('a', command);
-            queryVisitor.From('a', entityType);
+            using var queryVisitor = this.CreateQueryVisitor(command);
+            queryVisitor.AddTable(entityType);
             queryVisitor.And(wherePredicate);
             queryVisitor.SelectRaw(typeof(int), "1");
             queryVisitor.Take(1);

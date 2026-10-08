@@ -23,6 +23,6 @@ public class EntityMapProvider : IEntityMapProvider
         }
         //映射实体每个字段
         foreach (var entityMapper in this.EntityMaps)
-            entityMapper.Build(database.OrmProvider);
+            entityMapper.Build(database.OrmProvider, options);
     }
 }

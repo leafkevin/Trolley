@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Data;
 using System.Text;
 
 namespace Trolley;
 
-public class RefWhereBuilder : IDisposable, ICloneable
+public class ReusableWhereBuilder : IDisposable
 {
     private bool hasSavePoint;
-    private int whereIndex;
+    private string whereSql;
     private OperationType savedOperationType;
 
     private OperationType current = OperationType.None;
@@ -45,30 +44,29 @@ public class RefWhereBuilder : IDisposable, ICloneable
         this.current = OperationType.None;
         this.whereBuilder.Clear();
     }
-    public RefWhereBuilder Clone() => new RefWhereBuilder
+    public void CloneTo(ReusableWhereBuilder target)
     {
-        whereIndex = this.whereIndex,
-        savedOperationType = this.savedOperationType,
-        current = this.current,
-        whereBuilder = new StringBuilder(this.whereBuilder.ToString())
-    };
+        var sql = this.whereBuilder.ToString();
+        target.hasSavePoint = this.hasSavePoint;
+        target.whereSql = sql;
+        target.savedOperationType = this.savedOperationType;
+        target.current = this.current;
+        target.whereBuilder = new StringBuilder(sql);
+    }
     public void Save()
     {
-        this.whereIndex = this.whereBuilder.Length;
+        this.whereSql = this.whereBuilder.ToString();
         this.savedOperationType = this.current;
         this.hasSavePoint = true;
     }
-    public void Release()
+    public void Reset()
     {
         if (!this.hasSavePoint) return;
-        if (this.whereIndex < 0 || this.whereBuilder.Length <= this.whereIndex)
-            return;
         this.current = this.savedOperationType;
-        var length = this.whereBuilder.Length - this.whereIndex;
-        this.whereBuilder.Remove(whereIndex, length);
+        this.whereBuilder.Clear();
+        this.whereBuilder.Append(this.whereSql);
     }
     public override string ToString() => this.Build();
-    object ICloneable.Clone() => this.Clone();
     public void Dispose()
     {
         this.whereBuilder.Clear();

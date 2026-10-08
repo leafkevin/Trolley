@@ -18,7 +18,7 @@ public class MySqlCreateVisitor : CreateVisitor
     public MySqlCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
         : base(entityType, dbContext, tableAsStart, command) { }
 
-    public override string BuildSql(out List<ReaderField> readerFields)
+    public override string BuildSql(out ReusableList<ReaderField> readerFields)
     {
         string tailSql = null;
         readerFields = this.ReaderFields;
@@ -136,7 +136,7 @@ public class MySqlCreateVisitor : CreateVisitor
         tableSegment.TableSchema = tableSchema;
     }
     public override (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
-        Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<ReaderField>) BuildWithBulk(ITheaCommand command)
+        Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, ReusableList<ReaderField>) BuildWithBulk(ITheaCommand command)
     {
         (var insertObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
 
@@ -556,21 +556,21 @@ public class MySqlCreateVisitor : CreateVisitor
         this.UpdateBuilder.Append($"{fieldSegment.Value}={valueSegment.Value}");
         this.UpdateIndex++;
     }
-    public override IQueryVisitor CreateQueryVisitor(char? tableAsStart = null)
-    {
-        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAliasStart, this.Command) as MySqlQueryVisitor;
-        queryVisitor.SharedQueryObjs = this.SharedQueryObjs;
-        queryVisitor.ShardingTables = this.ShardingTables;
-        queryVisitor.RefTableAliases = this.RefTableAliases;
-        queryVisitor.IncludeTables = this.IncludeTables;
-        queryVisitor.IsRecursive = this.IsRecursive;
-        queryVisitor.CteQueryObj = this.CteQueryObj;
-        //queryVisitor.RefFrom = this;
-        queryVisitor.Tables = this.Tables;
+    //public override IQueryVisitor CreateQueryVisitor(char? tableAsStart = null)
+    //{
+    //    var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAliasStart, this.Command) as MySqlQueryVisitor;
+    //    queryVisitor.SharedQueryObjs = this.SharedQueryObjs;
+    //    queryVisitor.ShardingTables = this.ShardingTables;
+    //    queryVisitor.RefTableAliases = this.RefTableAliases;
+    //    queryVisitor.IncludeTables = this.IncludeTables;
+    //    queryVisitor.IsRecursive = this.IsRecursive;
+    //    queryVisitor.CteQueryObj = this.CteQueryObj;
+    //    //queryVisitor.RefFrom = this;
+    //    queryVisitor.Tables = this.Tables;
 
-        queryVisitor.IsUseIgnoreInto = this.IsUseIgnoreInto;
-        return queryVisitor;
-    }
+    //    queryVisitor.IsUseIgnoreInto = this.IsUseIgnoreInto;
+    //    return queryVisitor;
+    //}
     public virtual void AddMemberElement(Expression fieldExpr, MemberMap memberMapper)
     {
         var sqlSegment = this.Visit(new SqlSegment { Expression = fieldExpr });

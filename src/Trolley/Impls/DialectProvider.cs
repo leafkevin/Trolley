@@ -11,6 +11,7 @@ namespace Trolley;
 
 public class DialectProvider
 {
+    protected char tableAsStart = 'a';
     protected internal string dbKey => this.DbContext.DbKey;
     protected internal TheaDatabase database => this.DbContext.Database;
     protected internal ITheaConnection connection => this.DbContext.Connection;
@@ -125,15 +126,15 @@ public class DialectProvider
     #endregion
 
     #region CreateQueryVisitor
-    public IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a')
+    public IQueryVisitor CreateQueryVisitor()
     {
         (_, _, var command) = this.UseSlaveCommand();
-        return this.ormProvider.NewQueryVisitor(this.DbContext, tableAsStart, command);
+        return this.ormProvider.NewQueryVisitor(this.DbContext, this.tableAsStart, command);
     }
-    public IQueryVisitor CreateQueryVisitor(char tableAsStart, ITheaCommand command)
+    public IQueryVisitor CreateQueryVisitor(ITheaCommand command)
     {
-        if (command == null) return this.CreateQueryVisitor(tableAsStart);
-        return this.ormProvider.NewQueryVisitor(this.DbContext, tableAsStart, command);
+        if (command == null) (_, _, command) = this.UseSlaveCommand();
+        return this.ormProvider.NewQueryVisitor(this.DbContext, this.tableAsStart, command);
     }
     #endregion
 
@@ -434,7 +435,7 @@ public class DialectProvider
         return result;
     }
 
-    public List<TTarget> QuerySimple<TTarget>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, List<ReaderField> readerFields)
+    public List<TTarget> QuerySimple<TTarget>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, ReusableList<ReaderField> readerFields)
     {
         var entityType = typeof(TTarget);
         connection.Open();
@@ -448,7 +449,7 @@ public class DialectProvider
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<List<TTarget>> QuerySimpleAsync<TTarget>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, List<ReaderField> readerFields, CancellationToken cancellationToken = default)
+    public async Task<List<TTarget>> QuerySimpleAsync<TTarget>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, ReusableList<ReaderField> readerFields, CancellationToken cancellationToken = default)
     {
         var entityType = typeof(TTarget);
         await connection.OpenAsync(cancellationToken);
@@ -1190,7 +1191,7 @@ public class DialectProvider
             command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
-    public (bool, ITheaConnection, ITheaCommand, List<ReaderField>) CreateExecuteCommand(ICommandVisitor visitor)
+    public (bool, ITheaConnection, ITheaCommand, ReusableList<ReaderField>) CreateExecuteCommand(ICommandVisitor visitor)
     {
         (var isNeedClose, var connection, var command) = visitor.UseCommand();
         command.CommandText = visitor.BuildSql(out var readerFields);

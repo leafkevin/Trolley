@@ -118,10 +118,9 @@ public interface IRepository
     /// 使用1个表创建查询对象
     /// </summary>
     /// <typeparam name="T">实体类型</typeparam>
-    /// <param name="tableAsStart">表别名起始字母，默认从字母'a'开始</param>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> From<T>(char tableAsStart = 'a');
+    IQuery<T> From<T>();
 <#
     var count = 10;
     string tables = "T1";
@@ -140,9 +139,8 @@ public interface IRepository
 #>
     /// <typeparam name="<#=currentTable#>">表T<#=j#>实体类型</typeparam>
 <#      }#>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IQuery<<#=tables#>> From<<#=tables#>>(char tableAsStart = 'a');
+    IQuery<<#=tables#>> From<<#=tables#>>();
 <#  }#>
     #endregion
 

@@ -30,7 +30,7 @@ public enum TableType : byte
     /// </summary>
     SelectReaderFields
 }
-public class TableSegment
+public class TableSegment : ICloneable
 {
     /// <summary>
     /// 关联类型，第一个表的JoinType为空字符串，后面的每个表都有关联类型
@@ -79,6 +79,10 @@ public class TableSegment
     /// </summary>
     public bool IsMaster { get; set; }
     /// <summary>
+    /// 只对Include表有用
+    /// </summary>
+    public bool IsUsed { get; set; }
+    /// <summary>
     /// 表的访问路径，主表时，是别名，Include表时，是从根主表到本成员完整访问路径，为了便于查找，如:a.Seller.Company.Products
     /// </summary>
     public string Path { get; set; }
@@ -93,7 +97,7 @@ public class TableSegment
     /// <summary>
     /// 子查询表时，所有字段定义，包括CTE表
     /// </summary>
-    public List<ReaderField> Fields { get; set; }
+    public ReusableList<ReaderField> Fields { get; set; }
     /// <summary>
     /// Include 1:N关系表时，从最外层Select参数访问到Include成员的父亲路径所有成员访问列表，方便最后赋值
     /// </summary>
@@ -139,31 +143,15 @@ public class TableSegment
     /// </summary>
     public string TableAliasTrailing { get; set; }
 
-    /// <summary>
-    /// 生成一个自身引用的副本，主要用在cte表的自身引用
-    /// </summary>
-    /// <param name="aliasName"></param>
-    /// <param name="joinType"></param>
-    /// <param name="joinOnExpr"></param>
-    /// <returns></returns>
-    public TableSegment Clone(string aliasName = "a", string joinType = null, string joinOnExpr = null)
+    public TableSegment Clone()
     {
-        return new TableSegment
+        var result = this.MemberwiseClone() as TableSegment;
+        if (this.Fields != null && this.Fields.Count > 0)
         {
-            JoinType = joinType,
-            EntityType = this.EntityType,
-            AliasName = aliasName,
-            FromTable = this.FromTable,
-            FromMember = this.FromMember,
-            Mapper = this.Mapper,
-            Body = this.Body,
-            SuffixRawSql = this.SuffixRawSql,
-            TableType = this.TableType,
-            IsMaster = this.IsMaster,
-            Path = this.Path,
-            Filter = this.Filter,
-            OnExpr = joinOnExpr,
-            Fields = this.Fields
-        };
+            result.Fields = new();
+            this.Fields.ForEach(f => result.Fields.Add(f));
+        }
+        return result;
     }
+    object ICloneable.Clone() => Clone();
 }

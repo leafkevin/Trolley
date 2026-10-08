@@ -9,7 +9,7 @@ public class QueryInternal : DialectProvider
     private bool isDisposed = false;
     #region Properties
     public IQueryVisitor Visitor { get; set; }
-    public virtual bool IsCteTable => false;
+    public virtual bool IsCteQuery => false;
     public virtual IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 

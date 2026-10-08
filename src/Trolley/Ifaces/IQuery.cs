@@ -25,7 +25,7 @@ public interface IQuery : IDisposable
     /// <summary>
     /// 是否CTE表
     /// </summary>
-    bool IsCteTable { get; }
+    bool IsCteQuery { get; }
     #endregion
 
     #region ToSql

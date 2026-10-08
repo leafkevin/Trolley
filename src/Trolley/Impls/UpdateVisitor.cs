@@ -48,7 +48,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (this.TryGetTableShardingInfo(entityType, out var tableShardingInfo))
             this.Tables[0].TableShardingInfo = tableShardingInfo;
     }
-    public override string BuildSql(out List<ReaderField> readerFields)
+    public override string BuildSql(out ReusableList<ReaderField> readerFields)
     {
         string sql = null;
         readerFields = null;
@@ -212,7 +212,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         return sql;
     }
     public virtual (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>,
-        Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>, List<ReaderField>) BuildSetBulk(ITheaCommand command)
+        Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>, ReusableList<ReaderField>) BuildSetBulk(ITheaCommand command)
     {
         (var updateObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
 

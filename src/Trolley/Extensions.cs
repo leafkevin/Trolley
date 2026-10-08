@@ -25,8 +25,8 @@ public static class Extensions
     };
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<ITheaDataReader, object>>> valueTupleReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<ITheaDataReader, object>>> simpleReaderDeserializerCache = new();
-    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<ITheaDataReader, List<ReaderField>, object>>> queryReaderDeserializerCache = new();
-    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<ITheaDataReader, List<ReaderField>, object>>> deferredValueReaderDeserializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<ITheaDataReader, ReusableList<ReaderField>, object>>> queryReaderDeserializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<ITheaDataReader, ReusableList<ReaderField>, object>>> deferredValueReaderDeserializerCache = new();
 
     extension(OrmDbFactoryBuilder builder)
     {
@@ -300,7 +300,7 @@ public static class Extensions
                     RepositoryHelper.CreateReaderEntityDeserializer(targetType, dbContext, reader));
             }
         }
-        public Func<ITheaDataReader, List<ReaderField>, object> GetReaderDeserializer(Type targetType, DbContext dbContext, List<ReaderField> readerFields)
+        public Func<ITheaDataReader, ReusableList<ReaderField>, object> GetReaderDeserializer(Type targetType, DbContext dbContext, ReusableList<ReaderField> readerFields)
         {
             if (typeof(IDictionary<string, object>).IsAssignableFrom(targetType))
             {
@@ -514,7 +514,7 @@ public static class Extensions
         memberInfo = null;
         return false;
     }
-    private static int GetTypeReaderKey(Type entityType, OrmProviderType ormProviderType, ITheaDataReader reader, List<ReaderField> readerFields)
+    private static int GetTypeReaderKey(Type entityType, OrmProviderType ormProviderType, ITheaDataReader reader, ReusableList<ReaderField> readerFields)
     {
         var hashCode = new HashCode();
         hashCode.Add(ormProviderType);

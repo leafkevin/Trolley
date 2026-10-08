@@ -773,7 +773,7 @@ public class CteQuery<T> : Query<T>, ICteQuery<T>
 {
     #region Properties
     public string TableName { get; set; }
-    public override bool IsCteTable => true;
+    public override bool IsCteQuery => true;
     public bool IsRecursive { get; set; }
     #endregion
 

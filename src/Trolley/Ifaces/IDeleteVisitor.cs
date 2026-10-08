@@ -10,7 +10,7 @@ public interface IDeleteVisitor : ICommandVisitor, IDisposable
     DbContext DbContext { get; }
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider EntityMapProvider { get; }
-    List<TableSegment> Tables { get; set; }
+    ReusableList<TableSegment> Tables { get; set; }
     ITableShardingProvider ShardingProvider { get; }
 
     bool HasWhere { get; }

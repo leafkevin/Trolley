@@ -9,5 +9,5 @@ public interface ICommandVisitor
     ITheaCommand Command { get; set; }
     IDataParameterCollection DbParameters { get; set; }
     (bool, ITheaConnection, ITheaCommand) UseCommand();
-    string BuildSql(out List<ReaderField> readerFields);
+    string BuildSql(out ReusableList<ReaderField> readerFields);
 }

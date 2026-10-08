@@ -53,8 +53,8 @@ public interface IDialectProvider
     #endregion
 
     #region QueryVisitor
-    TResult QueryFrom<TEntity, TResult>(IQueryVisitor visitor, bool isBulk, Func<Type, ITheaDataReader, List<ReaderField>, TResult> readerInitializer);
-    Task<TResult> QueryFromAsync<TEntity, TResult>(IQueryVisitor visitor, bool isBulk, Func<Type, ITheaDataReader, List<ReaderField>, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default);
+    TResult QueryFrom<TEntity, TResult>(IQueryVisitor visitor, bool isBulk, Func<Type, ITheaDataReader, ReusableList<ReaderField>, TResult> readerInitializer);
+    Task<TResult> QueryFromAsync<TEntity, TResult>(IQueryVisitor visitor, bool isBulk, Func<Type, ITheaDataReader, ReusableList<ReaderField>, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default);
     IPagedList<TResult> QueryPage<TResult>(IQueryVisitor visitor);
     Task<IPagedList<TResult>> QueryPageAsync<TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default);
     #endregion
@@ -76,8 +76,8 @@ public interface IDialectProvider
     TResult CreateIdentity<TResult>(ICreateVisitor visitor);
     Task<TResult> CreateIdentityAsync<TResult>(ICreateVisitor visitor, CancellationToken cancellationToken = default);
 
-    TResult CreateResult<TTarget, TResult>(ICreateVisitor visitor, Func<ITheaDataReader, List<ReaderField>, Func<ITheaDataReader, List<ReaderField>, object>, TResult> readerInitializer);
-    Task<TResult> CreateResultAsync<TTarget, TResult>(ICreateVisitor visitor, Func<ITheaDataReader, List<ReaderField>, Func<ITheaDataReader, List<ReaderField>, object>, TResult> readerInitializer, CancellationToken cancellationToken = default);
+    TResult CreateResult<TTarget, TResult>(ICreateVisitor visitor, Func<ITheaDataReader, ReusableList<ReaderField>, Func<ITheaDataReader, ReusableList<ReaderField>, object>, TResult> readerInitializer);
+    Task<TResult> CreateResultAsync<TTarget, TResult>(ICreateVisitor visitor, Func<ITheaDataReader, ReusableList<ReaderField>, Func<ITheaDataReader, ReusableList<ReaderField>, object>, TResult> readerInitializer, CancellationToken cancellationToken = default);
     #endregion
 
     #region Update
@@ -109,7 +109,7 @@ public interface IDialectProvider
     #endregion
 
     #region BuildSql
-    (string, List<ReaderField>) BuildSql(IQueryVisitor visitor);
+    (string, ReusableList<ReaderField>) BuildSql(IQueryVisitor visitor);
     string BuildShardingTablesSqlByFormat(SqlVisitor visitor, string formatSql, string jointMark);
     string GetShardingTable(Type entityType, params object[] fieldValues);
     #endregion

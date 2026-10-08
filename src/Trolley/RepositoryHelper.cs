@@ -1246,9 +1246,9 @@ public static class RepositoryHelper
             result.Add((TEntity)deserializer.Invoke(reader));
         return result;
     }
-    private static List<ReaderField> GenerateReaderFields(DbContext dbContext, Type entityType, Type targetType = null)
+    private static ReusableList<ReaderField> GenerateReaderFields(DbContext dbContext, Type entityType, Type targetType = null)
     {
-        var targetFields = new List<ReaderField>();
+        var targetFields = new ReusableList<ReaderField>();
         var entityMapper = dbContext.EntityMapProvider.GetEntityMap(entityType);
         List<MemberInfo> targetMembers = null;
         if (targetType != null)
@@ -1375,7 +1375,7 @@ public static class RepositoryHelper
     public static Func<ITheaDataReader, object> CreateReaderEntityDeserializer(Type targetType, DbContext dbContext, ITheaDataReader reader)
     {
         var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
-        var readerFieldsExpr = Expression.Parameter(typeof(List<ReaderField>), "readerFields");
+        var readerFieldsExpr = Expression.Parameter(typeof(ReusableList<ReaderField>), "readerFields");
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
         var memberInfos = GetMembers(targetType).Where(f => f.CanWrite).ToList();
         var entityMapper = dbContext.EntityMapProvider.GetEntityMap(targetType);
@@ -1410,12 +1410,12 @@ public static class RepositoryHelper
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(object))));
         return Expression.Lambda<Func<ITheaDataReader, object>>(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
     }
-    public static Func<ITheaDataReader, List<ReaderField>, object> CreateReaderDeferredValueDeserializer(DbContext dbContext, ITheaDataReader reader, List<ReaderField> readerFields)
+    public static Func<ITheaDataReader, ReusableList<ReaderField>, object> CreateReaderDeferredValueDeserializer(DbContext dbContext, ITheaDataReader reader, ReusableList<ReaderField> readerFields)
     {
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
         var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
-        var readerFieldsExpr = Expression.Parameter(typeof(List<ReaderField>), "readerFields");
+        var readerFieldsExpr = Expression.Parameter(typeof(ReusableList<ReaderField>), "readerFields");
 
         Expression executeExpr = null;
         var readerField = readerFields[0];
@@ -1432,7 +1432,7 @@ public static class RepositoryHelper
             if (readerField.ValuesParameters.Count > 0)
             {
                 newParameters.AddRange(readerField.ValuesParameters);
-                var itemPropertyInfo = typeof(List<ReaderField>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                var itemPropertyInfo = typeof(ReusableList<ReaderField>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
                     .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(int)).First();
                 var readerFieldExpr = Expression.Property(readerFieldsExpr, itemPropertyInfo, Expression.Constant(0));
                 var localValuesExpr = Expression.Property(readerFieldExpr, nameof(ReaderField.LocalValues));
@@ -1453,15 +1453,15 @@ public static class RepositoryHelper
         var returnExpr = Expression.Convert(executeExpr, typeof(object));
         blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(object))));
-        return Expression.Lambda<Func<ITheaDataReader, List<ReaderField>, object>>(Expression.Block(blockParameters,
+        return Expression.Lambda<Func<ITheaDataReader, ReusableList<ReaderField>, object>>(Expression.Block(blockParameters,
             blockBodies), readerExpr, readerFieldsExpr).Compile();
     }
-    public static Func<ITheaDataReader, List<ReaderField>, object> CreateReaderEntityDeserializer(Type targetType, DbContext dbContext, ITheaDataReader reader, List<ReaderField> readerFields)
+    public static Func<ITheaDataReader, ReusableList<ReaderField>, object> CreateReaderEntityDeserializer(Type targetType, DbContext dbContext, ITheaDataReader reader, ReusableList<ReaderField> readerFields)
     {
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
         var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
-        var readerFieldsExpr = Expression.Parameter(typeof(List<ReaderField>), "readerFields");
+        var readerFieldsExpr = Expression.Parameter(typeof(ReusableList<ReaderField>), "readerFields");
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
 
         //IDataReader的索引，readerFields的索引
@@ -1472,9 +1472,22 @@ public static class RepositoryHelper
         var readerBuilders = new Dictionary<string, EntityBuilder>();
         var deferredBuilders = new Stack<EntityBuilder>();
         var entityMapProvider = dbContext.EntityMapProvider;
-
+        var includeFieldReaders = readerFields.FindAll(f => f.FieldType == ReaderFieldType.DeferredIncludeRef);
+        if (includeFieldReaders != null && includeFieldReaders.Count > 0)
+        {
+            foreach (var readerField in includeFieldReaders)
+            {
+                if (!readerField.TargetMember.CanWrite)
+                    throw new NotSupportedException($"类{targetType.FullName}的成员{readerField.TargetMember.Name}不是可写属性，引用Include Many字段[{readerField.Expression}]必须是可写属性才可赋值");
+            }
+        }
         foreach (var readerField in readerFields)
         {
+            if (readerField.FieldType == ReaderFieldType.DeferredIncludeRef)
+            {
+                readerIndex++;
+                continue;
+            }
             switch (readerField.FieldType)
             {
                 case ReaderFieldType.Field:
@@ -1510,7 +1523,7 @@ public static class RepositoryHelper
                             if (readerField.ValuesParameters != null && readerField.ValuesParameters.Count > 0)
                             {
                                 newParameters.AddRange(readerField.ValuesParameters);
-                                var itemPropertyInfo = typeof(List<ReaderField>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                                var itemPropertyInfo = typeof(ReusableList<ReaderField>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
                                     .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(int)).First();
                                 var myReaderIndex = readerFields.IndexOf(readerField);
                                 var readerFieldExpr = Expression.Property(readerFieldsExpr, itemPropertyInfo, Expression.Constant(myReaderIndex));
@@ -1605,7 +1618,7 @@ public static class RepositoryHelper
                     }
                     break;
                 default:
-                    //实体类型、引用实体类型的导航属性场景
+                    //实体类型、引用实体类型的导航属性场景                    
                     if (readerField.FieldType == ReaderFieldType.IncludeRef)
                     {
                         //Include导航属性引用不能单独Select，前面一定有Parameter访问
@@ -1677,7 +1690,7 @@ public static class RepositoryHelper
 
         blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(object))));
-        return Expression.Lambda<Func<ITheaDataReader, List<ReaderField>, object>>(Expression.Block(blockParameters,
+        return Expression.Lambda<Func<ITheaDataReader, ReusableList<ReaderField>, object>>(Expression.Block(blockParameters,
             blockBodies), readerExpr, readerFieldsExpr).Compile();
     }
     public static Expression GetTypedReaderValue(DbContext dbContext, ParameterExpression readerExpr, Expression indexExpr,

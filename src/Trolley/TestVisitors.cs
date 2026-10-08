@@ -11,7 +11,7 @@ public class DeferredExpressionVisitor : ExpressionVisitor
     private bool hasMemberAccess;
     private readonly List<ParameterExpression> fieldsParameters = new();
     private readonly List<ParameterExpression> valuesParameters = new();
-    private List<ReaderField> readerFields = null;
+    private ReusableList<ReaderField> readerFields = null;
     private List<object> localValues = new();
 
     public DeferredExpressionVisitor(SqlVisitor sqlVisitor)

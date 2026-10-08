@@ -13,7 +13,7 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
 
     public PostgreSqlUpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a')
         : base(entityType, dbContext, tableAsStart) { }
-    public override string BuildSql(  out List<ReaderField> readerFields)
+    public override string BuildSql(  out ReusableList<ReaderField> readerFields)
     {
         string sql = null;
         readerFields = null;
@@ -171,7 +171,7 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
         return sql;
     }
     public override (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>,
-        Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>, List<ReaderField>) BuildSetBulk(ITheaCommand command)
+        Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>, ReusableList<ReaderField>) BuildSetBulk(ITheaCommand command)
     {
         (var updateObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
         object firstUpdateObj = null;

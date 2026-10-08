@@ -48,7 +48,7 @@ public struct SqlSegment
     //where条件时候，需要用于添加参数
     public MemberMap MemberMapper { get; set; }
     public MemberInfo TargetMember { get; set; }
-    public List<ReaderField> Fields { get; set; }
+    public ReusableList<ReaderField> Fields { get; set; }
     public bool IsRawSqlFields { get; set; }
     public bool IsConstant => this.SqlType == SqlType.Constant;
     public bool IsVariable => this.SqlType == SqlType.Variable;
@@ -119,7 +119,7 @@ public enum ReaderFieldType : byte
     /// </summary>
     Expression
 }
-public class ReaderField
+public class ReaderField : ICloneable
 {
     public ReaderFieldType FieldType { get; set; }
     public TableSegment TableSegment { get; set; }
@@ -155,7 +155,7 @@ public class ReaderField
     public List<object> LocalValues { get; set; }
     public bool IsGroupingField { get; set; }
     public bool IsOrderingField { get; set; }
-    public List<ReaderField> Fields { get; set; }
+    public ReusableList<ReaderField> Fields { get; set; }
     public string Path { get; set; }
     public bool HasNextInclude { get; set; }
     public ReaderField Parent { get; set; }
@@ -183,4 +183,5 @@ public class ReaderField
         }
         return result;
     }
+    object ICloneable.Clone() => Clone();
 }

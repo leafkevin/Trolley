@@ -7,21 +7,21 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
+public interface IQueryVisitor : ICommandVisitor, IDisposable
 {
     DbContext DbContext { get; }
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider EntityMapProvider { get; }
-    List<TableSegment> Tables { get; set; }
+    ReusableList<TableSegment> Tables { get; set; }
     ITableShardingProvider ShardingProvider { get; }
 
     /// <summary>
     /// IncludeMany表，第二次执行时的参数列表，通常是Filter中使用的参数
     /// </summary>
     IDataParameterCollection NextDbParameters { get; set; }
-    List<ReaderField> ReaderFields { get; set; }
+    ReusableList<ReaderField> ReaderFields { get; set; }
 
-    RefWhereBuilder WhereBuilder { get; }
+    ReusableWhereBuilder WhereBuilder { get; }
     List<TableSegment> IncludeTables { get; set; }
     Dictionary<string, TableSegment> TableAliases { get; }
     /// <summary>
@@ -32,12 +32,12 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     /// <summary>
     /// 在SQL查询中，引用到子查询或是CTE表对象，防止重复添加参数，同时也为了解析CTE表引用SQL
     /// </summary>
-    List<IQuery> SharedQueryObjs { get; set; }
+    ReusableList<IQuery> SharedQueryObjs { get; set; }
     /// <summary>
     /// 当前子查询最后AsCteTable后生成的对象，或是CTE表构建的子查询中的自引用对象，此时IsRecursive=true
     /// </summary>
     ICteQuery CteQueryObj { get; set; }
-    List<ReaderField> GroupByFields { get; set; }
+    ReusableList<ReaderField> GroupByFields { get; set; }
     bool IsRecursive { get; set; }
     string UnionSql { get; set; }
 
@@ -55,14 +55,15 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     string ShardingTableJointMark { get; set; }
     bool IsNeedPaging { get; set; }
     bool IsScalar { get; set; }
+    bool HasChanged { get; }
 
 
-    string BuildSql(bool isBuildCteSql, out List<ReaderField> readerFields);
+    string BuildSql(bool isBuildCteSql, out ReusableList<ReaderField> readerFields);
     string BuildCommandSql(Type entityType, out IDataParameterCollection dbParameters);
     string BuildShardingTablesSqlByFormat(string formatSql, string jointMark);
     string BuildShardingSql(string formatSql);
     string BuildShardingScalarSql(string formatSql);
-    string BuildCteTableSql(string tableName, out List<ReaderField> readerFields);
+    string BuildCteTableSql(string tableName, out ReusableList<ReaderField> readerFields);
 
     void UseTable(TableUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
     void UseTableByRange(TableUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
@@ -72,10 +73,8 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     void UseTableSchema(bool isIncludeMany, string tableSchema);
     void WithTableAliasTrailing(bool isIncludeMany, string rawSql);
 
-    void From(char tableAsStart = 'a', params Type[] entityTypes);
     void AddTable(params Type[] entityTypes);
-    TableSegment AddTable(TableSegment tableSegment);
-    TableSegment UseQuery(Type targetType, IQuery subQuery, bool isClearTables);
+    void UseQuery(Type targetType, IQuery subQuery, bool isClearTables);
     void UseNewQuery(Type targetType, Expression subQueryExpr, bool isClearTables);
 
     void Union(string union, Type targetType, IQuery subQuery);
@@ -118,17 +117,16 @@ public interface IQueryVisitor : ICommandVisitor, ICloneable, IDisposable
     void Page(int pageNumber, int pageSize);
     void Skip(int skip);
     void Take(int limit);
-    ICteQuery AsCteTable(Type targetType, string tableName, bool hasSavePoint = true);
+    ICteQuery AsCteTable(Type targetType, string tableName);
     void AsSharedQuery();
 
     void WithLeadingSql(string rawSql);
     void WithTrailingSql(string rawSql);
 
     TableSegment InitTableAlias(LambdaExpression lambdaExpr);
-    List<ReaderField> FlattenTableFields(TableSegment tableSegment, bool isNeedAlias = true);
+    ReusableList<ReaderField> FlattenTableFields(TableSegment tableSegment, bool isNeedAlias = true);
     void Clear(bool isClearReaderFields = false);
-    void CloneTo(QueryVisitor queryVisitor, bool isCteQuery = false);
-    void UseSharedQueryObj(IQuery refQueryObj);
-    void Save();
-    void Release();
+    IQueryVisitor Clone(DbContext dbContext, ITheaCommand command);
+    void Save(string sql = null);
+    void Reset();
 }

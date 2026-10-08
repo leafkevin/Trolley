@@ -12,13 +12,13 @@ public interface ICreateVisitor : ICommandVisitor, IDisposable
     DbContext DbContext { get; }
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider EntityMapProvider { get; }
-    List<TableSegment> Tables { get; set; }
+    ReusableList<TableSegment> Tables { get; set; }
     ITableShardingProvider ShardingProvider { get; }
 
     ActionMode ActionMode { get; set; }
     bool IsReturnIdentity { get; set; }
 
-    List<IQuery> SharedQueryObjs { get; set; }
+    ReusableList<IQuery> SharedQueryObjs { get; set; }
     List<TableSegment> ShardingTables { get; set; }
     Dictionary<string, TableSegment> RefTableAliases { get; set; }
     ICteQuery CteQueryObj { get; set; }
@@ -27,9 +27,9 @@ public interface ICreateVisitor : ICommandVisitor, IDisposable
 
 
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
-        Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<ReaderField>) BuildWithBulk(ITheaCommand command);
+        Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, ReusableList<ReaderField>) BuildWithBulk(ITheaCommand command);
 
-    IQueryVisitor CreateQueryVisitor(char? tableAsStart = null);
+    //IQueryVisitor CreateQueryVisitor(char? tableAsStart = null);
     void UseTable(TableUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
     void UseTableBy(TableUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
     void UseTable(TableUsageMode usageMode, Func<object, string> tableNameGetter);

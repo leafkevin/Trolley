@@ -38,7 +38,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         if (this.TryGetTableShardingInfo(entityType, out var tableShardingInfo))
             this.Tables[0].TableShardingInfo = tableShardingInfo;
     }
-    public override string BuildSql(out List<ReaderField> readerFields)
+    public override string BuildSql(out ReusableList<ReaderField> readerFields)
     {
         readerFields = null;
 

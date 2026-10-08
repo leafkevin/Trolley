@@ -37,7 +37,7 @@ public class SqlVisitor : ISqlVisitor
     /// <summary>
     /// 所有表都是扁平化的，主表、1:1关系Include子表，也在这里
     /// </summary>
-    public List<TableSegment> Tables { get; set; } = new();
+    public ReusableList<TableSegment> Tables { get; set; } = new();
     public Dictionary<string, TableSegment> TableAliases { get; set; } = new();
     /// <summary>
     /// 在解析子查询中，会用到父查询中的所有表，父查询中所有表别名引用
@@ -54,15 +54,15 @@ public class SqlVisitor : ISqlVisitor
     #endregion
 
     public bool IsNeedTableAlias { get; set; }
-    public List<ReaderField> ReaderFields { get; set; }
+    public ReusableList<ReaderField> ReaderFields { get; set; }
 
-    public RefWhereBuilder WhereBuilder { get; set; } = new();
+    public ReusableWhereBuilder WhereBuilder { get; set; } = new();
 
     public List<TableSegment> IncludeTables { get; set; }
     /// <summary>
     /// 引用的CTE子查询或是子查询对象引用列表
     /// </summary>
-    public List<IQuery> SharedQueryObjs { get; set; } = new();
+    public ReusableList<IQuery> SharedQueryObjs { get; set; } = new();
     /// <summary>
     /// 当前子查询最后AsCteTable后生成的对象，或是CTE表UnionRecursive语句解析中使用的自引用对象，此时IsRecursive=true
     /// </summary>
@@ -98,7 +98,7 @@ public class SqlVisitor : ISqlVisitor
         var isNeedClose = this.DbContext.Transaction == null;
         return (isNeedClose, this.Connection, this.Command);
     }
-    public virtual string BuildSql(out List<ReaderField> readerFields)
+    public virtual string BuildSql(out ReusableList<ReaderField> readerFields)
     {
         readerFields = null;
         return null;
@@ -793,11 +793,12 @@ public class SqlVisitor : ISqlVisitor
             Path = fromSegment.Path
         };
         //include表的ReaderField字段，紧跟在主表ReaderField后面
-        List<ReaderField> readerFields = [readerField];
+        ReusableList<ReaderField> readerFields = [readerField];
+        this.UseIncludeTables(fromSegment.Path);
         this.AddIncludeTableReaderFields(readerField, readerFields);
         return sqlSegment.Change(readerFields, SqlType.ReaderFields);
     }
-    protected void AddIncludeTableReaderFields(ReaderField parent, List<ReaderField> readerFields)
+    protected void AddIncludeTableReaderFields(ReaderField parent, ReusableList<ReaderField> readerFields)
     {
         var includedSegments = this.Tables.FindAll(f => f.TableType == TableType.Include && f.FromTable == parent.TableSegment);
         if (includedSegments.Count > 0)
@@ -1128,7 +1129,7 @@ public class SqlVisitor : ISqlVisitor
                 break;
             case "Avg":
                 sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                List<ReaderField> readerFields = null;
+                ReusableList<ReaderField> readerFields = null;
                 if (this.IsManyShardingTables)
                 {
                     readerFields = [new ReaderField
@@ -1326,7 +1327,7 @@ public class SqlVisitor : ISqlVisitor
                     //优先确定是否是多分表情况，多分表时Value值是两个字段，SUM(...),COUNT(...)，
                     //最外层SELECT时，捞取IsAvgField=true的字段，再进行SUM(...)/COUNT(...)得到平均值，不是多分表时，直接Value值是AVG(...)
                     //最外层SELECT时，
-                    List<ReaderField> readerFields = null;
+                    ReusableList<ReaderField> readerFields = null;
                     if (this.IsManyShardingTables)
                     {
                         readerFields = [new ReaderField
@@ -1431,7 +1432,7 @@ public class SqlVisitor : ISqlVisitor
     {
         string sql = null;
         Type entityType = null;
-        List<ReaderField> readerFields = null;
+        ReusableList<ReaderField> readerFields = null;
         Expression currentExpr = methodCallExpr;
         var callStack = new Stack<MethodCallExpression>();
         while (true)
@@ -1444,11 +1445,9 @@ public class SqlVisitor : ISqlVisitor
         }
         IQueryVisitor queryVisitor = null;
         IQuery refQueryObj = null;
-        char tableIndex = 'a';
         var tableType = TableType.FromQuery;
         string cteTableName = null;
-        if (this.IsWhere) tableIndex = (char)(tableIndex + this.Tables.Count);
-        queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableIndex, this.Command);
+        //TODO: CTE子查询时，多创建了一个queryVisitor对象，导致CTE表的字段被重复添加到readerFields中，最终导致readerFields.Count > 1
         if (currentExpr != null && currentExpr is MemberExpression memberExpr)
         {
             //直接引用子查询对象，并执行Where/
@@ -1457,28 +1456,28 @@ public class SqlVisitor : ISqlVisitor
             {
                 entityType = currentExpr.Type.GenericTypeArguments[0];
                 //在CTE表基础上，又做了WHERE/SELECT...其他操作
-                queryVisitor.UseSharedQueryObj(subQueryObj);
-                queryVisitor.Tables.AddRange(subQueryObj.Visitor.Tables);
+                queryVisitor = subQueryObj.Visitor.Clone(this.DbContext, this.Command);
                 if (!this.SharedQueryObjs.Contains(subQueryObj))
                     this.SharedQueryObjs.Add(subQueryObj);
-                if (subQueryObj.IsCteTable)
+                if (subQueryObj.IsCteQuery)
                 {
-                    var cteQueryObj = subQueryObj as ICteQuery;
-                    cteTableName = cteQueryObj.TableName;
-                    queryVisitor.BuildSql(false, out readerFields);
                     if (callStack.Count == 0)
                     {
+                        var cteQueryObj = subQueryObj as ICteQuery;
+                        cteTableName = cteQueryObj.TableName;
                         return new VisitSqlResult
                         {
                             TableType = TableType.CteSelfRef,
-                            ReaderFields = readerFields,
-                            CteTableName = cteTableName
+                            ReaderFields = queryVisitor.ReaderFields,
+                            Sql = cteTableName
                         };
                     }
                 }
             }
             //IRepository对象，直接使用queryVisitor重新执行
         }
+        queryVisitor ??= this.OrmProvider.NewQueryVisitor(this.DbContext, 'a', this.Command);
+
         queryVisitor.IsSecondUnion = isUnion;
         //引用现有子查询对象不做任何处理场景，在最外层直接处理
         //引用现有子查询对象，并做了一些处理，比如：Where/And/Or等
@@ -1520,7 +1519,7 @@ public class SqlVisitor : ISqlVisitor
                     if (callExpr.Arguments.Count > 0)
                     {
                         var tableAsStart = callExpr.Arguments[0].Evaluate<char>();
-                        queryVisitor.From(tableAsStart, genericArguments);
+                        queryVisitor.AddTable(genericArguments);
                     }
                     else queryVisitor.AddTable(genericArguments);
                     break;
@@ -1743,7 +1742,7 @@ public class SqlVisitor : ISqlVisitor
                     if (callExpr.Arguments.Count > 0)
                     {
                         lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-                        queryVisitor.From(queryVisitor.TableAliasStart, genericArguments);
+                        queryVisitor.AddTable(genericArguments);
                         queryVisitor.RefTableAliases = this.TableAliases;
                         queryVisitor.And(lambdaArgsExpr);
                         entityType = genericArguments[0];
@@ -1764,14 +1763,14 @@ public class SqlVisitor : ISqlVisitor
                     cteTableName = callExpr.Arguments[0].Evaluate<string>();
                     entityType = callExpr.Type.GenericTypeArguments[0];
                     //每次要新建一个CteQuery对象，避免多次使用同一个对象
-                    queryVisitor.AsCteTable(entityType, cteTableName, false);
+                    queryVisitor.AsCteTable(entityType, cteTableName);
                     //queryVisitor.UseQuery(entityType, queryVisitor.CteQueryObj, true);
                     //readerFields = new();
                     //queryVisitor.CteQueryObj.ReaderFields.ForEach(f => readerFields.Add(f.Clone()));
                     //var tableSegment = this.AddJoinTable(entityType, null, TableType.CteSelfRef, queryVisitor.CteQueryObj.TableName, readerFields);
                     //this.InitUseQueryReaderFields(tableSegment, readerFields);
                     //this.RefQueries.Add(queryVisitor.CteQueryObj);
-                    return new VisitSqlResult { TableType = TableType.CteSelfRef, ReaderFields = readerFields, CteTableName = cteTableName };
+                    return new VisitSqlResult { TableType = TableType.CteSelfRef, ReaderFields = queryVisitor.ReaderFields, Sql = cteTableName };
 
                 default: throw new NotSupportedException("不支持的表达式解析");
             }
@@ -1781,8 +1780,7 @@ public class SqlVisitor : ISqlVisitor
         {
             TableType = tableType,
             Sql = sql,
-            ReaderFields = readerFields,
-            CteTableName = cteTableName
+            ReaderFields = readerFields
         };
     }
     //public virtual string GetQuotedValue(object elementValue, SqlSegment arraySegment, SqlSegment elementSegment)
@@ -1884,23 +1882,16 @@ public class SqlVisitor : ISqlVisitor
         this.OrmProvider.ChangeParameter(dbParameter, targetType, sqlSegment.Value);
         return parameterName;
     }
-    public virtual IQueryVisitor CreateQueryVisitor(char? tableAsStart = null)
+    public virtual IQueryVisitor CreateQueryVisitor()
     {
         //Union的时候，tableAsStart会传入'a'，表示从'a'开始
         //Join的时候，tableAsStart不传值，使用当前Visitor中的
-        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAliasStart, this.Command);
-        queryVisitor.SharedQueryObjs = this.SharedQueryObjs;
-        queryVisitor.ShardingTables = this.ShardingTables;
-        queryVisitor.RefTableAliases = this.RefTableAliases;
-        queryVisitor.IncludeTables = this.IncludeTables;
-        queryVisitor.NextDbParameters = this.NextDbParameters;
-        queryVisitor.IsRecursive = this.IsRecursive;
-        queryVisitor.CteQueryObj = this.CteQueryObj;
-        return queryVisitor;
+        var tableAsStart = this.IsWhere ? (char)(this.TableAliasStart + this.Tables.Count) : this.TableAliasStart;
+        return this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart, this.Command);
     }
-    public List<ReaderField> FlattenTableFields(TableSegment tableSegment, bool isNeedAlias = true)
+    public ReusableList<ReaderField> FlattenTableFields(TableSegment tableSegment, bool isNeedAlias = true)
     {
-        var targetFields = new List<ReaderField>();
+        var targetFields = new ReusableList<ReaderField>();
         if (tableSegment.Mapper != null)
         {
             //Select参数时，Flatten实体表
@@ -2383,40 +2374,18 @@ public class SqlVisitor : ISqlVisitor
         var readerField = visitor.Build(sqlSegment.Expression);
         return sqlSegment.Change(readerField, SqlType.ReaderField);
     }
-    public TableSegment AddJoinTable(Type entityType, string joinType = null, TableType tableType = TableType.Entity, string body = null, List<ReaderField> readerFields = null)
+    public virtual void UseIncludeTables(string path)
     {
-        int tableIndex = this.TableAliasStart + this.Tables.Count;
-        return this.AddTable(new TableSegment
-        {
-            JoinType = joinType,
-            EntityType = entityType,
-            AliasName = $"{(char)tableIndex}",
-            Path = $"{(char)tableIndex}",
-            TableType = tableType,
-            Body = body,
-            Fields = readerFields,
-            IsMaster = true
-        });
+        var includeTables = this.Tables.FindAll(f => f.TableType == TableType.Include && f.Path.Contains(path));
+        if (includeTables != null && includeTables.Count > 0)
+            includeTables.ForEach(f => f.IsUsed = true);
+        if (this.IncludeTables == null || this.IncludeTables.Count == 0)
+            return;
+        includeTables = this.IncludeTables.FindAll(f => f.Path.Contains(path));
+        if (includeTables != null && includeTables.Count > 0)
+            includeTables.ForEach(f => f.IsUsed = true);
     }
-    public virtual TableSegment AddTable(TableSegment tableSegment)
-    {
-        //Union后，有加新表，要把前一个UnionSql设置完整
-        this.ClearUnionSql();
-        this.Tables.Add(tableSegment);
-        if (this.ReaderFields != null && !this.IsUnion)
-            this.ReaderFields = null;
-        return tableSegment;
-    }
-    public virtual void ClearUnionSql()
-    {
-        if (this.UnionSql == null) return;
-
-        //有union操作的visitor，都是新New的，前面只有一个表
-        this.Tables.Last().Body = $"({this.UnionSql})";
-        this.Tables.Last().TableType = TableType.FromQuery;
-        this.UnionSql = null;
-    }
-    public void InitUseQueryReaderFields(TableSegment tableSegment, List<ReaderField> readerFields)
+    public void InitUseQueryReaderFields(TableSegment tableSegment, ReusableList<ReaderField> readerFields)
     {
         foreach (var readerField in readerFields)
         {
@@ -2438,7 +2407,7 @@ public class SqlVisitor : ISqlVisitor
             }
         }
     }
-    public virtual bool TryFindReaderFieldByValue(List<ReaderField> readerFields, string fieldValue, out ReaderField readerField)
+    public virtual bool TryFindReaderFieldByValue(ReusableList<ReaderField> readerFields, string fieldValue, out ReaderField readerField)
     {
         foreach (var myReaderField in readerFields)
         {
@@ -2573,7 +2542,7 @@ public class SqlVisitor : ISqlVisitor
         if (this.SharedQueryObjs != null && this.SharedQueryObjs.Count > 0)
         {
             foreach (var sharedQueryObj in this.SharedQueryObjs)
-                sharedQueryObj.Visitor.Release();
+                sharedQueryObj.Visitor.Reset();
         }
         this.SharedQueryObjs = null;
         this.UnionSql = null;
@@ -2587,6 +2556,5 @@ public struct VisitSqlResult
 {
     public TableType TableType { get; set; }
     public string Sql { get; set; }
-    public List<ReaderField> ReaderFields { get; set; }
-    public string CteTableName { get; set; }
+    public ReusableList<ReaderField> ReaderFields { get; set; }
 }

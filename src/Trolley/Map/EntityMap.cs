@@ -94,7 +94,7 @@ public class EntityMap
         if (this.memberMaps.TryAdd(memberName, mapper))
             this.memberMappers.Add(mapper);
     }
-    public void Build(IOrmProvider ormProvider)
+    public void Build(IOrmProvider ormProvider, OrmDbFactoryOptions options)
     {
         if (this.isBuild) return;
         if (string.IsNullOrEmpty(this.TableName))
@@ -135,7 +135,15 @@ public class EntityMap
                 memberMapper.TypeHandler = ormProvider.GetTypeHandler(memberMapper.TypeHandlerType);
             //这个默认值是实体参数存在字段，但没有赋值
             if (memberMapper.IsRequired && memberMapper.UnderlyingType.IsValueType)
-                memberMapper.DefaultValue = Activator.CreateInstance(memberMapper.MappedTargetType);
+            {
+                var defatulValue = Activator.CreateInstance(memberMapper.UnderlyingType);
+                if (memberMapper.MappedTargetType != memberMapper.UnderlyingType)
+                {
+                    var valueGetter = ormProvider.GetParameterValueGetter(memberMapper.UnderlyingType, memberMapper.MappedTargetType, memberMapper.IsRequired, options);
+                    defatulValue = valueGetter.Invoke(defatulValue);
+                }
+                memberMapper.DefaultValue = defatulValue;
+            }
             else memberMapper.DefaultValue = DBNull.Value;
             this.AddFieldMap(memberMapper.FieldName, memberMapper);
         }

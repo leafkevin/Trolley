@@ -47,7 +47,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (this.TryGetTableShardingInfo(entityType, out var tableShardingInfo))
             this.Tables[0].TableShardingInfo = tableShardingInfo;
     }
-    public override string BuildSql(out List<ReaderField> readerFields)
+    public override string BuildSql(out ReusableList<ReaderField> readerFields)
     {
         string tailSql = null;
         readerFields = this.ReaderFields;
@@ -230,7 +230,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         });
     }
     public virtual (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
-        Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<ReaderField>) BuildWithBulk(ITheaCommand command)
+        Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, ReusableList<ReaderField>) BuildWithBulk(ITheaCommand command)
     {
         (var insertObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
 
@@ -782,19 +782,19 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.FieldsBuilder = null;
         this.ValuesBuilder = null;
     }
-    public override IQueryVisitor CreateQueryVisitor(char? tableAsStart = null)
-    {
-        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAliasStart, this.Command);
-        queryVisitor.SharedQueryObjs = this.SharedQueryObjs;
-        queryVisitor.ShardingTables = this.ShardingTables;
-        queryVisitor.RefTableAliases = this.RefTableAliases;
-        queryVisitor.IncludeTables = this.IncludeTables;
-        queryVisitor.IsRecursive = this.IsRecursive;
-        queryVisitor.CteQueryObj = this.CteQueryObj;
+    //public override IQueryVisitor CreateQueryVisitor(char? tableAsStart = null)
+    //{
+    //    var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAliasStart, this.Command);
+    //    queryVisitor.SharedQueryObjs = this.SharedQueryObjs;
+    //    queryVisitor.ShardingTables = this.ShardingTables;
+    //    queryVisitor.RefTableAliases = this.RefTableAliases;
+    //    queryVisitor.IncludeTables = this.IncludeTables;
+    //    queryVisitor.IsRecursive = this.IsRecursive;
+    //    queryVisitor.CteQueryObj = this.CteQueryObj;
 
-        queryVisitor.Tables = this.Tables;
-        return queryVisitor;
-    }
+    //    queryVisitor.Tables = this.Tables;
+    //    return queryVisitor;
+    //}
     public virtual void InitTableAlias(LambdaExpression lambdaExpr)
     {
         if (!lambdaExpr.Body.TryGetParameters(out var parameters))

@@ -12,7 +12,7 @@ public interface IUpdateVisitor : ICommandVisitor, IDisposable
     DbContext DbContext { get; }
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider EntityMapProvider { get; }
-    List<TableSegment> Tables { get; set; }
+    ReusableList<TableSegment> Tables { get; set; }
     ITableShardingProvider ShardingProvider { get; }
 
     bool HasWhere { get; }
@@ -21,7 +21,7 @@ public interface IUpdateVisitor : ICommandVisitor, IDisposable
 
 
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>, Action<IDataParameterCollection,
-         StringBuilder, DbContext, string, object, string>, List<ReaderField>) BuildSetBulk(ITheaCommand command);
+         StringBuilder, DbContext, string, object, string>, ReusableList<ReaderField>) BuildSetBulk(ITheaCommand command);
 
     void UseTable(TableUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
     void UseTableByRange(TableUsageMode usageMode, bool isIncludeMany, object[] fieldValues);

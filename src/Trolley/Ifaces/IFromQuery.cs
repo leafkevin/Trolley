@@ -10,18 +10,11 @@ public interface IFromQuery
 {
     #region From
     /// <summary>
-    /// 创建子查询，生成SQL: FROM T
+    /// 使用1个表创建查询对象
     /// </summary>
     /// <typeparam name="T">实体类型</typeparam>
     /// <returns>返回查询对象</returns>
     IQuery<T> From<T>();
-    /// <summary>
-    /// 创建子查询，生成SQL: FROM T
-    /// </summary>
-    /// <typeparam name="T">实体类型</typeparam>
-    /// <param name="tableAsStart">表别名起始字母</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T> From<T>(char tableAsStart);
     /// <summary>
     /// 使用2个表创建查询对象
     /// </summary>
@@ -30,14 +23,6 @@ public interface IFromQuery
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> From<T1, T2>();
     /// <summary>
-    /// 使用2个表创建查询对象
-    /// </summary>
-    /// <typeparam name="T1">表T1实体类型</typeparam>
-    /// <typeparam name="T2">表T2实体类型</typeparam>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2> From<T1, T2>(char tableAsStart);
-    /// <summary>
     /// 使用3个表创建查询对象
     /// </summary>
     /// <typeparam name="T1">表T1实体类型</typeparam>
@@ -45,15 +30,6 @@ public interface IFromQuery
     /// <typeparam name="T3">表T3实体类型</typeparam>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> From<T1, T2, T3>();
-    /// <summary>
-    /// 使用3个表创建查询对象
-    /// </summary>
-    /// <typeparam name="T1">表T1实体类型</typeparam>
-    /// <typeparam name="T2">表T2实体类型</typeparam>
-    /// <typeparam name="T3">表T3实体类型</typeparam>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart);
     /// <summary>
     /// 使用4个表创建查询对象
     /// </summary>
@@ -64,16 +40,6 @@ public interface IFromQuery
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>();
     /// <summary>
-    /// 使用4个表创建查询对象
-    /// </summary>
-    /// <typeparam name="T1">表T1实体类型</typeparam>
-    /// <typeparam name="T2">表T2实体类型</typeparam>
-    /// <typeparam name="T3">表T3实体类型</typeparam>
-    /// <typeparam name="T4">表T4实体类型</typeparam>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart);
-    /// <summary>
     /// 使用5个表创建查询对象
     /// </summary>
     /// <typeparam name="T1">表T1实体类型</typeparam>
@@ -83,17 +49,6 @@ public interface IFromQuery
     /// <typeparam name="T5">表T5实体类型</typeparam>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>();
-    /// <summary>
-    /// 使用5个表创建查询对象
-    /// </summary>
-    /// <typeparam name="T1">表T1实体类型</typeparam>
-    /// <typeparam name="T2">表T2实体类型</typeparam>
-    /// <typeparam name="T3">表T3实体类型</typeparam>
-    /// <typeparam name="T4">表T4实体类型</typeparam>
-    /// <typeparam name="T5">表T5实体类型</typeparam>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(char tableAsStart);
     /// <summary>
     /// 使用6个表创建查询对象
     /// </summary>
@@ -106,18 +61,6 @@ public interface IFromQuery
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>();
     /// <summary>
-    /// 使用6个表创建查询对象
-    /// </summary>
-    /// <typeparam name="T1">表T1实体类型</typeparam>
-    /// <typeparam name="T2">表T2实体类型</typeparam>
-    /// <typeparam name="T3">表T3实体类型</typeparam>
-    /// <typeparam name="T4">表T4实体类型</typeparam>
-    /// <typeparam name="T5">表T5实体类型</typeparam>
-    /// <typeparam name="T6">表T6实体类型</typeparam>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>(char tableAsStart);
-    /// <summary>
     /// 使用7个表创建查询对象
     /// </summary>
     /// <typeparam name="T1">表T1实体类型</typeparam>
@@ -129,19 +72,6 @@ public interface IFromQuery
     /// <typeparam name="T7">表T7实体类型</typeparam>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>();
-    /// <summary>
-    /// 使用7个表创建查询对象
-    /// </summary>
-    /// <typeparam name="T1">表T1实体类型</typeparam>
-    /// <typeparam name="T2">表T2实体类型</typeparam>
-    /// <typeparam name="T3">表T3实体类型</typeparam>
-    /// <typeparam name="T4">表T4实体类型</typeparam>
-    /// <typeparam name="T5">表T5实体类型</typeparam>
-    /// <typeparam name="T6">表T6实体类型</typeparam>
-    /// <typeparam name="T7">表T7实体类型</typeparam>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>(char tableAsStart);
     /// <summary>
     /// 使用8个表创建查询对象
     /// </summary>
@@ -156,20 +86,6 @@ public interface IFromQuery
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>();
     /// <summary>
-    /// 使用8个表创建查询对象
-    /// </summary>
-    /// <typeparam name="T1">表T1实体类型</typeparam>
-    /// <typeparam name="T2">表T2实体类型</typeparam>
-    /// <typeparam name="T3">表T3实体类型</typeparam>
-    /// <typeparam name="T4">表T4实体类型</typeparam>
-    /// <typeparam name="T5">表T5实体类型</typeparam>
-    /// <typeparam name="T6">表T6实体类型</typeparam>
-    /// <typeparam name="T7">表T7实体类型</typeparam>
-    /// <typeparam name="T8">表T8实体类型</typeparam>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>(char tableAsStart);
-    /// <summary>
     /// 使用9个表创建查询对象
     /// </summary>
     /// <typeparam name="T1">表T1实体类型</typeparam>
@@ -183,21 +99,6 @@ public interface IFromQuery
     /// <typeparam name="T9">表T9实体类型</typeparam>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>();
-    /// <summary>
-    /// 使用9个表创建查询对象
-    /// </summary>
-    /// <typeparam name="T1">表T1实体类型</typeparam>
-    /// <typeparam name="T2">表T2实体类型</typeparam>
-    /// <typeparam name="T3">表T3实体类型</typeparam>
-    /// <typeparam name="T4">表T4实体类型</typeparam>
-    /// <typeparam name="T5">表T5实体类型</typeparam>
-    /// <typeparam name="T6">表T6实体类型</typeparam>
-    /// <typeparam name="T7">表T7实体类型</typeparam>
-    /// <typeparam name="T8">表T8实体类型</typeparam>
-    /// <typeparam name="T9">表T9实体类型</typeparam>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(char tableAsStart);
     /// <summary>
     /// 使用10个表创建查询对象
     /// </summary>
@@ -214,22 +115,6 @@ public interface IFromQuery
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>();
     /// <summary>
-    /// 使用10个表创建查询对象
-    /// </summary>
-    /// <typeparam name="T1">表T1实体类型</typeparam>
-    /// <typeparam name="T2">表T2实体类型</typeparam>
-    /// <typeparam name="T3">表T3实体类型</typeparam>
-    /// <typeparam name="T4">表T4实体类型</typeparam>
-    /// <typeparam name="T5">表T5实体类型</typeparam>
-    /// <typeparam name="T6">表T6实体类型</typeparam>
-    /// <typeparam name="T7">表T7实体类型</typeparam>
-    /// <typeparam name="T8">表T8实体类型</typeparam>
-    /// <typeparam name="T9">表T9实体类型</typeparam>
-    /// <typeparam name="T10">表T10实体类型</typeparam>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart);
-    /// <summary>
     /// 使用11个表创建查询对象
     /// </summary>
     /// <typeparam name="T1">表T1实体类型</typeparam>
@@ -245,23 +130,6 @@ public interface IFromQuery
     /// <typeparam name="T11">表T11实体类型</typeparam>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>();
-    /// <summary>
-    /// 使用11个表创建查询对象
-    /// </summary>
-    /// <typeparam name="T1">表T1实体类型</typeparam>
-    /// <typeparam name="T2">表T2实体类型</typeparam>
-    /// <typeparam name="T3">表T3实体类型</typeparam>
-    /// <typeparam name="T4">表T4实体类型</typeparam>
-    /// <typeparam name="T5">表T5实体类型</typeparam>
-    /// <typeparam name="T6">表T6实体类型</typeparam>
-    /// <typeparam name="T7">表T7实体类型</typeparam>
-    /// <typeparam name="T8">表T8实体类型</typeparam>
-    /// <typeparam name="T9">表T9实体类型</typeparam>
-    /// <typeparam name="T10">表T10实体类型</typeparam>
-    /// <typeparam name="T11">表T11实体类型</typeparam>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(char tableAsStart);
     /// <summary>
     /// 使用12个表创建查询对象
     /// </summary>
@@ -280,24 +148,6 @@ public interface IFromQuery
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>();
     /// <summary>
-    /// 使用12个表创建查询对象
-    /// </summary>
-    /// <typeparam name="T1">表T1实体类型</typeparam>
-    /// <typeparam name="T2">表T2实体类型</typeparam>
-    /// <typeparam name="T3">表T3实体类型</typeparam>
-    /// <typeparam name="T4">表T4实体类型</typeparam>
-    /// <typeparam name="T5">表T5实体类型</typeparam>
-    /// <typeparam name="T6">表T6实体类型</typeparam>
-    /// <typeparam name="T7">表T7实体类型</typeparam>
-    /// <typeparam name="T8">表T8实体类型</typeparam>
-    /// <typeparam name="T9">表T9实体类型</typeparam>
-    /// <typeparam name="T10">表T10实体类型</typeparam>
-    /// <typeparam name="T11">表T11实体类型</typeparam>
-    /// <typeparam name="T12">表T12实体类型</typeparam>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(char tableAsStart);
-    /// <summary>
     /// 使用13个表创建查询对象
     /// </summary>
     /// <typeparam name="T1">表T1实体类型</typeparam>
@@ -315,25 +165,6 @@ public interface IFromQuery
     /// <typeparam name="T13">表T13实体类型</typeparam>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>();
-    /// <summary>
-    /// 使用13个表创建查询对象
-    /// </summary>
-    /// <typeparam name="T1">表T1实体类型</typeparam>
-    /// <typeparam name="T2">表T2实体类型</typeparam>
-    /// <typeparam name="T3">表T3实体类型</typeparam>
-    /// <typeparam name="T4">表T4实体类型</typeparam>
-    /// <typeparam name="T5">表T5实体类型</typeparam>
-    /// <typeparam name="T6">表T6实体类型</typeparam>
-    /// <typeparam name="T7">表T7实体类型</typeparam>
-    /// <typeparam name="T8">表T8实体类型</typeparam>
-    /// <typeparam name="T9">表T9实体类型</typeparam>
-    /// <typeparam name="T10">表T10实体类型</typeparam>
-    /// <typeparam name="T11">表T11实体类型</typeparam>
-    /// <typeparam name="T12">表T12实体类型</typeparam>
-    /// <typeparam name="T13">表T13实体类型</typeparam>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(char tableAsStart);
     /// <summary>
     /// 使用14个表创建查询对象
     /// </summary>
@@ -354,26 +185,6 @@ public interface IFromQuery
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>();
     /// <summary>
-    /// 使用14个表创建查询对象
-    /// </summary>
-    /// <typeparam name="T1">表T1实体类型</typeparam>
-    /// <typeparam name="T2">表T2实体类型</typeparam>
-    /// <typeparam name="T3">表T3实体类型</typeparam>
-    /// <typeparam name="T4">表T4实体类型</typeparam>
-    /// <typeparam name="T5">表T5实体类型</typeparam>
-    /// <typeparam name="T6">表T6实体类型</typeparam>
-    /// <typeparam name="T7">表T7实体类型</typeparam>
-    /// <typeparam name="T8">表T8实体类型</typeparam>
-    /// <typeparam name="T9">表T9实体类型</typeparam>
-    /// <typeparam name="T10">表T10实体类型</typeparam>
-    /// <typeparam name="T11">表T11实体类型</typeparam>
-    /// <typeparam name="T12">表T12实体类型</typeparam>
-    /// <typeparam name="T13">表T13实体类型</typeparam>
-    /// <typeparam name="T14">表T14实体类型</typeparam>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(char tableAsStart);
-    /// <summary>
     /// 使用15个表创建查询对象
     /// </summary>
     /// <typeparam name="T1">表T1实体类型</typeparam>
@@ -393,27 +204,6 @@ public interface IFromQuery
     /// <typeparam name="T15">表T15实体类型</typeparam>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>();
-    /// <summary>
-    /// 使用15个表创建查询对象
-    /// </summary>
-    /// <typeparam name="T1">表T1实体类型</typeparam>
-    /// <typeparam name="T2">表T2实体类型</typeparam>
-    /// <typeparam name="T3">表T3实体类型</typeparam>
-    /// <typeparam name="T4">表T4实体类型</typeparam>
-    /// <typeparam name="T5">表T5实体类型</typeparam>
-    /// <typeparam name="T6">表T6实体类型</typeparam>
-    /// <typeparam name="T7">表T7实体类型</typeparam>
-    /// <typeparam name="T8">表T8实体类型</typeparam>
-    /// <typeparam name="T9">表T9实体类型</typeparam>
-    /// <typeparam name="T10">表T10实体类型</typeparam>
-    /// <typeparam name="T11">表T11实体类型</typeparam>
-    /// <typeparam name="T12">表T12实体类型</typeparam>
-    /// <typeparam name="T13">表T13实体类型</typeparam>
-    /// <typeparam name="T14">表T14实体类型</typeparam>
-    /// <typeparam name="T15">表T15实体类型</typeparam>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(char tableAsStart);
     #endregion
 
     #region ToSql
