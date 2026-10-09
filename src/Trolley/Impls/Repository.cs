@@ -120,13 +120,13 @@ public class Repository : DialectProvider, IRepository
     public virtual IQuery<T> FromQuery<T>(IQuery<T> subQuery)
     {
         var visitor = this.CreateQueryVisitor();
-        visitor.UseQuery(typeof(T), subQuery, true);
+        visitor.UseQuery(typeof(T), subQuery);
         return this.ormProvider.NewQuery<T>(this.DbContext, visitor);
     }
     public virtual IQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
         var visitor = this.CreateQueryVisitor();
-        visitor.UseNewQuery(typeof(T), subQueryExpr, true);
+        visitor.UseNewQuery(typeof(T), subQueryExpr);
         return this.ormProvider.NewQuery<T>(this.DbContext, visitor);
     }
     #endregion

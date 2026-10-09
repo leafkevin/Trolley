@@ -44,7 +44,7 @@ public interface IQueryVisitor : ICommandVisitor, IDisposable
     char TableAliasStart { get; set; }
     bool IsExists { get; set; }
     bool IsSecondUnion { get; set; }
-  
+
     int PageNumber { get; }
     int PageSize { get; }
     bool IsManyShardingTables { get; }
@@ -76,8 +76,8 @@ public interface IQueryVisitor : ICommandVisitor, IDisposable
     void WithTableAliasTrailing(bool isIncludeMany, string rawSql);
 
     void AddTable(params Type[] entityTypes);
-    void UseQuery(Type targetType, IQuery subQuery, bool isClearTables);
-    void UseNewQuery(Type targetType, Expression subQueryExpr, bool isClearTables);
+    void UseQuery(Type targetType, IQuery subQuery);
+    void UseNewQuery(Type targetType, Expression subQueryExpr);
 
     void Union(string union, Type targetType, IQuery subQuery);
     void Union(string union, Type targetType, Expression subQueryExpr);
@@ -127,7 +127,7 @@ public interface IQueryVisitor : ICommandVisitor, IDisposable
 
     TableSegment InitTableAlias(LambdaExpression lambdaExpr);
     ReusableList<ReaderField> FlattenTableFields(TableSegment tableSegment, bool isNeedAlias = true);
-    void Clear(bool isClearReaderFields = false);
+    void Clear();
     IQueryVisitor Clone(DbContext dbContext, ITheaCommand command);
     void Save();
     void Reset();

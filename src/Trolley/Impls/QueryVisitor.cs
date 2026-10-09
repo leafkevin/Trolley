@@ -107,6 +107,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         string sql = null;
         if (!string.IsNullOrEmpty(this.UnionSql))
         {
+            this.Tables[0].Body = $"({this.UnionSql})";
+            this.Tables[0].TableType = TableType.FromQuery;
+
             builder.Append(this.UnionSql);
             sql = builder.ToString();
             builder.Clear();
@@ -715,7 +718,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual TableSegment AddJoinTable(Type entityType, string joinType = null, TableType tableType = TableType.Entity, string body = null, ReusableList<ReaderField> readerFields = null)
     {
-        this.ClearUnionSql();
         int tableIndex = this.TableAliasStart + this.Tables.Count;
         var tableSegment = new TableSegment
         {
@@ -733,7 +735,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual void AddTable(params Type[] entityTypes)
     {
-        this.ClearUnionSql();
         int tableIndex = this.TableAliasStart + this.Tables.Count;
         foreach (var entityType in entityTypes)
         {
@@ -753,7 +754,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             tableIndex++;
         }
     }
-    public void UseNewQuery(Type targetType, Expression subQueryExpr, bool isClearTables)
+    public void UseNewQuery(Type targetType, Expression subQueryExpr)
     {
         //repository.FromQuery(f => ... ) 或是 ... .WithTable(f => ... )，具体参数如下：
         //f => f.From<Order>().Where(o=>o.Id==1) ... 或是 f => cteOrders 或是 f => myRefOrders等
@@ -786,14 +787,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.IsNeedChangeUnionShardingTables = false;
         this.IsManyShardingTables = false;
 
-        if (isClearTables)
-        {
-            this.Clear();
-            this.Tables.Clear();
-        }
         var tableSegment = this.AddJoinTable(targetType, null, result.TableType, tableName, readerFields);
         //从FromQuery对象开始的场景，直接build和生成SQL，就可以，正常逻辑
-        this.InitUseQueryReaderFields(tableSegment, readerFields);
+        if (result.TableType == TableType.FromQuery)
+            this.InitUseQueryReaderFields(tableSegment, readerFields);
     }
     /// <summary>
     /// 引用已有子查询对象
@@ -802,7 +799,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     /// <param name="subQueryObj"></param>
     /// <param name="isClearTables"></param>
     /// <returns></returns>
-    public void UseQuery(Type targetType, IQuery subQueryObj, bool isClearTables)
+    public void UseQuery(Type targetType, IQuery subQueryObj)
     {
         //包含该查询对象引用，就说明当前visitor对象已经包含了该子查询引用到的参数，只需要添加表即可
         string tableName = null;
@@ -832,7 +829,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             tableType = TableType.FromQuery;
         }
         //第一个表是子查询表或是Union场景时，需要清零表，Join场景不需要清表
-        if (isClearTables) this.Tables.Clear();
         var tableSegment = this.AddJoinTable(targetType, null, tableType, tableName, readerFields);
         //CTE别名不需要变化
         if (!subQueryObj.IsCteQuery)
@@ -856,9 +852,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             this.SharedQueryObjs.Add(subQuery);
 
         queryVisitor.IsSecondUnion = true;
-        var subQuerySql = queryVisitor.BuildSql(false, out var readerFields);
-        rawSql += union + Environment.NewLine + subQuerySql;
-        this.UnionSql = rawSql;
+        var sql = queryVisitor.BuildSql(false, out _);
+        this.UnionSql = rawSql + union + Environment.NewLine + sql;
         this.Clear();
         this.IsUnion = false;
     }
@@ -871,7 +866,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var result = this.VisitFromQuery(lambdaExpr.Body);
         this.IsSecondUnion = false;
         rawSql += union + Environment.NewLine + result.Sql;
-        this.UnionSql = rawSql;
+        this.UnionSql = rawSql + union + Environment.NewLine + result.Sql;
         this.Clear();
         this.IsUnion = false;
     }
@@ -879,8 +874,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         this.IsUnion = true;
         var rawSql = this.BuildSql(false, out var readerFields);
-        this.Clear();
-        this.Tables.Clear();
+
         //此时产生的queryObj是一个新的对象，只能用于解析sql，与传进来的queryObj不是同一个对象，舍弃
         //临时產生一個隨機表名，在後面的AsCteTable時，再做替換
         var entityType = typeof(CteQuery<>).MakeGenericType(targetType);
@@ -893,9 +887,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.IsSecondUnion = true;
         var result = this.VisitFromQuery(subQueryExpr);
         this.IsSecondUnion = false;
-        rawSql += union + Environment.NewLine + result.Sql;
+
         //先放到UnionSql中，在AsCteTable方法中，BuildCteTableSql时能得到这个SQL
-        this.UnionSql = rawSql;
+        this.UnionSql = rawSql + union + Environment.NewLine + result.Sql;
+        this.Clear();
+        //TODO: 是否需要清除，待测试
+        this.Tables.Clear();
         this.IsUnion = false;
     }
     public virtual void Join(string joinType, Expression joinOn)
@@ -931,7 +928,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (parameters.Count != 2)
             throw new NotSupportedException("Join操作，只支持两个表进行关联，但可以多次Join操作");
 
-        this.UseQuery(newEntityType, subQuery, false);
+        this.UseQuery(newEntityType, subQuery);
         var tableSegment = this.InitTableAlias(lambdaExpr);
         tableSegment.JoinType = joinType;
         tableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body, out _);
@@ -944,7 +941,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (parameters.Count != 2)
             throw new NotSupportedException("Join操作，只支持两个表进行关联，但可以多次Join操作");
 
-        this.UseNewQuery(newEntityType, subQueryExpr, false);
+        this.UseNewQuery(newEntityType, subQueryExpr);
         var tableSegment = this.InitTableAlias(lambdaExpr);
         tableSegment.JoinType = joinType;
         tableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body, out _);
@@ -1378,7 +1375,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void And(Expression whereExpr)
     {
         var lambdaExpr = whereExpr as LambdaExpression;
-        this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
         //不能更改LastWhereOperationType，如果是引用已有子查询，LastWhereOperationType是有值的
         var whereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
@@ -1402,7 +1398,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void Or(Expression whereExpr)
     {
         var lambdaExpr = whereExpr as LambdaExpression;
-        this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
         var whereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
         this.VisitOrSql(whereSql, operationType);
@@ -1410,7 +1405,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void GroupBy(Expression expr)
     {
         var lambdaExpr = expr as LambdaExpression;
-        this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
         this.GroupByFields = new();
         //分组字段都设置为ReaderFieldType.Expression类型，以便于在多分表情况下后加的字段使用别名，
@@ -1479,7 +1473,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void OrderBy(string orderType, Expression expr)
     {
         var lambdaExpr = expr as LambdaExpression;
-        this.ClearUnionSql();
         this.OrderByFields ??= new();
         this.InitTableAlias(lambdaExpr);
         var isReaderField = this.ReaderFields != null && this.ReaderFields.Count > 0;
@@ -1524,7 +1517,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         this.IsHaving = true;
         var lambdaExpr = havingExpr as LambdaExpression;
-        this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
         this.HavingSql = this.VisitConditionExpr(lambdaExpr.Body, out _);
         this.IsHaving = false;
@@ -1553,14 +1545,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             readerField.IsAggField = true;
             readerField.AggFunc = aggFunc;
         }
-        this.ClearUnionSql();
         this.ReaderFields = [readerField];
     }
     public virtual void Select(Expression selectExpr)
     {
         this.IsSelect = true;
         var toTargetExpr = selectExpr as LambdaExpression;
-        this.ClearUnionSql();
         this.InitTableAlias(toTargetExpr);
         //常量、变量、表达式、方法调用、成员访问、原始SQL、延迟属性、延迟方法调用等场景
         //.Select((x, y) => new { MaxValue = int.MaxValue, x.Seller, x.Buyer, Now = DateTime.UtcNow })
@@ -1617,7 +1607,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void SelectTo(Type targetType, Expression specialMemberSelector = null)
     {
         this.IsSelect = true;
-        this.ClearUnionSql();
         if (specialMemberSelector != null)
         {
             var lambdaExpr = specialMemberSelector as LambdaExpression;
@@ -1710,7 +1699,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void Distinct()
     {
         this.IsDistinct = true;
-        this.ClearUnionSql();
     }
     public virtual void Page(int pageNumber, int pageSize)
     {
@@ -1718,21 +1706,18 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (pageNumber > 0) pageNumber--;
         this.offset = pageNumber * pageSize;
         this.limit = pageSize;
-        this.ClearUnionSql();
     }
     public virtual void Skip(int skip)
     {
         this.offset = skip;
         if (this.limit.HasValue && this.limit.Value > 0)
             this.pageNumber = (int)Math.Ceiling((double)offset / this.limit.Value) + 1;
-        this.ClearUnionSql();
     }
     public virtual void Take(int limit)
     {
         this.limit = limit;
         if (this.offset.HasValue && this.offset.Value > 0)
             this.pageNumber = (int)Math.Ceiling((double)offset / this.limit.Value) + 1;
-        this.ClearUnionSql();
     }
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
@@ -2349,20 +2334,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //在子查询中，readerField.MemberName和readerField.TargetMember.Name不同，就需要别名
         return readerField.MemberName != readerField.TargetMember.Name;
     }
-    public virtual void ClearUnionSql()
+    public virtual void Clear()
     {
-        if (this.UnionSql == null) return;
-
-        //有union操作的visitor，都是新New的，前面只有一个表
-        this.Tables[0].Body = $"({this.UnionSql})";
-        this.Tables[0].TableType = TableType.FromQuery;
-        this.Clear();
-    }
-    public virtual void Clear(bool isClearReaderFields = false)
-    {
-        //有新加表，才需要清理ReaderFields，只有orderBy，groupBy，where等操作，不需要清理ReaderFields
-        if (isClearReaderFields)
-            this.ReaderFields = null;
+        //除了Tables和ReaderFields，其他的都要清空
         this.WhereBuilder.Clear();
         this.TableAliasStart = 'a';
 
@@ -2374,7 +2348,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.GroupByFields = null;
         this.OrderByFields = null;
         this.IsDistinct = false;
-
         this.IsSecondUnion = false;
         this.IsNeedTableAlias = true;
     }
@@ -2460,7 +2433,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public void Save()
     {
-        this.hasSavePoint = true;
         if (!this.IsCteQuery)
         {
             if (this.ReaderFields == null || this.ReaderFields.Count == 0)
@@ -2478,8 +2450,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.savedSql = this.BuildSql(false, out _);
         this.dbParametersIndex = this.DbParameters.Count;
         this.Tables.Save();
+        this.Tables.ForEach(f => f.Save());
         this.ReaderFields.Save();
         this.SharedQueryObjs?.Save();
+        this.hasSavePoint = true;
     }
     public void Reset()
     {
@@ -2499,6 +2473,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             this.OrderByFields?.Reset();
         }
         this.Tables.Reset();
+        this.Tables.ForEach(f => f.Reset());
         this.ReaderFields.Reset();
         this.SharedQueryObjs?.Reset();
     }

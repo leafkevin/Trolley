@@ -64,14 +64,14 @@ public class QueryInternal : DialectProvider
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        this.Visitor.UseQuery(typeof(TOther), subQuery, false);
+        this.Visitor.UseQuery(typeof(TOther), subQuery);
     }
     protected void WithQueryInternal<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
         if (subQueryExpr == null)
             throw new ArgumentNullException(nameof(subQueryExpr));
 
-        this.Visitor.UseNewQuery(typeof(TOther), subQueryExpr, false);
+        this.Visitor.UseNewQuery(typeof(TOther), subQueryExpr);
     }
     #endregion
 

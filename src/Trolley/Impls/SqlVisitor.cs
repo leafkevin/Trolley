@@ -1007,17 +1007,18 @@ public class SqlVisitor : ISqlVisitor
                 else
                 {
                     var subQueryExpr = methodCallExpr.Arguments[1];
+                    //TODO: 待测试
                     //直接引用现有IQuery子查询对象
-                    if (subQueryExpr.NodeType == ExpressionType.MemberAccess)
-                    {
-                        var subQuery = subQueryExpr.Evaluate() as IQuery;
-                        inSql = subQuery.Visitor.BuildSql(true, out _);
-                    }
-                    else
-                    {
-                        var result = this.VisitFromQuery(subQueryExpr);
-                        inSql = result.Sql;
-                    }
+                    //if (subQueryExpr.NodeType == ExpressionType.MemberAccess)
+                    //{
+                    //    var subQuery = subQueryExpr.Evaluate() as IQuery;
+                    //    inSql = subQuery.Visitor.BuildSql(false, out _);
+                    //}
+                    //else
+                    //{
+                    var result = this.VisitFromQuery(subQueryExpr);
+                    inSql = result.Sql;
+                    //}
                 }
                 var fieldArgument = this.WrapSql(fieldSegment);
                 if (sqlSegment.HasNotOperation(out _))
@@ -1495,7 +1496,8 @@ public class SqlVisitor : ISqlVisitor
                 tableIndex = (char)(tableIndex + this.Tables.Count);
             queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableIndex, this.Command);
         }
-        queryVisitor.RefTableAliases = this.TableAliases;
+        if (this.IsExists)
+            queryVisitor.RefTableAliases = this.TableAliases;
         queryVisitor.IsSecondUnion = this.IsSecondUnion;
         queryVisitor.IsExists = this.IsExists;
         //引用现有子查询对象不做任何处理场景，在最外层直接处理
@@ -1545,7 +1547,7 @@ public class SqlVisitor : ISqlVisitor
                 case "FromQuery":
                     entityType = callExpr.Type.GetGenericArguments()[0];
                     refQueryObj = callExpr.Arguments[0].Evaluate<IQuery>();
-                    queryVisitor.UseQuery(entityType, refQueryObj, true);
+                    queryVisitor.UseQuery(entityType, refQueryObj);
                     if (!this.SharedQueryObjs.Contains(refQueryObj))
                         this.SharedQueryObjs.Add(refQueryObj);
                     break;
@@ -1556,11 +1558,11 @@ public class SqlVisitor : ISqlVisitor
                         if (typeof(IQuery).IsAssignableFrom(callExpr.Arguments[0].Type))
                         {
                             refQueryObj = callExpr.Arguments[0].Evaluate<IQuery>();
-                            queryVisitor.UseQuery(entityType, refQueryObj, false);
+                            queryVisitor.UseQuery(entityType, refQueryObj);
                             if (!this.SharedQueryObjs.Contains(refQueryObj))
                                 this.SharedQueryObjs.Add(refQueryObj);
                         }
-                        else queryVisitor.UseNewQuery(entityType, callExpr.Arguments[0], false);
+                        else queryVisitor.UseNewQuery(entityType, callExpr.Arguments[0]);
                     }
                     else queryVisitor.AddTable(genericArguments);
                     break;
@@ -1787,7 +1789,6 @@ public class SqlVisitor : ISqlVisitor
         }
         sql = queryVisitor.BuildSql(false, out readerFields);
         if (isUseSharedQueryObj) queryVisitor.Reset();
-        else queryVisitor.Dispose();
         return new VisitSqlResult
         {
             TableType = tableType,
@@ -2540,7 +2541,6 @@ public class SqlVisitor : ISqlVisitor
         if (this.isDisposed)
             return;
         this.isDisposed = true;
-
         this.Connection = null;
         this.Command?.Dispose();
         this.Command = null;

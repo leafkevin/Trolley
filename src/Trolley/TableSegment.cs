@@ -32,6 +32,9 @@ public enum TableType : byte
 }
 public class TableSegment
 {
+    private bool hasSavePoint;
+    private string aliasName;
+
     /// <summary>
     /// 关联类型，第一个表的JoinType为空字符串，后面的每个表都有关联类型
     /// LEFT JOIN、INNER JOIN、RIGHT JOIN中的值之一
@@ -142,4 +145,11 @@ public class TableSegment
     /// 表别名后的原始SQL，比如：在polardbx数据库中，使用列存储索引FORCE INDEX(cc_i_seller),SQL SERVER数据库中，使用WITH (NOLOCK)
     /// </summary>
     public string TableAliasTrailing { get; set; }
+
+    public void Save() => this.aliasName = this.AliasName;
+    public void Reset()
+    {
+        if (this.aliasName == null) return;
+        this.AliasName = this.aliasName;
+    }
 }

@@ -111,13 +111,13 @@ public class MultipleQuery : DialectProvider, IMultipleQuery
     public virtual IMultiQuery<T> FromQuery<T>(IQuery<T> subQuery)
     {
         var visitor = this.CreateQueryVisitor(subQuery.Visitor.Command);
-        visitor.UseQuery(typeof(T), subQuery, false);
+        visitor.UseQuery(typeof(T), subQuery);
         return this.ormProvider.NewMultiQuery<T>(this, visitor);
     }
     public virtual IMultiQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
         var visitor = this.CreateQueryVisitor();
-        visitor.UseNewQuery(typeof(T), subQueryExpr, false);
+        visitor.UseNewQuery(typeof(T), subQueryExpr);
         return this.ormProvider.NewMultiQuery<T>(this, visitor);
     }
     #endregion
