@@ -127,8 +127,7 @@ public interface IQueryVisitor : ICommandVisitor, IDisposable
 
     TableSegment InitTableAlias(LambdaExpression lambdaExpr);
     ReusableList<ReaderField> FlattenTableFields(TableSegment tableSegment, bool isNeedAlias = true);
-    void Clear();
     IQueryVisitor Clone(DbContext dbContext, ITheaCommand command);
     void Save();
-    void Reset();
+    void Restore();
 }

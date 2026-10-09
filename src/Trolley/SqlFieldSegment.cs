@@ -121,6 +121,8 @@ public enum ReaderFieldType : byte
 }
 public class ReaderField
 {
+    private ReaderField cloned;
+
     public ReaderFieldType FieldType { get; set; }
     public TableSegment TableSegment { get; set; }
     /// <summary>
@@ -167,6 +169,48 @@ public class ReaderField
     public string AliasName { get; set; }
     public bool IsIgnore { get; set; }
     public bool IsRefField { get; set; }
+
+    public void Save()
+    {
+        this.cloned = this.MemberwiseClone() as ReaderField;
+        if (this.Value != null) this.cloned.Value = this.Value.ToString();
+        if (this.Fields != null && this.Fields.Count > 0)
+            this.Fields.ForEach(f => f.Save());
+    }
+    public void Restore()
+    {
+        if (this.cloned == null) return;
+
+        this.FieldType = this.cloned.FieldType;
+        this.TableSegment = this.cloned.TableSegment;
+        this.Value = this.cloned.Value;
+        this.FieldsCount = this.cloned.FieldsCount;
+        this.Expression = this.cloned.Expression;
+        this.MemberMapper = this.cloned.MemberMapper;
+        this.ReaderType = this.cloned.ReaderType;
+        this.MemberName = this.cloned.MemberName;
+        this.TargetMember = this.cloned.TargetMember;
+        this.IsDeferredFields = this.cloned.IsDeferredFields;
+        this.FieldParameters = this.cloned.FieldParameters;
+        this.ValuesParameters = this.cloned.ValuesParameters;
+        this.LocalValues = this.cloned.LocalValues;
+        this.IsGroupingField = this.cloned.IsGroupingField;
+        this.IsOrderingField = this.cloned.IsOrderingField;
+        this.Fields = this.cloned.Fields;
+        this.Path = this.cloned.Path;
+        this.HasNextInclude = this.cloned.HasNextInclude;
+        this.Parent = this.cloned.Parent;
+        this.RefField = this.cloned.RefField;
+        this.IsAggField = this.cloned.IsAggField;
+        this.IsAvgField = this.cloned.IsAvgField;
+        this.AggFunc = this.cloned.AggFunc;
+        this.IsNeedAlias = this.cloned.IsNeedAlias;
+        this.AliasName = this.cloned.AliasName;
+        this.IsIgnore = this.cloned.IsIgnore;
+        this.IsRefField = this.cloned.IsRefField;
+        if (this.Fields != null && this.Fields.Count > 0)
+            this.Fields.ForEach(f => f.Restore());
+    }
 
     public ReaderField Clone()
     {
