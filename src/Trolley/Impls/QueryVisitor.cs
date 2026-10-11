@@ -1796,7 +1796,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         sqlSegment.Value = fieldName;
                     }
                     //CTE子查询的Value值与当前表别名不一定一致，是原始SQL的表别名
-                    if (this.IsCteQuery)
+                    if (this.IsExists && this.IsCteQuery)
                     {
                         sqlSegment.SqlType = SqlType.OnlyField;
                         sqlSegment.Value = fromSegment.AliasName + lastReaderField.Value.ToString().Substring(1);
@@ -2014,8 +2014,17 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         };
                     //成员访问，多个字段实体类型的原始SQL，聚合字段
                     case SqlType.ReaderField:
+                        //GroupBy字段引用或是子查询表或是CTE表字段引用
                         var readerField = sqlSegment.Value as ReaderField;
                         //引用已有字段，需要更名，先克隆副本再更名，以免影响原字段后续使用
+                        if (readerField.IsGroupingField)
+                        {
+                            var orgReaderField = readerField;
+                            readerField = orgReaderField.Clone();
+                            readerField.RefField = orgReaderField;
+                            orgReaderField.IsRefField = false;
+                            readerField.TargetMember = memberInfo;
+                        }
                         if (!readerField.IsRefField)
                         {
                             readerField.ReaderType = memberInfo.GetMemberType();
