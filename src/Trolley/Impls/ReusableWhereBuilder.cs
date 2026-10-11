@@ -59,7 +59,7 @@ public class ReusableWhereBuilder : IDisposable
         this.savedOperationType = this.current;
         this.hasSavePoint = true;
     }
-    public void Reset()
+    public void Restore()
     {
         if (!this.hasSavePoint) return;
         this.current = this.savedOperationType;

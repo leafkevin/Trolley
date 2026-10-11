@@ -89,7 +89,6 @@ public interface IQueryVisitor : ICommandVisitor, IDisposable
     void Join(string joinType, Type newEntityType, Expression subQueryExpr, Expression joinOn);
 
     bool Include(Expression memberSelector, Expression filter = null);
-    bool ThenInclude(Expression memberSelector, Expression filter = null);
     bool HasIncludeTables();
     bool BuildIncludeSql(Type targetType, object target, bool isMultiResult, out string sql);
     void SetIncludeValues(Type targetType, object target, ITheaDataReader reader, bool isMultiResult);
@@ -125,10 +124,9 @@ public interface IQueryVisitor : ICommandVisitor, IDisposable
     void WithLeadingSql(string rawSql);
     void WithTrailingSql(string rawSql);
 
-    TableSegment InitTableAlias(LambdaExpression lambdaExpr);
+    void InitTableAlias(LambdaExpression lambdaExpr);
     ReusableList<ReaderField> FlattenTableFields(TableSegment tableSegment, bool isNeedAlias = true);
-    void Clear();
     IQueryVisitor Clone(DbContext dbContext, ITheaCommand command);
     void Save();
-    void Reset();
+    void Restore();
 }

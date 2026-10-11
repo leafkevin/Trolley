@@ -114,7 +114,7 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
     #endregion
 
     #region Include
-    public new IPostgreSqlIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector)
+    public new IPostgreSqlIncludableQuery<T> Include<TMember>(Expression<Func<T, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
         => base.Include(memberSelector) as IPostgreSqlIncludableQuery<T, TMember>;
     public new IPostgreSqlIncludableQuery<T, TElement> IncludeMany<TElement>(Expression<Func<T, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
         => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T, TElement>;
@@ -301,7 +301,7 @@ public class PostgreSqlQuery<<#=tables#>> : Query<<#=tables#>>, IPostgreSqlQuery
     #endregion
 
     #region Include
-    public new IPostgreSqlIncludableQuery<<#=tables#>, TMember> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector)
+    public new IPostgreSqlIncludableQuery<<#=tables#>> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
         => base.Include(memberSelector) as IPostgreSqlIncludableQuery<<#=tables#>, TMember>;
     public new IPostgreSqlIncludableQuery<<#=tables#>, TElement> IncludeMany<TElement>(Expression<Func<<#=tables#>, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
         => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<<#=tables#>, TElement>;

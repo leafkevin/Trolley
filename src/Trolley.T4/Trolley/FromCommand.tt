@@ -49,17 +49,17 @@ public class FromCommand<TEntity, T> : FromCommand, IFromCommand<TEntity, T>
     #region Sharding
     public virtual IFromCommand<TEntity, T> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, false, tableNames);
+        this.Visitor.UseTable(TableUsageMode.WriteOnly, false, tableNames);
         return this;
     }
     public virtual IFromCommand<TEntity, T> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IFromCommand<TEntity, T> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(TableShardingUsageMode.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IFromCommand<TEntity, T> UseUnionShardingTable()
@@ -121,7 +121,7 @@ public class FromCommand<TEntity, T> : FromCommand, IFromCommand<TEntity, T>
     #region WithTable
     public virtual IFromCommand<TEntity, T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
-        base.WithTableInternal(subQuery);
+        base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TEntity, T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
@@ -358,22 +358,22 @@ public class FromCommand<TEntity, <#=tables#>> : FromCommand, IFromCommand<TEnti
     #region Sharding
     public virtual IFromCommand<TEntity, <#=tables#>> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(TableShardingUsageMode.WriteOnly, false, tableNames);
+        this.Visitor.UseTable(TableUsageMode.WriteOnly, false, tableNames);
         return this;
     }
     public virtual IFromCommand<TEntity, <#=tables#>> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(TableShardingUsageMode.WriteOnly, false, tableNameGetter);
+        this.Visitor.UseTableMap(TableUsageMode.WriteOnly, false, tableNameGetter);
         return this;
     }
     public virtual IFromCommand<TEntity, <#=tables#>> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableShardingUsageMode.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IFromCommand<TEntity, <#=tables#>> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(TableShardingUsageMode.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, false, fieldValues);
         return this;
     }
     public virtual IFromCommand<TEntity, <#=tables#>> UseUnionShardingTable()
@@ -406,7 +406,7 @@ public class FromCommand<TEntity, <#=tables#>> : FromCommand, IFromCommand<TEnti
     #region WithTable
     public virtual IFromCommand<TEntity, <#=tables#>, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
-        base.WithTableInternal(subQuery);
+        base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TEntity, <#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)

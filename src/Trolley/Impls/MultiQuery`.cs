@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq.Expressions;
 
 namespace Trolley;
@@ -138,15 +137,10 @@ public class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
     #endregion
 
     #region Include
-    public virtual IMultiIncludableQuery<T1, T2, TMember> Include<TMember>(Expression<Func<T1, T2, TMember>> memberSelector)
+    public virtual IMultiQuery<T1, T2> Include<TMember>(Expression<Func<T1, T2, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
     {
-        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, TMember>(this.MultipleQuery, this.Visitor, isIncludeMany);
-    }
-    public virtual IMultiIncludableQuery<T1, T2, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
-    {
-        base.IncludeManyInternal<TElement>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, TElement>(this.MultipleQuery, this.Visitor, true);
+        base.IncludeInternal<TMember>(memberSelector, filter);
+        return this;
     }
     #endregion
 
@@ -339,7 +333,7 @@ public class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
     }
     #endregion
 
-    #region WithTable
+    #region WithQuery
     public virtual IMultiQuery<T1, T2, T3, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
@@ -422,15 +416,10 @@ public class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
     #endregion
 
     #region Include
-    public virtual IMultiIncludableQuery<T1, T2, T3, TMember> Include<TMember>(Expression<Func<T1, T2, T3, TMember>> memberSelector)
+    public virtual IMultiQuery<T1, T2, T3> Include<TMember>(Expression<Func<T1, T2, T3, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
     {
-        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, TMember>(this.MultipleQuery, this.Visitor, isIncludeMany);
-    }
-    public virtual IMultiIncludableQuery<T1, T2, T3, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
-    {
-        base.IncludeManyInternal<TElement>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, TElement>(this.MultipleQuery, this.Visitor, true);
+        base.IncludeInternal<TMember>(memberSelector, filter);
+        return this;
     }
     #endregion
 
@@ -623,7 +612,7 @@ public class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3
     }
     #endregion
 
-    #region WithTable
+    #region WithQuery
     public virtual IMultiQuery<T1, T2, T3, T4, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
@@ -706,15 +695,10 @@ public class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3
     #endregion
 
     #region Include
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, TMember>> memberSelector)
+    public virtual IMultiQuery<T1, T2, T3, T4> Include<TMember>(Expression<Func<T1, T2, T3, T4, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
     {
-        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, TMember>(this.MultipleQuery, this.Visitor, isIncludeMany);
-    }
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
-    {
-        base.IncludeManyInternal<TElement>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, TElement>(this.MultipleQuery, this.Visitor, true);
+        base.IncludeInternal<TMember>(memberSelector, filter);
+        return this;
     }
     #endregion
 
@@ -907,7 +891,7 @@ public class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2
     }
     #endregion
 
-    #region WithTable
+    #region WithQuery
     public virtual IMultiQuery<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
@@ -990,15 +974,10 @@ public class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2
     #endregion
 
     #region Include
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, TMember>> memberSelector)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
     {
-        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, TMember>(this.MultipleQuery, this.Visitor, isIncludeMany);
-    }
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
-    {
-        base.IncludeManyInternal<TElement>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, TElement>(this.MultipleQuery, this.Visitor, true);
+        base.IncludeInternal<TMember>(memberSelector, filter);
+        return this;
     }
     #endregion
 
@@ -1191,7 +1170,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1
     }
     #endregion
 
-    #region WithTable
+    #region WithQuery
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
@@ -1274,15 +1253,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1
     #endregion
 
     #region Include
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, TMember>> memberSelector)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
     {
-        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>(this.MultipleQuery, this.Visitor, isIncludeMany);
-    }
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
-    {
-        base.IncludeManyInternal<TElement>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TElement>(this.MultipleQuery, this.Visitor, true);
+        base.IncludeInternal<TMember>(memberSelector, filter);
+        return this;
     }
     #endregion
 
@@ -1475,7 +1449,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuer
     }
     #endregion
 
-    #region WithTable
+    #region WithQuery
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
@@ -1558,15 +1532,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuer
     #endregion
 
     #region Include
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TMember>> memberSelector)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
     {
-        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>(this.MultipleQuery, this.Visitor, isIncludeMany);
-    }
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
-    {
-        base.IncludeManyInternal<TElement>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElement>(this.MultipleQuery, this.Visitor, true);
+        base.IncludeInternal<TMember>(memberSelector, filter);
+        return this;
     }
     #endregion
 
@@ -1759,7 +1728,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMulti
     }
     #endregion
 
-    #region WithTable
+    #region WithQuery
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
@@ -1842,15 +1811,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMulti
     #endregion
 
     #region Include
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TMember>> memberSelector)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
     {
-        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>(this.MultipleQuery, this.Visitor, isIncludeMany);
-    }
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
-    {
-        base.IncludeManyInternal<TElement>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElement>(this.MultipleQuery, this.Visitor, true);
+        base.IncludeInternal<TMember>(memberSelector, filter);
+        return this;
     }
     #endregion
 
@@ -2043,7 +2007,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IM
     }
     #endregion
 
-    #region WithTable
+    #region WithQuery
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
@@ -2126,15 +2090,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IM
     #endregion
 
     #region Include
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>> memberSelector)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
     {
-        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>(this.MultipleQuery, this.Visitor, isIncludeMany);
-    }
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
-    {
-        base.IncludeManyInternal<TElement>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElement>(this.MultipleQuery, this.Visitor, true);
+        base.IncludeInternal<TMember>(memberSelector, filter);
+        return this;
     }
     #endregion
 
@@ -2327,7 +2286,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBas
     }
     #endregion
 
-    #region WithTable
+    #region WithQuery
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
@@ -2410,15 +2369,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBas
     #endregion
 
     #region Include
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>> memberSelector)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
     {
-        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>(this.MultipleQuery, this.Visitor, isIncludeMany);
-    }
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
-    {
-        base.IncludeManyInternal<TElement>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElement>(this.MultipleQuery, this.Visitor, true);
+        base.IncludeInternal<TMember>(memberSelector, filter);
+        return this;
     }
     #endregion
 
@@ -2611,7 +2565,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQue
     }
     #endregion
 
-    #region WithTable
+    #region WithQuery
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
@@ -2694,15 +2648,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQue
     #endregion
 
     #region Include
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>> memberSelector)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
     {
-        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>(this.MultipleQuery, this.Visitor, isIncludeMany);
-    }
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
-    {
-        base.IncludeManyInternal<TElement>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElement>(this.MultipleQuery, this.Visitor, true);
+        base.IncludeInternal<TMember>(memberSelector, filter);
+        return this;
     }
     #endregion
 
@@ -2895,7 +2844,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : Mul
     }
     #endregion
 
-    #region WithTable
+    #region WithQuery
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
@@ -2978,15 +2927,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : Mul
     #endregion
 
     #region Include
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>> memberSelector)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
     {
-        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>(this.MultipleQuery, this.Visitor, isIncludeMany);
-    }
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
-    {
-        base.IncludeManyInternal<TElement>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElement>(this.MultipleQuery, this.Visitor, true);
+        base.IncludeInternal<TMember>(memberSelector, filter);
+        return this;
     }
     #endregion
 
@@ -3179,7 +3123,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     }
     #endregion
 
-    #region WithTable
+    #region WithQuery
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
@@ -3262,15 +3206,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     #endregion
 
     #region Include
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>> memberSelector)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
     {
-        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>(this.MultipleQuery, this.Visitor, isIncludeMany);
-    }
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
-    {
-        base.IncludeManyInternal<TElement>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElement>(this.MultipleQuery, this.Visitor, true);
+        base.IncludeInternal<TMember>(memberSelector, filter);
+        return this;
     }
     #endregion
 
@@ -3463,7 +3402,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     }
     #endregion
 
-    #region WithTable
+    #region WithQuery
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
@@ -3546,15 +3485,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     #endregion
 
     #region Include
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>> memberSelector)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
     {
-        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>(this.MultipleQuery, this.Visitor, isIncludeMany);
-    }
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
-    {
-        base.IncludeManyInternal<TElement>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElement>(this.MultipleQuery, this.Visitor, true);
+        base.IncludeInternal<TMember>(memberSelector, filter);
+        return this;
     }
     #endregion
 
@@ -3747,7 +3681,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     }
     #endregion
 
-    #region WithTable
+    #region WithQuery
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
@@ -3830,15 +3764,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     #endregion
 
     #region Include
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>> memberSelector)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
     {
-        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>(this.MultipleQuery, this.Visitor, isIncludeMany);
-    }
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
-    {
-        base.IncludeManyInternal<TElement>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElement>(this.MultipleQuery, this.Visitor, true);
+        base.IncludeInternal<TMember>(memberSelector, filter);
+        return this;
     }
     #endregion
 
@@ -4048,15 +3977,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     #endregion
 
     #region Include
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>> memberSelector)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
     {
-        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>(this.MultipleQuery, this.Visitor, isIncludeMany);
-    }
-    public virtual IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
-    {
-        base.IncludeManyInternal<TElement>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElement>(this.MultipleQuery, this.Visitor, true);
+        base.IncludeInternal<TMember>(memberSelector, filter);
+        return this;
     }
     #endregion
 

@@ -6,7 +6,6 @@
 <#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
 <#@ output extension=".cs" #>
 using System;
-using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,22 +33,22 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     #region Sharding
     public virtual IQuery<<#=tables#>> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
+        this.Visitor.UseTable(TableUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IQuery<<#=tables#>> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameGetter);
+        this.Visitor.UseTableMap(TableUsageMode.ReadOnly, false, tableNameGetter);
         return this;
     }
     public virtual IQuery<<#=tables#>> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<<#=tables#>> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
+        this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IQuery<<#=tables#>> UseUnionShardingTable()
@@ -186,15 +185,10 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     #endregion
 
     #region Include
-    public virtual IIncludableQuery<<#=tables#>, TMember> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector)
+    public virtual IQuery<<#=tables#>> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
     {
-        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<<#=tables#>, TMember>(this.DbContext, this.Visitor, isIncludeMany);
-    }
-    public virtual IIncludableQuery<<#=tables#>, TElement> IncludeMany<TElement>(Expression<Func<<#=tables#>, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
-    {
-        base.IncludeManyInternal<TElement>(memberSelector, filter);
-        return this.OrmProvider.NewIncludableQuery<<#=tables#>, TElement>(this.DbContext, this.Visitor, true);
+        base.IncludeInternal<TMember>(memberSelector, filter);
+        return this;
     }
     #endregion
 

@@ -243,10 +243,6 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>IPostgreSqlIncludableQuery.cs</LastGenOutput>
     </Content>
-    <Content Include="Trolley\IIncludableQuery.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>IIncludableQuery.cs</LastGenOutput>
-    </Content>
     <Content Include="Trolley\IMultipleQuery.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>IMultipleQuery.cs</LastGenOutput>
@@ -254,10 +250,6 @@
     <Content Include="Trolley\IMultiQuery.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>IMultiQuery.cs</LastGenOutput>
-    </Content>
-    <Content Include="Trolley\IncludableQuery.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>IncludableQuery.cs</LastGenOutput>
     </Content>
     <Content Include="Trolley\PostgreSqlRepository.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
@@ -295,10 +287,6 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Query`.cs</LastGenOutput>
     </Content>
-    <Content Include="Trolley\IMultiIncludableQuery.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>IMultiIncludableQuery.cs</LastGenOutput>
-    </Content>
     <Content Include="Trolley\IMultiGroupingQuery.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>IMultiGroupingQuery.cs</LastGenOutput>
@@ -306,10 +294,6 @@
     <Content Include="Trolley\MultipleQuery.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>MultipleQuery.cs</LastGenOutput>
-    </Content>
-    <Content Include="Trolley\MultiIncludableQuery.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>MultiIncludableQuery.cs</LastGenOutput>
     </Content>
     <Content Include="Trolley\MultiGroupingQuery.tt">
       <Generator>TextTemplatingFileGenerator</Generator>

@@ -48,7 +48,7 @@ public class EntityTypeBuilder<TEntity> where TEntity : class
         this.mapper.SetAutoIncrement(memberVisitExpr.Member);
         return this;
     }
-    public virtual MemberBuilder<TMember> Member<TMember>(Expression<Func<TEntity, TMember>> memberSelector)
+    public virtual MemberBuilder<TMember> Member<TMember>(Expression<Func<TEntity, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
     {
         if (memberSelector.Body is not MemberExpression memberExpr) throw new Exception("不支持的表达式");
 
@@ -57,11 +57,11 @@ public class EntityTypeBuilder<TEntity> where TEntity : class
             this.mapper.AddMemberMap(memberName, memberMapper = new MemberMap(this.mapper, memberExpr.Member));
         return new MemberBuilder<TMember>(memberMapper);
     }
-    public virtual Navigation<TEntity> Navigation<TMember>(Expression<Func<TEntity, TMember>> memberSelector) where TMember : class
+    public virtual Navigation<TEntity> Navigation<TMember>(Expression<Func<TEntity, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null) where TMember : class
         => this.HasOne(memberSelector);
     public virtual Navigation<TElement> Navigation<TElement>(Expression<Func<TEntity, IEnumerable<TElement>>> memberSelector) where TElement : class
         => this.HasMany(memberSelector);
-    public virtual Navigation<TEntity> HasOne<TMember>(Expression<Func<TEntity, TMember>> memberSelector) where TMember : class
+    public virtual Navigation<TEntity> HasOne<TMember>(Expression<Func<TEntity, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null) where TMember : class
     {
         if (memberSelector.Body is not MemberExpression memberExpr)
             throw new Exception("不支持的表达式");

@@ -18,7 +18,7 @@ namespace Trolley;
 /// <summary>
 /// 查询对象
 /// </summary>
-public interface IQuery
+public interface IQuery : IDisposable
 {
     #region Properties
     /// <summary>
@@ -32,7 +32,7 @@ public interface IQuery
     /// <summary>
     /// 是否CTE表
     /// </summary>
-    bool IsCteTable { get; }
+    bool IsCteQuery { get; }
     #endregion
 
     #region ToSql
@@ -54,10 +54,6 @@ public interface ICteQuery : IQuery
     /// CTE表名称
     /// </summary>
     string TableName { get; set; }
-    /// <summary>
-    /// CTE表字段定义
-    /// </summary>
-    ReusableList<ReaderField> ReaderFields { get; set; }
     /// <summary>
     /// CTE表主体SQL
     /// </summary>
@@ -313,19 +309,7 @@ public interface IQuery<T> : IQueryBase
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    IIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector);
-    /// <summary>
-    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
-    /// <code>
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TElement">导航属性泛型类型</typeparam>
-    /// <param name="memberSelector">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
-    /// <param name="filter">导航属性过滤条件，加载满足条件的子表数据</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
-    IIncludableQuery<T, TElement> IncludeMany<TElement>(Expression<Func<T, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null);
+    IQuery<T> Include<TMember>(Expression<Func<T, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null);
     #endregion
 
     #region InnerJoin
@@ -966,6 +950,10 @@ public interface IQuery<T> : IQueryBase
     ICteQuery<T> AsCteTable(string tableName);
     #endregion
 
+    #region AsRefQueryObj
+    IQuery<T> AsSharedQuery();
+    #endregion
+
     #region ToCreate
     /// <summary>
     /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
@@ -1126,19 +1114,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    IIncludableQuery<<#=tables#>, TMember> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector);
-    /// <summary>
-    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
-    /// <code>
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TElement">导航属性泛型类型</typeparam>
-    /// <param name="memberSelector">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
-    /// <param name="filter">导航属性过滤条件，加载满足条件的子表数据</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
-    IIncludableQuery<<#=tables#>, TElement> IncludeMany<TElement>(Expression<Func<<#=tables#>, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null);
+    IQuery<<#=tables#>> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null);
     #endregion
 
     #region InnerJoin

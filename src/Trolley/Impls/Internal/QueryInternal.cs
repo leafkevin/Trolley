@@ -181,18 +181,10 @@ public class QueryInternal : DialectProvider
     #endregion
 
     #region Include/IncludeMany
-    protected bool IncludeInternal<TMember>(Expression memberSelector)
+    protected void IncludeInternal<TMember>(Expression memberSelector, Expression filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
-
-        return this.Visitor.Include(memberSelector);
-    }
-    protected void IncludeManyInternal<TElement>(Expression memberSelector, Expression filter = null)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
         this.Visitor.Include(memberSelector, filter);
     }
     #endregion

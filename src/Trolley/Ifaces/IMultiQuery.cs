@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq.Expressions;
 
 namespace Trolley;
@@ -217,26 +216,14 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
     /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
-    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
-    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
+    /// .From&lt;User&gt;().Include(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
-    /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回查询对象，带有导航属性</returns>
-    IMultiIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector);
-    /// <summary>
-    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
-    /// <code>
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TElement">导航属性泛型类型</typeparam>
-    /// <param name="memberSelector">导航属性选择表达式</param>
+    /// <param name="memberSelector">导航属性选择表达式</param>    
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
-    IMultiIncludableQuery<T, TElement> IncludeMany<TElement>(Expression<Func<T, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IMultiQuery<T> Include<TMember>(Expression<Func<T, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null);
     #endregion
 
     #region InnerJoin
@@ -867,26 +854,14 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
     /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
-    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
-    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
+    /// .From&lt;User&gt;().Include(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回查询对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, TMember> Include<TMember>(Expression<Func<T1, T2, TMember>> memberSelector);
-    /// <summary>
-    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
-    /// <code>
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TElement">导航属性泛型类型</typeparam>
-    /// <param name="memberSelector">导航属性选择表达式</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IMultiQuery<T1, T2> Include<TMember>(Expression<Func<T1, T2, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null);
     #endregion
 
     #region InnerJoin
@@ -1376,26 +1351,14 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
     /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
-    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
-    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
+    /// .From&lt;User&gt;().Include(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回查询对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, TMember> Include<TMember>(Expression<Func<T1, T2, T3, TMember>> memberSelector);
-    /// <summary>
-    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
-    /// <code>
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TElement">导航属性泛型类型</typeparam>
-    /// <param name="memberSelector">导航属性选择表达式</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IMultiQuery<T1, T2, T3> Include<TMember>(Expression<Func<T1, T2, T3, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null);
     #endregion
 
     #region InnerJoin
@@ -1886,26 +1849,14 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
     /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
-    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
-    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
+    /// .From&lt;User&gt;().Include(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回查询对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, TMember>> memberSelector);
-    /// <summary>
-    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
-    /// <code>
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TElement">导航属性泛型类型</typeparam>
-    /// <param name="memberSelector">导航属性选择表达式</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IMultiQuery<T1, T2, T3, T4> Include<TMember>(Expression<Func<T1, T2, T3, T4, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null);
     #endregion
 
     #region InnerJoin
@@ -2397,26 +2348,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
     /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
-    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
-    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
+    /// .From&lt;User&gt;().Include(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回查询对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, TMember>> memberSelector);
-    /// <summary>
-    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
-    /// <code>
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TElement">导航属性泛型类型</typeparam>
-    /// <param name="memberSelector">导航属性选择表达式</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IMultiQuery<T1, T2, T3, T4, T5> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null);
     #endregion
 
     #region InnerJoin
@@ -2909,26 +2848,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
     /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
-    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
-    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
+    /// .From&lt;User&gt;().Include(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回查询对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, TMember>> memberSelector);
-    /// <summary>
-    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
-    /// <code>
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TElement">导航属性泛型类型</typeparam>
-    /// <param name="memberSelector">导航属性选择表达式</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null);
     #endregion
 
     #region InnerJoin
@@ -3422,26 +3349,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
     /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
-    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
-    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
+    /// .From&lt;User&gt;().Include(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回查询对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TMember>> memberSelector);
-    /// <summary>
-    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
-    /// <code>
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TElement">导航属性泛型类型</typeparam>
-    /// <param name="memberSelector">导航属性选择表达式</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null);
     #endregion
 
     #region InnerJoin
@@ -3904,6 +3819,9 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <typeparam name="TOther">实体表类型</typeparam>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithTable
     /// <summary>
     /// 添加子查询表，方便后面做JOIN关联，如：
     /// <code>
@@ -3933,26 +3851,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
     /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
-    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
-    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
+    /// .From&lt;User&gt;().Include(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回查询对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TMember>> memberSelector);
-    /// <summary>
-    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
-    /// <code>
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TElement">导航属性泛型类型</typeparam>
-    /// <param name="memberSelector">导航属性选择表达式</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null);
     #endregion
 
     #region InnerJoin
@@ -4448,26 +4354,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
     /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
-    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
-    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
+    /// .From&lt;User&gt;().Include(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回查询对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>> memberSelector);
-    /// <summary>
-    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
-    /// <code>
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TElement">导航属性泛型类型</typeparam>
-    /// <param name="memberSelector">导航属性选择表达式</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null);
     #endregion
 
     #region InnerJoin
@@ -4964,26 +4858,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
     /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
-    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
-    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
+    /// .From&lt;User&gt;().Include(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回查询对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>> memberSelector);
-    /// <summary>
-    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
-    /// <code>
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TElement">导航属性泛型类型</typeparam>
-    /// <param name="memberSelector">导航属性选择表达式</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null);
     #endregion
 
     #region InnerJoin
@@ -5481,26 +5363,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
     /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
-    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
-    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
+    /// .From&lt;User&gt;().Include(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回查询对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>> memberSelector);
-    /// <summary>
-    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
-    /// <code>
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TElement">导航属性泛型类型</typeparam>
-    /// <param name="memberSelector">导航属性选择表达式</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null);
     #endregion
 
     #region InnerJoin
@@ -5999,26 +5869,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
     /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
-    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
-    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
+    /// .From&lt;User&gt;().Include(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回查询对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>> memberSelector);
-    /// <summary>
-    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
-    /// <code>
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TElement">导航属性泛型类型</typeparam>
-    /// <param name="memberSelector">导航属性选择表达式</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null);
     #endregion
 
     #region InnerJoin
@@ -6518,26 +6376,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
     /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
-    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
-    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
+    /// .From&lt;User&gt;().Include(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回查询对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>> memberSelector);
-    /// <summary>
-    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
-    /// <code>
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TElement">导航属性泛型类型</typeparam>
-    /// <param name="memberSelector">导航属性选择表达式</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null);
     #endregion
 
     #region InnerJoin
@@ -7038,26 +6884,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
     /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
-    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
-    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
+    /// .From&lt;User&gt;().Include(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回查询对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>> memberSelector);
-    /// <summary>
-    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
-    /// <code>
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TElement">导航属性泛型类型</typeparam>
-    /// <param name="memberSelector">导航属性选择表达式</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null);
     #endregion
 
     #region InnerJoin
@@ -7559,26 +7393,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
     /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
-    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
-    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
+    /// .From&lt;User&gt;().Include(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回查询对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>> memberSelector);
-    /// <summary>
-    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
-    /// <code>
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TElement">导航属性泛型类型</typeparam>
-    /// <param name="memberSelector">导航属性选择表达式</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null);
     #endregion
 
     #region InnerJoin
@@ -8047,26 +7869,14 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// 加载导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
     /// <code>
     /// .From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
-    /// .From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
-    /// .From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
+    /// .From&lt;User&gt;().Include(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
-    /// <returns>返回查询对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>> memberSelector);
-    /// <summary>
-    /// 加载集合类导航属性，使用LEFT JOIN关联导航属性表，使用实体映射中的导航属性配置生成LEFT JOIN ... ON子句，可使用filter筛选满足条件的导航属性，1:N关联关系，分两次查询，第二次查询返回结果，只支持1级。
-    /// <code>
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders)  //与 .From&lt;User&gt;().Include(f =&gt; f.Orders) 等价
-    /// .From&lt;User&gt;().IncludeMany(f =&gt; f.Orders, order =&gt; order.TotalAmout &gt; 500)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TElement">导航属性泛型类型</typeparam>
-    /// <param name="memberSelector">导航属性选择表达式</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回实体对象，带有导航属性</returns>
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null);
+    /// <returns>返回查询对象，带有导航属性</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null);
     #endregion
 
     #region InnerJoin

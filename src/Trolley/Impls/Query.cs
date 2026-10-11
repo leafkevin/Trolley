@@ -395,15 +395,10 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region Include
-    public virtual IIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector)
+    public virtual IQuery<T> Include<TMember>(Expression<Func<T, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
     {
-        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<T, TMember>(this.DbContext, this.Visitor, isIncludeMany);
-    }
-    public virtual IIncludableQuery<T, TElement> IncludeMany<TElement>(Expression<Func<T, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
-    {
-        base.IncludeManyInternal<TElement>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<T, TElement>(this.DbContext, this.Visitor, true);
+        base.IncludeInternal<TMember>(memberSelector, filter);
+        return this;
     }
     #endregion
 
@@ -782,9 +777,7 @@ public class CteQuery<T> : Query<T>, ICteQuery<T>
     #endregion
 
     #region 不支持的方法
-    public override IIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector)
-        => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持IncludeMany操作");
-    public override IIncludableQuery<T, TElement> IncludeMany<TElement>(Expression<Func<T, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
+    public override IQuery<T> Include<TMember>(Expression<Func<T, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持IncludeMany操作");
     public override int Count() => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
     public override Task<int> CountAsync(CancellationToken cancellationToken = default)

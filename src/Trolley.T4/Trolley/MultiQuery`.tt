@@ -6,7 +6,6 @@
 <#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
 <#@ output extension=".cs" #>
 using System;
-using System.Collections.Generic;
 using System.Linq.Expressions;
 
 namespace Trolley;
@@ -30,22 +29,22 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
     #region Sharding
     public virtual IMultiQuery<<#=tables#>> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(TableShardingUsageMode.ReadOnly, false, tableNames);
+        this.Visitor.UseTable(TableUsageMode.ReadOnly, false, tableNames);
         return this;
     }
     public virtual IMultiQuery<<#=tables#>> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(TableShardingUsageMode.ReadOnly, false, tableNameGetter);
+        this.Visitor.UseTableMap(TableUsageMode.ReadOnly, false, tableNameGetter);
         return this;
     }
     public virtual IMultiQuery<<#=tables#>> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableShardingUsageMode.ReadOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IMultiQuery<<#=tables#>> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(TableShardingUsageMode.ReadOnly, false, fieldValues);
+        this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, false, fieldValues);
         return this;
     }
     public virtual IMultiQuery<<#=tables#>> UseUnionShardingTable()
@@ -75,10 +74,10 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
     }
     #endregion
 
-    #region WithTable
+    #region WithQuery
     public virtual IMultiQuery<<#=tables#>, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
-        base.WithTableInternal(subQuery);
+        base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewMultiQuery<<#=tables#>, TOther>(this.MultipleQuery, this.Visitor);
     }
     public virtual IMultiQuery<<#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
@@ -174,15 +173,10 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
     #endregion
 
     #region Include
-    public virtual IMultiIncludableQuery<<#=tables#>, TMember> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector)
+    public virtual IMultiQuery<<#=tables#>> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null)
     {
-        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<<#=tables#>, TMember>(this.MultipleQuery, this.Visitor, isIncludeMany);
-    }
-    public virtual IMultiIncludableQuery<<#=tables#>, TElement> IncludeMany<TElement>(Expression<Func<<#=tables#>, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
-    {
-        base.IncludeManyInternal<TElement>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<<#=tables#>, TElement>(this.MultipleQuery, this.Visitor, true);
+        base.IncludeInternal<TMember>(memberSelector, filter);
+        return this;
     }
     #endregion
 

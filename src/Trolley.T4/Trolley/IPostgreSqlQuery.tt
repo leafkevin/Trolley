@@ -226,7 +226,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    new IPostgreSqlQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector);
+    new IPostgreSqlQuery<T> Include<TMember>(Expression<Func<T, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null);
     /// <summary>
     /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
@@ -764,7 +764,7 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
     /// <returns>返回实体对象，带有导航属性</returns>
-    new IPostgreSqlIncludableQuery<<#=tables#>, TMember> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector);
+    new IPostgreSqlIncludableQuery<<#=tables#>> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector, Expression<Func<TMember, bool>> filter = null);
     /// <summary>
     /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。

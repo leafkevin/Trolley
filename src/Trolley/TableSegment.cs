@@ -32,7 +32,6 @@ public enum TableType : byte
 }
 public class TableSegment
 {
-    private bool hasSavePoint;
     private string aliasName;
 
     /// <summary>
@@ -147,7 +146,7 @@ public class TableSegment
     public string TableAliasTrailing { get; set; }
 
     public void Save() => this.aliasName = this.AliasName;
-    public void Reset()
+    public void Restore()
     {
         if (this.aliasName == null) return;
         this.AliasName = this.aliasName;

@@ -43,23 +43,6 @@ public interface IOrmProvider
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(DbContext dbContext, IQueryVisitor visitor);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>(DbContext dbContext, IQueryVisitor visitor);
 
-    IIncludableQuery<T, TMember> NewIncludableQuery<T, TMember>(DbContext dbContext, IQueryVisitor visitor, bool isIncludablMany = false);
-    IIncludableQuery<T1, T2, TMember> NewIncludableQuery<T1, T2, TMember>(DbContext dbContext, IQueryVisitor visitor, bool isIncludablMany = false);
-    IIncludableQuery<T1, T2, T3, TMember> NewIncludableQuery<T1, T2, T3, TMember>(DbContext dbContext, IQueryVisitor visitor, bool isIncludablMany = false);
-    IIncludableQuery<T1, T2, T3, T4, TMember> NewIncludableQuery<T1, T2, T3, T4, TMember>(DbContext dbContext, IQueryVisitor visitor, bool isIncludablMany = false);
-    IIncludableQuery<T1, T2, T3, T4, T5, TMember> NewIncludableQuery<T1, T2, T3, T4, T5, TMember>(DbContext dbContext, IQueryVisitor visitor, bool isIncludablMany = false);
-    IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> NewIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>(DbContext dbContext, IQueryVisitor visitor, bool isIncludablMany = false);
-    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>(DbContext dbContext, IQueryVisitor visitor, bool isIncludablMany = false);
-    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>(DbContext dbContext, IQueryVisitor visitor, bool isIncludablMany = false);
-    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>(DbContext dbContext, IQueryVisitor visitor, bool isIncludablMany = false);
-    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>(DbContext dbContext, IQueryVisitor visitor, bool isIncludablMany = false);
-    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>(DbContext dbContext, IQueryVisitor visitor, bool isIncludablMany = false);
-    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>(DbContext dbContext, IQueryVisitor visitor, bool isIncludablMany = false);
-    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>(DbContext dbContext, IQueryVisitor visitor, bool isIncludablMany = false);
-    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>(DbContext dbContext, IQueryVisitor visitor, bool isIncludablMany = false);
-    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>(DbContext dbContext, IQueryVisitor visitor, bool isIncludablMany = false);
-    IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember> NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>(DbContext dbContext, IQueryVisitor visitor, bool isIncludablMany = false);
-
     IGroupingQuery<T, TGrouping> NewGroupQuery<T, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
     IGroupingQuery<T1, T2, TGrouping> NewGroupQuery<T1, T2, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
     IGroupingQuery<T1, T2, T3, TGrouping> NewGroupQuery<T1, T2, T3, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
@@ -109,23 +92,6 @@ public interface IOrmProvider
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(IMultipleQuery multiQuery, IQueryVisitor visitor);
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(IMultipleQuery multiQuery, IQueryVisitor visitor);
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>(IMultipleQuery multiQuery, IQueryVisitor visitor);
-
-    IMultiIncludableQuery<T, TMember> NewMultiIncludableQuery<T, TMember>(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
-    IMultiIncludableQuery<T1, T2, TMember> NewMultiIncludableQuery<T1, T2, TMember>(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
-    IMultiIncludableQuery<T1, T2, T3, TMember> NewMultiIncludableQuery<T1, T2, T3, TMember>(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
-    IMultiIncludableQuery<T1, T2, T3, T4, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, TMember>(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, TMember>(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
 
     IMultiGroupingQuery<T, TGrouping> NewMultiGroupingQuery<T, TGrouping>(IMultipleQuery multiQuery, IQueryVisitor visitor);
     IMultiGroupingQuery<T1, T2, TGrouping> NewMultiGroupingQuery<T1, T2, TGrouping>(IMultipleQuery multiQuery, IQueryVisitor visitor);
