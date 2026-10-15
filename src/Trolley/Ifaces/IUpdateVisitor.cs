@@ -23,13 +23,13 @@ public interface IUpdateVisitor : ICommandVisitor, IDisposable
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>, Action<IDataParameterCollection,
          StringBuilder, DbContext, string, object, string>, ReusableList<ReaderField>) BuildSetBulk(ITheaCommand command);
 
-    void UseTable(TableUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
-    void UseTableByRange(TableUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
-    void UseTableMap(TableUsageMode usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter);
-    void UseTableBy(TableUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
-    void UseTable(TableUsageMode usageMode, Func<object, string> tableNameGetter);
-    void UseTableSchema(bool isIncludeMany, string tableSchema);
-    void WithTableAliasTrailing(bool isIncludeMany, string rawSql);
+    void UseTable(TableSegment tableSegment, params string[] tableNames);
+    void UseTable(TableSegment tableSegment, Func<object, string> tableNameGetter);
+    void UseTableBy(TableUsageMode usageMode, TableSegment tableSegment, params object[] fieldValues);
+    void UseTableByRange(TableUsageMode usageMode, TableSegment tableSegment, object[] fieldValues);
+    void UseTableMap(TableSegment tableSegment, Func<string, string, string, string> tableNameGetter);
+    void UseTableSchema(TableSegment tableSegment, string tableSchema);
+    void WithTableAliasTrailing(TableSegment tableSegment, string rawSql);
 
     void Join(string joinType, Type entityType, Expression joinOn);
     void SetExpr(Expression fieldsAssignment);

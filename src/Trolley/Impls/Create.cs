@@ -28,17 +28,17 @@ public class Create : DialectProvider, ICreate
     #region Sharding
     public virtual ICreate UseTable(string tableName)
     {
-        this.Visitor.UseTable(TableUsageMode.WriteOnly, false, tableName);
+        this.Visitor.UseTable(this.Visitor.Tables[0], tableName);
         return this;
     }
     public virtual ICreate UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, this.Visitor.Tables[0], fieldValues);
         return this;
     }
     public virtual ICreate UseTable(Func<object, string> tableNameGetter)
     {
-        this.Visitor.UseTable(TableUsageMode.WriteOnly, tableNameGetter);
+        this.Visitor.UseTable(this.Visitor.Tables[0], tableNameGetter);
         return this;
     }
     #endregion
@@ -46,7 +46,7 @@ public class Create : DialectProvider, ICreate
     #region UseTableSchema
     public virtual ICreate UseTableSchema(string tableSchema)
     {
-        this.Visitor.UseTableSchema(false, tableSchema);
+        this.Visitor.UseTableSchema(this.Visitor.Tables[0], tableSchema);
         return this;
     }
     #endregion
@@ -54,7 +54,7 @@ public class Create : DialectProvider, ICreate
     #region WithTableAliasTrailing
     public virtual ICreate WithTableAliasTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables[0], rawSql);
         return this;
     }
     #endregion
@@ -657,17 +657,17 @@ public class FromCreated : Created, IFromCreate
     #region Sharding
     public virtual IFromCreate UseTable(string tableName)
     {
-        this.Visitor.UseTable(TableUsageMode.WriteOnly, false, tableName);
+        this.Visitor.UseTable(this.Visitor.Tables[0], tableName);
         return this;
     }
     public virtual IFromCreate UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, this.Visitor.Tables[0], fieldValues);
         return this;
     }
     public virtual IFromCreate UseTable(Func<object, string> tableNameGetter)
     {
-        this.Visitor.UseTable(TableUsageMode.WriteOnly, tableNameGetter);
+        this.Visitor.UseTable(this.Visitor.Tables[0], tableNameGetter);
         return this;
     }
     #endregion
@@ -675,7 +675,7 @@ public class FromCreated : Created, IFromCreate
     #region UseTableSchema
     public virtual IFromCreate UseTableSchema(string tableSchema)
     {
-        this.Visitor.UseTableSchema(false, tableSchema);
+        this.Visitor.UseTableSchema(this.Visitor.Tables[0], tableSchema);
         return this;
     }
     #endregion

@@ -162,18 +162,18 @@ public class SqlVisitor : ISqlVisitor
         builder.Clear();
         return result;
     }
-    public void UseTable(TableUsageMode usageMode, bool isIncludeMany, params string[] tableNames)
+    public void UseTable(TableSegment tableSegment, params string[] tableNames)
     {
+        if (tableSegment == null)
+            throw new ArgumentNullException(nameof(tableSegment));
         if (tableNames == null || tableNames.Length == 0)
             throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
 
-        var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         if (tableNames.Length > 1 && !this.TrySetTableShardingInfo(tableSegment, out var tableShardingInfo))
             return;
 
         //多个分表，才当作分表处理
         tableSegment.IsSharding = tableSegment.TableShardingInfo != null;
-        if (tableSegment.IsSharding) tableSegment.IsIncludeManySharding = isIncludeMany;
         if (tableNames.Length > 1)
         {
             tableSegment.ShardingType = ShardingTableType.MultiTable;
@@ -1512,7 +1512,7 @@ public class SqlVisitor : ISqlVisitor
                     entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
                     var parameterInfos = methodInfo.GetParameters();
                     var tableNames = callExpr.Arguments[0].Evaluate<string[]>();
-                    queryVisitor.UseTable(TableUsageMode.ReadOnly, false, tableNames);
+                    queryVisitor.UseTable(this.Visitor.Tables.Last(), tableNames);
                     break;
                 case "UseTableMap":
                     var tableNameMapGetter = callExpr.Arguments[0].Evaluate<Func<string, string, string, string>>();

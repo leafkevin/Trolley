@@ -29,12 +29,11 @@ public interface ICreateVisitor : ICommandVisitor, IDisposable
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, ReusableList<ReaderField>) BuildWithBulk(ITheaCommand command);
 
-    //IQueryVisitor CreateQueryVisitor(char? tableAsStart = null);
-    void UseTable(TableUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
-    void UseTableBy(TableUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
-    void UseTable(TableUsageMode usageMode, Func<object, string> tableNameGetter);
-    void UseTableSchema(bool isIncludeMany, string tableSchema);
-    void WithTableAliasTrailing(bool isIncludeMany, string rawSql);
+    void UseTable(TableSegment tableSegment, params string[] tableNames);
+    void UseTable(TableSegment tableSegment, Func<object, string> tableNameGetter);
+    void UseTableBy(TableUsageMode usageMode, TableSegment tableSegment, params object[] fieldValues);  
+    void UseTableSchema(TableSegment tableSegment, string tableSchema);
+    void WithTableAliasTrailing(TableSegment tableSegment, string rawSql);
 
     void WithBy(object insertObj);
     void WithByField(string fieldName, object fieldValue);

@@ -498,7 +498,7 @@ public interface IUpdate<TEntity> : IUpdate
 {
     #region Sharding
     /// <summary>
-    /// 直接指定<typeparamref name="TEntity"/>表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
+    /// 直接指定当前表分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回更新对象</returns>
@@ -509,8 +509,7 @@ public interface IUpdate<TEntity> : IUpdate
     /// <param name="fieldValues">字段值数组，不可为nul或空元素</param>
     /// <returns>返回更新对象</returns>
     new IUpdate<TEntity> UseTableBy(params object[] fieldValues);
-    /// <summary>
-    /// 手动指定分表名获取委托，执行委托获取分表名，插入对象的值自动插入对应分表中。第一个参数是原始表名，第二个参数是插入对象值，返回值是分表名，如：.UseTable((tableName, insertObj) =&gt; $"{tableName}_{((User)insertObj).CreatedAt:yyyyMM}")
+    //// <summary>
     /// 手动指定分表名获取委托，执行委托获取分表名，更新对象的值自动更新对应分表中。参数是更新对象的值，返回值是分表名，如：.UseTable(insertObj =&gt; $"sys_user_{((User)insertObj).CreatedAt:yyyyMM}")
     /// </summary>
     /// <param name="tableNameGetter">分表名获取委托</param>
@@ -531,6 +530,15 @@ public interface IUpdate<TEntity> : IUpdate
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回更新对象</returns>
     new IUpdate<TEntity> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回更新对象</returns>
+    new IUpdate<TEntity> WithTableAliasTrailing(string rawSql);
     #endregion
 
     #region Set

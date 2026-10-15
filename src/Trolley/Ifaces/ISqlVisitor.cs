@@ -11,12 +11,12 @@ public interface ISqlVisitor : IDisposable
     DbContext DbContext { get; }
     bool IsSelect { get; }
 
-    void UseTable(TableUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
-    void UseTableByRange(TableUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
-    void UseTableMap(TableUsageMode usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter);
-    void UseTableBy(TableUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
-    void UseTable(TableUsageMode usageMode, Func<object, string> tableNameGetter);
-    void UseTableSchema(bool isIncludeMany, string tableSchema);
+    void UseTable(TableSegment tableSegment, params string[] tableNames);
+    void UseTableByRange(TableUsageMode usageMode, TableSegment tableSegment, object[] fieldValues);
+    void UseTableMap(TableSegment tableSegment, Func<string, string, string, string> tableNameGetter);
+    void UseTableBy(TableUsageMode usageMode, TableSegment tableSegment, params object[] fieldValues);
+    void UseTable(TableSegment tableSegment, Func<object, string> tableNameGetter);
+    void UseTableSchema(TableSegment tableSegment, string tableSchema);
 
     SqlSegment Visit(SqlSegment sqlSegment);
     string WrapSql(SqlSegment sqlSegment, bool isNeedWrapExpr = false);

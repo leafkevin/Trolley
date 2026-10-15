@@ -17,11 +17,12 @@ public interface IDeleteVisitor : ICommandVisitor, IDisposable
     List<TableSegment> ShardingTables { get; }
 
 
-    void UseTable(TableUsageMode usageMode, bool isIncludeMany, params string[] tableNames);
-    void UseTableBy(TableUsageMode usageMode, bool isIncludeMany, params object[] fieldValues);
-    void UseTableByRange(TableUsageMode usageMode, bool isIncludeMany, object[] fieldValues);
-    void UseTableSchema(bool isIncludeMany, string tableSchema);
-    void WithTableAliasTrailing(bool isIncludeMany, string rawSql);
+    void UseTable(TableSegment tableSegment, params string[] tableNames);
+    void UseTable(TableSegment tableSegment, Func<object, string> tableNameGetter);
+    void UseTableBy(TableUsageMode usageMode, TableSegment tableSegment, params object[] fieldValues);
+    void UseTableByRange(TableUsageMode usageMode, TableSegment tableSegment, object[] fieldValues);
+    void UseTableSchema(TableSegment tableSegment, string tableSchema);
+    void WithTableAliasTrailing(TableSegment tableSegment, string rawSql);
 
     void AndBy(object whereObj);
     void AndById(object whereKey);

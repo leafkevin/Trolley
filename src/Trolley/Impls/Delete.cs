@@ -19,17 +19,17 @@ public class Delete : Deleted, IDelete
     #region Sharding
     public virtual IDelete UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(TableUsageMode.WriteOnly, false, tableNames);
+        this.Visitor.UseTable(this.Visitor.Tables[0], tableNames);
         return this;
     }
     public virtual IDelete UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, this.Visitor.Tables[0], fieldValues);
         return this;
     }
     public virtual IDelete UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, this.Visitor.Tables[0], fieldValues);
         return this;
     }
     #endregion
@@ -37,7 +37,7 @@ public class Delete : Deleted, IDelete
     #region UseTableSchema
     public virtual IDelete UseTableSchema(string tableSchema)
     {
-        this.Visitor.UseTableSchema(false, tableSchema);
+        this.Visitor.UseTableSchema(this.Visitor.Tables[0], tableSchema);
         return this;
     }
     #endregion
@@ -45,7 +45,7 @@ public class Delete : Deleted, IDelete
     #region WithTableAliasTrailing
     public virtual IDelete WithTableAliasTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables[0], rawSql);
         return this;
     }
     #endregion
@@ -230,10 +230,7 @@ public class Delete<TEntity> : Delete, IDelete<TEntity>
 
     #region WithTableAliasTrailing
     public new IDelete<TEntity> WithTableAliasTrailing(string rawSql)
-    {
-        this.Visitor.WithTableAliasTrailing(false, rawSql);
-        return this;
-    }
+        => base.WithTableAliasTrailing(rawSql) as IDelete<TEntity>;
     #endregion
 
     #region Where

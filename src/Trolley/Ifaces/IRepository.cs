@@ -66,21 +66,36 @@ public interface IRepository
     /// <summary>
     /// 更换dbKey
     /// </summary>
-    /// <param name="dbKey"></param>
-    /// <returns></returns>
+    /// <param name="dbKey">数据库连接串Key</param>
+    /// <returns>返回Repository对象</returns>
     IRepository Change(string dbKey);
     /// <summary>
     /// 强制使用主库，增删改操作都使用主库，根据selectorValues参数值，执行数据库选择器确定主库，适用于多写主库，多租户、多租户多写主库等各种各样场景，如：租户Id、时间、租户Id+游戏ID...等分库，不传任何值则使用默认null值返回的主库
     /// </summary>
     /// <param name="selectorValues">选择器依赖参数值，参数值要与设置的选择器参数相同，多主库场景，可为null，使用轮询选择主库</param>
-    /// <returns></returns>
+    /// <returns>返回Repository对象</returns>
     IRepository UseMaster(params object[] selectorValues);
     /// <summary>
     /// 强制使用从库查询数据，查询操作都使用从库，根据selectorValues参数值，执行数据库选择器确定从库，适用于多读从库，多租户、多租户多读从库等各种各样场景，如：租户Id、时间、租户Id+游戏ID...等分库，不传任何值则使用默认null值返回的从库
     /// </summary>
     /// <param name="selectorValues">选择器依赖参数值，参数值要与设置的选择器参数相同，多从库场景，可为null，使用轮询选择从库</param>
-    /// <returns></returns>
+    /// <returns>返回Repository对象</returns>
     IRepository UseSlave(params object[] selectorValues);
+    #endregion
+
+    #region WithRawSql
+    /// <summary>
+    /// 在最前面添加原始SQL片段，rawSql可以是任意SQL片段，如：polardb-x数据库，.WithLeadingSql("/*+TDDL:CMD_EXTRA(TTL_FORBID_DROP_TTL_TBL_WITH_ARC_CCI=false)*/")
+    /// </summary>
+    /// <param name="rawSql">原始SQL片</param>
+    /// <returns>返回Repository对象</returns>
+    IRepository WithLeadingSql(string rawSql);
+    /// <summary>
+    /// 在最后面添加原始SQL片段，rawSql可以是任意SQL片段
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回Repository对象</returns>
+    IRepository WithTrailingSql(string rawSql);
     #endregion
 
     #region From
