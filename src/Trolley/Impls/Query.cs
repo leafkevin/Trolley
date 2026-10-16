@@ -706,22 +706,6 @@ public class Query<T> : QueryBase, IQuery<T>
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
         return this.ormProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
-    /// <summary>
-    /// 生成插入数据的查询构造器，fieldsSelector参数指定要插入的字段，未指定的字段将使用默认值，fieldsSelector表达式支持匿名对象和实体对象两种形式，例如：
-    /// </summary>
-    /// <typeparam name="TEntity"></typeparam>
-    /// <param name="fieldsSelector"></param>
-    /// <returns></returns>
-    /// <exception cref="ArgumentNullException"></exception>
-    public virtual IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<T, object>> fieldsSelector)
-    {
-        if (fieldsSelector == null)
-            throw new ArgumentNullException(nameof(fieldsSelector));
-
-        this.SelectInternal(fieldsSelector);
-        var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.ormProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
-    }
     #endregion
 
     #region AsCteTable
@@ -1138,7 +1122,7 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
 
-        this.SelectInternal(fieldsSelector);        
+        this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
         return this.ormProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
@@ -1454,7 +1438,7 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
 
-        this.SelectInternal(fieldsSelector);        
+        this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
         return this.ormProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
@@ -1770,7 +1754,7 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
 
-        this.SelectInternal(fieldsSelector);        
+        this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
         return this.ormProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
@@ -2086,7 +2070,7 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
 
-        this.SelectInternal(fieldsSelector);        
+        this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
         return this.ormProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
@@ -2402,7 +2386,7 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
 
-        this.SelectInternal(fieldsSelector);        
+        this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
         return this.ormProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
@@ -2718,7 +2702,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
 
-        this.SelectInternal(fieldsSelector);        
+        this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
         return this.ormProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
@@ -3034,7 +3018,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
 
-        this.SelectInternal(fieldsSelector);        
+        this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
         return this.ormProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
@@ -3350,7 +3334,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
 
-        this.SelectInternal(fieldsSelector);        
+        this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
         return this.ormProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
@@ -3666,7 +3650,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
 
-        this.SelectInternal(fieldsSelector);        
+        this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
         return this.ormProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
@@ -3982,7 +3966,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
 
-        this.SelectInternal(fieldsSelector);        
+        this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
         return this.ormProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
@@ -4298,7 +4282,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
 
-        this.SelectInternal(fieldsSelector);        
+        this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
         return this.ormProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
@@ -4614,7 +4598,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
 
-        this.SelectInternal(fieldsSelector);        
+        this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
         return this.ormProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
@@ -4930,7 +4914,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
 
-        this.SelectInternal(fieldsSelector);        
+        this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
         return this.ormProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
@@ -5246,7 +5230,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
 
-        this.SelectInternal(fieldsSelector);        
+        this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
         return this.ormProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
@@ -5496,7 +5480,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
 
-        this.SelectInternal(fieldsSelector);        
+        this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
         return this.ormProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }

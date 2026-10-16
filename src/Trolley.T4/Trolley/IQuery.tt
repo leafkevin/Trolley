@@ -969,13 +969,6 @@ public interface IQuery<T> : IQueryBase
     /// <typeparam name="TEntity">插入表实体类型</typeparam>
     /// <returns>返回插入对象</returns>
     IFromCreate<TEntity> ToCreate<TEntity>();
-    /// <summary>
-    /// 生成Create对象，查询结果的字段与Create对象的字段按名称匹配赋值，未赋值的字段按照默认值插入
-    /// </summary>
-    /// <typeparam name="TEntity">插入表实体类型</typeparam>
-    /// <param name="fieldsSelector">字段值选择器</param>
-    /// <returns>返回插入对象</returns>
-    IFromCreate<TEntity> ToCreate<TEntity>(Expression<Func<T, object>> fieldsSelector);
     #endregion
 }
 /// <summary>
