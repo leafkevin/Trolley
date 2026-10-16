@@ -115,17 +115,12 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     }
     public virtual IMultiQuery<T> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableUsageMode.ReadOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.ReadOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
     public virtual IMultiQuery<T> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, false, fieldValues);
-        return this;
-    }
-    public virtual IMultiQuery<T> UseUnionShardingTable()
-    {
-        this.Visitor.UseUnionShardingTable();
+        this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
     #endregion
@@ -133,17 +128,22 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #region UseTableSchema
     public virtual IMultiQuery<T> UseTableSchema(string tableSchema)
     {
-        this.Visitor.UseTableSchema(false, tableSchema);
+        this.Visitor.UseTableSchema(this.Visitor.Tables.Last(), tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IMultiQuery<T> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
 
     #region GetShardingTableName
     public virtual IMultipleQuery GetShardingTableName(params object[] fieldValues)
-    {
-        var tableSchema = this.Visitor.Tables[0].TableSchema;
-        return this.MultipleQuery.GetShardingTableName<T>(fieldValues);
-    }
+        => this.MultipleQuery.GetShardingTableName<T>(fieldValues);
     #endregion
 
     #region Union/UnionAll
@@ -550,17 +550,12 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
     }
     public virtual IMultiQuery<<#=tables#>> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableUsageMode.ReadOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.ReadOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
     public virtual IMultiQuery<<#=tables#>> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, false, fieldValues);
-        return this;
-    }
-    public virtual IMultiQuery<<#=tables#>> UseUnionShardingTable()
-    {
-        this.Visitor.UseUnionShardingTable();
+        this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
     #endregion
@@ -569,6 +564,14 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
     public virtual IMultiQuery<<#=tables#>> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+    
+    #region WithTableAliasTrailing
+    public virtual IMultiQuery<<#=tables#>> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion

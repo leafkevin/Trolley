@@ -116,11 +116,6 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IMultiQuery<T> UseUnionShardingTable()
-    {
-        this.Visitor.UseUnionShardingTable();
-        return this;
-    }
     #endregion
 
     #region UseTableSchema
@@ -141,10 +136,7 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
 
     #region GetShardingTableName
     public virtual IMultipleQuery GetShardingTableName(params object[] fieldValues)
-    {
-        var tableSchema = this.Visitor.Tables[0].TableSchema;
-        return this.MultipleQuery.GetShardingTableName<T>(fieldValues);
-    }
+        => this.MultipleQuery.GetShardingTableName<T>(fieldValues);
     #endregion
 
     #region Union/UnionAll
@@ -258,13 +250,13 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #region Include
     public virtual IMultiIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector)
     {
-        base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T, TMember>(this.MultipleQuery, this.Visitor);
+        var tableSegment = base.IncludeInternal<TMember>(memberSelector);
+        return this.OrmProvider.NewMultiIncludableQuery<T, TMember>(this.MultipleQuery, this.Visitor, tableSegment);
     }
     public virtual IMultiIncludableQuery<T, TElement> IncludeMany<TElement>(Expression<Func<T, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
     {
-        base.IncludeInternal<TElement>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T, TElement>(this.MultipleQuery, this.Visitor);
+        var tableSegment = base.IncludeInternal<TElement>(memberSelector, filter);
+        return this.OrmProvider.NewMultiIncludableQuery<T, TElement>(this.MultipleQuery, this.Visitor, tableSegment);
     }
     #endregion
 
@@ -550,17 +542,20 @@ public class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
         this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IMultiQuery<T1, T2> UseUnionShardingTable()
-    {
-        this.Visitor.UseUnionShardingTable();
-        return this;
-    }
     #endregion
 
     #region UseTableSchema
     public virtual IMultiQuery<T1, T2> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IMultiQuery<T1, T2> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -834,17 +829,20 @@ public class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
         this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3> UseUnionShardingTable()
-    {
-        this.Visitor.UseUnionShardingTable();
-        return this;
-    }
     #endregion
 
     #region UseTableSchema
     public virtual IMultiQuery<T1, T2, T3> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IMultiQuery<T1, T2, T3> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -1118,17 +1116,20 @@ public class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3
         this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4> UseUnionShardingTable()
-    {
-        this.Visitor.UseUnionShardingTable();
-        return this;
-    }
     #endregion
 
     #region UseTableSchema
     public virtual IMultiQuery<T1, T2, T3, T4> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -1402,17 +1403,20 @@ public class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2
         this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5> UseUnionShardingTable()
-    {
-        this.Visitor.UseUnionShardingTable();
-        return this;
-    }
     #endregion
 
     #region UseTableSchema
     public virtual IMultiQuery<T1, T2, T3, T4, T5> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -1686,17 +1690,20 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1
         this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6> UseUnionShardingTable()
-    {
-        this.Visitor.UseUnionShardingTable();
-        return this;
-    }
     #endregion
 
     #region UseTableSchema
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -1970,17 +1977,20 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuer
         this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7> UseUnionShardingTable()
-    {
-        this.Visitor.UseUnionShardingTable();
-        return this;
-    }
     #endregion
 
     #region UseTableSchema
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -2254,17 +2264,20 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMulti
         this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseUnionShardingTable()
-    {
-        this.Visitor.UseUnionShardingTable();
-        return this;
-    }
     #endregion
 
     #region UseTableSchema
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -2538,17 +2551,20 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IM
         this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseUnionShardingTable()
-    {
-        this.Visitor.UseUnionShardingTable();
-        return this;
-    }
     #endregion
 
     #region UseTableSchema
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -2822,17 +2838,20 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBas
         this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseUnionShardingTable()
-    {
-        this.Visitor.UseUnionShardingTable();
-        return this;
-    }
     #endregion
 
     #region UseTableSchema
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -3106,17 +3125,20 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQue
         this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseUnionShardingTable()
-    {
-        this.Visitor.UseUnionShardingTable();
-        return this;
-    }
     #endregion
 
     #region UseTableSchema
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -3390,17 +3412,20 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : Mul
         this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseUnionShardingTable()
-    {
-        this.Visitor.UseUnionShardingTable();
-        return this;
-    }
     #endregion
 
     #region UseTableSchema
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -3674,17 +3699,20 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
         this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseUnionShardingTable()
-    {
-        this.Visitor.UseUnionShardingTable();
-        return this;
-    }
     #endregion
 
     #region UseTableSchema
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -3958,17 +3986,20 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
         this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseUnionShardingTable()
-    {
-        this.Visitor.UseUnionShardingTable();
-        return this;
-    }
     #endregion
 
     #region UseTableSchema
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -4242,17 +4273,20 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
         this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseUnionShardingTable()
-    {
-        this.Visitor.UseUnionShardingTable();
-        return this;
-    }
     #endregion
 
     #region UseTableSchema
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -4526,17 +4560,20 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
         this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseUnionShardingTable()
-    {
-        this.Visitor.UseUnionShardingTable();
-        return this;
-    }
     #endregion
 
     #region UseTableSchema
     public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion

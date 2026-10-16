@@ -37,18 +37,16 @@ public class Repository : DialectProvider, IRepository
     public virtual void CreateShardingTable<TEntity>(string tableName, string fromTableSchema = null) { }
     public virtual Task CreateShardingTableAsync<TEntity>(string tableName, string fromTableSchema = null, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
-    public virtual string GetShardingTableName<TEntity>(params object[] fieldValues)
-        => this.GetShardingTable(TableUsageMode.WriteOnly, typeof(TEntity), fieldValues);
     public virtual string GetShardingTableName<TEntity>(TableUsageMode usageMode, params object[] fieldValues)
         => this.GetShardingTable(usageMode, typeof(TEntity), fieldValues);
-    public virtual void CreateShardingTable<TEntity>(object[] fieldValues, string fromTableSchema = null)
+    public virtual void CreateShardingTable<TEntity>(object[] fieldValues, TableUsageMode usageMode = TableUsageMode.Default, string fromTableSchema = null)
     {
-        var tableName = this.GetShardingTable(TableUsageMode.WriteOnly, typeof(TEntity), fieldValues);
+        var tableName = this.GetShardingTable(usageMode, typeof(TEntity), fieldValues);
         this.CreateShardingTable<TEntity>(tableName, fromTableSchema);
     }
-    public virtual async Task CreateShardingTableAsync<TEntity>(object[] fieldValues, string fromTableSchema = null, CancellationToken cancellationToken = default)
+    public virtual async Task CreateShardingTableAsync<TEntity>(object[] fieldValues, TableUsageMode usageMode = TableUsageMode.Default, string fromTableSchema = null, CancellationToken cancellationToken = default)
     {
-        var tableName = this.GetShardingTable(TableUsageMode.WriteOnly, typeof(TEntity), fieldValues);
+        var tableName = this.GetShardingTable(usageMode, typeof(TEntity), fieldValues);
         await this.CreateShardingTableAsync<TEntity>(tableName, fromTableSchema, cancellationToken);
     }
     #endregion     

@@ -195,9 +195,10 @@ public class SqlVisitor : ISqlVisitor
             tableSegment.Body = tableNames[0];
         }
     }
-    public void UseTableByRange(TableUsageMode usageMode, bool isIncludeMany, object[] fieldValues)
+    public void UseTableByRange(TableUsageMode usageMode, TableSegment tableSegment, object[] fieldValues)
     {
-        var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
+        if (tableSegment == null)
+            throw new ArgumentNullException(nameof(tableSegment));
         if (!this.TrySetTableShardingInfo(tableSegment, out var tableShardingInfo))
             return;
 
@@ -210,7 +211,6 @@ public class SqlVisitor : ISqlVisitor
             throw new NotSupportedException("仅支持首个多分表为MultiTable类型，其余表只能为调用方法UseTableMap与首个多分表表名映射实现多分表");
 
         tableSegment.IsSharding = true;
-        tableSegment.IsIncludeManySharding = isIncludeMany;
         tableSegment.ShardingType = ShardingTableType.MultiTable;
         if (!this.ShardingTables.Contains(tableSegment))
         {
@@ -230,18 +230,17 @@ public class SqlVisitor : ISqlVisitor
         //范围分表，都当作多分表处理，方便后续表映射
         this.IsManyShardingTables = true;
     }
-    public void UseTableMap(TableUsageMode usageMode, bool isIncludeMany, Func<string, string, string, string> tableNameGetter)
+    public void UseTableMap(TableSegment tableSegment, Func<string, string, string, string> tableNameGetter)
     {
+        if (tableSegment == null)
+            throw new ArgumentNullException(nameof(tableSegment));
         if (tableNameGetter == null)
             throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
-        var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
-
         if (!this.TrySetTableShardingInfo(tableSegment, out var tableShardingInfo))
             return;
         if (this.ShardingTables == null || !this.ShardingTables.Exists(f => f.ShardingType == ShardingTableType.MultiTable))
             throw new NotSupportedException("不存在多分表的实体表，无法配置多分表映射，使用UseTable、UseTableBy方法后存在多分表后，才能使用本方法配置多分表映射");
 
-        tableSegment.IsIncludeManySharding = isIncludeMany;
         tableSegment.ShardingType = ShardingTableType.ShardingTableMap;
         tableSegment.ShardingMapGetter = tableNameGetter;
         if (!this.ShardingTables.Contains(tableSegment))
@@ -250,19 +249,19 @@ public class SqlVisitor : ISqlVisitor
             this.ShardingTables.Add(tableSegment);
         }
     }
-    public void UseTableBy(TableUsageMode usageMode, bool isIncludeMany, params object[] fieldValues)
+    public void UseTableBy(TableUsageMode usageMode, TableSegment tableSegment, params object[] fieldValues)
     {
-        var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
+        if (tableSegment == null)
+            throw new ArgumentNullException(nameof(tableSegment));
+        if (fieldValues == null || fieldValues.Length == 0)
+            throw new ArgumentNullException(nameof(tableSegment), $"字段值fieldValues不可为null");
         if (!this.TrySetTableShardingInfo(tableSegment, out var tableShardingInfo))
             return;
-        if (fieldValues == null)
-            throw new ArgumentNullException($"字段值fieldValues不可为null");
         var tableRule = tableShardingInfo.Rules[usageMode].Rule;
         if (tableRule.Method.GetParameters().Length != fieldValues.Length)
             throw new Exception($"实体{tableSegment.EntityType.FullName}表有配置分表规则依赖字段个数与提供的字段值fieldValues个数不一致");
 
         tableSegment.IsSharding = true;
-        tableSegment.IsIncludeManySharding = isIncludeMany;
         var origTableName = tableSegment.Mapper.TableName;
         var tableName = tableRule.Invoke(origTableName, fieldValues);
 
@@ -302,11 +301,28 @@ public class SqlVisitor : ISqlVisitor
     /// </summary>
     /// <param name="tableNameGetter"></param>
     /// <exception cref="ArgumentNullException"></exception>
-    public void UseTable(TableUsageMode usageMode, Func<object, string> tableNameGetter)
+    public void UseTable(TableSegment tableSegment, Func<object, string> tableNameGetter)
     {
+        if (tableSegment == null)
+            throw new ArgumentNullException(nameof(tableSegment));
         if (tableNameGetter == null)
             throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
-        this.Tables[0].ShardingTableGetter = tableNameGetter;
+        tableSegment.ShardingTableGetter = tableNameGetter;
+    }
+    public virtual void UseTableSchema(TableSegment tableSegment, string tableSchema)
+    {
+        if (tableSegment == null)
+            throw new ArgumentNullException(nameof(tableSegment));
+        if (tableSchema == this.DefaultTableSchema) return;
+        tableSegment.TableSchema = tableSchema;
+    }
+    public virtual void WithTableAliasTrailing(TableSegment tableSegment, string rawSql)
+    {
+        if (tableSegment == null)
+            throw new ArgumentNullException(nameof(tableSegment));
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+        tableSegment.TableAliasTrailing = rawSql;
     }
     public bool TrySetTableShardingInfo(TableSegment tableSegment, out TableShardingInfo tableShardingInfo)
     {
@@ -335,21 +351,7 @@ public class SqlVisitor : ISqlVisitor
         }
         return this.ShardingProvider.TryGetTableSharding(entityType, out tableShardingInfo);
     }
-    public void UseUnionShardingTable() => this.ShardingTableJointMark = "UNION";
-    public virtual void UseTableSchema(bool isIncludeMany, string tableSchema)
-    {
-        if (tableSchema == this.DefaultTableSchema) return;
 
-        var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
-        tableSegment.TableSchema = tableSchema;
-    }
-    public virtual void WithTableAliasTrailing(bool isIncludeMany, string rawSql)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-        var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
-        tableSegment.TableAliasTrailing = rawSql;
-    }
 
     public virtual void VisitAndSql(string whereSql, OperationType operationType = OperationType.None)
         => this.WhereBuilder.AndSql(whereSql, operationType);

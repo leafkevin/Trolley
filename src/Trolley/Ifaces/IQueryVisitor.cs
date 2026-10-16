@@ -71,7 +71,6 @@ public interface IQueryVisitor : ICommandVisitor, IDisposable
     void UseTableByRange(TableUsageMode usageMode, TableSegment tableSegment, object[] fieldValues);
     void UseTableMap(TableSegment tableSegment, Func<string, string, string, string> tableNameGetter);
     void UseTableBy(TableUsageMode usageMode, TableSegment tableSegment, params object[] fieldValues);
-    void UseUnionShardingTable();
     void UseTableSchema(TableSegment tableSegment, string tableSchema);
     void WithTableAliasTrailing(TableSegment tableSegment, string rawSql);
 
@@ -88,7 +87,7 @@ public interface IQueryVisitor : ICommandVisitor, IDisposable
     void Join(string joinType, Type newEntityType, IQuery subQuery, Expression joinOn);
     void Join(string joinType, Type newEntityType, Expression subQueryExpr, Expression joinOn);
 
-    bool Include(Expression memberSelector, Expression filter = null);
+    TableSegment Include(Expression memberSelector, Expression filter = null);
     bool HasIncludeTables();
     bool BuildIncludeSql(Type targetType, object target, bool isMultiResult, out string sql);
     void SetIncludeValues(Type targetType, object target, ITheaDataReader reader, bool isMultiResult);

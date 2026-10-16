@@ -894,7 +894,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.UseNewQuery(newEntityType, subQueryExpr);
         this.Join(joinType, joinOnExpr);
     }
-    public virtual bool Include(Expression memberSelector, Expression filter = null)
+    public virtual TableSegment Include(Expression memberSelector, Expression filter = null)
     {
         var lambdaExpr = memberSelector as LambdaExpression;
         var memberExpr = lambdaExpr.Body as MemberExpression;
@@ -905,7 +905,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var builder = new StringBuilder(fromSegment.AliasName);
         //1:N关系，需要记录访问路径，为后面结果赋值做准备
         var memberVisits = new List<MemberInfo>();
-        bool isIncludeMany = false;
         while (memberExprs.TryPop(out var currentExpr))
         {
             //多级成员访问，fromSegment.Mapper可能为null，如：f.Order.Seller.Company
@@ -926,7 +925,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             builder.Append("." + currentExpr.Member.Name);
             //在映射实体时，根据ParentIndex+FromMember值，设置到主表实体的属性中
             TableSegment tableSegment = null;
-            isIncludeMany = !memberMapper.IsToOne;
             if (fromSegment.Mapper.KeyMembers.Count > 1)
                 throw new NotSupportedException($"导航属性表，暂时不支持多个主键字段，实体：{fromSegment.EntityType.FullName}");
 
@@ -962,7 +960,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     Path = builder.ToString(),
                     ParentMemberVisits = memberVisits
                 });
-                isIncludeMany = true;
             }
             fromSegment = tableSegment;
         }
@@ -978,7 +975,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             fromSegment.Filter = this.VisitConditionExpr(filter, out _);
             this.IsIncludeMany = false;
         }
-        return isIncludeMany;
+        return fromSegment;
     }
     public virtual bool HasIncludeTables() => this.IncludeTables != null && this.IncludeTables.Count > 0;
     public virtual bool BuildIncludeSql(Type targetType, object target, bool isMultiResult, out string sql)
