@@ -111,20 +111,14 @@ public class Created : DialectProvider, ICreated
     #endregion
 
     #region WithRawSql
-    public virtual ICreated WithLeadingSql(string rawSql)
+    public new ICreated WithLeadingSql(string rawSql)
     {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        this.Visitor.WithLeadingSql(rawSql);
+        base.WithLeadingSql(rawSql);
         return this;
     }
-    public virtual ICreated WithTrailingSql(string rawSql)
+    public new ICreated WithTrailingSql(string rawSql)
     {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        this.Visitor.WithTrailingSql(rawSql);
+        base.WithTrailingSql(rawSql);
         return this;
     }
     #endregion
@@ -152,8 +146,7 @@ public class Created : DialectProvider, ICreated
                         {
                             builder.Remove(builder.Length - 1, 1);
                             command.CommandText = builder.ToString();
-                            if (this.interceptor != null)
-                                command = this.interceptor.CommandInitialized(command);
+                            this.Initialize(command);
 
                             result += command.ExecuteNonQuery();
                             builder.Clear();
@@ -184,17 +177,14 @@ public class Created : DialectProvider, ICreated
                 {
                     builder.Remove(builder.Length - 1, 1);
                     command.CommandText = builder.ToString();
-                    if (this.interceptor != null)
-                        command = this.interceptor.CommandInitialized(command);
-
+                    this.Initialize(command);
                     result += command.ExecuteNonQuery();
                 }
                 builder.Clear();
                 break;
             default:
                 command.CommandText = this.Visitor.BuildSql(out _);
-                if (this.interceptor != null)
-                    command = this.interceptor.CommandInitialized(command);
+                this.Initialize(command);
 
                 connection.Open();
                 result = command.ExecuteNonQuery();
@@ -202,7 +192,11 @@ public class Created : DialectProvider, ICreated
         }
 
         command.Dispose();
-        if (isNeedClose) connection.Close();
+        if (isNeedClose)
+        {
+            connection.Close();
+            this.Dispose();
+        }
         this.Visitor.Dispose();
         this.Visitor = null;
         return result;
@@ -229,8 +223,7 @@ public class Created : DialectProvider, ICreated
                         {
                             builder.Remove(builder.Length - 1, 1);
                             command.CommandText = builder.ToString();
-                            if (this.interceptor != null)
-                                command = this.interceptor.CommandInitialized(command);
+                            this.Initialize(command);
 
                             result += await command.ExecuteNonQueryAsync(cancellationToken);
                             builder.Clear();
@@ -261,25 +254,25 @@ public class Created : DialectProvider, ICreated
                 {
                     builder.Remove(builder.Length - 1, 1);
                     command.CommandText = builder.ToString();
-                    if (this.interceptor != null)
-                        command = this.interceptor.CommandInitialized(command);
-
+                    this.Initialize(command);
                     result += await command.ExecuteNonQueryAsync(cancellationToken);
                 }
                 builder.Clear();
                 break;
             default:
                 command.CommandText = this.Visitor.BuildSql(out _);
-                if (this.interceptor != null)
-                    command = this.interceptor.CommandInitialized(command);
-
+                this.Initialize(command);
                 await connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(cancellationToken);
                 break;
         }
 
         await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
+        if (isNeedClose)
+        {
+            await connection.CloseAsync();
+            this.Dispose();
+        }
         this.Visitor.Dispose();
         this.Visitor = null;
         return result;
@@ -308,18 +301,12 @@ public class IdentitiedCreated : Created, IIdentitiedCreated
     #region WithRawSql
     public new IIdentitiedCreated WithLeadingSql(string rawSql)
     {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        this.Visitor.WithLeadingSql(rawSql);
+        base.WithLeadingSql(rawSql);
         return this;
     }
     public new IIdentitiedCreated WithTrailingSql(string rawSql)
     {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        this.Visitor.WithTrailingSql(rawSql);
+        base.WithTrailingSql(rawSql);
         return this;
     }
     #endregion
@@ -443,6 +430,19 @@ public class ResultCreated<TResult> : DialectProvider, IResultCommand<TResult>
     }
     #endregion
 
+    #region WithRawSql
+    public new IResultCommand<TResult> WithLeadingSql(string rawSql)
+    {
+        base.WithLeadingSql(rawSql);
+        return this;
+    }
+    public new IResultCommand<TResult> WithTrailingSql(string rawSql)
+    {
+        base.WithTrailingSql(rawSql);
+        return this;
+    }
+    #endregion
+
     #region Execute
     public TResult Execute()
     {
@@ -487,6 +487,19 @@ public class BulkResultCreated<TResult> : DialectProvider, IBulkResultCommand<TR
     {
         this.DbContext = dbContext;
         this.Visitor = visitor;
+    }
+    #endregion
+
+    #region WithRawSql
+    public new IBulkResultCommand<TResult> WithLeadingSql(string rawSql)
+    {
+        base.WithLeadingSql(rawSql);
+        return this;
+    }
+    public new IBulkResultCommand<TResult> WithTrailingSql(string rawSql)
+    {
+        base.WithTrailingSql(rawSql);
+        return this;
     }
     #endregion
 
@@ -553,6 +566,14 @@ public class Create<TEntity> : Create, ICreate<TEntity>
     public new ICreate<TEntity> UseTableSchema(string tableSchema)
     {
         base.UseTableSchema(tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public new ICreate<TEntity> WithTableAliasTrailing(string rawSql)
+    {
+        base.WithTableAliasTrailing(rawSql);
         return this;
     }
     #endregion
@@ -679,6 +700,14 @@ public class FromCreated : Created, IFromCreate
         return this;
     }
     #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IFromCreate WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables[0], rawSql);
+        return this;
+    }
+    #endregion
 }
 public class FromCreated<TEntity> : FromCreated, IFromCreate<TEntity>
 {
@@ -709,6 +738,14 @@ public class FromCreated<TEntity> : FromCreated, IFromCreate<TEntity>
     public new IFromCreate<TEntity> UseTableSchema(string tableSchema)
     {
         base.UseTableSchema(tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public new IFromCreate<TEntity> WithTableAliasTrailing(string rawSql)
+    {
+        base.UseTableSchema(rawSql);
         return this;
     }
     #endregion

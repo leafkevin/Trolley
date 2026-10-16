@@ -115,13 +115,13 @@ public interface ICreated
     /// 在最前面添加原始SQL片段，rawSql可以是任意SQL片段，如：polardb-x数据库，.WithLeadingSql("/*+TDDL:CMD_EXTRA(TTL_FORBID_DROP_TTL_TBL_WITH_ARC_CCI=false)*/")
     /// </summary>
     /// <param name="rawSql">原始SQL片</param>
-    /// <returns>返回删除对象</returns>
+    /// <returns>返回Repository对象</returns>
     ICreated WithLeadingSql(string rawSql);
     /// <summary>
     /// 在最后面添加原始SQL片段，rawSql可以是任意SQL片段
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
-    /// <returns>返回删除对象</returns>
+    /// <returns>返回Repository对象</returns>
     ICreated WithTrailingSql(string rawSql);
     #endregion
 
@@ -158,13 +158,13 @@ public interface IIdentitiedCreated : ICreated
     /// 在最前面添加原始SQL片段，rawSql可以是任意SQL片段，如：polardb-x数据库，.WithLeadingSql("/*+TDDL:CMD_EXTRA(TTL_FORBID_DROP_TTL_TBL_WITH_ARC_CCI=false)*/")
     /// </summary>
     /// <param name="rawSql">原始SQL片</param>
-    /// <returns>返回删除对象</returns>
+    /// <returns>返回Repository对象</returns>
     new IIdentitiedCreated WithLeadingSql(string rawSql);
     /// <summary>
     /// 在最后面添加原始SQL片段，rawSql可以是任意SQL片段
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
-    /// <returns>返回删除对象</returns>
+    /// <returns>返回Repository对象</returns>
     new IIdentitiedCreated WithTrailingSql(string rawSql);
     #endregion
 
@@ -224,6 +224,15 @@ public interface IFromCreate : ICreated
     /// <returns>返回插入对象</returns>
     IFromCreate UseTableSchema(string tableSchema);
     #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回插入对象</returns>
+    IFromCreate WithTableAliasTrailing(string rawSql);
+    #endregion
 }
 public interface IFromCreate<TEntity> : IFromCreate
 {
@@ -255,6 +264,15 @@ public interface IFromCreate<TEntity> : IFromCreate
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回插入对象</returns>
     new IFromCreate<TEntity> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回插入对象</returns>
+    new IFromCreate<TEntity> WithTableAliasTrailing(string rawSql);
     #endregion
 }
 /// <summary>
@@ -345,6 +363,21 @@ public interface IResultCommand<TResult>
     DbContext DbContext { get; }
     #endregion
 
+    #region WithRawSql
+    /// <summary>
+    /// 在最前面添加原始SQL片段，rawSql可以是任意SQL片段，如：polardb-x数据库，.WithLeadingSql("/*+TDDL:CMD_EXTRA(TTL_FORBID_DROP_TTL_TBL_WITH_ARC_CCI=false)*/")
+    /// </summary>
+    /// <param name="rawSql">原始SQL片</param>
+    /// <returns>返回Repository对象</returns>
+    IResultCommand<TResult> WithLeadingSql(string rawSql);
+    /// <summary>
+    /// 在最后面添加原始SQL片段，rawSql可以是任意SQL片段
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回Repository对象</returns>
+    IResultCommand<TResult> WithTrailingSql(string rawSql);
+    #endregion
+
     #region Execute
     /// <summary>
     /// 执行插入操作，并返回插入行数
@@ -379,6 +412,21 @@ public interface IBulkResultCommand<TResult>
     /// 获取DbContext对象
     /// </summary>
     DbContext DbContext { get; }
+    #endregion
+
+    #region WithRawSql
+    /// <summary>
+    /// 在最前面添加原始SQL片段，rawSql可以是任意SQL片段，如：polardb-x数据库，.WithLeadingSql("/*+TDDL:CMD_EXTRA(TTL_FORBID_DROP_TTL_TBL_WITH_ARC_CCI=false)*/")
+    /// </summary>
+    /// <param name="rawSql">原始SQL片</param>
+    /// <returns>返回Repository对象</returns>
+    IBulkResultCommand<TResult> WithLeadingSql(string rawSql);
+    /// <summary>
+    /// 在最后面添加原始SQL片段，rawSql可以是任意SQL片段
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回Repository对象</returns>
+    IBulkResultCommand<TResult> WithTrailingSql(string rawSql);
     #endregion
 
     #region Execute
@@ -440,6 +488,15 @@ public interface ICreate<TEntity> : ICreate
     new ICreate<TEntity> UseTableSchema(string tableSchema);
     #endregion
 
+    #region WithTableAliasTrailing
+    /// <summary>
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回插入对象</returns>
+    new ICreate<TEntity> WithTableAliasTrailing(string rawSql);
+    #endregion
+
     #region WithBy
     /// <summary>
     /// 单条数据插入，可多次调用，自动增长栏位不需要传入，未列出属性不插入
@@ -469,92 +526,7 @@ public interface ICreate<TEntity> : ICreate
     /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
     /// <returns>返回插入对象</returns>
     new IBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500);
-    #endregion
-    //#region From
-    ///// <summary>
-    ///// 从表T中查询数据创建子查询对象，如：
-    ///// <code>
-    ///// repository.From&lt;Menu&gt;() SQL:FROM `sys_menu`
-    ///// </code>
-    ///// </summary>
-    ///// <typeparam name="T">实体类型</typeparam>
-    ///// </param>
-    ///// <returns>返回查询对象</returns>
-    //IFromCommand<T> From<T>();
-    ///// <summary>
-    ///// 使用2个表创建子查询对象
-    ///// </summary>
-    ///// <typeparam name="T1">表T1实体类型</typeparam>
-    ///// <typeparam name="T2">表T2实体类型</typeparam>
-    ///// <returns>返回查询对象</returns>
-    //IFromCommand<T1, T2> From<T1, T2>();
-    ///// <summary>
-    ///// 使用3个表创建子查询对象
-    ///// </summary>
-    ///// <typeparam name="T1">表T1实体类型</typeparam>
-    ///// <typeparam name="T2">表T2实体类型</typeparam>
-    ///// <typeparam name="T3">表T3实体类型</typeparam>
-    ///// <returns>返回查询对象</returns>
-    //IFromCommand<T1, T2, T3> From<T1, T2, T3>();
-    ///// <summary>
-    ///// 使用4个表创建子查询对象
-    ///// </summary>
-    ///// <typeparam name="T1">表T1实体类型</typeparam>
-    ///// <typeparam name="T2">表T2实体类型</typeparam>
-    ///// <typeparam name="T3">表T3实体类型</typeparam>
-    ///// <typeparam name="T4">表T4实体类型</typeparam>
-    ///// <returns>返回查询对象</returns>
-    //IFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>();
-    ///// <summary>
-    ///// 使用5个表创建子查询对象
-    ///// </summary>
-    ///// <typeparam name="T1">表T1实体类型</typeparam>
-    ///// <typeparam name="T2">表T2实体类型</typeparam>
-    ///// <typeparam name="T3">表T3实体类型</typeparam>
-    ///// <typeparam name="T4">表T4实体类型</typeparam>
-    ///// <typeparam name="T5">表T5实体类型</typeparam>
-    ///// <returns>返回查询对象</returns>
-    //IFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>();
-    ///// <summary>
-    ///// 使用6个表创建子查询对象
-    ///// </summary>
-    ///// <typeparam name="T1">表T1实体类型</typeparam>
-    ///// <typeparam name="T2">表T2实体类型</typeparam>
-    ///// <typeparam name="T3">表T3实体类型</typeparam>
-    ///// <typeparam name="T4">表T4实体类型</typeparam>
-    ///// <typeparam name="T5">表T5实体类型</typeparam>
-    ///// <typeparam name="T6">表T6实体类型</typeparam>
-    ///// <returns>返回查询对象</returns>
-    //IFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>();
-    //#endregion
-
-    //#region FromQuery
-    ///// <summary>
-    ///// 使用子查询多条数据插入，参数subQuery也可以是CTE表，如：
-    ///// <code>
-    ///// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    ///// repository.Create&lt;Menu&gt;().FromQuery(subQuery)
-    ///// SQL: INSERT INTO `sys_menu` SELECT ... FROM ( ... )
-    ///// </code>
-    ///// </summary>
-    ///// <typeparam name="T">子查询返回的实体类型</typeparam>
-    ///// <param name="subQuery">子查询</param>
-    ///// <returns>返回查询对象</returns>
-    //IFromCommand<T> FromQuery<T>(IQuery<T> subQuery);
-    ///// <summary>
-    ///// 使用子查询多条数据插入，参数subQuery也可以是CTE表，如：
-    ///// <code>
-    ///// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    ///// repository.Create&lt;Menu&gt;(f =&gt; f.UseQuery(subQuery)).Select( ... )
-    ///// repository.Create&lt;Menu&gt;(f =&gt; f.From&lt;Page, Menu&gt;('o').Where(...)...)
-    ///// SQL: INSERT INTO `sys_menu` SELECT ... FROM ( ... )
-    ///// </code>
-    ///// </summary>
-    ///// <typeparam name="T">子查询返回的实体类型</typeparam>
-    ///// <param name="subQueryExpr">子查询表达式</param>
-    ///// <returns>返回查询对象</returns>
-    //IFromCommand<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
-    //#endregion
+    #endregion  
 }
 /// <summary>
 /// 插入数据

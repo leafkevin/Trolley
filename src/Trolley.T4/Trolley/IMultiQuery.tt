@@ -22,12 +22,12 @@ public interface IMultiQueryBase : IQuery
     /// 返回数据条数
     /// </summary>
     /// <returns>返回int类型数据条数</returns>
-    IMultipleQuery Count();
+    IMultiDialectProvider Count();
     /// <summary>
     /// 返回long类型数据条数
     /// </summary>
     /// <returns>返回long类型数据条数</returns>
-    IMultipleQuery LongCount();
+    IMultiDialectProvider LongCount();
     #endregion
 
     #region Exists
@@ -35,7 +35,7 @@ public interface IMultiQueryBase : IQuery
     /// 判断数据是否存在，存在为true，否则为false
     /// </summary>
     /// <returns>返回布尔值，存在为true，否则为false</returns>
-    IMultipleQuery Exists();
+    IMultiDialectProvider Exists();
     #endregion
 }
 /// <summary>
@@ -701,7 +701,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <returns>返回该字段的int类型数据条数</returns>
-    IMultipleQuery Count<TField>(Expression<Func<T, TField>> fieldExpr);
+    IMultiDialectProvider Count<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
     /// 返回某个字段去重后的int类型数据条数，如：
     /// <code>.CountDistinct(f =&gt; f.BuyerId)</code>
@@ -709,7 +709,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <returns>返回该字段去重后的int类型数据条数</returns>
-    IMultipleQuery CountDistinct<TField>(Expression<Func<T, TField>> fieldExpr);
+    IMultiDialectProvider CountDistinct<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
     /// 返回某个字段的long类型数据条数，如：
     /// <code>.LongCount(f =&gt; f.BuyerId)</code>
@@ -717,7 +717,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <returns>返回该字段的long类型数据条数</returns>
-    IMultipleQuery LongCount<TField>(Expression<Func<T, TField>> fieldExpr);
+    IMultiDialectProvider LongCount<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
     /// 返回某个字段去重后的long类型数据条数，如：
     /// <code>.LongCountDistinct(f =&gt; f.BuyerId)</code>
@@ -725,7 +725,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <returns>返回该字段去重后的long类型数据条数</returns>
-    IMultipleQuery LongCountDistinct<TField>(Expression<Func<T, TField>> fieldExpr);
+    IMultiDialectProvider LongCountDistinct<TField>(Expression<Func<T, TField>> fieldExpr);
     #endregion
 
     #region Aggregate
@@ -735,14 +735,14 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <returns>返回该字段的求和值，decimal类型</returns>
-    IMultipleQuery Sum<TField>(Expression<Func<T, TField>> fieldExpr);
+    IMultiDialectProvider Sum<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
     /// 计算指定字段的平均值
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <returns>返回该字段的平均值</returns>
-    IMultipleQuery Avg<TField>(Expression<Func<T, TField>> fieldExpr);
+    IMultiDialectProvider Avg<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
     /// 计算指定字段的最大值
     /// </summary>
@@ -750,14 +750,14 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <param name="fieldExpr">字段表达式</param>
     /// <returns>返回该字段的最大值</returns>
     /// <returns>返回该字段的最大值</returns>
-    IMultipleQuery Max<TField>(Expression<Func<T, TField>> fieldExpr);
+    IMultiDialectProvider Max<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
     /// 计算指定字段的最小值
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <returns>返回该字段的最小值</returns>
-    IMultipleQuery Min<TField>(Expression<Func<T, TField>> fieldExpr);
+    IMultiDialectProvider Min<TField>(Expression<Func<T, TField>> fieldExpr);
     #endregion
 
     #region First/ToList/ToPageList
@@ -765,17 +765,17 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// 执行查询，返回第一条记录，没有记录时返回默认值
     /// </summary>
     /// <returns>返回T实体对象或默认值</returns>
-    IMultipleQuery First();
+    IMultiDialectProvider First();
     /// <summary>
     /// 执行查询，返回多条记录，没有记录时返回没有任何元素的空列表
     /// </summary>
     /// <returns>返回T实体列表或没有任何元素的空列表</returns>
-    IMultipleQuery ToList();
+    IMultiDialectProvider ToList();
     /// <summary>
     /// 执行查询，返回分页的多条记录，没有记录时返回没有任何元素的空分页列表
     /// </summary>
     /// <returns>返回IPagedList&lt;T&gt;列表或没有任何元素的空IPagedList&lt;T&gt;空列表</returns>
-    IMultipleQuery ToPageList();
+    IMultiDialectProvider ToPageList();
     #endregion
 }
 <#
@@ -1267,7 +1267,7 @@ public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <returns>返回该字段的int类型数据条数</returns>
-    IMultipleQuery Count<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    IMultiDialectProvider Count<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
     /// <summary>
     /// 返回某个字段去重后的int类型数据条数，如：
     /// <code>.From&lt;<#=tables#>&gt;().CountDistinct((<#=tableAlias#>) =&gt; a.BuyerId);</code>
@@ -1275,7 +1275,7 @@ public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <returns>返回该字段去重后的int类型数据条数</returns>
-    IMultipleQuery CountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    IMultiDialectProvider CountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
     /// <summary>
     /// 返回某个字段的long类型数据条数，如：
     /// <code>.From&lt;<#=tables#>&gt;().LongCount((<#=tableAlias#>) =&gt; a.BuyerId);</code>
@@ -1283,7 +1283,7 @@ public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <returns>返回该字段的long类型数据条数</returns>
-    IMultipleQuery LongCount<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    IMultiDialectProvider LongCount<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
     /// <summary>
     /// 返回某个字段去重后的long类型数据条数，如：
     /// <code>.From&lt;<#=tables#>&gt;().LongCountDistinct((<#=tableAlias#>) =&gt; a.BuyerId);</code>
@@ -1291,7 +1291,7 @@ public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <returns>返回该字段去重后的long类型数据条数</returns>
-    IMultipleQuery LongCountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    IMultiDialectProvider LongCountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
     #endregion
 
     #region Aggregate
@@ -1302,7 +1302,7 @@ public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <returns>返回该字段的求和值，decimal类型</returns>
-    IMultipleQuery Sum<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    IMultiDialectProvider Sum<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
     /// <summary>
     /// 计算指定字段的平均值
     /// <code>.From&lt;<#=tables#>&gt;().Avg((<#=tableAlias#>) =&gt; a.TotalAmount);</code>
@@ -1310,7 +1310,7 @@ public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <returns>返回该字段的平均值</returns>
-    IMultipleQuery Avg<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    IMultiDialectProvider Avg<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
     /// <summary>
     /// 计算指定字段的最大值
     /// <code>.From&lt;<#=tables#>&gt;().Max((<#=tableAlias#>) =&gt; a.TotalAmount);</code>
@@ -1318,7 +1318,7 @@ public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <returns>返回该字段的最大值</returns>
-    IMultipleQuery Max<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    IMultiDialectProvider Max<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
     /// <summary>
     /// 计算指定字段的最小值
     /// <code>.From&lt;<#=tables#>&gt;().Min((<#=tableAlias#>) =&gt; a.TotalAmount);</code>
@@ -1326,7 +1326,7 @@ public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <returns>返回该字段的最小值</returns>
-    IMultipleQuery Min<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    IMultiDialectProvider Min<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
     #endregion
 }
 <#  }#>

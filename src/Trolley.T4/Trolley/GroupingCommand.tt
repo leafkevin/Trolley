@@ -24,7 +24,7 @@ public class GroupingCommandBase<TEntity, TGrouping> :QueryInternal, IGroupingCo
     public virtual IFromCommand<TGrouping> Select()
     {
         this.Visitor.SelectGrouping();
-        return this.OrmProvider.NewFromCommand<TGrouping>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TGrouping>(this.DbContext, this.Visitor);
     }
     #endregion
 }
@@ -73,7 +73,7 @@ public class GroupingCommand<TEntity, T, TGrouping> : GroupingCommandBase<TEntit
     public virtual IFromCommand<TEntity, TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TEntity, TTarget>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
 }
@@ -129,7 +129,7 @@ public class GroupingCommand<TEntity, <#=tables#>, TGrouping> : GroupingCommandB
     public virtual IFromCommand<TEntity, TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TEntity, TTarget>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
 }

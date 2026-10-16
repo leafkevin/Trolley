@@ -31,7 +31,7 @@ public class PostgreSqlDistinctOnQueryBase<TDistinctOn>: IPostgreSqlDistinctOnQu
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
         dialectVisitor.SelectDistinctOn();
-        return this.OrmProvider.NewQuery<TDistinctOn>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TDistinctOn>;
+        return this.ormProvider.NewQuery<TDistinctOn>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TDistinctOn>;
     }
     public virtual IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*")
     {
@@ -39,7 +39,7 @@ public class PostgreSqlDistinctOnQueryBase<TDistinctOn>: IPostgreSqlDistinctOnQu
             throw new ArgumentNullException(nameof(fields));
 
         this.Visitor.Select(fields, null);
-        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
+        return this.ormProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
     }
     #endregion
 }
@@ -84,12 +84,12 @@ public class PostgreSqlDistinctOnQuery<T, TDistinctOn> : PostgreSqlDistinctOnQue
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
-        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
+        return this.ormProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
     }
     public virtual IPostgreSqlQuery<TTarget> SelectTo<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, T, TTarget>> specialMemberSelector = null)
     {
         this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
-        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
+        return this.ormProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
     }
     #endregion
 }
@@ -145,12 +145,12 @@ public class PostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> : PostgreSqlDis
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
-        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
+        return this.ormProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
     }
     public virtual IPostgreSqlQuery<TTarget> SelectTo<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, <#=tables#>, TTarget>> specialMemberSelector = null)
     {
         this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
-        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
+        return this.ormProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
     }
     #endregion
 <#      }#>

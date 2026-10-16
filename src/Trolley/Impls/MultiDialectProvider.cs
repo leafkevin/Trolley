@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Trolley;
 
-public class MultipleQuery : DialectProvider, IMultipleQuery
+public class MultiDialectProvider : DialectProvider, IMultiDialectProvider
 {
     #region Fields
     protected StringBuilder sqlBuilder = new();
@@ -21,7 +21,7 @@ public class MultipleQuery : DialectProvider, IMultipleQuery
     #endregion
 
     #region Constructor
-    public MultipleQuery(DbContext dbContext, ITheaCommand command)
+    public MultiDialectProvider(DbContext dbContext, ITheaCommand command)
     {
         this.DbContext = dbContext;
         this.ReaderAfters = new();
@@ -32,12 +32,12 @@ public class MultipleQuery : DialectProvider, IMultipleQuery
     #endregion
 
     #region GetShardingTableName
-    public virtual IMultipleQuery GetShardingTableName<TEntity>(params object[] fieldValues)
+    public virtual IMultiDialectProvider GetShardingTableName<TEntity>(params object[] fieldValues)
     {
         this.GetShardingTable(TableUsageMode.WriteOnly, typeof(TEntity), fieldValues);
         return this;
     }
-    public virtual IMultipleQuery GetShardingTableName<TEntity>(TableUsageMode usageMode, params object[] fieldValues)
+    public virtual IMultiDialectProvider GetShardingTableName<TEntity>(TableUsageMode usageMode, params object[] fieldValues)
     {
         this.GetShardingTable(usageMode, typeof(TEntity), fieldValues);
         return this;
@@ -123,17 +123,17 @@ public class MultipleQuery : DialectProvider, IMultipleQuery
     #endregion
 
     #region QueryScalar
-    public virtual IMultipleQuery QueryScalar<TValue>(string rawSql)
+    public virtual IMultiDialectProvider QueryScalar<TValue>(string rawSql)
     {
         this.CreateRawReader(rawSql, typeof(TValue), ReaderResultType.Value, false);
         return this;
     }
-    public virtual IMultipleQuery QueryScalar<TValue>(string rawSql, object parameters)
+    public virtual IMultiDialectProvider QueryScalar<TValue>(string rawSql, object parameters)
     {
         this.CreateRawReader(rawSql, parameters, typeof(TValue), ReaderResultType.Value, false);
         return this;
     }
-    public virtual IMultipleQuery QueryScalar<TValue>(string rawSql, List<IDbDataParameter> parameters)
+    public virtual IMultiDialectProvider QueryScalar<TValue>(string rawSql, List<IDbDataParameter> parameters)
     {
         this.CreateRawParametersReader(rawSql, parameters, typeof(TValue), ReaderResultType.Value, false);
         return this;
@@ -141,7 +141,7 @@ public class MultipleQuery : DialectProvider, IMultipleQuery
     #endregion
 
     #region QueryById
-    public virtual IMultipleQuery QueryById<TEntity>(object whereObj)
+    public virtual IMultiDialectProvider QueryById<TEntity>(object whereObj)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
@@ -152,7 +152,7 @@ public class MultipleQuery : DialectProvider, IMultipleQuery
     #endregion     
 
     #region QueryByIds
-    public virtual IMultipleQuery QueryByIds<TEntity>(IEnumerable whereObjs)
+    public virtual IMultiDialectProvider QueryByIds<TEntity>(IEnumerable whereObjs)
     {
         if (whereObjs == null)
             throw new ArgumentNullException(nameof(whereObjs));
@@ -163,22 +163,22 @@ public class MultipleQuery : DialectProvider, IMultipleQuery
     #endregion
 
     #region QueryFirst
-    public virtual IMultipleQuery QueryFirst<TEntity>(string rawSql)
+    public virtual IMultiDialectProvider QueryFirst<TEntity>(string rawSql)
     {
         this.CreateRawReader(rawSql, typeof(TEntity), ReaderResultType.Entity, false);
         return this;
     }
-    public IMultipleQuery QueryFirst<TEntity>(string rawSql, object parameters)
+    public IMultiDialectProvider QueryFirst<TEntity>(string rawSql, object parameters)
     {
         this.CreateRawReader(rawSql, parameters, typeof(TEntity), ReaderResultType.Entity, false);
         return this;
     }
-    public IMultipleQuery QueryFirst<TEntity>(string rawSql, List<IDbDataParameter> parameters)
+    public IMultiDialectProvider QueryFirst<TEntity>(string rawSql, List<IDbDataParameter> parameters)
     {
         this.CreateRawParametersReader(rawSql, parameters, typeof(TEntity), ReaderResultType.Entity, false);
         return this;
     }
-    public virtual IMultipleQuery QueryFirst<TEntity>(object whereObj)
+    public virtual IMultiDialectProvider QueryFirst<TEntity>(object whereObj)
     {
         var entityType = typeof(TEntity);
         this.CreateQueryReader(whereObj, entityType, entityType, 1, false, false, ReaderResultType.Entity);
@@ -187,22 +187,22 @@ public class MultipleQuery : DialectProvider, IMultipleQuery
     #endregion
 
     #region Query
-    public virtual IMultipleQuery Query<TEntity>(string rawSql)
+    public virtual IMultiDialectProvider Query<TEntity>(string rawSql)
     {
         this.CreateRawReader(rawSql, typeof(TEntity), ReaderResultType.List, false);
         return this;
     }
-    public IMultipleQuery Query<TEntity>(string rawSql, object parameters)
+    public IMultiDialectProvider Query<TEntity>(string rawSql, object parameters)
     {
         this.CreateRawReader(rawSql, parameters, typeof(TEntity), ReaderResultType.List, false);
         return this;
     }
-    public virtual IMultipleQuery Query<TEntity>(string rawSql, List<IDbDataParameter> parameters)
+    public virtual IMultiDialectProvider Query<TEntity>(string rawSql, List<IDbDataParameter> parameters)
     {
         this.CreateRawParametersReader(rawSql, parameters, typeof(TEntity), ReaderResultType.List, false);
         return this;
     }
-    public virtual IMultipleQuery Query<TEntity>(object whereObj)
+    public virtual IMultiDialectProvider Query<TEntity>(object whereObj)
     {
         var entityType = typeof(TEntity);
         this.CreateQueryReader(whereObj, entityType, entityType, 1, false, false, ReaderResultType.List);
@@ -211,26 +211,26 @@ public class MultipleQuery : DialectProvider, IMultipleQuery
     #endregion
 
     #region Exists
-    public virtual IMultipleQuery ExistsBy<TEntity>(object whereObj)
+    public virtual IMultiDialectProvider ExistsBy<TEntity>(object whereObj)
     {
         this.CreateQueryReader(whereObj, typeof(TEntity), typeof(bool), 2, false, false, ReaderResultType.Value);
         return this;
     }
-    public virtual IMultipleQuery ExistsById<TEntity>(object whereKey)
+    public virtual IMultiDialectProvider ExistsById<TEntity>(object whereKey)
     {
         if (whereKey == null)
             throw new ArgumentNullException(nameof(whereKey));
         this.CreateQueryReader(whereKey, typeof(TEntity), typeof(bool), 2, true, false, ReaderResultType.Value);
         return this;
     }
-    public virtual IMultipleQuery ExistsByIds<TEntity>(IEnumerable whereKeys)
+    public virtual IMultiDialectProvider ExistsByIds<TEntity>(IEnumerable whereKeys)
     {
         if (whereKeys == null)
             throw new ArgumentNullException(nameof(whereKeys));
         this.CreateQueryReader(whereKeys, typeof(TEntity), typeof(bool), 2, true, true, ReaderResultType.List);
         return this;
     }
-    public virtual IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate)
+    public virtual IMultiDialectProvider Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate)
     {
         if (wherePredicate == null)
             throw new ArgumentNullException(nameof(wherePredicate));
@@ -265,11 +265,11 @@ public class MultipleQuery : DialectProvider, IMultipleQuery
     #endregion
 
     #region Dispose
-    public virtual void Dispose()
+    public override void Dispose()
     {
         this.sqlBuilder = null;
         this.ReaderAfters = null;
-        this.Command = null;
+        base.Dispose();
     }
     #endregion
 

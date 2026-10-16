@@ -6,42 +6,42 @@
 <#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
 <#@ output extension=".cs" #>
 using System;
-using System.Collections.Generic;
-using System.Linq.Expressions;
 
 namespace Trolley;
 
 public class MultiIncludableQuery<T, TMember> : MultiQuery<T>, IMultiIncludableQuery<T, TMember>
 {
+    #region Properties
+    protected TableSegment TableSegment { get; private set; }
+    #endregion
+
     #region Constructor
-    public MultiIncludableQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
-        : base(multiQuery, visitor){}
+    public MultiIncludableQuery(IMultiDialectProvider multiDialectProvider, IQueryVisitor visitor, TableSegment tableSegment)
+        : base(multiDialectProvider, visitor)
+    {
+        this.TableSegment = tableSegment;
+    }
     #endregion
 
     #region Sharding
     public new IMultiIncludableQuery<T, TMember> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(TableUsageMode.ReadOnly, this.IsIncludeMany, tableNames);
+        this.Visitor.UseTable(this.TableSegment, tableNames);
         return this;
     }
     public new IMultiIncludableQuery<T, TMember> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(TableUsageMode.ReadOnly, this.IsIncludeMany, tableNameGetter);
+        this.Visitor.UseTableMap(this.TableSegment, tableNameGetter);
         return this;
     }
     public new IMultiIncludableQuery<T, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableUsageMode.ReadOnly, this.IsIncludeMany, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.ReadOnly, this.TableSegment, fieldValues);
         return this;
     }
     public new IMultiIncludableQuery<T, TMember> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.IsIncludeMany, fieldValues);
-        return this;
-    }
-    public new IMultiIncludableQuery<T, TMember> UseUnionShardingTable()
-    {
-        this.Visitor.UseUnionShardingTable();
+        this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.TableSegment, fieldValues);
         return this;
     }
     #endregion
@@ -49,7 +49,16 @@ public class MultiIncludableQuery<T, TMember> : MultiQuery<T>, IMultiIncludableQ
     #region UseTableSchema
     public new IMultiIncludableQuery<T, TMember> UseTableSchema(string tableSchema)
     {
-        this.Visitor.UseTableSchema(this.IsIncludeMany, tableSchema);
+        this.Visitor.UseTableSchema(this.TableSegment, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+
+    public new IMultiIncludableQuery<T, TMember> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion
@@ -63,9 +72,16 @@ public class MultiIncludableQuery<T, TMember> : MultiQuery<T>, IMultiIncludableQ
 #>
 public class MultiIncludableQuery<<#=tables#>, TMember> : MultiQuery<<#=tables#>>, IMultiIncludableQuery<<#=tables#>, TMember>
 {
+    #region Properties
+    protected TableSegment TableSegment { get; private set; }
+    #endregion
+
     #region Constructor
-    public MultiIncludableQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
-        : base(multiQuery, visitor){}
+    public MultiIncludableQuery(IMultiDialectProvider multiDialectProvider, IQueryVisitor visitor, TableSegment tableSegment)
+        : base(multiDialectProvider, visitor)
+    {
+        this.TableSegment = tableSegment;
+    }
     #endregion
 <#
         if( i < count)
@@ -75,27 +91,22 @@ public class MultiIncludableQuery<<#=tables#>, TMember> : MultiQuery<<#=tables#>
     #region Sharding
     public new IMultiIncludableQuery<<#=tables#>, TMember> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(TableUsageMode.ReadOnly, this.IsIncludeMany, tableNames);
+        this.Visitor.UseTable(this.TableSegment, tableNames);
         return this;
     }
     public new IMultiIncludableQuery<<#=tables#>, TMember> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(TableUsageMode.ReadOnly, this.IsIncludeMany, tableNameGetter);
+        this.Visitor.UseTableMap(this.TableSegment, tableNameGetter);
         return this;
     }
     public new IMultiIncludableQuery<<#=tables#>, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableUsageMode.ReadOnly, this.IsIncludeMany, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.ReadOnly, this.TableSegment, fieldValues);
         return this;
     }
     public new IMultiIncludableQuery<<#=tables#>, TMember> UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.IsIncludeMany, fieldValues);
-        return this;
-    }
-    public new IMultiIncludableQuery<<#=tables#>, TMember> UseUnionShardingTable()
-    {
-        this.Visitor.UseUnionShardingTable();
+        this.Visitor.UseTableByRange(TableUsageMode.ReadOnly, this.TableSegment, fieldValues);
         return this;
     }
     #endregion
@@ -103,7 +114,15 @@ public class MultiIncludableQuery<<#=tables#>, TMember> : MultiQuery<<#=tables#>
     #region UseTableSchema
     public new IMultiIncludableQuery<<#=tables#>, TMember> UseTableSchema(string tableSchema)
     {
-        this.Visitor.UseTableSchema(this.IsIncludeMany, tableSchema);
+        this.Visitor.UseTableSchema(this.TableSegment, tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public new IMultiIncludableQuery<<#=tables#>, TMember> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion

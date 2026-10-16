@@ -127,14 +127,7 @@ public class MySqlCreateVisitor : CreateVisitor
         }
         this.FieldsBuilder.Clear();
         return $"{this.FromSql}{tailSql}";
-    }
-    public override void UseTableSchema(bool isIncludeMany, string tableSchema)
-    {
-        if (tableSchema == this.DbContext.DefaultTableSchema) return;
-
-        var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
-        tableSegment.TableSchema = tableSchema;
-    }
+    } 
     public override (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, ReusableList<ReaderField>) BuildWithBulk(ITheaCommand command)
     {
@@ -558,7 +551,7 @@ public class MySqlCreateVisitor : CreateVisitor
     }
     //public override IQueryVisitor CreateQueryVisitor(char? tableAsStart = null)
     //{
-    //    var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAliasStart, this.Command) as MySqlQueryVisitor;
+    //    var queryVisitor = this.ormProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAliasStart, this.Command) as MySqlQueryVisitor;
     //    queryVisitor.SharedQueryObjs = this.SharedQueryObjs;
     //    queryVisitor.ShardingTables = this.ShardingTables;
     //    queryVisitor.RefTableAliases = this.RefTableAliases;

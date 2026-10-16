@@ -28,22 +28,22 @@ public class Update : DialectProvider, IUpdate
     #region Sharding
     public virtual IUpdate UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(TableUsageMode.WriteOnly, false, tableNames);
+        this.Visitor.UseTable(this.Visitor.Tables[0], tableNames);
         return this;
     }
     public virtual IUpdate UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, this.Visitor.Tables[0], fieldValues);
         return this;
     }
     public virtual IUpdate UseTable(Func<object, string> tableNameGetter)
     {
-        this.Visitor.UseTable(TableUsageMode.WriteOnly, tableNameGetter);
+        this.Visitor.UseTable(this.Visitor.Tables[0], tableNameGetter);
         return this;
     }
     public virtual IUpdate UseTableByRange(params object[] fieldValues)
     {
-        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, this.Visitor.Tables[0], fieldValues);
         return this;
     }
     #endregion
@@ -51,7 +51,7 @@ public class Update : DialectProvider, IUpdate
     #region UseTableSchema
     public virtual IUpdate UseTableSchema(string tableSchema)
     {
-        this.Visitor.UseTableSchema(false, tableSchema);
+        this.Visitor.UseTableSchema(this.Visitor.Tables[0], tableSchema);
         return this;
     }
     #endregion
@@ -59,7 +59,7 @@ public class Update : DialectProvider, IUpdate
     #region WithTableAliasTrailing
     public virtual IUpdate WithTableAliasTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(false, rawSql);
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables[0], rawSql);
         return this;
     }
     #endregion
@@ -132,12 +132,12 @@ public class Updated : DialectProvider, IUpdated
     #endregion
 
     #region WithRawSql
-    public IUpdated WithLeadingSql(string rawSql)
+    public new IUpdated WithLeadingSql(string rawSql)
     {
         this.Visitor.WithLeadingSql(rawSql);
         return this;
     }
-    public IUpdated WithTrailingSql(string rawSql)
+    public new IUpdated WithTrailingSql(string rawSql)
     {
         this.Visitor.WithTrailingSql(rawSql);
         return this;
@@ -667,6 +667,11 @@ public class Update<TEntity> : Update, IUpdate<TEntity>
         => base.UseTableSchema(tableSchema) as IUpdate<TEntity>;
     #endregion
 
+    #region WithTableAliasTrailing
+    public new IUpdate<TEntity> WithTableAliasTrailing(string rawSql)
+        => base.WithTableAliasTrailing(rawSql) as IUpdate<TEntity>;
+    #endregion
+
     #region Set
     public new IContinuedUpdate<TEntity> Set(object updateObj)
         => this.Set(true, updateObj);
@@ -777,6 +782,19 @@ public class ResultUpdated<TResult> : DialectProvider, IBulkResultCommand<TResul
     {
         this.DbContext = dbContext;
         this.Visitor = visitor;
+    }
+    #endregion
+
+    #region WithRawSql
+    public new IBulkResultCommand<TResult> WithLeadingSql(string rawSql)
+    {
+        this.Visitor.WithLeadingSql(rawSql);
+        return this;
+    }
+    public new IBulkResultCommand<TResult> WithTrailingSql(string rawSql)
+    {
+        this.Visitor.WithTrailingSql(rawSql);
+        return this;
     }
     #endregion
 
@@ -1235,24 +1253,29 @@ public class UpdateJoin<TEntity, T1> : Updated, IUpdateJoin<TEntity, T1>
     #endregion
 
     #region Sharding
-    public virtual IUpdateJoin<TEntity, T1> UseTable(string tableName)
+    public virtual IUpdateJoin<TEntity, T1> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(TableUsageMode.WriteOnly, false, tableName);
+        this.Visitor.UseTable(this.Visitor.Tables.Last(), tableNames);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IUpdateJoin<TEntity, T1> UseTableByRange(params object[] fieldValues)
+    public virtual IUpdateJoin<TEntity, T1> UseTable(Func<object, string> tableNameGetter)
     {
-        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, false, fieldValues);
+        this.Visitor.UseTable(this.Visitor.Tables.Last(), tableNameGetter);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(TableUsageMode.WriteOnly, false, tableNameGetter);
+        this.Visitor.UseTableMap(this.Visitor.Tables.Last(), tableNameGetter);
+        return this;
+    }
+    public virtual IUpdateJoin<TEntity, T1> UseTableByRange(params object[] fieldValues)
+    {
+        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
     #endregion
@@ -1260,7 +1283,15 @@ public class UpdateJoin<TEntity, T1> : Updated, IUpdateJoin<TEntity, T1>
     #region UseTableSchema
     public virtual IUpdateJoin<TEntity, T1> UseTableSchema(string tableSchema)
     {
-        this.Visitor.UseTableSchema(false, tableSchema);
+        this.Visitor.UseTableSchema(this.Visitor.Tables.Last(), tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IUpdateJoin<TEntity, T1> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -1432,24 +1463,29 @@ public class UpdateJoin<TEntity, T1, T2> : Updated, IUpdateJoin<TEntity, T1, T2>
     #endregion
 
     #region Sharding
-    public virtual IUpdateJoin<TEntity, T1, T2> UseTable(string tableName)
+    public virtual IUpdateJoin<TEntity, T1, T2> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(TableUsageMode.WriteOnly, false, tableName);
+        this.Visitor.UseTable(this.Visitor.Tables.Last(), tableNames);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IUpdateJoin<TEntity, T1, T2> UseTableByRange(params object[] fieldValues)
+    public virtual IUpdateJoin<TEntity, T1, T2> UseTable(Func<object, string> tableNameGetter)
     {
-        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, false, fieldValues);
+        this.Visitor.UseTable(this.Visitor.Tables.Last(), tableNameGetter);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(TableUsageMode.WriteOnly, false, tableNameGetter);
+        this.Visitor.UseTableMap(this.Visitor.Tables.Last(), tableNameGetter);
+        return this;
+    }
+    public virtual IUpdateJoin<TEntity, T1, T2> UseTableByRange(params object[] fieldValues)
+    {
+        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
     #endregion
@@ -1457,7 +1493,15 @@ public class UpdateJoin<TEntity, T1, T2> : Updated, IUpdateJoin<TEntity, T1, T2>
     #region UseTableSchema
     public virtual IUpdateJoin<TEntity, T1, T2> UseTableSchema(string tableSchema)
     {
-        this.Visitor.UseTableSchema(false, tableSchema);
+        this.Visitor.UseTableSchema(this.Visitor.Tables.Last(), tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IUpdateJoin<TEntity, T1, T2> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -1629,24 +1673,29 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated, IUpdateJoin<TEntity, T1,
     #endregion
 
     #region Sharding
-    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTable(string tableName)
+    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(TableUsageMode.WriteOnly, false, tableName);
+        this.Visitor.UseTable(this.Visitor.Tables.Last(), tableNames);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableByRange(params object[] fieldValues)
+    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTable(Func<object, string> tableNameGetter)
     {
-        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, false, fieldValues);
+        this.Visitor.UseTable(this.Visitor.Tables.Last(), tableNameGetter);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(TableUsageMode.WriteOnly, false, tableNameGetter);
+        this.Visitor.UseTableMap(this.Visitor.Tables.Last(), tableNameGetter);
+        return this;
+    }
+    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableByRange(params object[] fieldValues)
+    {
+        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
     #endregion
@@ -1654,7 +1703,15 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated, IUpdateJoin<TEntity, T1,
     #region UseTableSchema
     public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableSchema(string tableSchema)
     {
-        this.Visitor.UseTableSchema(false, tableSchema);
+        this.Visitor.UseTableSchema(this.Visitor.Tables.Last(), tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IUpdateJoin<TEntity, T1, T2, T3> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -1826,24 +1883,29 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated, IUpdateJoin<TEntity,
     #endregion
 
     #region Sharding
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTable(string tableName)
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(TableUsageMode.WriteOnly, false, tableName);
+        this.Visitor.UseTable(this.Visitor.Tables.Last(), tableNames);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableByRange(params object[] fieldValues)
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTable(Func<object, string> tableNameGetter)
     {
-        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, false, fieldValues);
+        this.Visitor.UseTable(this.Visitor.Tables.Last(), tableNameGetter);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(TableUsageMode.WriteOnly, false, tableNameGetter);
+        this.Visitor.UseTableMap(this.Visitor.Tables.Last(), tableNameGetter);
+        return this;
+    }
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableByRange(params object[] fieldValues)
+    {
+        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
     #endregion
@@ -1851,7 +1913,15 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated, IUpdateJoin<TEntity,
     #region UseTableSchema
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableSchema(string tableSchema)
     {
-        this.Visitor.UseTableSchema(false, tableSchema);
+        this.Visitor.UseTableSchema(this.Visitor.Tables.Last(), tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -2023,24 +2093,29 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated, IUpdateJoin<TEnt
     #endregion
 
     #region Sharding
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTable(string tableName)
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTable(params string[] tableNames)
     {
-        this.Visitor.UseTable(TableUsageMode.WriteOnly, false, tableName);
+        this.Visitor.UseTable(this.Visitor.Tables.Last(), tableNames);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, false, fieldValues);
+        this.Visitor.UseTableBy(TableUsageMode.WriteOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableByRange(params object[] fieldValues)
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTable(Func<object, string> tableNameGetter)
     {
-        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, false, fieldValues);
+        this.Visitor.UseTable(this.Visitor.Tables.Last(), tableNameGetter);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableMap(Func<string, string, string, string> tableNameGetter)
     {
-        this.Visitor.UseTableMap(TableUsageMode.WriteOnly, false, tableNameGetter);
+        this.Visitor.UseTableMap(this.Visitor.Tables.Last(), tableNameGetter);
+        return this;
+    }
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableByRange(params object[] fieldValues)
+    {
+        this.Visitor.UseTableByRange(TableUsageMode.WriteOnly, this.Visitor.Tables.Last(), fieldValues);
         return this;
     }
     #endregion
@@ -2048,7 +2123,15 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated, IUpdateJoin<TEnt
     #region UseTableSchema
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableSchema(string tableSchema)
     {
-        this.Visitor.UseTableSchema(false, tableSchema);
+        this.Visitor.UseTableSchema(this.Visitor.Tables.Last(), tableSchema);
+        return this;
+    }
+    #endregion
+
+    #region WithTableAliasTrailing
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> WithTableAliasTrailing(string rawSql)
+    {
+        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion

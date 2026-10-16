@@ -59,7 +59,7 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
     public virtual IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
     {
         base.WithByInternal(true, insertObj);
-        return this.OrmProvider.NewContinuedCreate<TEntity>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewContinuedCreate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -67,7 +67,7 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
     public virtual IContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500)
     {
         this.WithBulkInternal(insertObjs, bulkCount);
-        return this.OrmProvider.NewContinuedCreate<TEntity>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewContinuedCreate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -75,7 +75,7 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
     public virtual IFromCommand<TEntity, T> From<T>()
     {
         var queryVisitor = this.FromInternal(typeof(T));
-        return this.OrmProvider.NewFromCommand<TEntity, T>(this.DbContext, queryVisitor);
+        return this.ormProvider.NewFromCommand<TEntity, T>(this.DbContext, queryVisitor);
     }
 <#
     var count = 7;
@@ -89,7 +89,7 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
     public virtual IFromCommand<TEntity, <#=tables#>> From<<#=tables#>>()
     {
         var queryVisitor = this.FromInternal(<#=typeOfTables#>);
-        return this.OrmProvider.NewFromCommand<TEntity, <#=tables#>>(this.DbContext, queryVisitor);
+        return this.ormProvider.NewFromCommand<TEntity, <#=tables#>>(this.DbContext, queryVisitor);
     }
 <#  }#>
     #endregion
@@ -101,7 +101,7 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
         queryVisitor.IsFromCommand = true;
         queryVisitor.IsFromQuery = true;
         queryVisitor.UseQuery(typeof(T), subQuery, true);
-        return this.OrmProvider.NewFromCommand<TEntity, T>(this.DbContext, queryVisitor);
+        return this.ormProvider.NewFromCommand<TEntity, T>(this.DbContext, queryVisitor);
     }
     public virtual IFromCommand<TEntity, T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
@@ -109,7 +109,7 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
         queryVisitor.IsFromCommand = true;
         queryVisitor.IsFromQuery = true;
         queryVisitor.UseNewQuery(typeof(T), subQueryExpr, true);
-        return this.OrmProvider.NewFromCommand<TEntity, T>(this.DbContext, queryVisitor);
+        return this.ormProvider.NewFromCommand<TEntity, T>(this.DbContext, queryVisitor);
     }
     #endregion
 }

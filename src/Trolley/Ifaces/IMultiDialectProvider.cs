@@ -6,7 +6,7 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-public interface IMultipleQuery : IDisposable
+public interface IMultiDialectProvider : IDisposable
 {
     #region Properties
     DbContext DbContext { get; }
@@ -20,7 +20,7 @@ public interface IMultipleQuery : IDisposable
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="fieldValues">字段值数组，字段值的顺序与分表规则设置的顺序保持一致，不可为null</param>
     /// <returns>返回满足条件的分表名</returns>
-    IMultipleQuery GetShardingTableName<TEntity>(params object[] fieldValues);
+    IMultiDialectProvider GetShardingTableName<TEntity>(params object[] fieldValues);
     #endregion
 
     #region From
@@ -170,7 +170,7 @@ public interface IMultipleQuery : IDisposable
     /// <typeparam name="TValue">返回值类型</typeparam>
     /// <param name="rawSql">原始SQL语句</param>
     /// <returns>返回单个值</returns>
-    IMultipleQuery QueryScalar<TValue>(string rawSql);
+    IMultiDialectProvider QueryScalar<TValue>(string rawSql);
     /// <summary>
     /// 指定原始SQL语句，查询单个值
     /// </summary>
@@ -178,7 +178,7 @@ public interface IMultipleQuery : IDisposable
     /// <param name="rawSql">原始SQL语句</param>
     /// <param name="parameters">参数，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <returns>返回单个值</returns>
-    IMultipleQuery QueryScalar<TValue>(string rawSql, object parameters);
+    IMultiDialectProvider QueryScalar<TValue>(string rawSql, object parameters);
     /// <summary>
     /// 指定原始SQL语句，查询单个值
     /// </summary>
@@ -186,7 +186,7 @@ public interface IMultipleQuery : IDisposable
     /// <param name="rawSql">原始SQL语句</param>
     /// <param name="parameters">参数列表，不可为null</param>
     /// <returns>返回单个值</returns>
-    IMultipleQuery QueryScalar<TValue>(string rawSql, List<IDbDataParameter> parameters);
+    IMultiDialectProvider QueryScalar<TValue>(string rawSql, List<IDbDataParameter> parameters);
     #endregion
 
     #region QueryById
@@ -203,7 +203,7 @@ public interface IMultipleQuery : IDisposable
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="whereObj">主键值或是包含主键的匿名对象或是已有对象，如：1，2或new { Id = 1}或是已有对象userInfo(包含主键栏位Id) </param>
     /// <returns>返回实体对象或是TEntity类型默认值</returns>
-    IMultipleQuery QueryById<TEntity>(object whereObj);
+    IMultiDialectProvider QueryById<TEntity>(object whereObj);
     #endregion
 
     #region QueryByIds
@@ -220,7 +220,7 @@ public interface IMultipleQuery : IDisposable
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="whereKeys">主键值或是包含主键的匿名对象或是已有对象，如：1，2或new { Id = 1}或是已有对象userInfo(包含主键栏位Id) </param>
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
-    IMultipleQuery QueryByIds<TEntity>(IEnumerable whereKeys);
+    IMultiDialectProvider QueryByIds<TEntity>(IEnumerable whereKeys);
     #endregion
 
     #region QueryFirst
@@ -230,7 +230,7 @@ public interface IMultipleQuery : IDisposable
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
     /// <param name="rawSql">原始SQL</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
-    IMultipleQuery QueryFirst<TEntity>(string rawSql);
+    IMultiDialectProvider QueryFirst<TEntity>(string rawSql);
     /// <summary>
     /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值，不支持分表
     /// </summary>
@@ -238,14 +238,14 @@ public interface IMultipleQuery : IDisposable
     /// <param name="rawSql">原始SQL</param>
     /// <param name="parameters">参数，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
-    IMultipleQuery QueryFirst<TEntity>(string rawSql, object parameters);
+    IMultiDialectProvider QueryFirst<TEntity>(string rawSql, object parameters);
     /// <summary>
     /// 执行原始SQL，并返回影响行数
     /// </summary>
     /// <param name="rawSql">要执行的SQL</param>
     /// <param name="parameters">参数列表，不可为null</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
-    IMultipleQuery QueryFirst<TEntity>(string rawSql, List<IDbDataParameter> parameters);
+    IMultiDialectProvider QueryFirst<TEntity>(string rawSql, List<IDbDataParameter> parameters);
     /// <summary>
     /// 从表TEntity中，查询与whereObj对象各属性值都相等的第一条记录，记录不存在时返回TEntity类型的默认值，不支持分表，如：
     /// <code>
@@ -256,7 +256,7 @@ public interface IMultipleQuery : IDisposable
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
     /// <param name="whereObj">参数，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
-    IMultipleQuery QueryFirst<TEntity>(object whereObj);
+    IMultiDialectProvider QueryFirst<TEntity>(object whereObj);
     #endregion
 
     #region Query
@@ -266,7 +266,7 @@ public interface IMultipleQuery : IDisposable
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
     /// <param name="rawSql">原始SQL</param>
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
-    IMultipleQuery Query<TEntity>(string rawSql);
+    IMultiDialectProvider Query<TEntity>(string rawSql);
     /// <summary>
     /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表
     /// </summary>
@@ -274,14 +274,14 @@ public interface IMultipleQuery : IDisposable
     /// <param name="rawSql">原始SQL</param>
     /// <param name="parameters">参数，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
-    IMultipleQuery Query<TEntity>(string rawSql, object parameters);
+    IMultiDialectProvider Query<TEntity>(string rawSql, object parameters);
     /// <summary>
     /// 执行原始SQL，并返回影响行数
     /// </summary>
     /// <param name="rawSql">要执行的SQL</param>
     /// <param name="parameters">参数列表，不可为null</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
-    IMultipleQuery Query<TEntity>(string rawSql, List<IDbDataParameter> parameters);
+    IMultiDialectProvider Query<TEntity>(string rawSql, List<IDbDataParameter> parameters);
     /// <summary>
     /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，如：
     /// <code>
@@ -292,7 +292,7 @@ public interface IMultipleQuery : IDisposable
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
     /// <param name="whereObj">参数，可以是命名对象、匿名对象或是字典类型对象，不可为null</param>
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
-    IMultipleQuery Query<TEntity>(object whereObj);
+    IMultiDialectProvider Query<TEntity>(object whereObj);
     #endregion
 
     #region Exists
@@ -302,27 +302,27 @@ public interface IMultipleQuery : IDisposable
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="whereObj">条件对象，同名属性值作为查询条件，不能为null</param>
     /// <returns>返回是否存在</returns>
-    IMultipleQuery ExistsBy<TEntity>(object whereObj);
+    IMultiDialectProvider ExistsBy<TEntity>(object whereObj);
     /// <summary>
     /// 根据主键判断是否存在，不支持分表，如：.ExistsById&lt;User&gt;(1) 或是 .ExistsById&lt;User&gt;(new { Id = 1 })，whereKey不能为null
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="whereKey">主键值或是包含主键的对象，不能为null</param>
     /// <returns>返回是否存在</returns>
-    IMultipleQuery ExistsById<TEntity>(object whereKey);
+    IMultiDialectProvider ExistsById<TEntity>(object whereKey);
     /// <summary>
     /// 根据多主键判断是否存在，存在任意一条返回true，不支持分表，如：.ExistsByIds&lt;User&gt;(new int[]{ 1, 2, 3 }) 或是 .ExistsByIds&lt;User&gt;(new []{new { Id = 1 }, new { Id = 2 }, new { Id = 3 } })，whereKeys不能为null
     /// </summary>
     /// <param name="whereKeys">多个主键值或是包含主键的对象集合，不能为null</param>
     /// <returns>返回是否存在</returns>
-    IMultipleQuery ExistsByIds<TEntity>(IEnumerable whereKeys);
+    IMultiDialectProvider ExistsByIds<TEntity>(IEnumerable whereKeys);
     /// <summary>
     /// 判断TEntity表是否存在满足wherePredicate条件的记录，存在返回true，否则返回false，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">实体对象类型</typeparam>
     /// <param name="wherePredicate">where条件表达式</param>
     /// <returns>返回是否存在，布尔值</returns>
-    IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null);
+    IMultiDialectProvider Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null);
     #endregion
 
     #region AddReader/BuildSql

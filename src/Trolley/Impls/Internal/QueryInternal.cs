@@ -10,7 +10,6 @@ public class QueryInternal : DialectProvider
     #region Properties
     public IQueryVisitor Visitor { get; set; }
     public virtual bool IsCteQuery => false;
-    public virtual IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Union/UnionAll
@@ -328,12 +327,13 @@ public class QueryInternal : DialectProvider
     }
     #endregion
 
-    public void Dispose()
+    public override void Dispose()
     {
         if (this.isDisposed)
             return;
         this.Visitor.Dispose();
         this.DbContext = null;
+        base.Dispose();
         this.isDisposed = true;
     }
 }

@@ -89,14 +89,14 @@ public class PostgreSqlCreateConflictDoUpdate<TEntity> : PostgreSqlIdentitiedCre
         if (string.IsNullOrEmpty(fieldNames))
             throw new ArgumentNullException(nameof(fieldNames));
         this.dialectVisitor.Returning(fieldNames);
-        return this.OrmProvider.NewResultCreated<TResult>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewResultCreated<TResult>(this.DbContext, this.Visitor);
     }
     public virtual IResultCommand<TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
     {
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
         this.dialectVisitor.Returning(fieldsSelector);
-        return this.OrmProvider.NewResultCreated<TResult>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewResultCreated<TResult>(this.DbContext, this.Visitor);
     }
     #endregion
 }
@@ -186,14 +186,14 @@ public class PostgreSqlBulkCreateConflictDoUpdate<TEntity> : PostgreSqlCreated, 
         if (string.IsNullOrEmpty(fieldNames))
             throw new ArgumentNullException(nameof(fieldNames));
         this.dialectVisitor.Returning(fieldNames);
-        return this.OrmProvider.NewBulkResultCreated<TResult>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewBulkResultCreated<TResult>(this.DbContext, this.Visitor);
     }
     public virtual IBulkResultCommand<TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
     {
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
         this.dialectVisitor.Returning(fieldsSelector);
-        return this.OrmProvider.NewBulkResultCreated<TResult>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewBulkResultCreated<TResult>(this.DbContext, this.Visitor);
     }
     #endregion
 }

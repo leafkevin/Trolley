@@ -223,7 +223,7 @@ public class QueryBase : QueryInternal, IQueryBase
     #region NewCreateVisitor
     public virtual ICreateVisitor NewCreateVisitor(Type entityType)
     {
-        var createVisiter = this.OrmProvider.NewCreateVisitor(entityType, this.DbContext, 'a', this.Visitor.Command);
+        var createVisiter = this.ormProvider.NewCreateVisitor(entityType, this.DbContext, 'a', this.Visitor.Command);
         createVisiter.Tables = this.Visitor.Tables;
         createVisiter.SharedQueryObjs = this.Visitor.SharedQueryObjs;
         createVisiter.ShardingTables = this.Visitor.ShardingTables;
@@ -247,6 +247,19 @@ public class Query<T> : QueryBase, IQuery<T>
     public Query(DbContext dbContext, IQueryVisitor visitor)
         : base(dbContext, visitor) { }
     #endregion
+
+    #region WithRawSql
+    public new IQuery<T> WithLeadingSql(string rawSql)
+    {
+        base.WithLeadingSql(rawSql);
+        return this;
+    }
+    public new IQuery<T> WithTrailingSql(string rawSql)
+    {
+        base.WithTrailingSql(rawSql);
+        return this;
+    }
+    #endregion    
 
     #region Sharding
     public virtual IQuery<T> UseTable(params string[] tableNames)
@@ -325,7 +338,7 @@ public class Query<T> : QueryBase, IQuery<T>
     public virtual IQuery<T, TOther> WithTable<TOther>()
     {
         this.Visitor.AddTable(typeof(TOther));
-        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -333,12 +346,12 @@ public class Query<T> : QueryBase, IQuery<T>
     public virtual IQuery<T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
-        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
         base.WithQueryInternal(subQueryExpr);
-        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -346,17 +359,17 @@ public class Query<T> : QueryBase, IQuery<T>
     public virtual IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
         base.InnerJoinInternal(typeof(TOther), joinOn);
-        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         base.InnerJoinInternal(subQuery, joinOn);
-        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
     {
         base.InnerJoinInternal(subQueryExpr, joinOn);
-        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -364,17 +377,17 @@ public class Query<T> : QueryBase, IQuery<T>
     public virtual IQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
         base.LeftJoinInternal(typeof(TOther), joinOn);
-        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         base.LeftJoinInternal(subQuery, joinOn);
-        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
     {
         base.LeftJoinInternal(subQueryExpr, joinOn);
-        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -382,30 +395,30 @@ public class Query<T> : QueryBase, IQuery<T>
     public virtual IQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
         base.RightJoinInternal(typeof(TOther), joinOn);
-        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         base.RightJoinInternal(subQuery, joinOn);
-        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
     {
         base.RightJoinInternal(subQueryExpr, joinOn);
-        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
 
     #region Include
     public virtual IIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector)
     {
-        base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<T, TMember>(this.DbContext, this.Visitor);
+        var tableSegment = base.IncludeInternal<TMember>(memberSelector);
+        return this.ormProvider.NewIncludableQuery<T, TMember>(this.DbContext, this.Visitor, tableSegment);
     }
     public virtual IIncludableQuery<T, TElement> IncludeMany<TElement>(Expression<Func<T, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
     {
-        base.IncludeInternal<TElement>(memberSelector, filter);
-        return this.OrmProvider.NewIncludableQuery<T, TElement>(this.DbContext, this.Visitor);
+        var tableSegment = base.IncludeInternal<TElement>(memberSelector, filter);
+        return this.ormProvider.NewIncludableQuery<T, TElement>(this.DbContext, this.Visitor, tableSegment);
     }
     #endregion
 
@@ -540,7 +553,7 @@ public class Query<T> : QueryBase, IQuery<T>
     public virtual IGroupingQuery<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr)
     {
         base.GroupByInternal(groupingExpr);
-        return this.OrmProvider.NewGroupQuery<T, TGrouping>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewGroupQuery<T, TGrouping>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -596,22 +609,22 @@ public class Query<T> : QueryBase, IQuery<T>
     public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
     {
         base.SelectRawInternal(typeof(TTarget), rawFields);
-        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> SelectTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
     {
         this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
-        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -619,25 +632,6 @@ public class Query<T> : QueryBase, IQuery<T>
     public virtual IQuery<T> Distinct()
     {
         this.Visitor.Distinct();
-        return this;
-    }
-    #endregion
-
-    #region WithRawSql
-    public virtual IQuery<T> WithLeadingSql(string rawSql)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        this.Visitor.WithLeadingSql(rawSql);
-        return this;
-    }
-    public virtual IQuery<T> WithTrailingSql(string rawSql)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        this.Visitor.WithTrailingSql(rawSql);
         return this;
     }
     #endregion
@@ -717,7 +711,7 @@ public class Query<T> : QueryBase, IQuery<T>
         Expression<Func<T, T>> defaultExpr = f => f;
         this.Visitor.SelectDefault(defaultExpr);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
+        return this.ormProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     /// <summary>
     /// 生成插入数据的查询构造器，fieldsSelector参数指定要插入的字段，未指定的字段将使用默认值，fieldsSelector表达式支持匿名对象和实体对象两种形式，例如：
@@ -733,7 +727,7 @@ public class Query<T> : QueryBase, IQuery<T>
 
         this.SelectInternal(fieldsSelector);
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
+        return this.ormProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     #endregion
 
@@ -906,7 +900,7 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     public virtual IQuery<<#=tables#>, TOther> WithTable<TOther>()
     {
         this.Visitor.AddTable(typeof(TOther));
-        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -914,12 +908,12 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     public virtual IQuery<<#=tables#>, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
-        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<<#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
         base.WithQueryInternal(subQueryExpr);
-        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -937,17 +931,17 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     public virtual IQuery<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         base.InnerJoinInternal(typeof(TOther), joinOn);
-        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<<#=tables#>, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         base.InnerJoinInternal(subQuery, joinOn);
-        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         base.InnerJoinInternal(subQueryExpr, joinOn);
-        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
 <#      }#>
     #endregion
@@ -965,17 +959,17 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     public virtual IQuery<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         base.LeftJoinInternal(typeof(TOther), joinOn);
-        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<<#=tables#>, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         base.LeftJoinInternal(subQuery, joinOn);
-        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         base.LeftJoinInternal(subQueryExpr, joinOn);
-        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
 <#      }#>
     #endregion
@@ -993,17 +987,17 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     public virtual IQuery<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         base.RightJoinInternal(typeof(TOther), joinOn);
-        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<<#=tables#>, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         base.RightJoinInternal(subQuery, joinOn);
-        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         base.RightJoinInternal(subQueryExpr, joinOn);
-        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
 <#      }#>
     #endregion
@@ -1011,13 +1005,13 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     #region Include
     public virtual IIncludableQuery<<#=tables#>, TMember> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector)
     {
-        base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<<#=tables#>, TMember>(this.DbContext, this.Visitor);
+        var tableSegment = base.IncludeInternal<TMember>(memberSelector);
+        return this.ormProvider.NewIncludableQuery<<#=tables#>, TMember>(this.DbContext, this.Visitor, tableSegment);
     }
     public virtual IIncludableQuery<<#=tables#>, TElement> IncludeMany<TElement>(Expression<Func<<#=tables#>, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
     {
-        base.IncludeInternal<TElement>(memberSelector, filter);
-        return this.OrmProvider.NewIncludableQuery<<#=tables#>, TElement>(this.DbContext, this.Visitor);
+        var tableSegment = base.IncludeInternal<TElement>(memberSelector, filter);
+        return this.ormProvider.NewIncludableQuery<<#=tables#>, TElement>(this.DbContext, this.Visitor, tableSegment);
     }
     #endregion
 
@@ -1074,7 +1068,7 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     public virtual IGroupingQuery<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr)
     {
         base.GroupByInternal(groupingExpr);
-        return this.OrmProvider.NewGroupQuery<<#=tables#>, TGrouping>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewGroupQuery<<#=tables#>, TGrouping>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -1124,17 +1118,17 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     public virtual IQuery<TTarget> Select<TTarget>(string rawFields)
     {
         base.SelectRawInternal(typeof(TTarget), rawFields);
-        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> SelectTo<TTarget>(Expression<Func<<#=tables#>, TTarget>> specialMemberSelector = null)
     {
         this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
-        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -1184,7 +1178,7 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
 
         this.SelectInternal(fieldsSelector);        
         var createVisitor = this.NewCreateVisitor(typeof(TEntity));
-        return this.OrmProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
+        return this.ormProvider.NewFromCreate<TEntity>(this.DbContext, createVisitor);
     }
     #endregion
 }

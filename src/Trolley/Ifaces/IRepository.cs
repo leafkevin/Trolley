@@ -789,18 +789,18 @@ public interface IRepository
 
     #region QueryMultiple
     /// <summary>
-    /// 使用IMultipleQuery操作生成多个SQL语句一起执行，并返回多个结果集，根据IMultipleQuery操作顺序接收返回结果。
+    /// 使用IMultiDialectProvider操作生成多个SQL语句一起执行，并返回多个结果集，根据IMultiDialectProvider操作顺序接收返回结果。
     /// </summary>
     /// <param name="subQueries">多个SQL查询操作，不可为null</param>
     /// <returns>返回多结果集Reader对象</returns>
-    IMultiQueryReader QueryMultiple(Action<IMultipleQuery> subQueries);
+    IMultiQueryReader QueryMultiple(Action<IMultiDialectProvider> subQueries);
     /// <summary>
-    /// 使用IMultipleQuery操作生成多个SQL语句一起执行，并返回多个结果集，根据IMultipleQuery操作顺序接收返回结果。
+    /// 使用IMultiDialectProvider操作生成多个SQL语句一起执行，并返回多个结果集，根据IMultiDialectProvider操作顺序接收返回结果。
     /// </summary>
     /// <param name="subQueries">多个SQL查询操作，不可为null</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回多结果集Reader对象</returns>
-    Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default);
+    Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultiDialectProvider> subQueries, CancellationToken cancellationToken = default);
     #endregion
 
     #region Transaction

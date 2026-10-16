@@ -2,7 +2,7 @@
 
 namespace Trolley.SqlServer;
 
-public class SqlServerMultipleQuery : MultipleQuery
+public class SqlServerMultipleQuery : MultiDialectProvider
 {
     #region Constructor
     public SqlServerMultipleQuery(DbContext dbContext)
@@ -10,7 +10,7 @@ public class SqlServerMultipleQuery : MultipleQuery
     #endregion
 
     #region GetShardingTableNames
-    public override IMultipleQuery GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null)
+    public override IMultiDialectProvider GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null)
     {
         var entityMapper = this.DbContext.EntityMapProvider.GetEntityMap(typeof(TEntity));
         var orgTableName = entityMapper.TableName;

@@ -67,7 +67,7 @@ public class SqlServerCreate<TEntity> : Create<TEntity>, ISqlServerCreate<TEntit
         if (isEmpty) throw new Exception("批量更新，insertObjs参数至少要有一条数据");
 
         this.DialectVisitor.WithBulkCopy(insertObjs, timeoutSeconds);
-        return this.OrmProvider.NewCreated<TEntity>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewCreated<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
 

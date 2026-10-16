@@ -159,14 +159,14 @@ public class Deleted : DialectProvider, IDeleted
     #endregion
 
     #region WithRawSql
-    public IDeleted WithLeadingSql(string rawSql)
+    public new IDeleted WithLeadingSql(string rawSql)
     {
-        this.Visitor.WithLeadingSql(rawSql);
+        base.WithLeadingSql(rawSql);
         return this;
     }
-    public IDeleted WithTrailingSql(string rawSql)
+    public new IDeleted WithTrailingSql(string rawSql)
     {
-        this.Visitor.WithTrailingSql(rawSql);
+        base.WithTrailingSql(rawSql);
         return this;
     }
     #endregion
@@ -338,6 +338,19 @@ public class ResultDeleted<TResult> : DialectProvider, IBulkResultCommand<TResul
     }
     #endregion
 
+    #region WithRawSql
+    public new IBulkResultCommand<TResult> WithLeadingSql(string rawSql)
+    {
+        base.WithLeadingSql(rawSql);
+        return this;
+    }
+    public new IBulkResultCommand<TResult> WithTrailingSql(string rawSql)
+    {
+        base.WithTrailingSql(rawSql);
+        return this;
+    }
+    #endregion
+
     #region Execute
     public virtual List<TResult> Execute()
     {
@@ -346,6 +359,7 @@ public class ResultDeleted<TResult> : DialectProvider, IBulkResultCommand<TResul
 
         var result = new List<TResult>();
         (var isNeedClose, var connection, var command, var readerFields) = this.CreateExecuteCommand(this.Visitor);
+        this.Initialize(command);
 
         connection.Open();
         using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
@@ -361,7 +375,11 @@ public class ResultDeleted<TResult> : DialectProvider, IBulkResultCommand<TResul
 
         reader.Dispose();
         command.Dispose();
-        if (isNeedClose) connection.Close();
+        if (isNeedClose)
+        {
+            connection.Close();
+            this.Dispose();
+        }
         this.Visitor.Dispose();
         return result;
     }
@@ -372,6 +390,7 @@ public class ResultDeleted<TResult> : DialectProvider, IBulkResultCommand<TResul
 
         var result = new List<TResult>();
         (var isNeedClose, var connection, var command, var readerFields) = this.CreateExecuteCommand(this.Visitor);
+        this.Initialize(command);
 
         await connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
@@ -387,7 +406,11 @@ public class ResultDeleted<TResult> : DialectProvider, IBulkResultCommand<TResul
 
         await reader.DisposeAsync();
         await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
+        if (isNeedClose)
+        {
+            await connection.CloseAsync();
+            this.Dispose();
+        }
         this.Visitor.Dispose();
         return result;
     }

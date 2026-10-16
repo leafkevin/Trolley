@@ -26,6 +26,23 @@ public class DialectProvider
     #region Properties
     public IOrmDbFactory DbFactory => OrmDbFactory.Instance;
     public DbContext DbContext { get; set; }
+    public string HeadRawSql { get; set; }
+    public string TailRawSql { get; set; }
+    #endregion
+
+    #region WithRawSql
+    public virtual void WithLeadingSql(string rawSql)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+        this.HeadRawSql = rawSql;
+    }
+    public virtual void WithTrailingSql(string rawSql)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+        this.TailRawSql = rawSql;
+    }
     #endregion
 
     #region UseMasterCommand/UseSlaveCommand
@@ -146,8 +163,6 @@ public class DialectProvider
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         command.CommandText = rawSql;
         command.CommandType = commandType;
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     public (bool, ITheaConnection, ITheaCommand) CreateQueryCommand(string rawSql, object parameters, CommandType commandType)
@@ -167,8 +182,6 @@ public class DialectProvider
         commandInitializer.Invoke(command.Parameters, this.ormProvider, parameters);
         command.CommandText = rawSql;
         command.CommandType = commandType;
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     public (bool, ITheaConnection, ITheaCommand) CreateQueryCommand(string rawSql, List<IDbDataParameter> parameters, CommandType commandType)
@@ -181,8 +194,6 @@ public class DialectProvider
         command.CommandText = rawSql;
         command.CommandType = commandType;
         parameters.ForEach(f => command.Parameters.Add(f));
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     public (bool, ITheaConnection, ITheaCommand) CreateQueryByCommand(Type entityType, object whereObjs, bool isUseKey, bool isBulk)
@@ -198,8 +209,6 @@ public class DialectProvider
             var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjs, 1, isUseKey, false, isBulk);
             command.CommandText = commandInitializer.Invoke(command.Parameters, this.DbContext, whereObjs);
         }
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     public (bool, ITheaConnection, ITheaCommand) CreateExistsCommand(Type entityType, object whereObjs, bool isUseKey, bool isBulk)
@@ -215,8 +224,6 @@ public class DialectProvider
             var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjs, 2, isUseKey, false, isBulk);
             command.CommandText = commandInitializer.Invoke(command.Parameters, this.DbContext, whereObjs);
         }
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     #endregion
@@ -224,6 +231,7 @@ public class DialectProvider
     #region QueryScalar
     public TResult QueryScalar<TResult>(bool isNeedClose, ITheaConnection connection, ITheaCommand command)
     {
+        this.Initialize(command);
         connection.Open();
         TResult result = default;
         var objResult = command.ExecuteScalar();
@@ -231,11 +239,16 @@ public class DialectProvider
             result = (TResult)Convert.ChangeType(objResult, typeof(TResult));
 
         command.Dispose();
-        if (isNeedClose) connection.Close();
+        if (isNeedClose)
+        {
+            connection.Close();
+            this.Dispose();
+        }
         return result;
     }
     public async Task<TResult> QueryScalarAsync<TResult>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, CancellationToken cancellationToken = default)
     {
+        this.Initialize(command);
         await connection.OpenAsync(cancellationToken);
         TResult result = default;
         var objResult = await command.ExecuteScalarAsync(cancellationToken);
@@ -243,7 +256,11 @@ public class DialectProvider
             result = (TResult)Convert.ChangeType(objResult, typeof(TResult));
 
         await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
+        if (isNeedClose)
+        {
+            await connection.CloseAsync();
+            this.Dispose();
+        }
         return result;
     }
     #endregion
@@ -251,6 +268,7 @@ public class DialectProvider
     #region QuerySingle
     public TTarget QuerySingle<TTarget>(bool isNeedClose, ITheaConnection connection, ITheaCommand command)
     {
+        this.Initialize(command);
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(behavior);
@@ -260,11 +278,16 @@ public class DialectProvider
             result = (TTarget)deserializer.Invoke(reader);
         reader.Dispose();
         command.Dispose();
-        if (isNeedClose) connection.Close();
+        if (isNeedClose)
+        {
+            connection.Close();
+            this.Dispose();
+        }
         return result;
     }
     public async Task<TTarget> QuerySingleAsync<TTarget>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, CancellationToken cancellationToken = default)
     {
+        this.Initialize(command);
         await connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
@@ -274,7 +297,11 @@ public class DialectProvider
             result = (TTarget)deserializer.Invoke(reader);
         await reader.DisposeAsync();
         await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
+        if (isNeedClose)
+        {
+            await connection.CloseAsync();
+            this.Dispose();
+        }
         return result;
     }
     public TTarget QuerySingle<TTarget>(IQueryVisitor visitor)
@@ -285,8 +312,7 @@ public class DialectProvider
         visitor.SelectDefault(defaultExpr);
         var sql = visitor.BuildSql(out var readerFields);
         command.CommandText = sql;
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
+        this.Initialize(command);
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
@@ -300,13 +326,18 @@ public class DialectProvider
             command.CommandText = sql;
             command.Parameters.Clear();
             visitor.NextDbParameters.CopyTo(command.Parameters);
+            this.Initialize(command);
             reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
             visitor.SetIncludeValues(entityType, result, reader, false);
         }
 
         reader.Dispose();
         command.Dispose();
-        if (isNeedClose) connection.Close();
+        if (isNeedClose)
+        {
+            connection.Close();
+            this.Dispose();
+        }
         visitor.Dispose();
         return result;
     }
@@ -318,6 +349,7 @@ public class DialectProvider
         visitor.SelectDefault(defaultExpr);
         var sql = visitor.BuildSql(out var readerFields);
         command.CommandText = sql;
+        this.Initialize(command);
 
         await connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
@@ -332,12 +364,17 @@ public class DialectProvider
             command.CommandText = sql;
             command.Parameters.Clear();
             visitor.NextDbParameters.CopyTo(command.Parameters);
+            this.Initialize(command);
             reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
             visitor.SetIncludeValues(entityType, result, reader, false);
         }
         await reader.DisposeAsync();
         await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
+        if (isNeedClose)
+        {
+            await connection.CloseAsync();
+            this.Dispose();
+        }
         visitor.Dispose();
         return result;
     }
@@ -346,6 +383,7 @@ public class DialectProvider
     #region Query
     public List<TTarget> Query<TTarget>(bool isNeedClose, ITheaConnection connection, ITheaCommand command)
     {
+        this.Initialize(command);
         connection.Open();
         using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
         var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext);
@@ -354,11 +392,16 @@ public class DialectProvider
             result.Add((TTarget)deserializer.Invoke(reader));
         reader.Dispose();
         command.Dispose();
-        if (isNeedClose) connection.Close();
+        if (isNeedClose)
+        {
+            connection.Close();
+            this.Dispose();
+        }
         return result;
     }
     public async Task<List<TTarget>> QueryAsync<TTarget>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, CancellationToken cancellationToken = default)
     {
+        this.Initialize(command);
         await connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
         var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext);
@@ -367,7 +410,11 @@ public class DialectProvider
             result.Add((TTarget)deserializer.Invoke(reader));
         await reader.DisposeAsync();
         await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
+        if (isNeedClose)
+        {
+            await connection.CloseAsync();
+            this.Dispose();
+        }
         return result;
     }
     public List<TTarget> Query<TTarget>(IQueryVisitor visitor)
@@ -378,6 +425,7 @@ public class DialectProvider
         visitor.SelectDefault(defaultExpr);
         var sql = visitor.BuildSql(out var readerFields);
         command.CommandText = sql;
+        this.Initialize(command);
 
         connection.Open();
         var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
@@ -392,13 +440,18 @@ public class DialectProvider
             command.CommandText = sql;
             command.Parameters.Clear();
             visitor.NextDbParameters.CopyTo(command.Parameters);
+            this.Initialize(command);
             reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
             visitor.SetIncludeValues(entityType, result, reader, true);
         }
 
         reader.Dispose();
         command.Dispose();
-        if (isNeedClose) connection.Close();
+        if (isNeedClose)
+        {
+            connection.Close();
+            this.Dispose();
+        }
         visitor.Dispose();
         return result;
     }
@@ -410,6 +463,7 @@ public class DialectProvider
         visitor.SelectDefault(defaultExpr);
         var sql = visitor.BuildSql(out var readerFields);
         command.CommandText = sql;
+        this.Initialize(command);
 
         await connection.OpenAsync(cancellationToken);
         var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
@@ -424,13 +478,18 @@ public class DialectProvider
             command.CommandText = sql;
             command.Parameters.Clear();
             visitor.NextDbParameters.CopyTo(command.Parameters);
+            this.Initialize(command);
             reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
             visitor.SetIncludeValues(entityType, result, reader, true);
         }
 
         await reader.DisposeAsync();
         await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
+        if (isNeedClose)
+        {
+            await connection.CloseAsync();
+            this.Dispose();
+        }
         visitor.Dispose();
         return result;
     }
@@ -438,6 +497,7 @@ public class DialectProvider
     public List<TTarget> QuerySimple<TTarget>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, ReusableList<ReaderField> readerFields)
     {
         var entityType = typeof(TTarget);
+        this.Initialize(command);
         connection.Open();
         var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
         var deserializer = reader.GetReaderDeserializer(entityType, this.DbContext, readerFields);
@@ -446,12 +506,17 @@ public class DialectProvider
             result.Add((TTarget)deserializer.Invoke(reader, readerFields));
         reader.Dispose();
         command.Dispose();
-        if (isNeedClose) connection.Close();
+        if (isNeedClose)
+        {
+            connection.Close();
+            this.Dispose();
+        }
         return result;
     }
     public async Task<List<TTarget>> QuerySimpleAsync<TTarget>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, ReusableList<ReaderField> readerFields, CancellationToken cancellationToken = default)
     {
         var entityType = typeof(TTarget);
+        this.Initialize(command);
         await connection.OpenAsync(cancellationToken);
         var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
         var deserializer = reader.GetReaderDeserializer(entityType, this.DbContext, readerFields);
@@ -460,7 +525,11 @@ public class DialectProvider
             result.Add((TTarget)deserializer.Invoke(reader, readerFields));
         await reader.DisposeAsync();
         await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
+        if (isNeedClose)
+        {
+            await connection.CloseAsync();
+            this.Dispose();
+        }
         return result;
     }
     #endregion
@@ -475,8 +544,7 @@ public class DialectProvider
         visitor.IsNeedPaging = true;
         var sql = visitor.BuildSql(out var readerFields);
         command.CommandText = sql;
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
+        this.Initialize(command);
 
         connection.Open();
         var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
@@ -496,13 +564,18 @@ public class DialectProvider
             command.CommandText = sql;
             command.Parameters.Clear();
             visitor.NextDbParameters.CopyTo(command.Parameters);
+            this.Initialize(command);
             reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
             visitor.SetIncludeValues(entityType, result.Data, reader, true);
         }
 
         reader.Dispose();
         command.Dispose();
-        if (isNeedClose) connection.Close();
+        if (isNeedClose)
+        {
+            connection.Close();
+            this.Dispose();
+        }
         visitor.Dispose();
         return result;
     }
@@ -516,8 +589,7 @@ public class DialectProvider
         visitor.IsNeedPaging = true;
         var sql = visitor.BuildSql(out var readerFields);
         command.CommandText = sql;
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
+        this.Initialize(command);
 
         await connection.OpenAsync(cancellationToken);
         var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
@@ -539,13 +611,18 @@ public class DialectProvider
             command.CommandText = sql;
             command.Parameters.Clear();
             visitor.NextDbParameters.CopyTo(command.Parameters);
+            this.Initialize(command);
             reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
             await visitor.SetIncludeValuesAsync(entityType, result.Data, reader, true, cancellationToken);
         }
 
         await reader.DisposeAsync();
         await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
+        if (isNeedClose)
+        {
+            await connection.CloseAsync();
+            this.Dispose();
+        }
         visitor.Dispose();
         return result;
     }
@@ -554,20 +631,30 @@ public class DialectProvider
     #region Exists
     public bool Exists(bool isNeedClose, ITheaConnection connection, ITheaCommand command)
     {
+        this.Initialize(command);
         connection.Open();
         var objResult = command.ExecuteScalar();
         var result = objResult != null && objResult is not DBNull;
         command.Dispose();
-        if (isNeedClose) connection.Close();
+        if (isNeedClose)
+        {
+            connection.Close();
+            this.Dispose();
+        }
         return result;
     }
     public async Task<bool> ExistsAsync(bool isNeedClose, ITheaConnection connection, ITheaCommand command, CancellationToken cancellationToken = default)
     {
+        this.Initialize(command);
         await connection.OpenAsync(cancellationToken);
         var objResult = await command.ExecuteScalarAsync(cancellationToken);
         var result = objResult != null && objResult is not DBNull;
         await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
+        if (isNeedClose)
+        {
+            await connection.CloseAsync();
+            this.Dispose();
+        }
         return result;
     }
     #endregion
@@ -635,8 +722,6 @@ public class DialectProvider
                 as Func<IDataParameterCollection, DbContext, object, string>;
             command.CommandText = commandInitializer.Invoke(command.Parameters, this.DbContext, insertObj);
         }
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     public (bool, ITheaConnection, ITheaCommand, string, Action<IDataParameterCollection, StringBuilder, DbContext, object, string>)
@@ -761,8 +846,6 @@ public class DialectProvider
             commandInitializer = (dbParameters, builder, dbContext, insertObj, suffix) =>
                 typedCommandInitializer.Invoke(dbParameters, builder, dbContext, "(", "),", insertObj, suffix);
         }
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command, headSql, commandInitializer);
     }
     public int CreateBulk<TEntity>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, IEnumerable insertObjs, int bulkCount,
@@ -780,8 +863,7 @@ public class DialectProvider
             {
                 builder.Remove(builder.Length - 1, 1);
                 command.CommandText = builder.ToString();
-                if (this.interceptor != null)
-                    command = this.interceptor.CommandInitialized(command);
+                this.Initialize(command);
 
                 result += command.ExecuteNonQuery();
                 builder.Clear();
@@ -794,8 +876,7 @@ public class DialectProvider
         {
             builder.Remove(builder.Length - 1, 1);
             command.CommandText = builder.ToString();
-            if (this.interceptor != null)
-                command = this.interceptor.CommandInitialized(command);
+            this.Initialize(command);
 
             result += command.ExecuteNonQuery();
             builder.Clear();
@@ -803,7 +884,11 @@ public class DialectProvider
         }
 
         command.Dispose();
-        if (isNeedClose) connection.Close();
+        if (isNeedClose)
+        {
+            connection.Close();
+            this.Dispose();
+        }
         return result;
     }
     public async Task<int> CreateBulkAsync<TEntity>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, IEnumerable insertObjs, int bulkCount,
@@ -821,8 +906,7 @@ public class DialectProvider
             {
                 builder.Remove(builder.Length - 1, 1);
                 command.CommandText = builder.ToString();
-                if (this.interceptor != null)
-                    command = this.interceptor.CommandInitialized(command);
+                this.Initialize(command);
 
                 result += await command.ExecuteNonQueryAsync(cancellationToken);
                 builder.Clear();
@@ -835,8 +919,7 @@ public class DialectProvider
         {
             builder.Remove(builder.Length - 1, 1);
             command.CommandText = builder.ToString();
-            if (this.interceptor != null)
-                command = this.interceptor.CommandInitialized(command);
+            this.Initialize(command);
 
             result += await command.ExecuteNonQueryAsync(cancellationToken);
             builder.Clear();
@@ -906,8 +989,6 @@ public class DialectProvider
                 as Func<IDataParameterCollection, DbContext, object, string>;
             command.CommandText = commandInitializer.Invoke(command.Parameters, this.DbContext, updateObj);
         }
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     public (bool, ITheaConnection, ITheaCommand, Action<IDataParameterCollection, StringBuilder, DbContext, object, string>)
@@ -1064,8 +1145,7 @@ public class DialectProvider
             if (index >= bulkCount)
             {
                 command.CommandText = builder.ToString();
-                if (this.interceptor != null)
-                    command = this.interceptor.CommandInitialized(command);
+                this.Initialize(command);
 
                 result += command.ExecuteNonQuery();
                 builder.Clear();
@@ -1076,8 +1156,7 @@ public class DialectProvider
         if (index > 0)
         {
             command.CommandText = builder.ToString();
-            if (this.interceptor != null)
-                command = this.interceptor.CommandInitialized(command);
+            this.Initialize(command);
 
             result += command.ExecuteNonQuery();
             builder.Clear();
@@ -1085,7 +1164,11 @@ public class DialectProvider
         }
 
         command.Dispose();
-        if (isNeedClose) connection.Close();
+        if (isNeedClose)
+        {
+            connection.Close();
+            this.Dispose();
+        }
         return result;
     }
     public async Task<int> UpdateBulkAsync<TEntity>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, IEnumerable updateObjs,
@@ -1104,8 +1187,7 @@ public class DialectProvider
             if (index >= bulkCount)
             {
                 command.CommandText = builder.ToString();
-                if (this.interceptor != null)
-                    command = this.interceptor.CommandInitialized(command);
+                this.Initialize(command);
 
                 result += await command.ExecuteNonQueryAsync(cancellationToken);
                 builder.Clear();
@@ -1116,8 +1198,7 @@ public class DialectProvider
         if (index > 0)
         {
             command.CommandText = builder.ToString();
-            if (this.interceptor != null)
-                command = this.interceptor.CommandInitialized(command);
+            this.Initialize(command);
 
             result += await command.ExecuteNonQueryAsync(cancellationToken);
             builder.Clear();
@@ -1125,7 +1206,11 @@ public class DialectProvider
         }
 
         await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
+        if (isNeedClose)
+        {
+            await connection.CloseAsync();
+            this.Dispose();
+        }
         return result;
     }
     #endregion
@@ -1138,8 +1223,6 @@ public class DialectProvider
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjs, 3, isUseKey, false, isBulk);
         command.CommandText = commandInitializer.Invoke(command.Parameters, this.DbContext, whereObjs);
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     #endregion
@@ -1152,8 +1235,6 @@ public class DialectProvider
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         command.CommandText = rawSql;
         command.CommandType = commandType;
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     public (bool, ITheaConnection, ITheaCommand) CreateExecuteCommand(string rawSql, object parameters, CommandType commandType)
@@ -1173,8 +1254,6 @@ public class DialectProvider
         commandInitializer.Invoke(command.Parameters, this.ormProvider, parameters);
         command.CommandText = rawSql;
         command.CommandType = commandType;
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     public (bool, ITheaConnection, ITheaCommand) CreateExecuteCommand(string rawSql, List<IDbDataParameter> parameters, CommandType commandType)
@@ -1187,16 +1266,12 @@ public class DialectProvider
         command.CommandText = rawSql;
         command.CommandType = commandType;
         parameters.ForEach(f => command.Parameters.Add(f));
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command);
     }
     public (bool, ITheaConnection, ITheaCommand, ReusableList<ReaderField>) CreateExecuteCommand(ICommandVisitor visitor)
     {
         (var isNeedClose, var connection, var command) = visitor.UseCommand();
         command.CommandText = visitor.BuildSql(out var readerFields);
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command, readerFields);
     }
     #endregion
@@ -1204,18 +1279,28 @@ public class DialectProvider
     #region Execute
     public int Execute(bool isNeedClose, ITheaConnection connection, ITheaCommand command)
     {
+        this.Initialize(command);
         connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
-        if (isNeedClose) connection.Close();
+        if (isNeedClose)
+        {
+            connection.Close();
+            this.Dispose();
+        }
         return result;
     }
     public async Task<int> ExecuteAsync(bool isNeedClose, ITheaConnection connection, ITheaCommand command, CancellationToken cancellationToken = default)
     {
+        this.Initialize(command);
         await connection.OpenAsync(cancellationToken);
         var result = await command.ExecuteNonQueryAsync(cancellationToken);
         await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
+        if (isNeedClose)
+        {
+            await connection.CloseAsync();
+            this.Dispose();
+        }
         return result;
     }
     #endregion
@@ -1260,6 +1345,7 @@ public class DialectProvider
             throw new Exception("还没有开启事务，无法完成提交");
         this.transaction.Commit();
         this.connection.Close();
+        this.Dispose();
         this.DbContext.Transaction = null;
         this.DbContext.Connection = null;
     }
@@ -1271,6 +1357,7 @@ public class DialectProvider
         await this.connection.CloseAsync();
         this.DbContext.Transaction = null;
         this.DbContext.Connection = null;
+        this.Dispose();
     }
     public void Rollback()
     {
@@ -1280,6 +1367,7 @@ public class DialectProvider
         this.connection.Close();
         this.DbContext.Transaction = null;
         this.DbContext.Connection = null;
+        this.Dispose();
     }
     public async Task RollbackAsync(CancellationToken cancellationToken = default)
     {
@@ -1289,6 +1377,21 @@ public class DialectProvider
         await this.connection.CloseAsync();
         this.DbContext.Transaction = null;
         this.DbContext.Connection = null;
+        this.Dispose();
     }
-    #endregion     
+    #endregion
+    protected void Initialize(ITheaCommand command)
+    {
+        if (!string.IsNullOrEmpty(this.HeadRawSql))
+            command.CommandText = this.HeadRawSql + command.CommandText;
+        if (!string.IsNullOrEmpty(this.TailRawSql))
+            command.CommandText += this.TailRawSql;
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
+    }
+    public virtual void Dispose()
+    {
+        this.HeadRawSql = null;
+        this.TailRawSql = null;
+    }
 }

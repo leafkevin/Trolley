@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -216,17 +214,7 @@ public class MySqlQueryVisitor : QueryVisitor
     //    sql = builder.ToString();
     //    builder.Clear();
     //    return sql;
-    //}
-    public override void UseTableSchema(bool isIncludeMany, string tableSchema)
-    {
-        var dialectProvider = this.OrmProvider as MySqlProvider;
-        var connectionString = this.DbContext.Database.ConnectionStrings.First();
-        var defaultSchemaName = dialectProvider.GetSchemaName(connectionString);
-        if (tableSchema == defaultSchemaName) return;
-
-        var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
-        tableSegment.TableSchema = tableSchema;
-    }
+    //}   
     public override SqlSegment VisitGroupConcatMethodCall(SqlSegment sqlSegment)
     {
         var methodCallExpr = sqlSegment.Expression as MethodCallExpression;

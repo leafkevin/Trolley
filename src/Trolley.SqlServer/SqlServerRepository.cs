@@ -19,17 +19,17 @@ public class SqlServerRepository : Repository, ISqlServerRepository
 
     #region Create
     public new ISqlServerCreate<TEntity> Create<TEntity>()
-        => this.OrmProvider.NewCreate<TEntity>(this.DbContext) as ISqlServerCreate<TEntity>;
+        => this.ormProvider.NewCreate<TEntity>(this.DbContext) as ISqlServerCreate<TEntity>;
     #endregion
 
     #region Update
     public new ISqlServerUpdate<TEntity> Update<TEntity>()
-        => this.OrmProvider.NewUpdate<TEntity>(this.DbContext) as ISqlServerUpdate<TEntity>;
+        => this.ormProvider.NewUpdate<TEntity>(this.DbContext) as ISqlServerUpdate<TEntity>;
     #endregion
 
     #region Delete
     public new ISqlServerDelete<TEntity> Delete<TEntity>()
-        => this.OrmProvider.NewDelete<TEntity>(this.DbContext) as ISqlServerDelete<TEntity>;
+        => this.ormProvider.NewDelete<TEntity>(this.DbContext) as ISqlServerDelete<TEntity>;
     #endregion
 
     #region ShardingTable

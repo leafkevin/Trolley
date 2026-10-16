@@ -71,13 +71,13 @@ public class SqlServerUpdate<TEntity> : Update<TEntity>, ISqlServerUpdate<TEntit
     {
         if (joinOn == null) throw new ArgumentNullException(nameof(joinOn));
         this.Visitor.Join("INNER JOIN", typeof(T), joinOn);
-        return this.OrmProvider.NewUpdateJoin<TEntity, T>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewUpdateJoin<TEntity, T>(this.DbContext, this.Visitor);
     }
     public IUpdateJoin<TEntity, T> LeftJoin<T>(Expression<Func<TEntity, T, bool>> joinOn)
     {
         if (joinOn == null) throw new ArgumentNullException(nameof(joinOn));
         this.Visitor.Join("LEFT JOIN", typeof(T), joinOn);
-        return this.OrmProvider.NewUpdateJoin<TEntity, T>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewUpdateJoin<TEntity, T>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -98,7 +98,7 @@ public class SqlServerUpdate<TEntity> : Update<TEntity>, ISqlServerUpdate<TEntit
         }
         if (isEmpty) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
         this.DialectVisitor.WithBulkCopy(updateObjs, timeoutSeconds);
-        return this.OrmProvider.NewUpdated<TEntity>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewUpdated<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
 }

@@ -121,7 +121,7 @@ public static class OrmExtensions
         #endregion
     }
 
-    extension(IMultipleQuery instance)
+    extension(IMultiDialectProvider instance)
     {
         /// <summary>
         /// 查询TEntity实体表满足表达式wherePredicate条件的第一条记录，条件表达式wherePredicate可以为null，为null时，查询所有记录的第一条
@@ -129,7 +129,7 @@ public static class OrmExtensions
         /// <typeparam name="TEntity">实体类型</typeparam>
         /// <param name="wherePredicate">条件表达式</param>
         /// <returns>返回多语句查询对象，将TEntity类型值添加到Reader中</returns>
-        public IMultipleQuery QueryFirst<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null)
+        public IMultiDialectProvider QueryFirst<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null)
             => instance.From<TEntity>().Where(wherePredicate).First();
 
         /// <summary>
@@ -138,7 +138,7 @@ public static class OrmExtensions
         /// <typeparam name="TEntity">实体类型</typeparam>
         /// <param name="wherePredicate">条件表达式</param>
         /// <returns>返回多语句查询对象，将TEntity类型列表添加到Reader中</returns>
-        public IMultipleQuery Query<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null)
+        public IMultiDialectProvider Query<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null)
             => instance.From<TEntity>().Where(wherePredicate).ToList();
     }
 }

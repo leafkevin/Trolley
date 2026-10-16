@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -13,13 +12,6 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
     public MySqlUpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
         : base(entityType, dbContext, tableAsStart, command) { }
 
-    public override void UseTableSchema(bool isIncludeMany, string tableSchema)
-    {
-        var defaultSchemaName = this.DbContext.DefaultTableSchema;
-        if (tableSchema == defaultSchemaName) return;
-        var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
-        tableSegment.TableSchema = tableSchema;
-    }
     public override (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>,
         Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>, ReusableList<ReaderField>) BuildSetBulk(ITheaCommand command)
     {

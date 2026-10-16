@@ -114,7 +114,7 @@ public class FromCommand<TEntity, T> : FromCommand, IFromCommand<TEntity, T>
     public virtual IFromCommand<TEntity, T, TOther> WithTable<TOther>()
     {
         this.Visitor.AddTable(typeof(TOther));
-        return this.OrmProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -122,12 +122,12 @@ public class FromCommand<TEntity, T> : FromCommand, IFromCommand<TEntity, T>
     public virtual IFromCommand<TEntity, T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
-        return this.OrmProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TEntity, T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
         base.WithQueryInternal(subQueryExpr);
-        return this.OrmProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -135,17 +135,17 @@ public class FromCommand<TEntity, T> : FromCommand, IFromCommand<TEntity, T>
     public virtual IFromCommand<TEntity, T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
         base.InnerJoinInternal(typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TEntity, T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         base.InnerJoinInternal(subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TEntity, T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
     {
         base.InnerJoinInternal(subQueryExpr, joinOn);
-        return this.OrmProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -153,17 +153,17 @@ public class FromCommand<TEntity, T> : FromCommand, IFromCommand<TEntity, T>
     public virtual IFromCommand<TEntity, T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
         base.LeftJoinInternal(typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TEntity, T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         base.LeftJoinInternal(subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TEntity, T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
     {
         base.LeftJoinInternal(subQueryExpr, joinOn);
-        return this.OrmProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -171,17 +171,17 @@ public class FromCommand<TEntity, T> : FromCommand, IFromCommand<TEntity, T>
     public virtual IFromCommand<TEntity, T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
         base.RightJoinInternal(typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TEntity, T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         base.RightJoinInternal(subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TEntity, T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
     {
         base.RightJoinInternal(subQueryExpr, joinOn);
-        return this.OrmProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -237,7 +237,7 @@ public class FromCommand<TEntity, T> : FromCommand, IFromCommand<TEntity, T>
     public virtual IGroupingCommand<TEntity, T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr)
     {
         this.GroupByInternal(groupingExpr);
-        return this.OrmProvider.NewGroupCommand<TEntity, T, TGrouping>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewGroupCommand<TEntity, T, TGrouping>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -292,17 +292,17 @@ public class FromCommand<TEntity, T> : FromCommand, IFromCommand<TEntity, T>
     public virtual IFromCommand<TEntity, TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TEntity, TTarget>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TEntity, TTarget> SelectTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
     {
         this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
-        return this.OrmProvider.NewFromCommand<TEntity, TTarget>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TEntity, TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TEntity, TTarget>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -399,7 +399,7 @@ public class FromCommand<TEntity, <#=tables#>> : FromCommand, IFromCommand<TEnti
     public virtual IFromCommand<TEntity, <#=tables#>, TOther> WithTable<TOther>()
     {
         this.Visitor.AddTable(typeof(TOther));
-        return this.OrmProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -407,12 +407,12 @@ public class FromCommand<TEntity, <#=tables#>> : FromCommand, IFromCommand<TEnti
     public virtual IFromCommand<TEntity, <#=tables#>, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
     {
         base.WithQueryInternal(subQuery);
-        return this.OrmProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TEntity, <#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
         base.WithQueryInternal(subQueryExpr);
-        return this.OrmProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
 
     #endregion
@@ -431,17 +431,17 @@ public class FromCommand<TEntity, <#=tables#>> : FromCommand, IFromCommand<TEnti
     public virtual IFromCommand<TEntity, <#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         base.InnerJoinInternal(typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TEntity, <#=tables#>, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         base.InnerJoinInternal(subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TEntity, <#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         base.InnerJoinInternal(subQueryExpr, joinOn);
-        return this.OrmProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
 <#      }#>
     #endregion
@@ -459,17 +459,17 @@ public class FromCommand<TEntity, <#=tables#>> : FromCommand, IFromCommand<TEnti
     public virtual IFromCommand<TEntity, <#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         base.LeftJoinInternal(typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TEntity, <#=tables#>, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         base.LeftJoinInternal(subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TEntity, <#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         base.LeftJoinInternal(subQueryExpr, joinOn);
-        return this.OrmProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
 <#      }#>
     #endregion
@@ -487,17 +487,17 @@ public class FromCommand<TEntity, <#=tables#>> : FromCommand, IFromCommand<TEnti
     public virtual IFromCommand<TEntity, <#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         base.RightJoinInternal(typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TEntity, <#=tables#>, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         base.RightJoinInternal(subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TEntity, <#=tables#>, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         base.RightJoinInternal(subQueryExpr, joinOn);
-        return this.OrmProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, <#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
 <#      }#>
     #endregion
@@ -554,7 +554,7 @@ public class FromCommand<TEntity, <#=tables#>> : FromCommand, IFromCommand<TEnti
     public virtual IGroupingCommand<TEntity, <#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr)
     {
         base.GroupByInternal(groupingExpr);
-        return this.OrmProvider.NewGroupCommand<TEntity, <#=tables#>, TGrouping>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewGroupCommand<TEntity, <#=tables#>, TGrouping>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -604,12 +604,12 @@ public class FromCommand<TEntity, <#=tables#>> : FromCommand, IFromCommand<TEnti
     public virtual IFromCommand<TEntity, TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TEntity, TTarget>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TEntity, TTarget> SelectTo<TTarget>(Expression<Func<<#=tables#>, TTarget>> specialMemberSelector = null)
     {
         this.Visitor.SelectTo(typeof(TTarget), specialMemberSelector);
-        return this.OrmProvider.NewFromCommand<TEntity, TTarget>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewFromCommand<TEntity, TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
 }

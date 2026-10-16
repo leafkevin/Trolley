@@ -6,14 +6,14 @@ namespace Trolley;
 public class MultiGroupingQueryBase<TGrouping> : QueryInternal, IMultiGroupingQueryBase<TGrouping>
 {
     #region Properties
-    public IMultipleQuery MultipleQuery { get; set; }
+    public IMultiDialectProvider MultiDialectProvider { get; set; }
     #endregion
 
     #region Constructor
-    public MultiGroupingQueryBase(IMultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiGroupingQueryBase(IMultiDialectProvider multiDialectProvider, IQueryVisitor visitor)
     {
-        this.DbContext = multiQuery.DbContext;
-        this.MultipleQuery = multiQuery;
+        this.DbContext = multiDialectProvider.DbContext;
+        this.MultiDialectProvider = multiDialectProvider;
         this.Visitor = visitor;
     }
     #endregion
@@ -22,15 +22,15 @@ public class MultiGroupingQueryBase<TGrouping> : QueryInternal, IMultiGroupingQu
     public virtual IMultiQuery<TGrouping> Select()
     {
         this.Visitor.SelectGrouping();
-        return this.OrmProvider.NewMultiQuery<TGrouping>(this.MultipleQuery, this.Visitor);
+        return this.ormProvider.NewMultiQuery<TGrouping>(this.MultiDialectProvider, this.Visitor);
     }
     #endregion
 }
 class MultiGroupingQuery<T, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
-        : base(multiQuery, visitor) { }
+    public MultiGroupingQuery(IMultiDialectProvider multiDialectProvider, IQueryVisitor visitor)
+        : base(multiDialectProvider, visitor) { }
     #endregion
 
     #region Having
@@ -71,15 +71,15 @@ class MultiGroupingQuery<T, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMul
     public virtual IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
+        return this.ormProvider.NewMultiQuery<TTarget>(this.MultiDialectProvider, this.Visitor);
     }
     #endregion
 }
 public class MultiGroupingQuery<T1, T2, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
-        : base(multiQuery, visitor) { }
+    public MultiGroupingQuery(IMultiDialectProvider multiDialectProvider, IQueryVisitor visitor)
+        : base(multiDialectProvider, visitor) { }
     #endregion
 
     #region Having
@@ -120,15 +120,15 @@ public class MultiGroupingQuery<T1, T2, TGrouping> : MultiGroupingQueryBase<TGro
     public virtual IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
+        return this.ormProvider.NewMultiQuery<TTarget>(this.MultiDialectProvider, this.Visitor);
     }
     #endregion
 }
 public class MultiGroupingQuery<T1, T2, T3, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
-        : base(multiQuery, visitor) { }
+    public MultiGroupingQuery(IMultiDialectProvider multiDialectProvider, IQueryVisitor visitor)
+        : base(multiDialectProvider, visitor) { }
     #endregion
 
     #region Having
@@ -169,15 +169,15 @@ public class MultiGroupingQuery<T1, T2, T3, TGrouping> : MultiGroupingQueryBase<
     public virtual IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
+        return this.ormProvider.NewMultiQuery<TTarget>(this.MultiDialectProvider, this.Visitor);
     }
     #endregion
 }
 public class MultiGroupingQuery<T1, T2, T3, T4, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
-        : base(multiQuery, visitor) { }
+    public MultiGroupingQuery(IMultiDialectProvider multiDialectProvider, IQueryVisitor visitor)
+        : base(multiDialectProvider, visitor) { }
     #endregion
 
     #region Having
@@ -218,15 +218,15 @@ public class MultiGroupingQuery<T1, T2, T3, T4, TGrouping> : MultiGroupingQueryB
     public virtual IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
+        return this.ormProvider.NewMultiQuery<TTarget>(this.MultiDialectProvider, this.Visitor);
     }
     #endregion
 }
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
-        : base(multiQuery, visitor) { }
+    public MultiGroupingQuery(IMultiDialectProvider multiDialectProvider, IQueryVisitor visitor)
+        : base(multiDialectProvider, visitor) { }
     #endregion
 
     #region Having
@@ -267,15 +267,15 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : MultiGroupingQu
     public virtual IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
+        return this.ormProvider.NewMultiQuery<TTarget>(this.MultiDialectProvider, this.Visitor);
     }
     #endregion
 }
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
-        : base(multiQuery, visitor) { }
+    public MultiGroupingQuery(IMultiDialectProvider multiDialectProvider, IQueryVisitor visitor)
+        : base(multiDialectProvider, visitor) { }
     #endregion
 
     #region Having
@@ -316,15 +316,15 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : MultiGroupi
     public virtual IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
+        return this.ormProvider.NewMultiQuery<TTarget>(this.MultiDialectProvider, this.Visitor);
     }
     #endregion
 }
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
-        : base(multiQuery, visitor) { }
+    public MultiGroupingQuery(IMultiDialectProvider multiDialectProvider, IQueryVisitor visitor)
+        : base(multiDialectProvider, visitor) { }
     #endregion
 
     #region Having
@@ -365,15 +365,15 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : MultiGr
     public virtual IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
+        return this.ormProvider.NewMultiQuery<TTarget>(this.MultiDialectProvider, this.Visitor);
     }
     #endregion
 }
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
-        : base(multiQuery, visitor) { }
+    public MultiGroupingQuery(IMultiDialectProvider multiDialectProvider, IQueryVisitor visitor)
+        : base(multiDialectProvider, visitor) { }
     #endregion
 
     #region Having
@@ -414,15 +414,15 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : Mul
     public virtual IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
+        return this.ormProvider.NewMultiQuery<TTarget>(this.MultiDialectProvider, this.Visitor);
     }
     #endregion
 }
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
-        : base(multiQuery, visitor) { }
+    public MultiGroupingQuery(IMultiDialectProvider multiDialectProvider, IQueryVisitor visitor)
+        : base(multiDialectProvider, visitor) { }
     #endregion
 
     #region Having
@@ -463,15 +463,15 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> :
     public virtual IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
+        return this.ormProvider.NewMultiQuery<TTarget>(this.MultiDialectProvider, this.Visitor);
     }
     #endregion
 }
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
-        : base(multiQuery, visitor) { }
+    public MultiGroupingQuery(IMultiDialectProvider multiDialectProvider, IQueryVisitor visitor)
+        : base(multiDialectProvider, visitor) { }
     #endregion
 
     #region Having
@@ -512,15 +512,15 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGroupi
     public virtual IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
+        return this.ormProvider.NewMultiQuery<TTarget>(this.MultiDialectProvider, this.Visitor);
     }
     #endregion
 }
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
-        : base(multiQuery, visitor) { }
+    public MultiGroupingQuery(IMultiDialectProvider multiDialectProvider, IQueryVisitor visitor)
+        : base(multiDialectProvider, visitor) { }
     #endregion
 
     #region Having
@@ -561,15 +561,15 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TG
     public virtual IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
+        return this.ormProvider.NewMultiQuery<TTarget>(this.MultiDialectProvider, this.Visitor);
     }
     #endregion
 }
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
-        : base(multiQuery, visitor) { }
+    public MultiGroupingQuery(IMultiDialectProvider multiDialectProvider, IQueryVisitor visitor)
+        : base(multiDialectProvider, visitor) { }
     #endregion
 
     #region Having
@@ -610,15 +610,15 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     public virtual IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
+        return this.ormProvider.NewMultiQuery<TTarget>(this.MultiDialectProvider, this.Visitor);
     }
     #endregion
 }
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
-        : base(multiQuery, visitor) { }
+    public MultiGroupingQuery(IMultiDialectProvider multiDialectProvider, IQueryVisitor visitor)
+        : base(multiDialectProvider, visitor) { }
     #endregion
 
     #region Having
@@ -659,15 +659,15 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     public virtual IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
+        return this.ormProvider.NewMultiQuery<TTarget>(this.MultiDialectProvider, this.Visitor);
     }
     #endregion
 }
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
-        : base(multiQuery, visitor) { }
+    public MultiGroupingQuery(IMultiDialectProvider multiDialectProvider, IQueryVisitor visitor)
+        : base(multiDialectProvider, visitor) { }
     #endregion
 
     #region Having
@@ -708,15 +708,15 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     public virtual IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
+        return this.ormProvider.NewMultiQuery<TTarget>(this.MultiDialectProvider, this.Visitor);
     }
     #endregion
 }
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
-        : base(multiQuery, visitor) { }
+    public MultiGroupingQuery(IMultiDialectProvider multiDialectProvider, IQueryVisitor visitor)
+        : base(multiDialectProvider, visitor) { }
     #endregion
 
     #region Having
@@ -757,14 +757,14 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     public virtual IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
+        return this.ormProvider.NewMultiQuery<TTarget>(this.MultiDialectProvider, this.Visitor);
     }
     #endregion
 }
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
-        : base(multiQuery, visitor) { }
+    public MultiGroupingQuery(IMultiDialectProvider multiDialectProvider, IQueryVisitor visitor)
+        : base(multiDialectProvider, visitor) { }
     #endregion
 }

@@ -1514,24 +1514,24 @@ public class SqlVisitor : ISqlVisitor
                     entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
                     var parameterInfos = methodInfo.GetParameters();
                     var tableNames = callExpr.Arguments[0].Evaluate<string[]>();
-                    queryVisitor.UseTable(this.Visitor.Tables.Last(), tableNames);
+                    queryVisitor.UseTable(queryVisitor.Tables.Last(), tableNames);
                     break;
                 case "UseTableMap":
                     var tableNameMapGetter = callExpr.Arguments[0].Evaluate<Func<string, string, string, string>>();
-                    queryVisitor.UseTableMap(TableUsageMode.ReadOnly, false, tableNameMapGetter);
+                    queryVisitor.UseTableMap(queryVisitor.Tables.Last(), tableNameMapGetter);
                     break;
                 case "UseTableBy":
                     fieldValues = callExpr.Arguments[0].Evaluate<object[]>();
                     entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
-                    queryVisitor.UseTableBy(TableUsageMode.ReadOnly, false, fieldValues);
+                    queryVisitor.UseTableBy(TableUsageMode.ReadOnly, queryVisitor.Tables.Last(), fieldValues);
                     break;
                 case "UseTableByRange":
                     fieldValues = callExpr.Arguments[0].Evaluate<object[]>();
                     entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
-                    queryVisitor.UseTableByRange(TableUsageMode.ReadOnly, false, fieldValues);
+                    queryVisitor.UseTableByRange(TableUsageMode.ReadOnly, queryVisitor.Tables.Last(), fieldValues);
                     break;
                 case "UseTableSchema":
-                    queryVisitor.UseTableSchema(false, callExpr.Arguments[0].Evaluate<string>());
+                    queryVisitor.UseTableSchema(queryVisitor.Tables.Last(), callExpr.Arguments[0].Evaluate<string>());
                     break;
                 case "From":
                     if (callExpr.Arguments.Count > 0)

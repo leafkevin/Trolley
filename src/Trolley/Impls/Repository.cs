@@ -33,6 +33,19 @@ public class Repository : DialectProvider, IRepository
     }
     #endregion
 
+    #region WithRawSql
+    public new IRepository WithLeadingSql(string rawSql)
+    {
+        base.WithLeadingSql(rawSql);
+        return this;
+    }
+    public new IRepository WithTrailingSql(string rawSql)
+    {
+        base.WithTrailingSql(rawSql);
+        return this;
+    }
+    #endregion
+
     #region ShardingTable
     public virtual void CreateShardingTable<TEntity>(string tableName, string fromTableSchema = null) { }
     public virtual Task CreateShardingTableAsync<TEntity>(string tableName, string fromTableSchema = null, CancellationToken cancellationToken = default)
@@ -395,34 +408,32 @@ public class Repository : DialectProvider, IRepository
     #endregion
 
     #region QueryMultiple
-    public virtual IMultiQueryReader QueryMultiple(Action<IMultipleQuery> subQueries)
+    public virtual IMultiQueryReader QueryMultiple(Action<IMultiDialectProvider> subQueries)
     {
         if (subQueries == null)
             throw new ArgumentNullException(nameof(subQueries));
 
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        using var multiQuery = this.ormProvider.NewMultipleQuery(this.DbContext, command);
-        subQueries.Invoke(multiQuery);
-        command.CommandText = multiQuery.BuildSql(out var readerAfters);
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
+        using var multiDialectProvider = this.ormProvider.NewMultipleQuery(this.DbContext, command);
+        subQueries.Invoke(multiDialectProvider);
+        command.CommandText = multiDialectProvider.BuildSql(out var readerAfters);
+        this.Initialize(command);
 
         connection.Open();
         var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
         //多语句查询，在最后reader读取后，自动关闭
         return new MultiQueryReader(this.DbContext, connection, command, reader, readerAfters, isNeedClose);
     }
-    public virtual async Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default)
+    public virtual async Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultiDialectProvider> subQueries, CancellationToken cancellationToken = default)
     {
         if (subQueries == null)
             throw new ArgumentNullException(nameof(subQueries));
 
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        using var multiQuery = this.ormProvider.NewMultipleQuery(this.DbContext, command);
-        subQueries.Invoke(multiQuery);
-        command.CommandText = multiQuery.BuildSql(out var readerAfters);
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
+        using var multiDialectProvider = this.ormProvider.NewMultipleQuery(this.DbContext, command);
+        subQueries.Invoke(multiDialectProvider);
+        command.CommandText = multiDialectProvider.BuildSql(out var readerAfters);
+        this.Initialize(command);
 
         await connection.OpenAsync(cancellationToken);
         var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);

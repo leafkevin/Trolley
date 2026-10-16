@@ -107,6 +107,21 @@ public interface IQueryBase : IQuery
 /// <typeparam name="T">实体类型</typeparam>
 public interface IQuery<T> : IQueryBase
 {
+    #region WithRawSql
+    /// <summary>
+    /// 在最前面添加原始SQL片段，rawSql可以是任意SQL片段，如：polardb-x数据库，.WithLeadingSql("/*+TDDL:CMD_EXTRA(TTL_FORBID_DROP_TTL_TBL_WITH_ARC_CCI=false)*/")
+    /// </summary>
+    /// <param name="rawSql">原始SQL片</param>
+    /// <returns>返回Repository对象</returns>
+    IQuery<T> WithLeadingSql(string rawSql);
+    /// <summary>
+    /// 在最后面添加原始SQL片段，rawSql可以是任意SQL片段
+    /// </summary>
+    /// <param name="rawSql">原始SQL片段</param>
+    /// <returns>返回Repository对象</returns>
+    IQuery<T> WithTrailingSql(string rawSql);
+    #endregion
+
     #region Sharding
     /// <summary>
     /// 手动指定分表名，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")
@@ -754,21 +769,6 @@ public interface IQuery<T> : IQueryBase
     /// </summary>
     /// <returns>返回查询对象</returns>
     IQuery<T> Distinct();
-    #endregion
-
-    #region WithRawSql
-    /// <summary>
-    /// 在最前面添加原始SQL片段，rawSql可以是任意SQL片段，如：polardb-x数据库，.WithLeadingSql("/*+TDDL:CMD_EXTRA(TTL_FORBID_DROP_TTL_TBL_WITH_ARC_CCI=false)*/")
-    /// </summary>
-    /// <param name="rawSql">原始SQL片</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T> WithLeadingSql(string rawSql);
-    /// <summary>
-    /// 在最后面添加原始SQL片段，rawSql可以是任意SQL片段
-    /// </summary>
-    /// <param name="rawSql">原始SQL片段</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T> WithTrailingSql(string rawSql);
     #endregion
 
     #region Count

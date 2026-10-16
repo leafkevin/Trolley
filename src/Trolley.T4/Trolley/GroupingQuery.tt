@@ -24,7 +24,7 @@ public class GroupingQueryBase<TGrouping> :QueryInternal, IGroupingQueryBase<TGr
     public virtual IQuery<TGrouping> Select()
     {
         this.Visitor.SelectGrouping();
-        return this.OrmProvider.NewQuery<TGrouping>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<TGrouping>(this.DbContext, this.Visitor);
     }
     #endregion
 }
@@ -73,7 +73,7 @@ public class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupi
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
 }
@@ -133,7 +133,7 @@ public class GroupingQuery<<#=tables#>, TGrouping> : GroupingQueryBase<TGrouping
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
-        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+        return this.ormProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
 <#      }#>
