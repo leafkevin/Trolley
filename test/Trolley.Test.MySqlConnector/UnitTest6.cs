@@ -1394,7 +1394,7 @@ public class UnitTest6 : UnitTestBase
         var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
-            .Where(f => repository.From<User>('b')
+            .Where(f => repository.From<User>()
                 .UseTableBy("104")
                 .Where(t => t.Id == f.BuyerId && t.Age < 25)
                 .Exists())
@@ -1403,7 +1403,7 @@ public class UnitTest6 : UnitTestBase
 
         var result = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
-            .Where(f => repository.From<User>('b')
+            .Where(f => repository.From<User>()
                 .UseTableBy("104")
                 .Where(t => t.Id == f.BuyerId && t.Age < 25)
                 .Exists())
@@ -1421,7 +1421,7 @@ public class UnitTest6 : UnitTestBase
         var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
-            .Where(f => repository.From<User>('b')
+            .Where(f => repository.From<User>()
                 .UseTableBy("104")
                 .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
@@ -1432,7 +1432,7 @@ public class UnitTest6 : UnitTestBase
 
         sql = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
-            .Where(f => repository.From<User>('b')
+            .Where(f => repository.From<User>()
                 .UseTableBy("104")
                 .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
@@ -1443,7 +1443,7 @@ public class UnitTest6 : UnitTestBase
 
         var result = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
-            .Where(f => repository.From<User>('b')
+            .Where(f => repository.From<User>()
                 .UseTableBy("104")
                 .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
@@ -2124,8 +2124,8 @@ public class UnitTest6 : UnitTestBase
         var tenantId = "104";
         var now = DateTime.Now;
         var repository = this.dbFactory.Create();
-        var tableName1 = repository.GetShardingTableName<OrderDetail>(tenantId, now);
-        var tableName2 = repository.GetShardingTableName<OrderDetail>(tenantId, now.AddMonths(1));
+        var tableName1 = repository.GetShardingTableName<OrderDetail>(TableUsageMode.Default, tenantId, now);
+        var tableName2 = repository.GetShardingTableName<OrderDetail>(TableUsageMode.Default, tenantId, now.AddMonths(1));
         var sql = $"DROP TABLE {tableName1};DROP TABLE {tableName2}";
         await repository.ExecuteAsync(sql);
         repository.CreateShardingTable<OrderDetail>(tableName1);
@@ -2141,8 +2141,8 @@ public class UnitTest6 : UnitTestBase
         var tenantId = "104";
         var now = DateTime.Now;
         var repository = this.dbFactory.Create();
-        var tableName1 = repository.GetShardingTableName<OrderDetail>(tenantId, now);
-        var tableName2 = repository.GetShardingTableName<OrderDetail>(tenantId, now.AddMonths(1));
+        var tableName1 = repository.GetShardingTableName<OrderDetail>(TableUsageMode.WriteOnly, tenantId, now);
+        var tableName2 = repository.GetShardingTableName<OrderDetail>(TableUsageMode.WriteOnly, tenantId, now.AddMonths(1));
         var sql = $"DROP TABLE {tableName1};DROP TABLE {tableName1};DROP TABLE {tableName2}";
         await repository.ExecuteAsync(sql);
         repository.CreateShardingTable<OrderDetail>(tableName1);
@@ -2158,7 +2158,6 @@ public class UnitTest6 : UnitTestBase
         var repository = this.dbFactory.Create();
         var result = await repository.FromQuery(t => t.From<User>()
             .UseTableBy("sys_user_104", "sys_user_105")
-            .UseUnionShardingTable()
             .Select(f => f.Id).Distinct())
             .CountAsync();
         var sql = $"SELECT DISTINCT Id FROM sys_user_104 UNION SELECT DISTINCT Id FROM sys_user_105";

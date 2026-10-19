@@ -650,7 +650,7 @@ public class UnitTest3 : UnitTestBase
         sql = repository.Update<Order>()
             .SetFrom((a, b) => new
             {
-                TotalAmount = a.From<OrderDetail>('b')
+                TotalAmount = a.From<OrderDetail>()
                     .Where(f => f.OrderId == b.Id)
                     .SelectAggregate((x, t) => x.Sum(t.Amount)),
                 OrderNo = b.OrderNo + "_111",
@@ -663,7 +663,7 @@ public class UnitTest3 : UnitTestBase
         count = repository.Update<Order>()
             .SetFrom((a, b) => new
             {
-                TotalAmount = a.From<OrderDetail>('b')
+                TotalAmount = a.From<OrderDetail>()
                     .Where(f => f.OrderId == b.Id)
                     .SelectAggregate((x, t) => x.Sum(t.Amount)),
                 OrderNo = b.OrderNo + "_111",
@@ -681,7 +681,7 @@ public class UnitTest3 : UnitTestBase
         var sql = repository.Update<Order>()
             .SetFrom((a, b) => new
             {
-                TotalAmount = a.From<OrderDetail>('b')
+                TotalAmount = a.From<OrderDetail>()
                     .Where(f => f.OrderId == b.Id)
                     .SelectAggregate((x, t) => x.Sum(t.Amount)),
                 OrderNo = b.OrderNo + "_111",
@@ -694,7 +694,7 @@ public class UnitTest3 : UnitTestBase
         var count = await repository.Update<Order>()
             .SetFrom((a, b) => new
             {
-                TotalAmount = a.From<OrderDetail>('b')
+                TotalAmount = a.From<OrderDetail>()
                     .Where(f => f.OrderId == b.Id)
                     .SelectAggregate((x, t) => x.Sum(t.Amount)),
                 OrderNo = b.OrderNo + "_111",
@@ -752,7 +752,7 @@ public class UnitTest3 : UnitTestBase
         sql = repository.Update<Order>()
             .SetFrom((a, b) => new
             {
-                totalAmount = a.From<OrderDetail>('b')
+                totalAmount = a.From<OrderDetail>()
                     .Where(f => f.OrderId == b.Id)
                     .SelectAggregate((x, t) => x.Sum(t.Amount)),
                 orderNo = b.OrderNo + "_111",
@@ -765,7 +765,7 @@ public class UnitTest3 : UnitTestBase
         result = repository.Update<Order>()
             .SetFrom((a, b) => new
             {
-                totalAmount = a.From<OrderDetail>('b')
+                totalAmount = a.From<OrderDetail>()
                     .Where(f => f.OrderId == b.Id)
                     .SelectAggregate((x, t) => x.Sum(t.Amount)),
                 orderNo = b.OrderNo + "_111",
@@ -786,7 +786,7 @@ public class UnitTest3 : UnitTestBase
             .SumAsync(f => f.Amount);
         var sql = repository.Update<Order>()
             .SetFrom(f => f.TotalAmount, (x, y) => x
-                .From<OrderDetail>('b')
+                .From<OrderDetail>()
                 .Where(t => t.OrderId == y.Id)
                 .SelectAggregate((x, f) => (double)x.Sum(f.Amount)))
             .Set(x => x.OrderNo, "ON_111")
@@ -799,7 +799,7 @@ public class UnitTest3 : UnitTestBase
 
         var count = await repository.Update<Order>()
             .SetFrom(f => f.TotalAmount, (x, y) => x
-                .From<OrderDetail>('b')
+                .From<OrderDetail>()
                 .Where(t => t.OrderId == y.Id)
                 .SelectAggregate((x, f) => (double)x.Sum(f.Amount)))
             .Set(x => x.OrderNo, "ON_111")
@@ -814,7 +814,7 @@ public class UnitTest3 : UnitTestBase
         sql = repository.Update<Order>()
             .SetFrom((a, b) => new
             {
-                TotalAmount = a.From<OrderDetail>('b')
+                TotalAmount = a.From<OrderDetail>()
                     .Where(f => f.OrderId == b.Id)
                     .SelectAggregate((x, t) => x.Sum(t.Amount))
             })
@@ -827,7 +827,7 @@ public class UnitTest3 : UnitTestBase
         count = await repository.Update<Order>()
             .SetFrom((a, b) => new
             {
-                TotalAmount = a.From<OrderDetail>('b')
+                TotalAmount = a.From<OrderDetail>()
                     .Where(f => f.OrderId == b.Id)
                     .SelectAggregate((x, t) => x.Sum(t.Amount))
             })
@@ -845,7 +845,7 @@ public class UnitTest3 : UnitTestBase
         var sql = repository.Update<Company>()
             .SetFrom((a, b) => new
             {
-                Nature = a.From<Company>('b')
+                Nature = a.From<Company>()
                     .Where(f => f.Id == 1)
                     .Select(t => t.Nature)
             })
@@ -860,13 +860,13 @@ public class UnitTest3 : UnitTestBase
         var result = repository.Update<Company>()
             .SetFrom((a, b) => new
             {
-                Nature = a.From<Company>('b')
+                Nature = a.From<Company>()
                     .Where(f => f.Id == 1)
                     .Select(t => t.Nature)
             })
             .Where(f => f.Nature != CompanyNature.Internet)
             .Execute();
-        var microCompany = repository.From<Company>('b')
+        var microCompany = repository.From<Company>()
             .Where(f => f.Id == 1)
             .First();
         var companies = repository.Query<Company>(f => f.Id > 1);
@@ -885,7 +885,7 @@ public class UnitTest3 : UnitTestBase
         var sql = repository.Update<Order>()
             .SetFrom((x, y) => new
             {
-                TotalAmount = x.From<OrderDetail>('b')
+                TotalAmount = x.From<OrderDetail>()
                     .Where(f => f.OrderId == y.Id)
                     .SelectAggregate((x, t) => x.Sum(t.Amount))
             })
@@ -1017,7 +1017,7 @@ public class UnitTest3 : UnitTestBase
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
             .SetFrom((x, y) => new
             {
-                TotalAmount = x.From<OrderDetail>('c')
+                TotalAmount = x.From<OrderDetail>()
                     .Where(f => f.OrderId == y.Id)
                     .SelectAggregate((x, t) => x.Sum(t.Amount))
             })
@@ -1037,7 +1037,7 @@ public class UnitTest3 : UnitTestBase
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
             .SetFrom((x, y) => new
             {
-                TotalAmount = x.From<OrderDetail>('c')
+                TotalAmount = x.From<OrderDetail>()
                     .Where(f => f.OrderId == y.Id)
                     .SelectAggregate((x, t) => x.Sum(t.Amount))
             })
@@ -1055,7 +1055,7 @@ public class UnitTest3 : UnitTestBase
 
         var sql1 = repository.Update<Order>()
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .SetFrom(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
+            .SetFrom(f => f.TotalAmount, (x, y) => x.From<OrderDetail>()
                 .Where(f => f.OrderId == y.Id)
                 .SelectAggregate((x, t) => (double)x.Sum(t.Amount)))
             .Set((a, b) => new { OrderNo = a.OrderNo + " - " + b.Id.ToString() })
@@ -1072,7 +1072,7 @@ public class UnitTest3 : UnitTestBase
         await repository.BeginTransactionAsync();
         result = repository.Update<Order>()
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .SetFrom(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
+            .SetFrom(f => f.TotalAmount, (x, y) => x.From<OrderDetail>()
                 .Where(f => f.OrderId == y.Id)
                 .SelectAggregate((x, t) => (double)x.Sum(t.Amount)))
             .Set((a, b) => new { OrderNo = a.OrderNo + " - " + b.Id.ToString() })

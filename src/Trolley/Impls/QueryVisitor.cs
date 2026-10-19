@@ -1756,17 +1756,19 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //当访问x.Grouping.UserId或是x.Order.Buyer时，会有2个以上的成员访问
                 var memberExprs = this.GetMemberExprs(memberExpr, out _);
                 var builder = new StringBuilder(fromSegment.AliasName);
+                List<ReaderField> readerFields = null;
                 while (memberExprs.TryPop(out var lastMemberExpr))
                 {
-                    //子查询表通常只有下转1层，只有导航属性才有N层下转
-                    if (lastReaderField != null && lastReaderField.Fields != null && lastReaderField.Fields.Count > 0)
-                    {
-                        //lastReaderField = lastReaderField.Fields.Find(f => f.TargetMember.Name == lastMemberExpr.Member.Name);
-                        if (this.TryFindReaderField(lastReaderField.Fields, lastMemberExpr.Member, out var readerField))
-                            lastReaderField = readerField;
-                    }
-                    //只有正常实体表和Include表才有Mapper，子查询表没有Mapper
-                    else if (fromSegment.Mapper != null)
+                    ////子查询表通常只有下转1层，只有导航属性才有N层下转
+                    //if (lastReaderField != null && lastReaderField.Fields != null && lastReaderField.Fields.Count > 0)
+                    //{
+                    //    //lastReaderField = lastReaderField.Fields.Find(f => f.TargetMember.Name == lastMemberExpr.Member.Name);
+                    //    if (this.TryFindReaderField(lastReaderField.Fields, lastMemberExpr.Member, out var readerField))
+                    //        lastReaderField = readerField;
+                    //}
+                    ////只有正常实体表和Include表才有Mapper，子查询表没有Mapper
+                    //else 
+                    if (fromSegment.Mapper != null)
                     {
                         if (!fromSegment.Mapper.TryGetMemberMap(lastMemberExpr.Member.Name, out memberMapper))
                             throw new NotSupportedException($"类{fromSegment.EntityType.FullName}没有成员{lastMemberExpr.Member.Name}，无法访问");
@@ -1777,14 +1779,32 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             builder.Append("." + lastMemberExpr.Member.Name);
                             path = builder.ToString();
 
+                            ReaderField readerField = null;
+                            if (this.IsSelect)
+                            {
+                                readerFields ??= new List<ReaderField>();
+                                var fieldType = memberMapper.IsToOne ? ReaderFieldType.IncludeRef : ReaderFieldType.DeferredIncludeRef;
+                                readerField = new ReaderField
+                                {
+                                    FieldType = fieldType,
+                                    TableSegment = fromSegment,
+                                    Path = path,
+                                    Parent = lastReaderField,
+                                    Expression = memberExpr
+                                };
+                                readerFields.Add(readerField);
+                                fromSegment.IsUsed = true;
+                            }
                             if (memberExprs.Count == 0)
                                 break;
+
                             //最后一级成员访问，如果是导航属性，且没有下转成员访问，如：f.Order.Seller.Company.Products，直接访问Products集合对象
                             var myTables = memberMapper.IsToOne ? this.Tables : this.IncludeTables;
                             var nextTableSegment = myTables.Find(f => f.TableType == TableType.Include && f.Path == path);
                             if (nextTableSegment == null)
                                 throw new NotSupportedException($"无法访问成员{lastMemberExpr.Member.Name}，请确认是否已经使用Include访问了导航属性{lastMemberExpr.Member.Name}的主表实体");
                             fromSegment = nextTableSegment;
+                            lastReaderField = readerField;
                         }
                     }
                     //子查询和CTE子查询场景，fromSegment.TableType: TableType.FromQuery || TableType.CteSelfRef
@@ -1822,17 +1842,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 {
                     //真实表字段访问
                     if (memberMapper.IsNavigation)
-                    {
-                        var tableSegment = this.UseIncludeTables(path);
-                        var fieldType = memberMapper.IsToOne ? ReaderFieldType.IncludeRef : ReaderFieldType.DeferredIncludeRef;
-                        sqlSegment.Change(new ReaderField
-                        {
-                            FieldType = fieldType,
-                            TableSegment = tableSegment,
-                            Path = path,
-                            Expression = memberExpr
-                        }, SqlType.ReaderField);
-                    }
+                        sqlSegment.Change(readerFields, SqlType.ReaderFields);
                     else
                     {
                         //简单字段访问
@@ -2048,6 +2058,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             readerField.TargetMember = memberInfo;
                         }
                         return readerField;
+                    case SqlType.ReaderFields:
+                        return sqlSegment.Value as List<ReaderField>;
                     default:
                         //常量、变量、表达式、方法调用、静态成员访问、原始SQL、延迟属性、延迟方法调用等场景
                         //原始SQL，当个字段当作方法调用处理
@@ -2115,18 +2127,34 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual void AddSelectFieldsSql(StringBuilder builder, ReusableList<ReaderField> readerFields)
     {
+        //Stack<(int, ReaderField)> includeFields = null;
+        //if (readerFields.Exists(f => f.FieldType == ReaderFieldType.IncludeRef))
+        //    includeFields = new();
         if (readerFields.Count > 1)
         {
             int index = 0;
             foreach (var readerField in readerFields)
             {
-                if (readerField.FieldType == ReaderFieldType.IncludeRef
-                    || readerField.IsDeferredFields && readerField.Fields == null
-                    || readerField.FieldType == ReaderFieldType.DeferredIncludeRef)
+                if (readerField.IsDeferredFields && readerField.Fields == null)
                 {
+                    index++;
                     continue;
                 }
-
+                if (readerField.FieldType == ReaderFieldType.IncludeRef
+                    || readerField.FieldType == ReaderFieldType.DeferredIncludeRef)
+                {
+                    //检查include字段，必须Select主表外键值
+                    var foreignMember = readerField.TableSegment.FromMember;
+                    var rootPath = readerField.Path.Substring(0, 1);
+                    var foreignField = $"{rootPath}.{this.OrmProvider.GetFieldName(foreignMember.FieldName)}";
+                    if (!readerFields.Exists(f => f.Path == rootPath && f.FieldType == ReaderFieldType.Entity
+                        || f.Value.ToString() == foreignField))
+                    {
+                        var masterTable = this.Tables.Find(f => f.Path == rootPath);
+                        throw new NotSupportedException($"Select Include导航属性{readerField.Expression}字段，必须Select主表外键{masterTable.Mapper.TableName}.{foreignMember.FieldName}");
+                    }
+                    continue;
+                }
                 if (index > 0) builder.Append(',');
                 switch (readerField.FieldType)
                 {
@@ -2191,6 +2219,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 }
                 index++;
             }
+            //if (includeFields != null && includeFields.Count > 0)
+            //{
+            //    while (includeFields.TryPop(out var includeField))
+            //        readerFields.Insert(includeField.Item1, includeField.Item2);
+            //}
         }
         else
         {
