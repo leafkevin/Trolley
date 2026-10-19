@@ -241,19 +241,6 @@ public class Query<T> : QueryBase, IQuery<T>
         : base(dbContext, visitor) { }
     #endregion
 
-    #region WithRawSql
-    public new IQuery<T> WithLeadingSql(string rawSql)
-    {
-        base.WithLeadingSql(rawSql);
-        return this;
-    }
-    public new IQuery<T> WithTrailingSql(string rawSql)
-    {
-        base.WithTrailingSql(rawSql);
-        return this;
-    }
-    #endregion    
-
     #region Sharding
     public virtual IQuery<T> UseTable(params string[] tableNames)
     {
@@ -629,6 +616,19 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     #endregion
 
+    #region WithRawSql
+    public new IQuery<T> WithLeadingSql(string rawSql)
+    {
+        base.WithLeadingSql(rawSql);
+        return this;
+    }
+    public new IQuery<T> WithTrailingSql(string rawSql)
+    {
+        base.WithTrailingSql(rawSql);
+        return this;
+    }
+    #endregion
+
     #region Count
     public virtual int Count<TField>(Expression<Func<T, TField>> fieldExpr)
         => base.CountInternal(fieldExpr);
@@ -699,6 +699,13 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region ToCreate
+    public virtual IFromCreate<T> ToCreate()
+    {
+        Expression<Func<T, T>> defaultExpr = f => f;
+        this.Visitor.SelectDefault(defaultExpr);
+        var createVisitor = this.NewCreateVisitor(typeof(T));
+        return this.ormProvider.NewFromCreate<T>(this.DbContext, createVisitor);
+    }
     public virtual IFromCreate<TEntity> ToCreate<TEntity>()
     {
         Expression<Func<T, T>> defaultExpr = f => f;

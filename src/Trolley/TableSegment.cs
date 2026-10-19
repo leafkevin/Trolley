@@ -101,10 +101,6 @@ public class TableSegment
     /// </summary>
     public ReusableList<ReaderField> Fields { get; set; }
     /// <summary>
-    /// Include 1:N关系表时，从最外层Select参数访问到Include成员的父亲路径所有成员访问列表，方便最后赋值
-    /// </summary>
-    public List<MemberInfo> ParentMemberVisits { get; set; }
-    /// <summary>
     /// 是否已经指定分表，指定了分表此值为true
     /// </summary>
     public bool IsSharding { get; set; }

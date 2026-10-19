@@ -1043,11 +1043,6 @@ public class SqlVisitor : ISqlVisitor
                     foreach (var tableType in genericArguments)
                     {
                         var aliasName = lambdaExpr.Parameters[index].Name;
-                        if (this.TableAliases.ContainsKey(aliasName))
-                        {
-                            tableIndex++;
-                            continue;
-                        }
                         var tableMapper = this.EntityMapProvider.GetEntityMap(tableType);
                         var tableSegment = new TableSegment
                         {
@@ -1067,11 +1062,7 @@ public class SqlVisitor : ISqlVisitor
                     builder.Append(" WHERE ");
                     builder.Append(this.VisitConditionExpr(lambdaExpr.Body, out _));
                     //恢复现场
-                    removeTables.ForEach(f =>
-                    {
-                        this.Tables.Remove(f);
-                        this.TableAliases.Remove(f.AliasName);
-                    });
+                    removeTables.ForEach(f => this.Tables.Remove(f));
                     existsSql = builder.ToString();
                 }
                 else
@@ -2386,16 +2377,33 @@ public class SqlVisitor : ISqlVisitor
         var readerField = visitor.Build(sqlSegment.Expression);
         return sqlSegment.Change(readerField, SqlType.ReaderField);
     }
-    public virtual void UseIncludeTables(string path)
+    public virtual TableSegment UseIncludeTables(string path)
     {
-        var includeTables = this.Tables.FindAll(f => f.TableType == TableType.Include && f.Path.Contains(path));
-        if (includeTables != null && includeTables.Count > 0)
-            includeTables.ForEach(f => f.IsUsed = true);
-        if (this.IncludeTables == null || this.IncludeTables.Count == 0)
-            return;
-        includeTables = this.IncludeTables.FindAll(f => f.Path.Contains(path));
-        if (includeTables != null && includeTables.Count > 0)
-            includeTables.ForEach(f => f.IsUsed = true);
+        var tableSegment = this.Tables.Find(f => f.TableType == TableType.Include && f.Path == path);
+        if (tableSegment != null)
+        {
+            tableSegment.IsUsed = true;
+            var fromSegment = tableSegment.FromTable;
+            while (fromSegment != null)
+            {
+                fromSegment.IsUsed = true;
+                fromSegment = fromSegment.FromTable;
+            }
+            return tableSegment;
+        }
+        tableSegment = this.IncludeTables.Find(f => f.Path == path);
+        if (tableSegment != null)
+        {
+            tableSegment.IsUsed = true;
+            var fromSegment = tableSegment.FromTable;
+            while (fromSegment != null)
+            {
+                fromSegment.IsUsed = true;
+                fromSegment = fromSegment.FromTable;
+            }
+            return tableSegment;
+        }
+        return null;
     }
     public void InitUseQueryReaderFields(TableSegment tableSegment, ReusableList<ReaderField> readerFields)
     {
