@@ -797,33 +797,45 @@ public class SqlVisitor : ISqlVisitor
         };
         //include表的ReaderField字段，紧跟在主表ReaderField后面
         ReusableList<ReaderField> readerFields = [readerField];
-        this.UseIncludeTables(fromSegment.Path);
         this.AddIncludeTableReaderFields(readerField, readerFields);
+        if (this.IncludeTables != null && this.IncludeTables.Count > 0)
+        {
+            var tableSegments = this.IncludeTables.FindAll(f => f.Path.Contains(fromSegment.Path));
+            if (tableSegments.Count > 0) tableSegments.ForEach(f => f.IsUsed = true);
+        }
         return sqlSegment.Change(readerFields, SqlType.ReaderFields);
     }
     protected void AddIncludeTableReaderFields(ReaderField parent, ReusableList<ReaderField> readerFields)
     {
-        var includedSegments = this.Tables.FindAll(f => f.TableType == TableType.Include && f.FromTable == parent.TableSegment);
-        if (includedSegments.Count > 0)
+        var tableSegments = this.Tables.FindAll(f => f.TableType == TableType.Include
+            && f.Path.Contains(parent.TableSegment.Path));
+        if (tableSegments.Count > 0)
         {
-            parent.HasNextInclude = true;
-            foreach (var includedSegment in includedSegments)
+            foreach (var tableSegment in tableSegments)
             {
-                var childReaderFields = this.FlattenTableFields(includedSegment);
+                var childReaderFields = this.FlattenTableFields(tableSegment);
+                ReaderField myParent = null;
+                if (readerFields.Count > 1)
+                {
+                    var index = tableSegment.Path.LastIndexOf('.');
+                    var parentPath = tableSegment.Path.Substring(0, index);
+                    myParent = readerFields.Find(f => f.Path == parentPath);
+                }
+                else myParent = parent;
+                myParent.HasNextInclude = true;
                 var readerField = new ReaderField
                 {
                     FieldType = ReaderFieldType.Entity,
-                    TableSegment = includedSegment,
-                    TargetMember = includedSegment.FromMember.Member,
-                    ReaderType = includedSegment.EntityType,
-                    Parent = parent,
-                    Fields = this.FlattenTableFields(includedSegment),
+                    TableSegment = tableSegment,
+                    TargetMember = tableSegment.FromMember.Member,
+                    ReaderType = tableSegment.EntityType,
+                    Parent = myParent,
+                    Fields = this.FlattenTableFields(tableSegment),
                     //更换path，方便后续Include成员赋值时，能够找到parent对象
-                    Path = includedSegment.Path
+                    Path = tableSegment.Path
                 };
+                tableSegment.IsUsed = true;
                 readerFields.Add(readerField);
-                if (this.Tables.Exists(f => f.TableType == TableType.Include && f.FromTable == includedSegment))
-                    this.AddIncludeTableReaderFields(readerField, readerFields);
             }
         }
         //TODO: 需要注释掉，无用
@@ -2376,34 +2388,6 @@ public class SqlVisitor : ISqlVisitor
         var visitor = new DeferredExpressionVisitor(this);
         var readerField = visitor.Build(sqlSegment.Expression);
         return sqlSegment.Change(readerField, SqlType.ReaderField);
-    }
-    public virtual TableSegment UseIncludeTables(string path)
-    {
-        var tableSegment = this.Tables.Find(f => f.TableType == TableType.Include && f.Path == path);
-        if (tableSegment != null)
-        {
-            tableSegment.IsUsed = true;
-            var fromSegment = tableSegment.FromTable;
-            while (fromSegment != null)
-            {
-                fromSegment.IsUsed = true;
-                fromSegment = fromSegment.FromTable;
-            }
-            return tableSegment;
-        }
-        tableSegment = this.IncludeTables.Find(f => f.Path == path);
-        if (tableSegment != null)
-        {
-            tableSegment.IsUsed = true;
-            var fromSegment = tableSegment.FromTable;
-            while (fromSegment != null)
-            {
-                fromSegment.IsUsed = true;
-                fromSegment = fromSegment.FromTable;
-            }
-            return tableSegment;
-        }
-        return null;
     }
     public void InitUseQueryReaderFields(TableSegment tableSegment, ReusableList<ReaderField> readerFields)
     {

@@ -1246,33 +1246,6 @@ public static class RepositoryHelper
             result.Add((TEntity)deserializer.Invoke(reader));
         return result;
     }
-    private static ReusableList<ReaderField> GenerateReaderFields(DbContext dbContext, Type entityType, Type targetType = null)
-    {
-        var targetFields = new ReusableList<ReaderField>();
-        var entityMapper = dbContext.EntityMapProvider.GetEntityMap(entityType);
-        List<MemberInfo> targetMembers = null;
-        if (targetType != null)
-            targetMembers = GetMembers(targetType).FindAll(f => f.CanWrite);
-        foreach (var memberMapper in entityMapper.MemberMaps)
-        {
-            if (memberMapper.IsIgnore || memberMapper.IsNavigation)
-                continue;
-            if (targetType != null && !targetMembers.Exists(f => f.Name != memberMapper.MemberName))
-                continue;
-
-            var fieldName = dbContext.OrmProvider.GetFieldName(memberMapper.FieldName);
-            targetFields.Add(new ReaderField
-            {
-                FieldType = ReaderFieldType.Field,
-                ReaderType = memberMapper.MemberType,
-                MemberName = memberMapper.FieldName,
-                MemberMapper = memberMapper,
-                TargetMember = memberMapper.Member,
-                Value = fieldName
-            });
-        }
-        return targetFields;
-    }
     public static Func<object, object[], object> GetMemberValueGetter(MemberInfo memberInfo)
     {
         var entityType = memberInfo.DeclaringType;
@@ -1485,6 +1458,19 @@ public static class RepositoryHelper
         {
             if (readerField.FieldType == ReaderFieldType.DeferredIncludeRef)
             {
+                if (!current.IsDefault)
+                {
+                    var memberType = readerField.TargetMember.GetMemberType();
+                    if (memberType.IsArray) throw new NotSupportedException("不支持匿名类型中数组类型属性");
+                    if (memberType.IsInterface && memberType.IsGenericType)
+                    {
+                        var genericType = memberType.GetGenericArguments()[0];
+                        memberType = typeof(List<>).MakeGenericType(genericType);
+                    }
+                    var constructor = memberType.GetConstructor(Type.EmptyTypes);
+                    if (constructor == null) throw new NotSupportedException($"{memberType.FullName}类型不存在默认的构造方法");
+                    current.Arguments.Add(Expression.New(constructor));
+                }
                 readerIndex++;
                 continue;
             }
