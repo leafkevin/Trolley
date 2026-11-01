@@ -48,7 +48,7 @@ public struct SqlSegment
     //where条件时候，需要用于添加参数
     public MemberMap MemberMapper { get; set; }
     public MemberInfo TargetMember { get; set; }
-    public ReusableList<ReaderField> Fields { get; set; }
+    //public ReusableList<ReaderField> Fields { get; set; }
     public bool IsRawSqlFields { get; set; }
     public bool IsConstant => this.SqlType == SqlType.Constant;
     public bool IsVariable => this.SqlType == SqlType.Variable;
@@ -169,6 +169,7 @@ public class ReaderField
     public string AliasName { get; set; }
     public bool IsIgnore { get; set; }
     public bool IsRefField { get; set; }
+    public bool IsTarget { get; set; }
 
     public void Save()
     {

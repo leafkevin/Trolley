@@ -91,7 +91,6 @@ partial class MySqlProvider
                                     visitor.ToEnumString(sqlSegment);
                                 //先不处理类型，都解析完毕后，最后处理类型，转换成字符串
                                 sqlSegments.Add(sqlSegment);
-
                             }
                             if (isDeferredFields)
                                 return visitor.VisitDeferredSqlSegment(new SqlSegment { Expression = methodCallExpr });

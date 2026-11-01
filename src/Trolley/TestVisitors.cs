@@ -11,7 +11,7 @@ public class DeferredExpressionVisitor : ExpressionVisitor
     private bool hasMemberAccess;
     private readonly List<ParameterExpression> fieldsParameters = new();
     private readonly List<ParameterExpression> valuesParameters = new();
-    private ReusableList<ReaderField> readerFields = null;
+    private ReusableList<ReaderField> readerFields = new();
     private List<object> localValues = new();
 
     public DeferredExpressionVisitor(SqlVisitor sqlVisitor)
@@ -21,6 +21,7 @@ public class DeferredExpressionVisitor : ExpressionVisitor
     public ReaderField Build(Expression expr)
     {
         var rawSql = "NULL";
+        var changedExpr = this.Visit(expr);
         if (this.readerFields != null && this.readerFields.Count > 0)
         {
             var builder = new StringBuilder();
@@ -36,7 +37,7 @@ public class DeferredExpressionVisitor : ExpressionVisitor
         {
             IsDeferredFields = true,
             FieldType = ReaderFieldType.Field,
-            Expression = this.Visit(expr),
+            Expression = changedExpr,
             Fields = this.readerFields,
             FieldParameters = this.fieldsParameters,
             ValuesParameters = this.valuesParameters,
@@ -59,7 +60,6 @@ public class DeferredExpressionVisitor : ExpressionVisitor
                 ReaderType = node.Type,
                 MemberMapper = sqlSegment.MemberMapper,
                 MemberName = sqlSegment.MemberName,
-                //TypeHandler = sqlSegment.TypeHandler,
                 Value = sqlSegment.Value
             });
             var parameterExpr = node.Expression as ParameterExpression;
@@ -85,12 +85,12 @@ public class DeferredExpressionVisitor : ExpressionVisitor
     protected override Expression VisitMethodCall(MethodCallExpression node)
     {
         this.hasMemberAccess = false;
-        var isSupportMethod = node.Method.DeclaringType == typeof(Sql) ||
+        var isAggMethod = node.Method.DeclaringType == typeof(Sql) ||
             typeof(IAggregateSelect).IsAssignableFrom(node.Method.DeclaringType);
 
         var result = base.VisitMethodCall(node);
         //支持IsNull、Max、Min、Sum、Avg等聚合函数的参数表达式中包含成员访问表达式的情况
-        if (isSupportMethod && this.hasMemberAccess)
+        if (isAggMethod && this.hasMemberAccess)
         {
             var sqlSegment = this.sqlVisitor.Visit(new SqlSegment { Expression = node });
             if (sqlSegment.SqlType == SqlType.ReaderField)

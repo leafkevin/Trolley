@@ -844,7 +844,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.CteQueryObj = selfQueryObj;
         this.IsRecursive = true;
         this.IsSecondUnion = true;
-        (_, var sql, _) = this.VisitFromQuery(subQueryExpr);
+        var lambdaExpr = this.EnsureLambda(subQueryExpr);
+        (_, var sql, _) = this.VisitFromQuery(lambdaExpr.Body);
         this.UnionSql = rawSql + union + Environment.NewLine + sql;
         this.Clear();
         //TODO: 是否需要清除，待测试
@@ -860,6 +861,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             throw new NotSupportedException("Join操作，只支持两个表进行关联，但可以多次Join操作");
 
         //JoinOn子句中使用的都是真实表、CTE表、子查询表
+        this.ClearUnionSql();
         this.TableAliases.Clear();
         TableSegment tableSegment = null;
         var masterTables = this.Tables.FindAll(f => f.IsMaster);
@@ -1283,6 +1285,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void And(Expression whereExpr)
     {
         var lambdaExpr = whereExpr as LambdaExpression;
+        this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
         //不能更改LastWhereOperationType，如果是引用已有子查询，LastWhereOperationType是有值的
         var whereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
@@ -1306,6 +1309,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void Or(Expression whereExpr)
     {
         var lambdaExpr = whereExpr as LambdaExpression;
+        this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
         var whereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
         this.VisitOrSql(whereSql, operationType);
@@ -1313,6 +1317,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void GroupBy(Expression expr)
     {
         var lambdaExpr = expr as LambdaExpression;
+        this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
         this.GroupByFields = new();
         //分组字段都设置为ReaderFieldType.Expression类型，以便于在多分表情况下后加的字段使用别名，
@@ -1382,6 +1387,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         var lambdaExpr = expr as LambdaExpression;
         this.OrderByFields ??= new();
+        this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
         var isReaderField = this.ReaderFields != null && this.ReaderFields.Count > 0;
 
@@ -1444,7 +1450,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         {
             FieldType = ReaderFieldType.RawSql,
             ReaderType = targetType,
-            Value = rawFields
+            Value = rawFields,
+            IsTarget = true
         };
         if (!string.IsNullOrEmpty(aggFunc))
         {
@@ -1501,6 +1508,19 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 }];
                 break;
         }
+        var isTarget = false;
+        switch (toTargetExpr.Body.NodeType)
+        {
+            case ExpressionType.Parameter:
+                isTarget = true;
+                break;
+            case ExpressionType.Call:
+                var callExpr = toTargetExpr.Body as MethodCallExpression;
+                if (callExpr.Method.DeclaringType == typeof(Sql) && callExpr.Method.Name == "Raw")
+                    isTarget = true;
+                break;
+        }
+        this.ReaderFields[0].IsTarget = isTarget;
         this.IsSelect = false;
     }
     public virtual void Select(string sqlFormat, Expression selectExpr)
@@ -1523,7 +1543,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             {
                 var sqlSegment = this.Visit(new SqlSegment { Expression = lambdaExpr.Body });
                 //特殊的已经确定的列
-                this.ReaderFields = sqlSegment.Fields;
+                this.ReaderFields = sqlSegment.Value as ReusableList<ReaderField>;
             }
             else this.ReaderFields = new();
             bool isExistsFields = false;
@@ -1538,7 +1558,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             {
                 if (isExistsFields && existsMembers.Contains(memberInfo.Name)) continue;
                 if (this.TryFindReaderField(memberInfo, out var readerField))
+                {
                     this.ReaderFields.Add(readerField);
+                    readerField.TargetMember = memberInfo;
+                }
             }
         }
         else
@@ -1548,7 +1571,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             foreach (var memberInfo in targetMembers)
             {
                 if (this.TryFindReaderField(memberInfo, out var readerField))
+                {
                     this.ReaderFields.Add(readerField);
+                    readerField.TargetMember = memberInfo;
+                }
             }
         }
         this.IsSelect = false;
@@ -1581,10 +1607,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 TargetMember = memberInfo,
                 ReaderType = memberInfo.GetMemberType(),
                 MemberMapper = memberMapper,
+                MemberName = memberMapper.MemberName,
                 Value = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(memberMapper.FieldName)
             };
+            return true;
         }
-        return true;
+        return false;
     }
     public virtual bool TryFindReaderField(ReusableList<ReaderField> readerFields, MemberInfo memberInfo, out ReaderField readerField)
     {
@@ -1614,18 +1642,21 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (pageNumber > 0) pageNumber--;
         this.offset = pageNumber * pageSize;
         this.limit = pageSize;
+        this.ClearUnionSql();
     }
     public virtual void Skip(int skip)
     {
         this.offset = skip;
         if (this.limit.HasValue && this.limit.Value > 0)
             this.pageNumber = (int)Math.Ceiling((double)offset / this.limit.Value) + 1;
+        this.ClearUnionSql();
     }
     public virtual void Take(int limit)
     {
         this.limit = limit;
         if (this.offset.HasValue && this.offset.Value > 0)
             this.pageNumber = (int)Math.Ceiling((double)offset / this.limit.Value) + 1;
+        this.ClearUnionSql();
     }
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
@@ -2077,30 +2108,32 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             };
             this.TableAliases.Add(parameterExprs[0].Name, tableSegment);
         }
-
-        //有加新表操作或是Join操作就要清空ReaderFields，以免后续的解析字段时找不到字段       
-        int index = 0, tableIndex = 0;
-        while (this.TableAliases.Count < parameterExprs.Count)
+        //有加新表操作或是Join操作就要清空ReaderFields，以免后续的解析字段时找不到字段
+        if (parameterExprs != null && parameterExprs.Count > 0)
         {
-            if (index >= lambdaExpr.Parameters.Count || tableIndex >= this.Tables.Count)
-                break;
-            var parameterExpr = lambdaExpr.Parameters[index];
-            if (typeof(IAggregateSelect).IsAssignableFrom(parameterExpr.Type))
+            int index = 0, tableIndex = 0;
+            while (this.TableAliases.Count < parameterExprs.Count)
             {
-                index++;
-                continue;
-            }
-            if (!parameterExprs.Contains(parameterExpr))
-            {
+                if (index >= lambdaExpr.Parameters.Count || tableIndex >= this.Tables.Count)
+                    break;
+                var parameterExpr = lambdaExpr.Parameters[index];
+                if (typeof(IAggregateSelect).IsAssignableFrom(parameterExpr.Type))
+                {
+                    index++;
+                    continue;
+                }
+                if (!parameterExprs.Contains(parameterExpr))
+                {
+                    index++;
+                    tableIndex++;
+                    continue;
+                }
+                while (!this.Tables[tableIndex].IsMaster)
+                    tableIndex++;
+                this.TableAliases.Add(parameterExpr.Name, this.Tables[tableIndex]);
                 index++;
                 tableIndex++;
-                continue;
             }
-            while (!this.Tables[tableIndex].IsMaster)
-                tableIndex++;
-            this.TableAliases.Add(parameterExpr.Name, this.Tables[tableIndex]);
-            index++;
-            tableIndex++;
         }
     }
     public virtual void AddSelectFieldsSql(StringBuilder builder, ReusableList<ReaderField> readerFields)

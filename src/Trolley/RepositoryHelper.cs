@@ -1502,7 +1502,7 @@ public static class RepositoryHelper
                             {
                                 var fieldType = reader.GetFieldType(index);
                                 var readerValueExpr = GetTypedReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                                    readerField.ReaderType, fieldType, readerField.MemberMapper, blockParameters, blockBodies);
+                                    childReaderField.ReaderType, fieldType, readerField.MemberMapper, blockParameters, blockBodies);
                                 argsExprs.Add(readerValueExpr);
                                 index++;
                             }
@@ -1527,6 +1527,8 @@ public static class RepositoryHelper
                                 }
                             }
                         }
+                        else index++;
+
                         if (newParameters.Count > 0)
                             executeExpr = Expression.Invoke(Expression.Lambda(readerField.Expression, newParameters), argsExprs);
                         else executeExpr = Expression.Invoke(Expression.Lambda(readerField.Expression));
@@ -1559,11 +1561,10 @@ public static class RepositoryHelper
                 case ReaderFieldType.RawSql:
                     var myTargetType = targetType;
                     var isEntityType = false;
-                    if (readerField.ReaderType.IsEntityType(out _))
+                    if (!readerField.IsTarget && readerField.ReaderType.IsEntityType(out _))
                     {
                         isEntityType = true;
                         current = NewBuildInfo(readerField.ReaderType, readerField.TargetMember, parent);
-                        readerBuilders.TryAdd(readerField.Path, current);
                         myTargetType = readerField.ReaderType;
                     }
                     var memberInfos = myTargetType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
@@ -1617,7 +1618,7 @@ public static class RepositoryHelper
                     else
                     {
                         //默认是目标类型，并且也只有第一个ReaderField才是目标类型
-                        if (readerIndex > 0 || readerIndex == 0 && readerField.ReaderType != targetType)
+                        if (!readerField.IsTarget && readerField.ReaderType.IsEntityType(out _))
                         {
                             if (readerField.Parent != null)
                                 parent = readerBuilders[readerField.Parent.Path];

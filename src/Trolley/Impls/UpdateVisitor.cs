@@ -780,7 +780,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         && argumentParameters.Exists(f => f.Type == typeof(IFromQuery)))
                     {
                         var newLambdaExpr = Expression.Lambda(argumentExpr, lambdaExpr.Parameters.ToList());
-                        (_, var sql, _) = this.VisitFromQuery(newLambdaExpr);
+                        (_, var sql, _) = this.VisitFromQuery(newLambdaExpr.Body);
                         this.FieldsBuilder.Append($"{this.Tables[0].AliasName}.{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
                     }
                     else this.AddMemberElement(argumentExpr, memberMapper);
@@ -800,7 +800,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         && argumentParameters.Exists(f => f.Type == typeof(IFromQuery)))
                     {
                         var newLambdaExpr = Expression.Lambda(argumentExpr, lambdaExpr.Parameters.ToList());
-                        (_, var sql, _) = this.VisitFromQuery(newLambdaExpr);
+                        (_, var sql, _) = this.VisitFromQuery(newLambdaExpr.Body);
                         this.FieldsBuilder.Append($"{this.Tables[0].AliasName}.{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
                     }
                     else this.AddMemberElement(argumentExpr, memberMapper);
@@ -821,8 +821,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (memberMapper.IsRowVersion)
             throw new NotSupportedException($"当前字段{memberMapper.FieldName}不允许更新，IsRowVersion：{memberMapper.IsRowVersion}");
 
-        this.InitTableAlias(valueSelector as LambdaExpression);
-        (_, var sql, _) = this.VisitFromQuery(valueSelector as LambdaExpression);
+        lambdaExpr = this.EnsureLambda(valueSelector);
+        this.InitTableAlias(lambdaExpr);
+        (_, var sql, _) = this.VisitFromQuery(lambdaExpr.Body);
         this.FieldsBuilder.Append($"{this.Tables[0].AliasName}.{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
     }
     public virtual void VisitAnd(Expression whereExpr)

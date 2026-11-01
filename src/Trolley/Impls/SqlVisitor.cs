@@ -961,20 +961,22 @@ public class SqlVisitor : ISqlVisitor
                 {
                     if (this.IsSelectMember && methodCallExpr.Arguments.Count == 1)
                         throw new NotSupportedException("当返回类型为多字段时，Sql.Raw方法必须指定fieldsCount");
+                    var fieldCount = 0;
+                    if (methodCallExpr.Arguments.Count > 1)
+                        fieldCount = methodCallExpr.Arguments[1].Evaluate<int>();
                     sqlSegment.Change(new ReaderField
                     {
                         FieldType = ReaderFieldType.RawSql,
                         ReaderType = targetType,
                         Value = rawSql,
-                        FieldsCount = methodCallExpr.Arguments[1].Evaluate<int>()
+                        FieldsCount = fieldCount
                     }, SqlType.ReaderField);
                 }
                 //单个字段的原始SQL当作函数处理
                 else sqlSegment.Change(rawSql, SqlType.MethodCall);
                 break;
             case "Deferred":
-                sqlSegment.IsDeferredFields = true;
-                sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                sqlSegment = this.VisitDeferredSqlSegment(sqlSegment.Next(methodCallExpr.Arguments[0]));
                 break;
             case "IsNull":
                 if (methodCallExpr.Arguments.Count > 1)
@@ -1021,17 +1023,8 @@ public class SqlVisitor : ISqlVisitor
                 else
                 {
                     var subQueryExpr = methodCallExpr.Arguments[1];
-                    //TODO: 待测试
-                    //直接引用现有IQuery子查询对象
-                    //if (subQueryExpr.NodeType == ExpressionType.MemberAccess)
-                    //{
-                    //    var subQuery = subQueryExpr.Evaluate() as IQuery;
-                    //    inSql = subQuery.Visitor.BuildSql(false, out _);
-                    //}
-                    //else
-                    //{
-                    (_, inSql, _) = this.VisitFromQuery(subQueryExpr);
-                    //}
+                    lambdaExpr = this.EnsureLambda(subQueryExpr);
+                    (_, inSql, _) = this.VisitFromQuery(lambdaExpr.Body);
                 }
                 var fieldArgument = this.WrapSql(fieldSegment);
                 if (sqlSegment.HasNotOperation(out _))
@@ -1449,6 +1442,9 @@ public class SqlVisitor : ISqlVisitor
         Type entityType = null;
         ReusableList<ReaderField> readerFields = null;
         Expression currentExpr = methodCallExpr;
+        if (currentExpr is UnaryExpression unaryExpr)
+            currentExpr = unaryExpr.Operand;
+
         var callStack = new Stack<MethodCallExpression>();
         while (true)
         {
@@ -2186,6 +2182,16 @@ public class SqlVisitor : ISqlVisitor
         return false;
     }
     public void Swap<T>(ref T left, ref T right) => (left, right) = (right, left);
+    public virtual void ClearUnionSql()
+    {
+        if (this.UnionSql == null) return;
+
+        //有union操作的visitor，都是新New的，前面只有一个表
+        this.Tables[0].Body = $"({this.UnionSql})";
+        this.Tables[0].TableType = TableType.FromQuery;
+        this.UnionSql = null;
+        this.ReaderFields = null;
+    }
     public LambdaExpression EnsureLambda(Expression expr)
     {
         if (expr.NodeType == ExpressionType.Lambda)
@@ -2387,6 +2393,7 @@ public class SqlVisitor : ISqlVisitor
         //DateTimeOffset.FromUnixTimeMilliseconds(x.Max(f.UpdatedAt)).UtcDateTime.Add(request.TimeZone.ToTimeZone()).Deferred()
         var visitor = new DeferredExpressionVisitor(this);
         var readerField = visitor.Build(sqlSegment.Expression);
+        sqlSegment.IsDeferredFields = true;
         return sqlSegment.Change(readerField, SqlType.ReaderField);
     }
     public void InitUseQueryReaderFields(TableSegment tableSegment, ReusableList<ReaderField> readerFields)
@@ -2554,10 +2561,4 @@ public class SqlVisitor : ISqlVisitor
         this.ShardingTables = null;
         this.ShardingTableJointMark = null;
     }
-}
-public struct VisitSqlResult
-{
-    public TableType TableType { get; set; }
-    public string Sql { get; set; }
-    public ReusableList<ReaderField> ReaderFields { get; set; }
 }
