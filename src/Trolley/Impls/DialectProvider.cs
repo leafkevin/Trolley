@@ -59,10 +59,14 @@ public class DialectProvider
         }
         this.interceptor?.CommandCreating(connection);
         command = connection.CreateCommand();
-        this.interceptor?.CommandCreated(command);
+        if (this.interceptor != null)
+        {
+            command = this.interceptor.CommandCreated(command);
+            command.Interceptor = this.interceptor;
+        }
         command.CommandTimeout = this.options.CommandTimeout;
         command.Transaction = this.transaction;
-        command.Interceptor = this.interceptor;
+
         return (this.isNeedClose, connection, command);
     }
     public (bool, ITheaConnection, ITheaCommand) UseMasterCommand(ITheaCommand command)
@@ -102,10 +106,13 @@ public class DialectProvider
         }
         this.interceptor?.CommandCreating(connection);
         command = connection.CreateCommand();
-        this.interceptor?.CommandCreated(command);
+        if (this.interceptor != null)
+        {
+            command = this.interceptor.CommandCreated(command);
+            command.Interceptor = this.interceptor;
+        }
         command.CommandTimeout = this.options.CommandTimeout;
-        command.Transaction = this.transaction;
-        command.Interceptor = this.interceptor;
+        command.Transaction = this.transaction; 
         return (this.isNeedClose, connection, command);
     }
     public (bool, ITheaConnection, ITheaCommand) UseSlaveCommand(ITheaCommand command)
@@ -136,8 +143,11 @@ public class DialectProvider
     {
         this.interceptor?.ConnectionCreating();
         var connection = this.ormProvider.CreateConnection(this.dbKey, connectionString);
-        connection = this.interceptor?.ConnectionCreated(connection);
-        connection.Interceptor = this.interceptor;
+        if (this.interceptor != null)
+        {
+            connection = this.interceptor.ConnectionCreated(connection);
+            connection.Interceptor = this.interceptor;
+        }
         return connection;
     }
     #endregion

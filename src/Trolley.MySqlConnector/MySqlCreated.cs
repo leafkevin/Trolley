@@ -168,7 +168,7 @@ public class MySqlCreated : Created
             case ActionMode.Bulk:
                 {
                     (var shardingType, var shardingTables, var insertObjs, var bulkCount, var firstSqlSetter,
-                        var loopSqlSetter, _, var readerFields) = this.Visitor.BuildWithBulk(command);
+                        var loopSqlSetter, var tailSql, var readerFields) = this.Visitor.BuildWithBulk(command);
 
                     int index = 0;
                     var builder = new StringBuilder();
@@ -181,6 +181,8 @@ public class MySqlCreated : Created
                             if (index >= bulkCount)
                             {
                                 builder.Remove(builder.Length - 1, 1);
+                                if (!string.IsNullOrEmpty(tailSql))
+                                    builder.Append(tailSql);
                                 command.CommandText = builder.ToString();
                                 if (this.interceptor != null)
                                     command = this.interceptor.CommandInitialized(command);
@@ -212,6 +214,8 @@ public class MySqlCreated : Created
                     if (index > 0)
                     {
                         builder.Remove(builder.Length - 1, 1);
+                        if (!string.IsNullOrEmpty(tailSql))
+                            builder.Append(tailSql);
                         command.CommandText = builder.ToString();
                         if (this.interceptor != null)
                             command = this.interceptor.CommandInitialized(command);

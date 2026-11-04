@@ -793,7 +793,8 @@ public class SqlVisitor : ISqlVisitor
             TableSegment = fromSegment,
             ReaderType = fromSegment.EntityType,
             Fields = this.FlattenTableFields(fromSegment),
-            Path = fromSegment.Path
+            Path = fromSegment.Path,
+            IsTarget = true
         };
         //include表的ReaderField字段，紧跟在主表ReaderField后面
         ReusableList<ReaderField> readerFields = [readerField];

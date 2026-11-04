@@ -127,7 +127,7 @@ public class MySqlCreateVisitor : CreateVisitor
         }
         this.FieldsBuilder.Clear();
         return $"{this.FromSql}{tailSql}";
-    } 
+    }
     public override (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, ReusableList<ReaderField>) BuildWithBulk(ITheaCommand command)
     {
@@ -164,8 +164,6 @@ public class MySqlCreateVisitor : CreateVisitor
         if (this.deferredSegments.Count > 1)
         {
             this.ValuesBuilder = new StringBuilder("(");
-            var tempDbParameters = new TheaDbParameterCollection();
-            this.DbParameters = tempDbParameters;
             for (int i = 1; i < this.deferredSegments.Count; i++)
             {
                 var deferredSegment = this.deferredSegments[i];
@@ -198,13 +196,18 @@ public class MySqlCreateVisitor : CreateVisitor
                     default: throw new NotSupportedException("批量插入后，只支持WithBy/OnDuplicateKeyUpdate/Returning操作");
                 }
             }
-            this.FieldsBuilder.Append(',');
-            this.ValuesBuilder.Append(',');
-            fixedValuesSql = this.ValuesBuilder.ToString();
+            if (this.FieldsBuilder.Length > 1)
+            {
+                this.FieldsBuilder.Append(',');
+                this.ValuesBuilder.Append(',');
+                fixedValuesSql = this.ValuesBuilder.ToString();
+            }
             this.ValuesBuilder.Clear();
             if (this.DbParameters.Count > 0)
-                fixedDbParameters = tempDbParameters.ToList();
-            this.DbParameters = command.Parameters;
+            {
+                fixedDbParameters = this.DbParameters.ToList();
+                this.DbParameters.Clear();
+            }
         }
 
         Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
@@ -516,6 +519,7 @@ public class MySqlCreateVisitor : CreateVisitor
                 if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
                     continue;
                 this.AddMemberElement(newExpr.Arguments[i], memberMapper);
+                this.UpdateIndex++;
             }
             return sqlSegment;
         }
@@ -533,6 +537,7 @@ public class MySqlCreateVisitor : CreateVisitor
             if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out var memberMapper))
                 continue;
             this.AddMemberElement(memberAssignment.Expression, memberMapper);
+            this.UpdateIndex++;
         }
         return sqlSegment.Change(sqlSegment.Expression.Evaluate(), SqlType.Constant);
     }

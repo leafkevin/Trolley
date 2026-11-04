@@ -28,6 +28,61 @@ public static class Extensions
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<ITheaDataReader, ReusableList<ReaderField>, object>>> queryReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<ITheaDataReader, ReusableList<ReaderField>, object>>> deferredValueReaderDeserializerCache = new();
 
+    extension(IOrmDbFactory dbFactory)
+    {
+        public void UseMapping(string dbKey, IModelMappingConfiguration configuration)
+        {
+            if (string.IsNullOrEmpty(dbKey))
+                throw new ArgumentNullException(nameof(dbKey));
+            if (configuration == null)
+                throw new ArgumentNullException(nameof(configuration));
+
+            if (!dbFactory.TryGetEntityMapProvider(dbKey, out var entityMapProvider))
+                dbFactory.UseEntityMapProvider(dbKey, entityMapProvider = new EntityMapProvider());
+            entityMapProvider.IsCanMapTo = configuration.IsCanMapTo;
+            configuration.OnModelCreating(new ModelBuilder(entityMapProvider));
+        }
+        public void UseMapping<TModelConfiguration>(string dbKey) where TModelConfiguration : class, IModelMappingConfiguration, new()
+            => dbFactory.UseMapping(dbKey, new TModelConfiguration());
+        public void UseMapping(OrmProviderType ormProviderType, IModelMappingConfiguration configuration)
+        {
+            if (configuration == null)
+                throw new ArgumentNullException(nameof(configuration));
+
+            if (!dbFactory.TryGetEntityMapProvider(ormProviderType, out var entityMapProvider))
+                dbFactory.UseEntityMapProvider(ormProviderType, entityMapProvider = new EntityMapProvider());
+            entityMapProvider.IsCanMapTo = configuration.IsCanMapTo;
+            configuration.OnModelCreating(new ModelBuilder(entityMapProvider));
+        }
+        public void UseMapping<TModelConfiguration>(OrmProviderType ormProviderType) where TModelConfiguration : class, IModelMappingConfiguration, new()
+            => dbFactory.UseMapping(ormProviderType, new TModelConfiguration());
+
+        public void UseTableSharding(string dbKey, ITableShardingConfiguration configuration)
+        {
+            if (string.IsNullOrEmpty(dbKey))
+                throw new ArgumentNullException(nameof(dbKey));
+            if (configuration == null)
+                throw new ArgumentNullException(nameof(configuration));
+
+            if (!dbFactory.TryGetTableShardingProvider(dbKey, out var tableShardingProvider))
+                dbFactory.UseTableShardingProvider(dbKey, tableShardingProvider = new TableShardingProvider());
+            configuration.Configure(new TableShardingBuilder(tableShardingProvider));
+            tableShardingProvider.Build();
+        }
+        public void UseTableSharding<TModelConfiguration>(string dbKey) where TModelConfiguration : class, IModelMappingConfiguration, new()
+            => dbFactory.UseMapping(dbKey, new TModelConfiguration());
+        public void UseTableSharding(OrmProviderType ormProviderType, ITableShardingConfiguration configuration)
+        {
+            if (configuration == null)
+                throw new ArgumentNullException(nameof(configuration));
+
+            if (!dbFactory.TryGetTableShardingProvider(ormProviderType, out var tableShardingProvider))
+                dbFactory.UseTableShardingProvider(ormProviderType, tableShardingProvider = new TableShardingProvider());
+            configuration.Configure(new TableShardingBuilder(tableShardingProvider));
+        }
+        public void UseTableSharding<TModelConfiguration>(OrmProviderType ormProviderType) where TModelConfiguration : class, IModelMappingConfiguration, new()
+            => dbFactory.UseMapping(ormProviderType, new TModelConfiguration());
+    }
     extension(OrmDbFactoryBuilder builder)
     {
         public OrmDbFactoryBuilder UseMapping<TModelConfiguration>(OrmProviderType ormProviderType) where TModelConfiguration : class, IModelMappingConfiguration, new()
@@ -54,6 +109,14 @@ public static class Extensions
             if (string.IsNullOrEmpty(fieldName))
                 throw new ArgumentNullException(nameof(fieldName));
             memberMapper = memberMappers.Find(f => entityMapProvider.IsCanMapTo(fieldName, f.MemberName));
+            return memberMapper != null;
+        }
+        public bool TryMapMember(Type targetType, string fieldName, out MemberMap memberMapper)
+        {
+            if (string.IsNullOrEmpty(fieldName))
+                throw new ArgumentNullException(nameof(fieldName));
+            var entityMapper = entityMapProvider.GetEntityMap(targetType);
+            memberMapper = entityMapper.MemberMaps.Find(f => entityMapProvider.IsCanMapTo(fieldName, f.MemberName));
             return memberMapper != null;
         }
         public bool TryMapMember(string fieldName, List<MemberInfo> memberInfos, out MemberInfo memberInfo)

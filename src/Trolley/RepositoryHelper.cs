@@ -1351,7 +1351,6 @@ public static class RepositoryHelper
         var readerFieldsExpr = Expression.Parameter(typeof(ReusableList<ReaderField>), "readerFields");
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
         var memberInfos = GetMembers(targetType).Where(f => f.CanWrite).ToList();
-        var entityMapper = dbContext.EntityMapProvider.GetEntityMap(targetType);
         var index = 0;
         var target = NewBuildInfo(targetType);
         var blockParameters = new List<ParameterExpression>();
@@ -1359,10 +1358,10 @@ public static class RepositoryHelper
 
         while (index < reader.FieldCount)
         {
-            var memberName = reader.GetName(index);
+            var fieldName = reader.GetName(index);
             //使用原始SQL才有可能SQL中的字段名与成员名不一致，或是没有加 AS成员名
-            if (!entityMapper.TryGetMemberMap(memberName, out var memberMapper))
-                throw new Exception($"SQL中字段{memberName}映射不到模型{targetType.FullName}任何栏位,或者没有添加AS子句");
+            if (!dbContext.EntityMapProvider.TryMapMember(targetType, fieldName, out MemberMap memberMapper))
+                throw new Exception($"SQL中字段{fieldName}映射不到模型{targetType.FullName}任何栏位,或者没有添加AS子句");
 
             var fieldType = reader.GetFieldType(index);
             var readerValueExpr = GetTypedReaderValue(dbContext, readerExpr, Expression.Constant(index),
