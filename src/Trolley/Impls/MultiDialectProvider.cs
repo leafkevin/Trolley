@@ -143,8 +143,6 @@ public class MultiDialectProvider : DialectProvider, IMultiDialectProvider
     #region QueryById
     public virtual IMultiDialectProvider QueryById<TEntity>(object whereObj)
     {
-        if (whereObj == null)
-            throw new ArgumentNullException(nameof(whereObj));
         var entityType = typeof(TEntity);
         this.CreateQueryReader(whereObj, entityType, entityType, 1, true, false, ReaderResultType.Entity);
         return this;
@@ -154,8 +152,6 @@ public class MultiDialectProvider : DialectProvider, IMultiDialectProvider
     #region QueryByIds
     public virtual IMultiDialectProvider QueryByIds<TEntity>(IEnumerable whereObjs)
     {
-        if (whereObjs == null)
-            throw new ArgumentNullException(nameof(whereObjs));
         var entityType = typeof(TEntity);
         this.CreateQueryReader(whereObjs, entityType, entityType, 1, true, true, ReaderResultType.List);
         return this;
@@ -218,15 +214,11 @@ public class MultiDialectProvider : DialectProvider, IMultiDialectProvider
     }
     public virtual IMultiDialectProvider ExistsById<TEntity>(object whereKey)
     {
-        if (whereKey == null)
-            throw new ArgumentNullException(nameof(whereKey));
         this.CreateQueryReader(whereKey, typeof(TEntity), typeof(bool), 2, true, false, ReaderResultType.Value);
         return this;
     }
     public virtual IMultiDialectProvider ExistsByIds<TEntity>(IEnumerable whereKeys)
     {
-        if (whereKeys == null)
-            throw new ArgumentNullException(nameof(whereKeys));
         this.CreateQueryReader(whereKeys, typeof(TEntity), typeof(bool), 2, true, true, ReaderResultType.List);
         return this;
     }
@@ -304,6 +296,8 @@ public class MultiDialectProvider : DialectProvider, IMultiDialectProvider
     }
     private void CreateQueryReader(object whereObjs, Type entityType, Type targetType, int commandType, bool isUseKey, bool isBulk, ReaderResultType resultType)
     {
+        if (whereObjs == null)
+            throw new ArgumentNullException(nameof(whereObjs));
         var commandInitializer = RepositoryHelper.BuildWhereCommandInitializer(this.DbContext, entityType, whereObjs, commandType, isUseKey, true, isBulk);
         var sql = commandInitializer.Invoke(this.Command.Parameters, this.DbContext, whereObjs);
         this.AddReader(targetType, sql, resultType, commandType == 2);

@@ -156,15 +156,19 @@ class MultiQueryReader : IMultiQueryReader
         int pageIndex = 0;
         int pageSize = 0;
         var readerAfter = this.readerAfters[this.readerIndex];
-        var readerFields = readerAfter.Visitor.ReaderFields;
-        var deserializer = reader.GetReaderDeserializer(readerAfter.TargetType, this.dbContext, readerFields);
-
-        var index = 0;
-        while (index < this.reader.FieldCount)
+        ReusableList<ReaderField> readerFields = null;
+        Func<ITheaDataReader, ReusableList<ReaderField>, object> deserializer = null;
+        if (readerAfter.Visitor != null)
         {
-            this.reader.GetName(index);
-            this.reader.GetValue(index);
+            readerFields = readerAfter.Visitor.ReaderFields;
+            deserializer = reader.GetReaderDeserializer(readerAfter.TargetType, this.dbContext, readerFields);
         }
+        else
+        {
+            var mydeserializer = reader.GetReaderDeserializer(readerAfter.TargetType, this.dbContext);
+            deserializer = (reader, _) => mydeserializer.Invoke(reader);
+        }
+
         while (await this.reader.ReadAsync(cancellationToken))
             dataList.Add((T)deserializer.Invoke(this.reader, readerFields));
         if (isPaged)

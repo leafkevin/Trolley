@@ -1347,8 +1347,7 @@ public static class RepositoryHelper
     }
     public static Func<ITheaDataReader, object> CreateReaderEntityDeserializer(Type targetType, DbContext dbContext, ITheaDataReader reader)
     {
-        var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
-        var readerFieldsExpr = Expression.Parameter(typeof(ReusableList<ReaderField>), "readerFields");
+        var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader"); 
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
         var memberInfos = GetMembers(targetType).Where(f => f.CanWrite).ToList();
         var index = 0;

@@ -129,16 +129,26 @@ public static class OrmExtensions
         /// <typeparam name="TEntity">实体类型</typeparam>
         /// <param name="wherePredicate">条件表达式</param>
         /// <returns>返回多语句查询对象，将TEntity类型值添加到Reader中</returns>
-        public IMultiDialectProvider QueryFirst<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null)
+        public IMultiDialectProvider QueryFirst<TEntity>(Expression<Func<TEntity, bool>> wherePredicate)
             => instance.From<TEntity>().Where(wherePredicate).First();
 
         /// <summary>
         /// 查询TEntity实体表满足表达式wherePredicate条件的所有记录，条件表达式wherePredicate可以为null，为null时，查询所有记录
         /// </summary>
         /// <typeparam name="TEntity">实体类型</typeparam>
-        /// <param name="wherePredicate">条件表达式</param>
+        /// <param name="wherePredicate">条件表达式，可为null</param>
         /// <returns>返回多语句查询对象，将TEntity类型列表添加到Reader中</returns>
         public IMultiDialectProvider Query<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null)
-            => instance.From<TEntity>().Where(wherePredicate).ToList();
+        {
+            if (wherePredicate != null)
+                return instance.From<TEntity>().Where(wherePredicate).ToList();
+            else
+            {
+                var entityMapper = instance.DbContext.EntityMapProvider.GetEntityMap(typeof(TEntity));
+                var tableName = instance.DbContext.OrmProvider.GetTableName(entityMapper.TableName);
+                var rawSql = $"SELECT * FROM {tableName}";
+                return instance.Query<TEntity>(rawSql);
+            }
+        }
     }
 }
