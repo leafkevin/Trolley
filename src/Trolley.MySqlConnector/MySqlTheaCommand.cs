@@ -45,6 +45,7 @@ class MySqlTheaCommand : ITheaCommand
             if (value is not MySqlTheaConnection theaConnection)
                 throw new NotSupportedException("不支持的连接类型，只支持MySqlTheaConnection类型");
             this.connection = theaConnection;
+            this.command.Connection = theaConnection.DbConnection as MySqlConnection;
             this.DbKey = theaConnection.DbKey;
         }
     }
@@ -63,6 +64,7 @@ class MySqlTheaCommand : ITheaCommand
             {
                 this.DbKey = theaConnection.DbKey;
                 this.connection = theaConnection;
+                this.command.Connection = theaConnection.DbConnection as MySqlConnection;
             }
         }
     }

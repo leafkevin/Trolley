@@ -151,7 +151,7 @@ public partial class MySqlProvider : BaseOrmProvider
         => this.GetSchemaName(connectionString);
     public override ITheaConnection CreateConnection(string dbKey, string connectionString)
         => new MySqlTheaConnection(dbKey, connectionString);
-    //public override ITheaCommand CreateCommand() => new MySqlTheaCommand(new MySqlCommand());
+    public override ITheaCommand CreateCommand() => new MySqlTheaCommand(new MySqlCommand());
     public override IDbDataParameter CreateParameter(string parameterName, object value)
        => new MySqlParameter(parameterName, value);
     public override IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value)

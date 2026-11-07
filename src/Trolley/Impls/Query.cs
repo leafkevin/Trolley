@@ -167,11 +167,8 @@ public class QueryBase : QueryInternal, IQueryBase
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (_, var connection, var command) = this.Visitor.UseCommand();
         var sql = this.Visitor.BuildSql(out _);
-        dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
-        command.Dispose();
-        connection.Dispose();
+        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;
@@ -182,7 +179,7 @@ public class QueryBase : QueryInternal, IQueryBase
     protected TTarget QueryScalar<TTarget>(string aggSql, string aggFunc)
     {
         this.Visitor.SelectRaw(typeof(TTarget), aggSql, aggFunc);
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor.Command);
         this.Visitor.IsScalar = true;
         command.CommandText = this.Visitor.BuildSql(out _);
         return this.QueryScalar<TTarget>(isNeedClose, connection, command);
@@ -190,7 +187,7 @@ public class QueryBase : QueryInternal, IQueryBase
     protected async Task<TTarget> QueryScalarAsync<TTarget>(string aggSql, string aggFunc, CancellationToken cancellationToken = default)
     {
         this.Visitor.SelectRaw(typeof(TTarget), aggSql, aggFunc);
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor.Command);
         this.Visitor.IsScalar = true;
         command.CommandText = this.Visitor.BuildSql(out _);
         return await this.QueryScalarAsync<TTarget>(isNeedClose, connection, command, cancellationToken);
@@ -198,7 +195,7 @@ public class QueryBase : QueryInternal, IQueryBase
     protected TTarget QueryScalar<TTarget>(string aggSqlFormat, Expression fieldExpr)
     {
         this.Visitor.Select(aggSqlFormat, fieldExpr);
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor.Command);
         this.Visitor.IsScalar = true;
         command.CommandText = this.Visitor.BuildSql(out _);
         return this.QueryScalar<TTarget>(isNeedClose, connection, command);
@@ -206,7 +203,7 @@ public class QueryBase : QueryInternal, IQueryBase
     protected async Task<TTarget> QueryScalarAsync<TTarget>(string aggSqlFormat, Expression fieldExpr, CancellationToken cancellationToken = default)
     {
         this.Visitor.Select(aggSqlFormat, fieldExpr);
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor.Command);
         this.Visitor.IsScalar = true;
         command.CommandText = this.Visitor.BuildSql(out _);
         return await this.QueryScalarAsync<TTarget>(isNeedClose, connection, command, cancellationToken);
@@ -737,11 +734,8 @@ public class Query<T> : QueryBase, IQuery<T>
     public override string ToSql(out List<IDbDataParameter> dbParameters)
     {
         this.Select();
-        (_, var connection, var command) = this.Visitor.UseCommand();
         var sql = this.Visitor.BuildSql(out _);
-        dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
-        command.Dispose();
-        connection.Dispose();
+        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;

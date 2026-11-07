@@ -21,7 +21,7 @@ public interface IOrmProvider
     ICollection<ITypeHandler> TypeHandlers { get; }
     string GetDefaultSchema(string connectionString);
     ITheaConnection CreateConnection(string dbKey, string connectionString);
-    //ITheaCommand CreateCommand();
+    ITheaCommand CreateCommand();
     IDbDataParameter CreateParameter(string parameterName, object value);
     IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
     void ChangeParameter(object dbParameter, Type targetType, object value);

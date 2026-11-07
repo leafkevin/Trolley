@@ -1934,12 +1934,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (this.ShardingTables != null && this.ShardingTables.Count > 0)
             throw new NotSupportedException("CTE暂时不支持多分表，只支持单个分表");
 
-        if (this.Connection != null)
-        {
-            this.Connection.Dispose();
-            this.Connection = null;
-        }
-
         this.IsCteQuery = true;
         //每次要新建一个CteQuery对象，避免多次使用同一个对象
         if (this.CteQueryObj == null)
@@ -1947,6 +1941,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var cteQueryType = typeof(CteQuery<>).MakeGenericType(targetType);
             this.CteQueryObj = RepositoryHelper.CreateInstance(cteQueryType,
                 [typeof(DbContext), typeof(IQueryVisitor)], this.DbContext, this) as ICteQuery;
+            this.SharedQueryObjs.Add(this.CteQueryObj);
         }
         if (this.IsRecursive)
         {
@@ -1955,6 +1950,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         this.CteQueryObj.Body = this.BuildCteTableSql(tableName, out var readerFields);
         this.CteQueryObj.TableName = tableName;
+        this.UnionSql = null;
         this.Tables.Clear();
         this.WhereBuilder.Clear();
         var tableSegment = new TableSegment
@@ -1976,11 +1972,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         if (this.ShardingTables != null && this.ShardingTables.Count > 0)
             throw new NotSupportedException("共享子查询暂时不支持多分表，只支持单个分表");
-        if (this.Connection != null)
-        {
-            this.Connection.Dispose();
-            this.Connection = null;
-        }
         this.Save();
     }
 
@@ -2347,7 +2338,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         //result.Command = command;
         //result.DbParameters = command.Parameters;
-        if (this.DbParameters != null && this.DbParameters.Count > 0)
+        if (!ReferenceEquals(this.DbParameters, command.Parameters)
+            && this.DbParameters != null && this.DbParameters.Count > 0)
         {
             foreach (var dbParameter in this.DbParameters)
             {

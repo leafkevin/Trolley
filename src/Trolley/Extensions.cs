@@ -593,11 +593,7 @@ public static class Extensions
         {
             hashCode.Add(readerField.FieldType);
             if (readerField.FieldType == ReaderFieldType.Entity)
-            {
-                if (readerField.Value != null)
-                    hashCode.Add(readerField.Value);
-                else hashCode.Add(readerField.ReaderType);
-            }
+                hashCode.Add(readerField.ReaderType);
             else if (readerField.IsDeferredFields) hashCode.Add(readerField.Expression.ToString());
             else if (readerField.Value != null) hashCode.Add(readerField.Value);
             else hashCode.Add(readerField.TargetMember.Name);
