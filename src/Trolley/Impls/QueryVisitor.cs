@@ -35,7 +35,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public TableSegment LastIncludeSegment { get; set; }
     public ReusableList<ReaderField> GroupByFields { get; set; }
     public ReusableList<OrderByField> OrderByFields { get; set; }
-    public bool IsCteQuery { get; set; }
     public int PageNumber => this.pageNumber;
     public int PageSize => this.limit ?? 0;
     public bool IsNeedPaging { get; set; }
@@ -789,8 +788,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //包含该查询对象引用，就说明当前visitor对象已经包含了该子查询引用到的参数，只需要添加表即可
         string tableName = null;
         TableType tableType = default;
-        var queryVisitor = subQueryObj.Visitor.Clone(this.DbContext, this.Command);
-        this.AddSharedQueryObjs(subQueryObj);
+        var isCopyParameters = this.AddSharedQueryObjs(subQueryObj);
+        var queryVisitor = subQueryObj.Visitor.Clone(this.DbContext, this.Command, isCopyParameters);
         var sql = queryVisitor.BuildSql(false, out var readerFields);
         if (subQueryObj is ICteQuery cteQueryObj && !queryVisitor.HasChanged)
         {
@@ -2327,7 +2326,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.IsSecondUnion = false;
         this.IsNeedTableAlias = true;
     }
-    public IQueryVisitor Clone(DbContext dbContext, ITheaCommand command)
+    public IQueryVisitor Clone(DbContext dbContext, ITheaCommand command, bool isCopyParameters = true)
     {
         var result = this.OrmProvider.NewQueryVisitor(dbContext, 'a', command) as QueryVisitor;
         result.hasSavePoint = this.hasSavePoint;
@@ -2338,7 +2337,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         //result.Command = command;
         //result.DbParameters = command.Parameters;
-        if (!ReferenceEquals(this.DbParameters, command.Parameters)
+        if (isCopyParameters && !ReferenceEquals(this.DbParameters, command.Parameters)
             && this.DbParameters != null && this.DbParameters.Count > 0)
         {
             foreach (var dbParameter in this.DbParameters)
@@ -2349,7 +2348,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         //直接引用
         result.Tables = this.Tables;
-        result.ReaderFields = this.ReaderFields;
+        if (this.ReaderFields != null && this.ReaderFields.Count > 0)
+        {
+            result.ReaderFields = new();
+            this.ReaderFields.ForEach(f => result.ReaderFields.Add(f.Clone()));
+        }
         result.HeadRawSql = this.HeadRawSql;
         result.TailRawSql = this.TailRawSql;
         result.WhereBuilder = this.WhereBuilder;
@@ -2438,8 +2441,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.SharedQueryObjs = this.cloned.SharedQueryObjs;
         this.savedSql = this.cloned.savedSql;
 
-        while (this.DbParameters.Count > this.dbParametersIndex)
-            this.DbParameters.RemoveAt(this.dbParametersIndex);
+        if (this.DbParameters != null)
+        {
+            while (this.DbParameters.Count > this.dbParametersIndex)
+                this.DbParameters.RemoveAt(this.dbParametersIndex);
+        }
         if (this.IsCteQuery)
         {
             this.WhereBuilder.Clear();

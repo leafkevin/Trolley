@@ -54,6 +54,7 @@ public class SqlVisitor : ISqlVisitor
     public bool IsIncludeMany { get; set; }
     #endregion
 
+    public bool IsCteQuery { get; set; }
     public bool IsNeedTableAlias { get; set; }
     public ReusableList<ReaderField> ReaderFields { get; set; }
 
@@ -1497,6 +1498,7 @@ public class SqlVisitor : ISqlVisitor
         queryVisitor.IsRecursive = this.IsRecursive;
         queryVisitor.IsSecondUnion = this.IsSecondUnion;
         queryVisitor.IsExists = this.IsExists;
+        queryVisitor.SharedQueryObjs = this.SharedQueryObjs;
         //引用现有子查询对象不做任何处理场景，在最外层直接处理
         //引用现有子查询对象，并做了一些处理，比如：Where/And/Or等
 
@@ -1775,12 +1777,15 @@ public class SqlVisitor : ISqlVisitor
         this.AddSharedQueryObjs(queryVisitor);
         return (TableType.FromQuery, sql, readerFields);
     }
-    public void AddSharedQueryObjs(IQuery refQueryObj)
+    public bool AddSharedQueryObjs(IQuery refQueryObj)
     {
+        if (this.SharedQueryObjs.Contains(refQueryObj))
+            return false;
+
+        this.SharedQueryObjs.Add(refQueryObj);
         var refQueryVisitor = refQueryObj.Visitor;
         this.AddSharedQueryObjs(refQueryVisitor);
-        if (!this.SharedQueryObjs.Contains(refQueryObj))
-            this.SharedQueryObjs.Add(refQueryObj);
+        return true;
     }
     public void AddSharedQueryObjs(IQueryVisitor refQueryVisitor)
     {
@@ -2523,8 +2528,6 @@ public class SqlVisitor : ISqlVisitor
             return;
         this.isDisposed = true;
         this.Connection = null;
-        this.Command?.Dispose();
-        this.Command = null;
         this.Tables = null;
         this.TableAliases = null;
         this.RefTableAliases = null;
@@ -2534,18 +2537,24 @@ public class SqlVisitor : ISqlVisitor
         this.IncludeTables = null;
 
         //设置null，不能清空，以免给返回的参数丢失
-        this.DbParameters = null;
-        this.NextDbParameters = null;
         this.DbContext = null;
-
         //应用子查询表，只删除元素，不能dispose，后续操作可能还会用到子查询
         this.CteQueryObj = null;
         if (this.SharedQueryObjs != null && this.SharedQueryObjs.Count > 0)
         {
             foreach (var sharedQueryObj in this.SharedQueryObjs)
+            {
+                if (this.IsCteQuery && ReferenceEquals(this, sharedQueryObj.Visitor))
+                    continue;
                 sharedQueryObj.Visitor.Restore();
+            }
+            this.SharedQueryObjs.Clear();
         }
         this.SharedQueryObjs = null;
+        this.Command?.Dispose();
+        this.Command = null;
+        this.DbParameters = null;
+        this.NextDbParameters = null;
         this.UnionSql = null;
         this.HeadRawSql = null;
         this.TailRawSql = null;
