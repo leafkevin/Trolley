@@ -852,7 +852,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         }
 #if NET6_0_OR_GREATER
                         else if (fieldType == typeof(DateOnly))
-                            typeHandler = value => ((DateOnly)value).ToDateTime(TimeOnly.MinValue);                       
+                            typeHandler = value => ((DateOnly)value).ToDateTime(TimeOnly.MinValue);
 #endif
                     }
 #if NET6_0_OR_GREATER
@@ -1329,7 +1329,13 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     {
                         formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                         {
-                            var enumerableOrSapnSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                            var targetArgument = methodCallExpr.Arguments[0];
+                            //C#14 把数组.Contains会解析成ReadOnlySpan<T>.Contains
+                            if (targetArgument.Type.FullName.StartsWith("System.ReadOnlySpan")
+                                && targetArgument is MethodCallExpression opCallExpr && opCallExpr.Method.Name == "op_Implicit")
+                                targetArgument = opCallExpr.Arguments[0];
+
+                            var enumerableOrSapnSegment = visitor.Visit(new SqlSegment { Expression = targetArgument });
                             var elementSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
                             var comparerSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[2] });
 
@@ -1346,7 +1352,13 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     {
                         formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                         {
-                            var enumerableOrSapnSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                            var targetArgument = methodCallExpr.Arguments[0];
+                            //C#14 把数组.Contains会解析成ReadOnlySpan<T>.Contains
+                            if (targetArgument.Type.FullName.StartsWith("System.ReadOnlySpan")
+                                && targetArgument is MethodCallExpression opCallExpr && opCallExpr.Method.Name == "op_Implicit")
+                                targetArgument = opCallExpr.Arguments[0];
+
+                            var enumerableOrSapnSegment = visitor.Visit(new SqlSegment { Expression = targetArgument });
                             var elementSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
 
                             if (enumerableOrSapnSegment.IsValue && elementSegment.IsValue)

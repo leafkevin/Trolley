@@ -2002,9 +2002,10 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
     public void CteTable_Exists()
     {
         this.Initialize(1);
+        var totalAmount = 300D;
         var repository = this.dbFactory.Create();
         var myOrders = repository.From<OrderDetail, Order>()
-            .Where((a, b) => a.OrderId == b.Id)
+            .Where((a, b) => a.OrderId == b.Id && b.TotalAmount > totalAmount)
             .GroupBy((a, b) => new { a.OrderId, b.BuyerId })
             .Having((x, a, b) => x.CountDistinct(a.ProductId) > 1)
             .Select((x, a, b) => x.Grouping)
@@ -2017,7 +2018,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
             .ToSql(out _);
         Assert.AreEqual(@"WITH `myOrders`(`OrderId`,`BuyerId`) AS 
 (
-SELECT a.`OrderId`,b.`BuyerId` FROM `sys_order_detail` a,`sys_order` b WHERE a.`OrderId`=b.`Id` GROUP BY a.`OrderId`,b.`BuyerId` HAVING COUNT(DISTINCT a.`ProductId`)>1
+SELECT a.`OrderId`,b.`BuyerId` FROM `sys_order_detail` a,`sys_order` b WHERE a.`OrderId`=b.`Id` AND b.`TotalAmount`>@p0 GROUP BY a.`OrderId`,b.`BuyerId` HAVING COUNT(DISTINCT a.`ProductId`)>1
 )
 SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `sys_company` b ON a.`CompanyId`=b.`Id` WHERE EXISTS(SELECT * FROM `myOrders` c WHERE c.`BuyerId`=a.`Id`)", sql);
 
@@ -2030,12 +2031,12 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
 
         sql = repository.From<User>()
             .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
-            .Where((x, y) => Sql.FromQuery(myOrders).Where(f => f.BuyerId == x.Id).Exists())
+            .Where((x, y) => myOrders.Where(f => f.BuyerId == x.Id).Exists())
             .Select((a, b) => new { a.Id, a.Name, CompanyName = b.Name })
             .ToSql(out _);
         Assert.AreEqual(@"WITH `myOrders`(`OrderId`,`BuyerId`) AS 
 (
-SELECT a.`OrderId`,b.`BuyerId` FROM `sys_order_detail` a,`sys_order` b WHERE a.`OrderId`=b.`Id` GROUP BY a.`OrderId`,b.`BuyerId` HAVING COUNT(DISTINCT a.`ProductId`)>1
+SELECT a.`OrderId`,b.`BuyerId` FROM `sys_order_detail` a,`sys_order` b WHERE a.`OrderId`=b.`Id` AND b.`TotalAmount`>@p0 GROUP BY a.`OrderId`,b.`BuyerId` HAVING COUNT(DISTINCT a.`ProductId`)>1
 )
 SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `sys_company` b ON a.`CompanyId`=b.`Id` WHERE EXISTS(SELECT * FROM `myOrders` c WHERE c.`BuyerId`=a.`Id`)", sql);
 
@@ -3212,11 +3213,11 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         Assert.IsNotEmpty(result3);
     }
     [Test]
-    public void SelectTo()
+    public async Task SelectTo()
     {
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
-        repository.DeleteByIdAsync<Order>("8");
+        await repository.DeleteByIdAsync<Order>("8");
         repository.Create<Order>(new Order
         {
             Id = "8",

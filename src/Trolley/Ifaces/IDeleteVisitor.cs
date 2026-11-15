@@ -13,7 +13,6 @@ public interface IDeleteVisitor : ICommandVisitor, IDisposable
     ReusableList<TableSegment> Tables { get; set; }
     ITableShardingProvider ShardingProvider { get; }
 
-    bool HasWhere { get; }
     List<TableSegment> ShardingTables { get; }
 
 

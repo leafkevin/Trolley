@@ -69,30 +69,30 @@ public class DialectProvider
 
         return (this.isNeedClose, connection, command);
     }
-    //public (bool, ITheaConnection, ITheaCommand) UseMasterCommand(ITheaCommand command)
-    //{
-    //    ITheaConnection connection;
-    //    if (this.transaction != null)
-    //    {
-    //        connection = this.connection;
-    //        command.Connection = connection;
-    //    }
-    //    else
-    //    {
-    //        if (command.Connection != null)
-    //            connection = command.Connection;
-    //        else
-    //        {
-    //            var connString = this.database.Select();
-    //            connection = this.CreateConnection(connString);
-    //            command.Connection = connection;
-    //        }
-    //    }
-    //    command.CommandTimeout = this.options.CommandTimeout;
-    //    command.Transaction = this.transaction;
-    //    command.Interceptor = this.interceptor;
-    //    return (this.isNeedClose, connection, command);
-    //}
+    public (bool, ITheaConnection, ITheaCommand) UseMasterCommand(ITheaCommand command)
+    {
+        ITheaConnection connection;
+        if (this.transaction != null)
+        {
+            connection = this.connection;
+            command.Connection = connection;
+        }
+        else
+        {
+            if (command.Connection != null)
+                connection = command.Connection;
+            else
+            {
+                var connString = this.database.Select();
+                connection = this.CreateConnection(connString);
+                command.Connection = connection;
+            }
+        }
+        command.CommandTimeout = this.options.CommandTimeout;
+        command.Transaction = this.transaction;
+        command.Interceptor = this.interceptor;
+        return (this.isNeedClose, connection, command);
+    }
     public (bool, ITheaConnection, ITheaCommand) UseSlaveCommand()
     {
         ITheaConnection connection;
@@ -1298,7 +1298,7 @@ public class DialectProvider
     }
     public (bool, ITheaConnection, ITheaCommand, ReusableList<ReaderField>) CreateExecuteCommand(ICommandVisitor visitor)
     {
-        (var isNeedClose, var connection, var command) = visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(visitor.Command);
         command.CommandText = visitor.BuildSql(out var readerFields);
         return (isNeedClose, connection, command, readerFields);
     }

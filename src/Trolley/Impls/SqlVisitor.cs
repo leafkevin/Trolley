@@ -9,12 +9,6 @@ using System.Text;
 
 namespace Trolley;
 
-public enum OperationType
-{
-    None = 0,
-    And,
-    Or
-}
 public class SqlVisitor : ISqlVisitor
 {
     private bool isDisposed;
@@ -741,18 +735,19 @@ public class SqlVisitor : ISqlVisitor
             || typeof(IQueryBase).IsAssignableFrom(declaringType)
             || declaringType.FullName.StartsWith("Trolley.IGroupingQuery"))
             return this.VisitSqlMethodCall(sqlSegment);
-        //TODO: 
-        //sqlSegment.TargetType = methodCallExpr.Type;
+      
+            //TODO: 
+            //sqlSegment.TargetType = methodCallExpr.Type;
 
-        if (methodCallExpr.Method.Name == "ToValue")
-        {
-            if (declaringType.FullName.StartsWith("Trolley.ISqlOver") || declaringType.FullName.StartsWith("Trolley.IPartitionByOver"))
-                return this.VisitOverMethodCall(sqlSegment);
-            else if (declaringType == typeof(IGroupConcat))
-                return this.VisitGroupConcatMethodCall(sqlSegment);
-            else if (declaringType == typeof(IStringAgg))
-                return this.VisitStringAggMethodCall(sqlSegment);
-        }
+            if (methodCallExpr.Method.Name == "ToValue")
+            {
+                if (declaringType.FullName.StartsWith("Trolley.ISqlOver") || declaringType.FullName.StartsWith("Trolley.IPartitionByOver"))
+                    return this.VisitOverMethodCall(sqlSegment);
+                else if (declaringType == typeof(IGroupConcat))
+                    return this.VisitGroupConcatMethodCall(sqlSegment);
+                else if (declaringType == typeof(IStringAgg))
+                    return this.VisitStringAggMethodCall(sqlSegment);
+            }
         if (sqlSegment.IsDeferredFields)
             return this.VisitDeferredSqlSegment(sqlSegment);
 
@@ -772,7 +767,6 @@ public class SqlVisitor : ISqlVisitor
             sqlSegment.IsDeferredFields = true;
             return this.VisitDeferredSqlSegment(sqlSegment);
         }
-
         var testVisitor = new HasParameterVisitor();
         testVisitor.Visit(methodCallExpr);
         var value = methodCallExpr.Evaluate();
@@ -780,6 +774,47 @@ public class SqlVisitor : ISqlVisitor
             return sqlSegment.Change(value, SqlType.Variable);
         return sqlSegment.Change(value, SqlType.Constant);
     }
+    //private bool IsReadOnlySpanContains(MethodCallExpression methodCallExpr)
+    //{
+    //    if (declaringType == typeof(MemoryExtensions) && methodCallExpr && methodCallExpr.Method.Name == "Contains"
+    //      && methodCallExpr.Arguments[0])
+    //    {
+
+    //    }
+    //}
+    public static MethodInfo GetImplicitCastMethod(Type fromType, Type toType)
+    {
+        foreach (var methodInfo in fromType.GetMethods(BindingFlags.Public | BindingFlags.Static))
+        {
+            if (methodInfo.Name == "op_Implicit" && methodInfo.ReturnType == toType &&
+                methodInfo.GetParameters().FirstOrDefault()?.ParameterType == fromType)
+                return methodInfo;
+        }
+        foreach (var methodInfo in toType.GetMethods(BindingFlags.Public | BindingFlags.Static))
+        {
+            if (methodInfo.Name == "op_Implicit" && methodInfo.ReturnType == toType &&
+                methodInfo.GetParameters().FirstOrDefault()?.ParameterType == fromType)
+                return methodInfo;
+        }
+        return null;
+    }
+    public static MethodInfo GetExplicitCastMethod(Type fromType, Type toType)
+    {
+        foreach (var methodInfo in toType.GetMethods(BindingFlags.Public | BindingFlags.Static))
+        {
+            if (methodInfo.Name == "op_Explicit" && methodInfo.ReturnType == toType &&
+                methodInfo.GetParameters().FirstOrDefault()?.ParameterType == fromType)
+                return methodInfo;
+        }
+        foreach (var methodInfo in fromType.GetMethods(BindingFlags.Public | BindingFlags.Static))
+        {
+            if (methodInfo.Name == "op_Explicit" && methodInfo.ReturnType == toType &&
+                methodInfo.GetParameters().FirstOrDefault()?.ParameterType == fromType)
+                return methodInfo;
+        }
+        return null;
+    }
+
     public virtual SqlSegment VisitParameter(SqlSegment sqlSegment)
     {
         var parameterExpr = sqlSegment.Expression as ParameterExpression;
@@ -2561,4 +2596,10 @@ public class SqlVisitor : ISqlVisitor
         this.ShardingTables = null;
         this.ShardingTableJointMark = null;
     }
+}
+public enum OperationType
+{
+    None = 0,
+    And,
+    Or
 }

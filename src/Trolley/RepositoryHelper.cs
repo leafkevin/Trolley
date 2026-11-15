@@ -44,7 +44,9 @@ public static class RepositoryHelper
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> whereByIdsCommandInitializerCache = new();
 
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, object>> createWithCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, object>> createWithBulkCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, object>> updateWithCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, object>> updateWithBulkCommandInitializerCache = new();
 
     private static readonly ConcurrentDictionary<int, Delegate> readerDeserializerGetters = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerDeserializerAsyncGetters = new();
@@ -717,12 +719,12 @@ public static class RepositoryHelper
         return typedCommandInitializerCache.GetOrAdd(cacheKey, f =>
         {
             var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
-            var fieldBuilderExpr = Expression.Variable(typeof(StringBuilder), "fieldBuilder");
             var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
             var parameterExpr = Expression.Parameter(typeof(object), "parameter");
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
 
+            var fieldBuilderExpr = Expression.Variable(typeof(StringBuilder), "fieldBuilder");
             var typedParameterExpr = Expression.Variable(parameterType, "typedParameterObj");
             var ormProviderExpr = Expression.Variable(typeof(IOrmProvider), "ormProvider");
             blockParameters.AddRange([typedParameterExpr, ormProviderExpr]);
@@ -840,7 +842,6 @@ public static class RepositoryHelper
                     parameterNameExpr, parameterValueExpr, memberMapper, blockParameters, blockBodies);
             }
             if (index <= 0) throw new Exception($"没有找到{(commandType == 1 ? "插入" : "更新")}语句");
-
             if (isFunc)
             {
                 methodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.ToString), Type.EmptyTypes);
@@ -849,8 +850,13 @@ public static class RepositoryHelper
                     blockBodies.Add(Expression.Call(valueOrWhereBuilderExpr, appendMethodInfo, Expression.Constant(")")));
                     if (hasIdentity)
                     {
+                        if (entityMapper.KeyMembers == null || entityMapper.KeyMembers.Count == 0)
+                            throw new InvalidOperationException($"实体表{entityMapper.EntityType.FullName}不包含任何主键信息");
+                        if (!entityMapper.KeyMembers[0].IsAutoIncrement)
+                            throw new InvalidOperationException($"实体表{entityMapper.EntityType.FullName}主键{entityMapper.KeyMembers[0].FieldName}不是自增长字段");
+
                         var keyFieldName = ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName);
-                        var tailSql = ormProvider.GetIdentitySql(ormProvider.GetFieldName(keyFieldName));
+                        var tailSql = ormProvider.GetIdentitySql(keyFieldName);
                         blockBodies.Add(Expression.Call(valueOrWhereBuilderExpr, appendMethodInfo, Expression.Constant(tailSql)));
                     }
                     blockBodies.Add(Expression.Call(fieldBuilderExpr, appendMethodInfo, Expression.Call(valueOrWhereBuilderExpr, methodInfo)));
@@ -879,7 +885,7 @@ public static class RepositoryHelper
         var ignoreFieldsKey = hasIgnoreFields ? string.Join("-", ignoreFields) : "";
         var hasFilterFields = hasOnlyFields || hasIgnoreFields;
         var cacheKey = HashCode.Combine(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, parameterType, onlyFieldsKey, ignoreFieldsKey);
-        var commandInitializerCache = commandType == 1 ? createWithCommandInitializerCache : updateWithCommandInitializerCache;
+        var commandInitializerCache = commandType == 1 ? createWithBulkCommandInitializerCache : updateWithBulkCommandInitializerCache;
         var typedCommandInitializerCache = commandInitializerCache.GetOrAdd(entityType, f => new());
         return typedCommandInitializerCache.GetOrAdd(cacheKey, f =>
         {
@@ -1347,7 +1353,7 @@ public static class RepositoryHelper
     }
     public static Func<ITheaDataReader, object> CreateReaderEntityDeserializer(Type targetType, DbContext dbContext, ITheaDataReader reader)
     {
-        var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader"); 
+        var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
         var memberInfos = GetMembers(targetType).Where(f => f.CanWrite).ToList();
         var index = 0;

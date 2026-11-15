@@ -353,11 +353,11 @@ public class Updated : DialectProvider, IUpdated
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (_, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
         var sql = this.Visitor.BuildSql(out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
-        connection.Dispose();
+        if (isNeedClose) connection.Dispose();
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;
@@ -850,11 +850,11 @@ public class ResultUpdated<TResult> : DialectProvider, IBulkResultCommand<TResul
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (_, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
         var sql = this.Visitor.BuildSql(out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
-        connection.Dispose();
+        if (isNeedClose) connection.Dispose();
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;

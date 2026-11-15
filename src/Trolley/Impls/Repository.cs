@@ -445,27 +445,37 @@ public class Repository : DialectProvider, IRepository
     #region Create
     public virtual ICreate Create(Type entityType) => this.ormProvider.NewCreate(entityType, this.DbContext);
     public virtual ICreate<TEntity> Create<TEntity>() => this.ormProvider.NewCreate<TEntity>(this.DbContext);
-    public virtual int Create<TEntity>(object insertObj)
+    public virtual int Create<TEntity>(object insertObj, int bulkCount = 500)
     {
-        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(typeof(TEntity), insertObj, false);
-        return this.Execute(isNeedClose, connection, command);
+        var isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
+        if (isBulk)
+        {
+            var insertObjs = insertObj as IEnumerable;
+            (var isNeedClose, var connection, var command, var headSql, var commandInitializer)
+                = this.CreateInsertBulkCommand(typeof(TEntity), insertObjs, bulkCount);
+            return this.CreateBulk<TEntity>(isNeedClose, connection, command, insertObjs, bulkCount, headSql, commandInitializer);
+        }
+        else
+        {
+            (var isNeedClose, var connection, var command) = this.CreateInsertCommand(typeof(TEntity), insertObj, false);
+            return this.Execute(isNeedClose, connection, command);
+        }
     }
-    public virtual async Task<int> CreateAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default)
+    public virtual async Task<int> CreateAsync<TEntity>(object insertObj, int bulkCount = 500, CancellationToken cancellationToken = default)
     {
-        (var isNeedClose, var connection, var command) = this.CreateInsertCommand(typeof(TEntity), insertObj, false);
-        return await this.ExecuteAsync(isNeedClose, connection, command, cancellationToken);
-    }
-    public virtual int Create<TEntity>(IEnumerable insertObjs, int bulkCount = 500)
-    {
-        (var isNeedClose, var connection, var command, var headSql, var commandInitializer)
-            = this.CreateInsertBulkCommand(typeof(TEntity), insertObjs, bulkCount);
-        return this.CreateBulk<TEntity>(isNeedClose, connection, command, insertObjs, bulkCount, headSql, commandInitializer);
-    }
-    public virtual async Task<int> CreateAsync<TEntity>(IEnumerable insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
-    {
-        (var isNeedClose, var connection, var command, var headSql, var commandInitializer)
-            = this.CreateInsertBulkCommand(typeof(TEntity), insertObjs, bulkCount);
-        return await this.CreateBulkAsync<TEntity>(isNeedClose, connection, command, insertObjs, bulkCount, headSql, commandInitializer, cancellationToken);
+        var isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
+        if (isBulk)
+        {
+            var insertObjs = insertObj as IEnumerable;
+            (var isNeedClose, var connection, var command, var headSql, var commandInitializer)
+                = this.CreateInsertBulkCommand(typeof(TEntity), insertObjs, bulkCount);
+            return await this.CreateBulkAsync<TEntity>(isNeedClose, connection, command, insertObjs, bulkCount, headSql, commandInitializer, cancellationToken);
+        }
+        else
+        {
+            (var isNeedClose, var connection, var command) = this.CreateInsertCommand(typeof(TEntity), insertObj, false);
+            return await this.ExecuteAsync(isNeedClose, connection, command, cancellationToken);
+        }
     }
     public virtual int CreateIdentity<TEntity>(object insertObj)
     {
