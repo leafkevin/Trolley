@@ -1813,7 +1813,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         if (!string.IsNullOrEmpty(fromSegment.AliasName))
                             fieldName = fromSegment.AliasName + "." + fieldName;
                         sqlSegment.Value = fieldName;
-                        sqlSegment.IsEnum = memberMapper.UnderlyingType.IsEnum;
                     }
                 }
                 return sqlSegment;

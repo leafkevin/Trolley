@@ -583,8 +583,8 @@ public class UnitTest1 : UnitTestBase
             .WithBy(new { categoryId = 1 })
             .WithBy(f => f.BrandId, 2)
             .ToSql(out var parameters);
-        Assert.AreEqual("INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id0,@ProductNo0,@Name0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)", sql);
-        Assert.AreEqual(26, parameters.Count);
+        Assert.AreEqual("INSERT INTO `sys_product`(`CategoryId`,`BrandId`,`ProductNo`,`Name`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@CategoryId,@BrandId,@ProductNo0,@Name0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@CategoryId,@BrandId,@ProductNo1,@Name1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@CategoryId,@BrandId,@ProductNo2,@Name2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)", sql);
+        Assert.AreEqual(23, parameters.Count);
         Assert.AreEqual(1, (int)parameters[0].Value);
         Assert.AreEqual(2, (int)parameters[1].Value);
 

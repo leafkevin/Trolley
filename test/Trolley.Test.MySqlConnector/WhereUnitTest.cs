@@ -8,12 +8,11 @@ namespace Trolley.Test.MySqlConnector;
 [TestFixture]
 public class WhereUnitTest : UnitTestBase
 {
-    [SetUp]
-    public void Setup()
+    public WhereUnitTest()
     {
         var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
         var builder = new OrmDbFactoryBuilder()
-            .Register("fengling", OrmProviderType.MySql,f => f.Use(connectionString), true)
+            .Register("fengling", OrmProviderType.MySql, f => f.Use(connectionString), true)
             .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
             .UseInterceptor<MyDbInterceptor>();
         this.dbFactory = builder.Build();
@@ -96,7 +95,7 @@ public class WhereUnitTest : UnitTestBase
         var sql3 = repository.From<Company>()
             .Where(f => (f.IsEnabled ? f.Nature : CompanyNature.Internet) == localNature)
             .ToSql(out dbParameters);
-        Assert.AreEqual("SELECT a.`Id`,a.`Name`,a.`Nature`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_company` a WHERE (CASE WHEN a.`IsEnabled`=1 THEN a.`Nature` ELSE 'Internet' END)=@p0", sql3);
+        Assert.AreEqual("SELECT a.`Id`,a.`Name`,a.`Nature`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_company` a WHERE CASE WHEN a.`IsEnabled` THEN a.`Nature` ELSE 'Internet' END=@p0", sql3);
         Assert.AreEqual(localNature.ToString(), (string)dbParameters[0].Value);
         Assert.That(dbParameters[0].Value, Is.TypeOf<string>());
         var result3 = await repository.QueryAsync<Company>(f => (f.IsEnabled ? f.Nature : CompanyNature.Internet) == localNature);
@@ -107,7 +106,7 @@ public class WhereUnitTest : UnitTestBase
             .Where(f => (f.IsEnabled ? f.SourceType : UserSourceType.Website) > UserSourceType.Website)
             .Select(f => f.Id)
             .ToSql(out dbParameters);
-        Assert.AreEqual("SELECT a.`Id` FROM `sys_user` a WHERE (CASE WHEN a.`IsEnabled`=1 THEN a.`SourceType` ELSE 'Website' END)>'Website'", sql4);
+        Assert.AreEqual("SELECT a.`Id` FROM `sys_user` a WHERE CASE WHEN a.`IsEnabled` THEN a.`SourceType` ELSE 'Website' END>'Website'", sql4);
         var result5 = await repository.QueryAsync<Company>(f => (f.IsEnabled ? f.Nature : CompanyNature.Internet) == localNature);
         Assert.GreaterOrEqual(result5.Count, 2);
         Assert.AreEqual(localNature, result5[0].Nature);
@@ -148,7 +147,7 @@ public class WhereUnitTest : UnitTestBase
             .And(true, (a, b) => a.Products == null || a.Disputes == null)
             .Select((a, b) => "*")
             .ToSql(out _);
-        Assert.AreEqual("SELECT * FROM `sys_order` a,`sys_user` b WHERE ((a.`BuyerId`=b.`Id` AND (a.`SellerId` IS NULL OR a.`ProductCount` IS NULL) AND a.`Products` IS NOT NULL) OR b.`Age`<20) AND (a.`Products` IS NULL OR a.`Disputes` IS NULL)", sql);
+        Assert.AreEqual("SELECT * FROM `sys_order` a,`sys_user` b WHERE (a.`BuyerId`=b.`Id` AND (a.`SellerId` IS NULL OR a.`ProductCount` IS NULL) AND a.`Products` IS NOT NULL OR b.`Age`<20) AND (a.`Products` IS NULL OR a.`Disputes` IS NULL)", sql);
 
         sql = repository.From<Order, User>()
             .Where((a, b) => a.BuyerId == b.Id || b.SourceType == UserSourceType.Douyin)
@@ -162,7 +161,7 @@ public class WhereUnitTest : UnitTestBase
             .And(true, (a, b) => a.Products == null || a.Disputes == null)
             .Select((a, b) => "*")
             .ToSql(out _);
-        Assert.AreEqual("SELECT * FROM `sys_order` a,`sys_user` b WHERE (a.`BuyerId`=b.`Id` OR b.`SourceType`='Douyin') AND (a.`BuyerSource`='Taobao' OR (a.`SellerId` IS NULL AND a.`ProductCount` IS NULL) OR a.`ProductCount`>1 OR (a.`TotalAmount`>500 AND a.`BuyerSource`='Website')) AND ((a.`BuyerId`<=10 AND a.`ProductCount`>5 AND b.`SourceType`='Douyin') OR (a.`BuyerId`>10 AND a.`ProductCount`<=5 AND b.`SourceType`='Website') OR a.`BuyerSource`='Taobao') AND a.`IsEnabled`=1 AND a.`BuyerId`=b.`Id` AND (a.`Products` IS NULL OR a.`Disputes` IS NULL)", sql);
+        Assert.AreEqual("SELECT * FROM `sys_order` a,`sys_user` b WHERE (a.`BuyerId`=b.`Id` OR b.`SourceType`='Douyin') AND (a.`BuyerSource`='Taobao' OR a.`SellerId` IS NULL AND a.`ProductCount` IS NULL OR a.`ProductCount`>1 OR a.`TotalAmount`>500 AND a.`BuyerSource`='Website') AND (a.`BuyerId`<=10 AND a.`ProductCount`>5 AND b.`SourceType`='Douyin' OR a.`BuyerId`>10 AND a.`ProductCount`<=5 AND b.`SourceType`='Website' OR a.`BuyerSource`='Taobao') AND a.`IsEnabled`=1 AND a.`BuyerId`=b.`Id` AND (a.`Products` IS NULL OR a.`Disputes` IS NULL)", sql);
     }
     [Test]
     public void SqlWhere_Predicate()
@@ -180,7 +179,7 @@ public class WhereUnitTest : UnitTestBase
             .And(true, (a, b) => a.Products == null || a.Disputes == null)
             .Select((a, b) => "*")
         .ToSql(out _);
-        Assert.AreEqual("SELECT * FROM `sys_order` a,`sys_user` b WHERE (a.`BuyerId`=b.`Id` OR b.`SourceType`='Douyin') AND (a.`BuyerSource`='Taobao' OR (a.`SellerId` IS NULL AND a.`ProductCount` IS NULL) OR a.`ProductCount`>1 OR (a.`TotalAmount`>500 AND a.`BuyerSource`='Website')) AND ((a.`BuyerId`<=10 AND a.`ProductCount`>5 AND b.`SourceType`='Douyin') OR (a.`BuyerId`>10 AND a.`ProductCount`<=5 AND b.`SourceType`='Website') OR a.`BuyerSource`='Taobao') AND (a.`Products` IS NULL OR a.`Disputes` IS NULL)", sql);
+        Assert.AreEqual("SELECT * FROM `sys_order` a,`sys_user` b WHERE (a.`BuyerId`=b.`Id` OR b.`SourceType`='Douyin') AND (a.`BuyerSource`='Taobao' OR a.`SellerId` IS NULL AND a.`ProductCount` IS NULL OR a.`ProductCount`>1 OR a.`TotalAmount`>500 AND a.`BuyerSource`='Website') AND (a.`BuyerId`<=10 AND a.`ProductCount`>5 AND b.`SourceType`='Douyin' OR a.`BuyerId`>10 AND a.`ProductCount`<=5 AND b.`SourceType`='Website' OR a.`BuyerSource`='Taobao') AND (a.`Products` IS NULL OR a.`Disputes` IS NULL)", sql);
     }
     [Test]
     public void Where()
@@ -191,7 +190,7 @@ public class WhereUnitTest : UnitTestBase
                 && (f.OrderNo.Contains("ON_") && string.IsNullOrEmpty(f.OrderNo)))
             .Select(f => f.Id)
             .ToSql(out _);
-        Assert.AreEqual("SELECT a.`Id` FROM `sys_order` a WHERE EXISTS(SELECT * FROM `sys_user` t WHERE t.`Id`=a.`BuyerId` AND t.`IsEnabled`=1) AND (a.`BuyerId` IS NULL OR a.`BuyerId`=2) AND a.`OrderNo` LIKE '%ON_%' AND (a.`OrderNo` IS NULL OR a.`OrderNo`='')", sql1);
+        Assert.AreEqual("SELECT a.`Id` FROM `sys_order` a WHERE EXISTS(SELECT * FROM `sys_user` b WHERE b.`Id`=a.`BuyerId` AND b.`IsEnabled`=1) AND (a.`BuyerId` IS NULL OR a.`BuyerId`=2) AND a.`OrderNo` LIKE '%ON_%' AND (a.`OrderNo` IS NULL OR a.`OrderNo`='')", sql1);
         var result1 = repository.From<Order>()
             .Where(f => Sql.Exists<User>(t => t.Id == f.BuyerId && t.IsEnabled) && (f.BuyerId.IsNull() || f.BuyerId == 2)
                 && (f.OrderNo.Contains("ON_") || string.IsNullOrEmpty(f.OrderNo)))
@@ -204,7 +203,7 @@ public class WhereUnitTest : UnitTestBase
                 && (Sql.Exists<User>(t => t.Id == f.BuyerId && t.IsEnabled) || f.SellerId.IsNull()))
             .Select(f => f.Id)
             .ToSql(out _);
-        Assert.AreEqual("SELECT a.`Id` FROM `sys_order` a WHERE (a.`BuyerId` IS NULL OR a.`BuyerId`=2) AND (a.`OrderNo` LIKE '%ON_%' OR (a.`OrderNo` IS NULL OR a.`OrderNo`='')) AND (EXISTS(SELECT * FROM `sys_user` t WHERE t.`Id`=a.`BuyerId` AND t.`IsEnabled`=1) OR a.`SellerId` IS NULL)", sql2);
+        Assert.AreEqual("SELECT a.`Id` FROM `sys_order` a WHERE (a.`BuyerId` IS NULL OR a.`BuyerId`=2) AND (a.`OrderNo` LIKE '%ON_%' OR (a.`OrderNo` IS NULL OR a.`OrderNo`='')) AND (EXISTS(SELECT * FROM `sys_user` b WHERE b.`Id`=a.`BuyerId` AND b.`IsEnabled`=1) OR a.`SellerId` IS NULL)", sql2);
         var result2 = repository.From<Order>()
             .Where(f => Sql.Exists<User>(t => t.Id == f.BuyerId && t.IsEnabled) && (f.BuyerId.IsNull() || f.BuyerId == 2)
                 && (f.OrderNo.Contains("ON_") || string.IsNullOrEmpty(f.OrderNo)))
@@ -217,7 +216,7 @@ public class WhereUnitTest : UnitTestBase
                 && (f.OrderNo.Contains("ON_") && string.IsNullOrEmpty(f.OrderNo)) || DateTime.IsLeapYear(f.CreatedAt.Year))
             .Select(f => f.Id)
             .ToSql(out _);
-        Assert.AreEqual("SELECT a.`Id` FROM `sys_order` a WHERE EXISTS(SELECT * FROM `sys_user` t WHERE t.`Id`=a.`BuyerId` AND t.`IsEnabled`=1) AND (a.`BuyerId` IS NULL OR a.`BuyerId`=2) AND a.`OrderNo` LIKE '%ON_%' AND (a.`OrderNo` IS NULL OR a.`OrderNo`='') OR (YEAR(a.`CreatedAt`)%4=0 AND YEAR(a.`CreatedAt`)%100<>0 OR YEAR(a.`CreatedAt`)%400=0)", sql3);
+        Assert.AreEqual("SELECT a.`Id` FROM `sys_order` a WHERE EXISTS(SELECT * FROM `sys_user` b WHERE b.`Id`=a.`BuyerId` AND b.`IsEnabled`=1) AND (a.`BuyerId` IS NULL OR a.`BuyerId`=2) AND a.`OrderNo` LIKE '%ON_%' AND (a.`OrderNo` IS NULL OR a.`OrderNo`='') OR (YEAR(a.`CreatedAt`)%4=0 AND YEAR(a.`CreatedAt`)%100<>0 OR YEAR(a.`CreatedAt`)%400=0)", sql3);
         var result3 = repository.From<Order>()
             .Where(f => Sql.Exists<User>(t => t.Id == f.BuyerId && t.IsEnabled) && (f.BuyerId.IsNull() || f.BuyerId == 2)
                 && (f.OrderNo.Contains("ON_") && string.IsNullOrEmpty(f.OrderNo)) || DateTime.IsLeapYear(f.CreatedAt.Year))
@@ -235,7 +234,7 @@ public class WhereUnitTest : UnitTestBase
             .Where(f => users.Select(t => t.Id).Distinct().ToList().Contains(f.BuyerId))
             .Select(f => f.Id)
             .ToSql(out var parameters);
-        //Assert.AreEqual("SELECT a.`Id` FROM `sys_order` a WHERE a.`BuyerId` IN (@p0,@p1,@p2)", sql);
+        Assert.AreEqual("SELECT a.`Id` FROM `sys_order` a WHERE a.`BuyerId` IN (@p0,@p1,@p2)", sql);
         var userIds = users.Select(t => t.Id).Distinct().ToList();
         Assert.AreEqual(parameters.Count, userIds.Count);
         var userIdValues = parameters.Select(f => f.Value).ToList();
@@ -279,15 +278,15 @@ public class WhereUnitTest : UnitTestBase
             .Select(f => new { f.Id, f.ProductCount })
             .ToList();
         Assert.IsNotEmpty(result2);
-            foreach (var item in result2)
-                Assert.Greater(item.ProductCount, 1);
+        foreach (var item in result2)
+            Assert.Greater(item.ProductCount, 1);
         result2 = await repository.From<Order>()
             .Where(f => f.ProductCount.Value > 1)
             .Select(f => new { f.Id, f.ProductCount })
             .ToListAsync();
         Assert.IsNotEmpty(result2);
-            foreach (var item in result2)
-                Assert.Greater(item.ProductCount, 1);
+        foreach (var item in result2)
+            Assert.Greater(item.ProductCount, 1);
 
         var sql3 = repository.From<Order>()
            .Where(f => f.ProductCount.HasValue)
@@ -305,14 +304,14 @@ public class WhereUnitTest : UnitTestBase
             .Select(f => new { f.Id, f.ProductCount })
             .ToList();
         Assert.IsNotEmpty(result3);
-            foreach (var item in result3)
-                Assert.IsTrue(item.ProductCount.HasValue);
+        foreach (var item in result3)
+            Assert.IsTrue(item.ProductCount.HasValue);
         result3 = await repository.From<Order>()
             .Where(f => f.ProductCount.HasValue)
             .Select(f => new { f.Id, f.ProductCount })
             .ToListAsync();
         Assert.IsNotEmpty(result3);
-            foreach (var item in result3)
-                Assert.IsTrue(item.ProductCount.HasValue);
+        foreach (var item in result3)
+            Assert.IsTrue(item.ProductCount.HasValue);
     }
 }

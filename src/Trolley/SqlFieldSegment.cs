@@ -38,7 +38,6 @@ public struct SqlSegment
     /// 是否参数化当前值，本次解析有效
     /// </summary>
     public bool IsParameterized { get; set; }
-    public bool IsEnum { get; set; }
 
     public bool IsTrue { get; set; }
     public bool IsNull { get; set; }
@@ -48,15 +47,16 @@ public struct SqlSegment
     //where条件时候，需要用于添加参数
     public MemberMap MemberMapper { get; set; }
     public MemberInfo TargetMember { get; set; }
-    //public ReusableList<ReaderField> Fields { get; set; }
     public bool IsRawSqlFields { get; set; }
     public bool IsConstant => this.SqlType == SqlType.Constant;
     public bool IsVariable => this.SqlType == SqlType.Variable;
 
     public bool IsValue => this.SqlType == SqlType.Constant || this.SqlType == SqlType.Variable;
     public bool IsField => this.SqlType == SqlType.OnlyField;
+    public bool IsFieldType { get; set; }
     public bool HasField => this.SqlType > SqlType.Variable;
     public bool IsFixedValue => this.SqlType == SqlType.FixedValue;
+    public bool IsEnum => this.MemberMapper?.UnderlyingType.IsEnum ?? false;
     public bool HasDeferred => this.DeferredOperations != null && this.DeferredOperations.Count > 0;
     public Stack<DeferredOperation> DeferredOperations { get; set; }
 

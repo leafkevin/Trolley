@@ -1084,7 +1084,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     {
                         var targetSegment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Object });
                         if (targetSegment.IsValue) return targetSegment.Change(targetSegment.Value.ToString());
-                        if (targetSegment.SqlType == SqlType.OnlyField && targetSegment.IsEnum)
+                        if ((targetSegment.IsField || targetSegment.IsFieldType) && targetSegment.IsEnum)
                             return visitor.ToEnumString(targetSegment);
                         return targetSegment.Change(this.CastTo(methodInfo.ReturnType, targetSegment.Value), SqlType.MethodCall);
                     });

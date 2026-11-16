@@ -137,7 +137,7 @@ public class HasParameterVisitor : ExpressionVisitor
 {
     private bool hasMemberAccess;
     public bool HasParameter { get; private set; }
-    public bool HasVariable => this.hasMemberAccess && !this.HasParameter;
+    public bool HasVariable => this.hasMemberAccess;
     public List<ParameterExpression> Parameters { get; private set; }
 
     public HasParameterVisitor() => this.Parameters = new();
