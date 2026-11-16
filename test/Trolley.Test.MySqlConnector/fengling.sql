@@ -232,7 +232,7 @@ CREATE TABLE `sys_page`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_product`;
 CREATE TABLE `sys_product`  (
-  `Id` int NOT NULL,
+  `Id` int NOT NULL AUTO_INCREMENT,
   `ProductNo` varchar(50) NULL DEFAULT NULL,
   `Name` varchar(50) NULL DEFAULT NULL,
   `BrandId` int NULL DEFAULT NULL,

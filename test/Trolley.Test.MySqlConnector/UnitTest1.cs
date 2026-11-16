@@ -13,12 +13,11 @@ namespace Trolley.Test.MySqlConnector;
 [TestFixture]
 public class UnitTest1 : UnitTestBase
 {
-    [SetUp]
-    public void Setup()
+    public UnitTest1()
     {
         var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
         var builder = new OrmDbFactoryBuilder()
-            .Register("fengling", OrmProviderType.MySql,f => f.Use(connectionString), true)
+            .Register("fengling", OrmProviderType.MySql, f => f.Use(connectionString), true)
             .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
             .UseInterceptor<MyDbInterceptor>();
         this.dbFactory = builder.Build();
@@ -103,7 +102,7 @@ public class UnitTest1 : UnitTestBase
         {
             new
             {
-                Id = 1,
+                //Id = 1,
                 ProductNo="PN-001",
                 Name = "波司登羽绒服",
                 BrandId = 1,
@@ -116,7 +115,7 @@ public class UnitTest1 : UnitTestBase
             },
             new
             {
-                Id = 2,
+                //Id = 2,
                 ProductNo="PN-002",
                 Name = "雪中飞羽绒裤",
                 BrandId = 2,
@@ -129,7 +128,7 @@ public class UnitTest1 : UnitTestBase
             },
             new
             {
-                Id = 3,
+                //Id = 3,
                 ProductNo="PN-003",
                 Name = "优衣库保暖内衣",
                 BrandId = 3,
@@ -150,7 +149,7 @@ public class UnitTest1 : UnitTestBase
         {
             new Dictionary<string, object>
             {
-                { "id" , 1 },
+                //{ "id" , 1 },
                 { "productNo" , "PN-001" },
                 { "name" , "波司登羽绒服" },
                 { "brandId" , 2 },
@@ -163,7 +162,7 @@ public class UnitTest1 : UnitTestBase
             },
             new Dictionary<string, object>
             {
-                { "id" , 2 },
+                //{ "id" , 2 },
                 { "productNo" , "PN-002" },
                 { "name" , "雪中飞羽绒裤" },
                 { "brandId" , 1 },
@@ -176,7 +175,7 @@ public class UnitTest1 : UnitTestBase
             },
             new Dictionary<string, object>
             {
-                { "id" , 3 },
+                //{ "id" , 3 },
                 { "productNo" , "PN-003" },
                 { "name" , "优衣库保暖内衣" },
                 { "brandId" , 3 },
@@ -402,7 +401,7 @@ public class UnitTest1 : UnitTestBase
                 new
                 {
                     Id = 1,
-                    ProductNo="PN-001",
+                    ProductNo = "PN-001",
                     Name = "波司登羽绒服",
                     BrandId = 1,
                     CategoryId = 1,
@@ -415,7 +414,7 @@ public class UnitTest1 : UnitTestBase
                 new
                 {
                     Id = 2,
-                    ProductNo="PN-002",
+                    ProductNo = "PN-002",
                     Name = "雪中飞羽绒裤",
                     BrandId = 2,
                     CategoryId = 2,
@@ -428,7 +427,7 @@ public class UnitTest1 : UnitTestBase
                 new
                 {
                     Id = 3,
-                    ProductNo="PN-003",
+                    ProductNo = "PN-003",
                     Name = "优衣库保暖内衣",
                     BrandId = 3,
                     CategoryId = 3,
@@ -440,7 +439,7 @@ public class UnitTest1 : UnitTestBase
                 }
             }, 50)
             .ToSql(out _);
-        Assert.AreEqual("INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)", sql);
+        Assert.AreEqual("INSERT INTO `sys_product` (`ProductNo`,`Name`,`BrandId`,`CategoryId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)", sql);
 
         repository.BeginTransaction();
         repository.DeleteByIds<Product>(new int[] { 1, 2, 3 });
@@ -450,7 +449,7 @@ public class UnitTest1 : UnitTestBase
                 new
                 {
                     Id = 1,
-                    ProductNo="PN-001",
+                    ProductNo = "PN-001",
                     Name = "波司登羽绒服",
                     BrandId = 1,
                     CategoryId = 1,
@@ -463,7 +462,7 @@ public class UnitTest1 : UnitTestBase
                 new
                 {
                     Id = 2,
-                    ProductNo="PN-002",
+                    ProductNo = "PN-002",
                     Name = "雪中飞羽绒裤",
                     BrandId = 2,
                     CategoryId = 2,
@@ -476,7 +475,7 @@ public class UnitTest1 : UnitTestBase
                 new
                 {
                     Id = 3,
-                    ProductNo="PN-003",
+                    ProductNo = "PN-003",
                     Name = "优衣库保暖内衣",
                     BrandId = 3,
                     CategoryId = 3,
@@ -511,16 +510,16 @@ public class UnitTest1 : UnitTestBase
                 },
                 new Dictionary<string,object>
                 {
-                    { "Id",2},
-                    { "ProductNo","PN-002"},
-                    { "Name","雪中飞羽绒裤"},
-                    { "BrandId",2},
-                    { "CategoryId",2},
-                    { "IsEnabled",true},
-                    { "CreatedAt",DateTime.Now},
-                    { "CreatedBy",1},
-                    { "UpdatedAt",DateTime.Now},
-                    { "UpdatedBy",1}
+                    { "id",2},
+                    { "productNo","PN-002"},
+                    { "name","雪中飞羽绒裤"},
+                    { "brandId",2},
+                    { "categoryId",2},
+                    { "isEnabled",true},
+                    { "createdAt",DateTime.Now},
+                    { "createdBy",1},
+                    { "updatedAt",DateTime.Now},
+                    { "updatedBy",1}
                 },
                 new Dictionary<string,object>
                 {

@@ -153,7 +153,7 @@ public class Deleted : DialectProvider, IDeleted
     public Deleted(Type entityType, DbContext dbContext)
     {
         this.DbContext = dbContext;
-        (_, _, var command) = this.UseMasterCommand();
+        var command = this.ormProvider.CreateCommand();
         this.Visitor = this.DbContext.OrmProvider.NewDeleteVisitor(entityType, dbContext, 'a', command);
     }
     #endregion
@@ -191,11 +191,8 @@ public class Deleted : DialectProvider, IDeleted
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         var sql = this.Visitor.BuildSql(out _);
-        dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
-        command.Dispose();
-        if (isNeedClose) connection.Dispose();
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;
@@ -407,11 +404,8 @@ public class ResultDeleted<TResult> : DialectProvider, IBulkResultCommand<TResul
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         var sql = this.Visitor.BuildSql(out _);
-        dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
-        command.Dispose();
-        if (isNeedClose) connection.Dispose();
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;

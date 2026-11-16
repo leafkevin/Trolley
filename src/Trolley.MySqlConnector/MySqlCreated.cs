@@ -23,7 +23,7 @@ public class MySqlCreated : Created
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -132,7 +132,7 @@ public class MySqlCreated : Created
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -259,7 +259,7 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -368,7 +368,7 @@ public class MySqlIdentitiedCreated : IdentitiedCreated
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -492,7 +492,7 @@ public class MySqlContinuedCreate : ContinuedCreate
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -598,7 +598,7 @@ public class MySqlContinuedCreate : ContinuedCreate
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -721,7 +721,7 @@ public class MySqlBulkContinuedCreate : BulkContinuedCreate
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -835,7 +835,7 @@ public class MySqlBulkContinuedCreate : BulkContinuedCreate
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -963,7 +963,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -1076,7 +1076,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -1204,7 +1204,7 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
     public override int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -1245,7 +1245,7 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
             case ActionMode.Bulk:
                 {
                     (var shardingType, var shardingTables, var insertObjs, var bulkCount, var firstSqlSetter,
-                        var loopSqlSetter, _, var readerFields) = this.Visitor.BuildWithBulk(command);
+                        var loopSqlSetter, var tailSql, var readerFields) = this.Visitor.BuildWithBulk(command);
 
                     int index = 0;
                     var builder = new StringBuilder();
@@ -1258,6 +1258,8 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
                             if (index >= bulkCount)
                             {
                                 builder.Remove(builder.Length - 1, 1);
+                                if (!string.IsNullOrEmpty(tailSql))
+                                    builder.Append(tailSql);
                                 command.CommandText = builder.ToString();
                                 if (this.interceptor != null)
                                     command = this.interceptor.CommandInitialized(command);
@@ -1290,6 +1292,8 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
                     if (index > 0)
                     {
                         builder.Remove(builder.Length - 1, 1);
+                        if (!string.IsNullOrEmpty(tailSql))
+                            builder.Append(tailSql);
                         command.CommandText = builder.ToString();
                         if (this.interceptor != null)
                             command = this.interceptor.CommandInitialized(command);
@@ -1318,7 +1322,7 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
         var entityType = this.Visitor.Tables[0].EntityType;
         switch (this.Visitor.ActionMode)
         {
@@ -1359,7 +1363,7 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
             case ActionMode.Bulk:
                 {
                     (var shardingType, var shardingTables, var insertObjs, var bulkCount, var firstSqlSetter,
-                        var loopSqlSetter, _, var readerFields) = this.Visitor.BuildWithBulk(command);
+                        var loopSqlSetter, var tailSql, var readerFields) = this.Visitor.BuildWithBulk(command);
 
                     int index = 0;
                     var builder = new StringBuilder();
@@ -1372,6 +1376,8 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
                             if (index >= bulkCount)
                             {
                                 builder.Remove(builder.Length - 1, 1);
+                                if (!string.IsNullOrEmpty(tailSql))
+                                    builder.Append(tailSql);
                                 command.CommandText = builder.ToString();
                                 if (this.interceptor != null)
                                     command = this.interceptor.CommandInitialized(command);
@@ -1403,6 +1409,8 @@ public class MySqlBulkContinuedCreate<TEntity> : BulkContinuedCreate<TEntity>
                     if (index > 0)
                     {
                         builder.Remove(builder.Length - 1, 1);
+                        if (!string.IsNullOrEmpty(tailSql))
+                            builder.Append(tailSql);
                         command.CommandText = builder.ToString();
                         if (this.interceptor != null)
                             command = this.interceptor.CommandInitialized(command);

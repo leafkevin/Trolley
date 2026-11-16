@@ -546,7 +546,6 @@ public static class Extensions
 
     public static bool TryGetKeyIgnoreCase(this IDictionary<string, object> dict, string memberName, out string itemKey)
     {
-        itemKey = null;
         foreach (var dictKey in dict.Keys)
         {
             if (string.Equals(memberName, dictKey, StringComparison.OrdinalIgnoreCase))
@@ -555,6 +554,20 @@ public static class Extensions
                 return true;
             }
         }
+        itemKey = null;
+        return false;
+    }
+    public static bool TryGetValueIgnoreCase(this IDictionary<string, object> dict, string key, out object value)
+    {
+        foreach (var dictKey in dict.Keys)
+        {
+            if (string.Equals(key, dictKey, StringComparison.OrdinalIgnoreCase))
+            {
+                value = dict[dictKey];
+                return true;
+            }
+        }
+        value = null;
         return false;
     }
     public static bool TryFind(this List<MemberInfo> memberInfos, string memberName, out MemberInfo memberInfo)

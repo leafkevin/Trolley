@@ -182,24 +182,4 @@ public class MySqlDeleteVisitor : DeleteVisitor
         this.OutputSql = builder.ToString();
         builder.Clear();
     }
-    public virtual void InitTableAlias(LambdaExpression lambdaExpr)
-    {
-        this.TableAliases.Clear();
-        lambdaExpr.Body.TryGetParameterNames(out var parameters);
-        if (parameters == null || parameters.Count == 0)
-            return;
-        int index = 0;
-        foreach (var parameterExpr in lambdaExpr.Parameters)
-        {
-            if (!parameters.Contains(parameterExpr.Name))
-            {
-                index++;
-                continue;
-            }
-            if (this.TableAliases.ContainsKey(parameterExpr.Name))
-                continue;
-            this.TableAliases.Add(parameterExpr.Name, this.Tables[index]);
-            index++;
-        }
-    }
 }

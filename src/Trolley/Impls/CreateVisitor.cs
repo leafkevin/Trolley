@@ -700,12 +700,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             else
             {
                 var targetType = memberMapper.MappedTargetType;
-                var fieldValue = dict[key];
+                var isContainsKey = dict.TryGetValueIgnoreCase(key, out var fieldValue);
+                if (memberMapper.IsRequired && (!isContainsKey || fieldValue == null))
+                    throw new Exception($"实体{entityMapper.EntityType.FullName}表，字段{memberMapper.FieldName}为必填，值不能为空");
+
                 if (memberMapper.IsRequired)
                 {
-                    if (fieldValue == null)
-                        throw new Exception($"实体{entityMapper.EntityType.FullName}表，字段{memberMapper.FieldName}为必填，值不能为空");
-
                     var fieldValueType = fieldValue.GetType();
                     if (fieldValueType.ToUnderlyingType() != targetType)
                     {

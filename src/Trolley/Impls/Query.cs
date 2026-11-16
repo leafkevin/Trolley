@@ -167,8 +167,8 @@ public class QueryBase : QueryInternal, IQueryBase
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        var sql = this.Visitor.BuildSql(out _);
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
+        var sql = this.Visitor.BuildSql(out _);
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;
@@ -734,8 +734,8 @@ public class Query<T> : QueryBase, IQuery<T>
     public override string ToSql(out List<IDbDataParameter> dbParameters)
     {
         this.Select();
-        var sql = this.Visitor.BuildSql(out _);
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
+        var sql = this.Visitor.BuildSql(out _);
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;

@@ -20,10 +20,6 @@ public class UnitTest2 : UnitTestBase
             .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
             .UseInterceptor<MyDbInterceptor>();
         this.dbFactory = builder.Build();
-    }
-    [SetUp]
-    public void Setup()
-    {
         this.Initialize(1);
     }
     [Test]
