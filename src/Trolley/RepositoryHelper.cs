@@ -44,9 +44,11 @@ public static class RepositoryHelper
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, Func<IDataParameterCollection, DbContext, object, string>>> whereByIdsCommandInitializerCache = new();
 
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, object>> createWithCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, object>> createWithBulkCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, object>> updateWithCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, object>> createOrUpdateWithCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, object>> createWithBulkCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, object>> updateWithBulkCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<int, object>> createOrUpdateWithBulkCommandInitializerCache = new();
 
     private static readonly ConcurrentDictionary<int, Delegate> readerDeserializerGetters = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerDeserializerAsyncGetters = new();
@@ -237,6 +239,7 @@ public static class RepositoryHelper
 
     public static Func<IDataParameterCollection, DbContext, object, string> BuildWhereCommandInitializer(DbContext dbContext, Type entityType, object whereObjs, int commandType, bool isUseKey, bool isMultiple, bool isBulk)
     {
+        //commandType: 1 query, 2 exists, 3 delete
         Type whereObjType = null;
         bool isDictionary = false;
         if (isBulk)
@@ -713,8 +716,13 @@ public static class RepositoryHelper
         var hasIgnoreFields = ignoreFields != null && ignoreFields.Count > 0;
         var onlyFieldsKey = hasOnlyFields ? string.Join("-", onlyFields) : "";
         var ignoreFieldsKey = hasIgnoreFields ? string.Join("-", ignoreFields) : "";
-        var cacheKey = HashCode.Combine(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, parameterType, hasIdentity, onlyFieldsKey, ignoreFieldsKey);
-        var commandInitializerCache = commandType == 1 ? createWithCommandInitializerCache : updateWithCommandInitializerCache;
+        var cacheKey = HashCode.Combine(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, parameterType, isFunc, hasIdentity, onlyFieldsKey, ignoreFieldsKey);
+        var commandInitializerCache = commandType switch
+        {
+            1 => createWithCommandInitializerCache,
+            2 => updateWithCommandInitializerCache,
+            _ => createOrUpdateWithCommandInitializerCache
+        };
         var typedCommandInitializerCache = commandInitializerCache.GetOrAdd(entityType, f => new());
         return typedCommandInitializerCache.GetOrAdd(cacheKey, f =>
         {
@@ -885,7 +893,12 @@ public static class RepositoryHelper
         var ignoreFieldsKey = hasIgnoreFields ? string.Join("-", ignoreFields) : "";
         var hasFilterFields = hasOnlyFields || hasIgnoreFields;
         var cacheKey = HashCode.Combine(dbContext.OrmProvider.OrmProviderType, dbContext.EntityMapProvider, entityType, parameterType, onlyFieldsKey, ignoreFieldsKey);
-        var commandInitializerCache = commandType == 1 ? createWithBulkCommandInitializerCache : updateWithBulkCommandInitializerCache;
+        var commandInitializerCache = commandType switch
+        {
+            1 => createWithBulkCommandInitializerCache,
+            2 => updateWithBulkCommandInitializerCache,
+            _ => createOrUpdateWithBulkCommandInitializerCache
+        };
         var typedCommandInitializerCache = commandInitializerCache.GetOrAdd(entityType, f => new());
         return typedCommandInitializerCache.GetOrAdd(cacheKey, f =>
         {
