@@ -141,8 +141,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 builder.Append(tableName);
                 //子查询要设置表别名
                 builder.Append(" " + tableSegment.AliasName);
-                if (!string.IsNullOrEmpty(tableSegment.SuffixRawSql))
-                    builder.Append(" " + tableSegment.SuffixRawSql);
+                if (!string.IsNullOrEmpty(tableSegment.TableAliasTrailing))
+                    builder.Append(" " + tableSegment.TableAliasTrailing);
                 if (!string.IsNullOrEmpty(tableSegment.OnExpr))
                     builder.Append($" ON {tableSegment.OnExpr}");
             }
@@ -399,8 +399,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 builder.Append(tableName);
                 //子查询要设置表别名
                 builder.Append(" " + tableSegment.AliasName);
-                if (!string.IsNullOrEmpty(tableSegment.SuffixRawSql))
-                    builder.Append(" " + tableSegment.SuffixRawSql);
+                if (!string.IsNullOrEmpty(tableSegment.TableAliasTrailing))
+                    builder.Append(" " + tableSegment.TableAliasTrailing);
                 if (!string.IsNullOrEmpty(tableSegment.OnExpr))
                     builder.Append($" ON {tableSegment.OnExpr}");
             }

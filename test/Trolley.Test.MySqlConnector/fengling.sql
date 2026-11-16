@@ -88,7 +88,8 @@ CREATE TABLE `sys_order`  (
   `CreatedBy` int NULL DEFAULT NULL,
   `UpdatedAt` datetime NULL DEFAULT NULL,
   `UpdatedBy` int NULL DEFAULT NULL,
-  CONSTRAINT `pk_sys_order` PRIMARY KEY (`Id`)
+  CONSTRAINT `pk_sys_order` PRIMARY KEY (`Id`),
+  INDEX `idx_timed_tenant`(`CreatedAt`,`TenantId`) USING BTREE
 );
 -- ----------------------------
 -- Table structure for sys_order_104_202405

@@ -3680,5 +3680,36 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
              .ToCreate<Order>()
              .ExecuteAsync();
     }
+    [Test]
+    public async Task UseIndex()
+    {
+        var repository = this.dbFactory.Create();
+        var beginTime = DateTime.Parse("2025-10-01");
+        var endTime = DateTime.Parse("2025-12-31");
+        var sql1 = repository.From<Order>()
+            .WithTableAliasTrailing("USE INDEX(idx_timed_tenant)")
+            .Where(f => f.TenantId == "1" && f.CreatedAt >= beginTime && f.CreatedAt < endTime)
+            .Select(f => f.Id)
+            .ToSql(out _);
+        Assert.AreEqual("SELECT a.`Id` FROM `sys_order` a USE INDEX(idx_timed_tenant) WHERE a.`TenantId`='1' AND a.`CreatedAt`>=@p0 AND a.`CreatedAt`<@p1", sql1);
+        var result1 = repository.From<Order>()
+            .WithTableAliasTrailing("USE INDEX(idx_timed_tenant)")
+            .Where(f => f.TenantId == "1" && f.CreatedAt >= beginTime && f.CreatedAt < endTime)
+            .Select(f => f.Id)
+            .ToListAsync();
+        Assert.IsNotNull(result1);
+        var sql2 = repository.From<Order>()
+            .WithTableAliasTrailing("FORCE INDEX(idx_timed_tenant)")
+            .Where(f => f.TenantId == "1" && f.CreatedAt >= beginTime && f.CreatedAt < endTime)
+            .Select(f => f.Id)
+            .ToSql(out _);
+        Assert.AreEqual("SELECT a.`Id` FROM `sys_order` a FORCE INDEX(idx_timed_tenant) WHERE a.`TenantId`='1' AND a.`CreatedAt`>=@p0 AND a.`CreatedAt`<@p1", sql2);
+        var result2 = repository.From<Order>()
+          .WithTableAliasTrailing("FORCE INDEX(idx_timed_tenant)")
+          .Where(f => f.TenantId == "1" && f.CreatedAt >= beginTime && f.CreatedAt < endTime)
+          .Select(f => f.Id)
+          .ToListAsync();
+        Assert.IsNotNull(result1);
+    }
     private string DeferInvoke() => "DeferInvoke";
 }
