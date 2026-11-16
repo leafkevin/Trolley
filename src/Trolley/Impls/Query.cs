@@ -148,7 +148,7 @@ public class QueryBase : QueryInternal, IQueryBase
     {
         this.Visitor.SelectRaw(typeof(int), "1");
         this.Visitor.Take(1);
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor.Command);
         this.Visitor.IsScalar = true;
         command.CommandText = this.Visitor.BuildSql(out _);
         return this.Exists(isNeedClose, connection, command);
@@ -157,7 +157,7 @@ public class QueryBase : QueryInternal, IQueryBase
     {
         this.Visitor.SelectRaw(typeof(int), "1");
         this.Visitor.Take(1);
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor.Command);
         this.Visitor.IsScalar = true;
         command.CommandText = this.Visitor.BuildSql(out _);
         return await this.ExistsAsync(isNeedClose, connection, command, cancellationToken);
@@ -167,8 +167,8 @@ public class QueryBase : QueryInternal, IQueryBase
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         var sql = this.Visitor.BuildSql(out _);
+        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;
@@ -214,11 +214,7 @@ public class QueryBase : QueryInternal, IQueryBase
     public virtual ICreateVisitor NewCreateVisitor(Type entityType)
     {
         var createVisiter = this.ormProvider.NewCreateVisitor(entityType, this.DbContext, 'a', this.Visitor.Command);
-        createVisiter.Tables = this.Visitor.Tables;
         createVisiter.SharedQueryObjs = this.Visitor.SharedQueryObjs;
-        createVisiter.ShardingTables = this.Visitor.ShardingTables;
-        createVisiter.IsRecursive = this.Visitor.IsRecursive;
-        //createVisiter.CteQueryObj = this.Visitor.CteQueryObj;
         createVisiter.FromSql = this.Visitor.BuildCommandSql(entityType, out _);
         return createVisiter;
     }
@@ -734,8 +730,8 @@ public class Query<T> : QueryBase, IQuery<T>
     public override string ToSql(out List<IDbDataParameter> dbParameters)
     {
         this.Select();
-        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         var sql = this.Visitor.BuildSql(out _);
+        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;

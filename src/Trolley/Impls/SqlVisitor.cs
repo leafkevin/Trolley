@@ -22,7 +22,6 @@ public class SqlVisitor : ISqlVisitor
     public bool IsConstantParameterized => this.DbContext.Options.IsConstantParameterized;
     public string UserParameterPrefix => this.DbContext.Options.UserParameterPrefix;
 
-    public ITheaConnection Connection { get; set; }
     public ITheaCommand Command { get; set; }
     public IDataParameterCollection DbParameters { get; set; }
     public IDataParameterCollection NextDbParameters { get; set; }
@@ -88,12 +87,6 @@ public class SqlVisitor : ISqlVisitor
     public string HeadRawSql { get; set; }
     public string TailRawSql { get; set; }
 
-
-    public (bool, ITheaConnection, ITheaCommand) UseCommand()
-    {
-        var isNeedClose = this.DbContext.Transaction == null;
-        return (isNeedClose, this.Connection, this.Command);
-    }
     public virtual string BuildSql(out ReusableList<ReaderField> readerFields)
     {
         readerFields = null;
@@ -735,19 +728,19 @@ public class SqlVisitor : ISqlVisitor
             || typeof(IQueryBase).IsAssignableFrom(declaringType)
             || declaringType.FullName.StartsWith("Trolley.IGroupingQuery"))
             return this.VisitSqlMethodCall(sqlSegment);
-      
-            //TODO: 
-            //sqlSegment.TargetType = methodCallExpr.Type;
 
-            if (methodCallExpr.Method.Name == "ToValue")
-            {
-                if (declaringType.FullName.StartsWith("Trolley.ISqlOver") || declaringType.FullName.StartsWith("Trolley.IPartitionByOver"))
-                    return this.VisitOverMethodCall(sqlSegment);
-                else if (declaringType == typeof(IGroupConcat))
-                    return this.VisitGroupConcatMethodCall(sqlSegment);
-                else if (declaringType == typeof(IStringAgg))
-                    return this.VisitStringAggMethodCall(sqlSegment);
-            }
+        //TODO: 
+        //sqlSegment.TargetType = methodCallExpr.Type;
+
+        if (methodCallExpr.Method.Name == "ToValue")
+        {
+            if (declaringType.FullName.StartsWith("Trolley.ISqlOver") || declaringType.FullName.StartsWith("Trolley.IPartitionByOver"))
+                return this.VisitOverMethodCall(sqlSegment);
+            else if (declaringType == typeof(IGroupConcat))
+                return this.VisitGroupConcatMethodCall(sqlSegment);
+            else if (declaringType == typeof(IStringAgg))
+                return this.VisitStringAggMethodCall(sqlSegment);
+        }
         if (sqlSegment.IsDeferredFields)
             return this.VisitDeferredSqlSegment(sqlSegment);
 
@@ -2561,8 +2554,7 @@ public class SqlVisitor : ISqlVisitor
     {
         if (this.isDisposed)
             return;
-        this.isDisposed = true;
-        this.Connection = null;
+        this.isDisposed = true; 
         this.Tables = null;
         this.TableAliases = null;
         this.RefTableAliases = null;

@@ -148,7 +148,7 @@ public class Updated : DialectProvider, IUpdated
     public virtual int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.Bulk:
@@ -249,7 +249,7 @@ public class Updated : DialectProvider, IUpdated
     public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
 
         switch (this.Visitor.ActionMode)
         {
@@ -353,8 +353,8 @@ public class Updated : DialectProvider, IUpdated
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         var sql = this.Visitor.BuildSql(out _);
+        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;
@@ -847,8 +847,8 @@ public class ResultUpdated<TResult> : DialectProvider, IBulkResultCommand<TResul
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         var sql = this.Visitor.BuildSql(out _);
+        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;

@@ -151,7 +151,7 @@ public class HasParameterVisitor : ExpressionVisitor
     }
     protected override Expression VisitMember(MemberExpression node)
     {
-        if (node.Expression.NodeType == ExpressionType.Constant)
+        if (node.Expression != null && node.Expression.NodeType == ExpressionType.Constant)
             this.hasMemberAccess = true;
         return base.VisitMember(node);
     }

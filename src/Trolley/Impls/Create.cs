@@ -127,7 +127,7 @@ public class Created : DialectProvider, ICreated
     public virtual int Execute()
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.Bulk:
@@ -204,12 +204,12 @@ public class Created : DialectProvider, ICreated
     public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        (var isNeedClose, var connection, var command) = this.Visitor.UseCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand(this.Visitor.Command);
         switch (this.Visitor.ActionMode)
         {
             case ActionMode.Bulk:
                 (var shardingType, var shardingTables, var insertObjs, var bulkCount, var firstSqlSetter,
-                     var loopSqlSetter, _, var readerFields) = this.Visitor.BuildWithBulk(command);
+                     var loopSqlSetter, var tailSql, var readerFields) = this.Visitor.BuildWithBulk(command);
 
                 int index = 0;
                 var builder = new StringBuilder();
@@ -282,8 +282,8 @@ public class Created : DialectProvider, ICreated
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         var sql = this.Visitor.BuildSql(out _);
+        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;
@@ -462,8 +462,8 @@ public class ResultCreated<TResult> : DialectProvider, IResultCommand<TResult>
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         var sql = this.Visitor.BuildSql(out _);
+        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;
@@ -519,8 +519,8 @@ public class BulkResultCreated<TResult> : DialectProvider, IBulkResultCommand<TR
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         var sql = this.Visitor.BuildSql(out _);
+        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;

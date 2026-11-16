@@ -4,9 +4,7 @@ namespace Trolley;
 
 public interface ICommandVisitor
 {
-    ITheaConnection Connection { get; set; }
     ITheaCommand Command { get; set; }
     IDataParameterCollection DbParameters { get; set; }
-    (bool, ITheaConnection, ITheaCommand) UseCommand();
     string BuildSql(out ReusableList<ReaderField> readerFields);
 }

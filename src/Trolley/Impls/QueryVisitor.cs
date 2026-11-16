@@ -47,10 +47,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.TableAliasStart = tableAliasStart;
         this.Command = command;
         if (command != null)
-        {
-            this.Connection = command.Connection;
             this.DbParameters = this.Command.Parameters;
-        }
         this.IsNeedTableAlias = true;
     }
 
@@ -318,9 +315,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual string BuildCommandSql(Type entityType, out IDataParameterCollection dbParameters)
     {
+        if (this.IsManyShardingTables)
+            throw new NotSupportedException("SELECT ... INTO... 不支持多分表场景");
+
+        int index = 0;
         var builder = new StringBuilder("(");
         var entityMapper = this.Tables[0].Mapper;
-        int index = 0;
         foreach (var readerField in this.ReaderFields)
         {
             //Union后，如果没有select语句时，通常实体类型或是select分组对象
@@ -333,15 +333,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             builder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}");
             index++;
         }
-        builder.Append(") ");
-        //有CTE表
+        builder.AppendLine(")");
         if (this.SharedQueryObjs != null && this.SharedQueryObjs.Count > 0)
         {
-            var fieldsSql = builder.ToString();
+            var fieldSql = builder.ToString();
             builder.Clear();
-            bool isRecursive = false;
-
-            index = 0;
+            var isRecursive = false;
             foreach (var refQueryObj in this.SharedQueryObjs)
             {
                 if (!refQueryObj.IsCteQuery || refQueryObj is not ICteQuery cteQueryObj)
@@ -353,26 +350,32 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 index++;
             }
 
+            builder.Append(fieldSql);
             if (isRecursive)
                 builder.Insert(0, "WITH RECURSIVE ");
             else builder.Insert(0, "WITH ");
             builder.AppendLine();
-            builder.Append(fieldsSql);
         }
         dbParameters = this.DbParameters;
-
-        if (this.IsUnion && this.IsManyShardingTables)
-            throw new NotSupportedException("多分表场景下不支持Union操作");
 
         string sql = null;
         if (!string.IsNullOrEmpty(this.UnionSql))
         {
+            this.Tables[0].Body = $"({this.UnionSql})";
+            this.Tables[0].TableType = TableType.FromQuery;
+
             builder.Append(this.UnionSql);
             sql = builder.ToString();
             builder.Clear();
             return sql;
         }
         var headSql = builder.ToString();
+        builder.Clear();
+        this.AddSelectFieldsSql(builder, this.ReaderFields);
+        string selectSql = null;
+        if (this.IsDistinct)
+            selectSql = "DISTINCT " + builder.ToString();
+        else selectSql = builder.ToString();
         builder.Clear();
 
         string tableSql = null;
@@ -381,6 +384,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             for (int i = 0; i < this.Tables.Count; i++)
             {
                 var tableSegment = this.Tables[i];
+                if (tableSegment.TableType == TableType.Include && !tableSegment.IsUsed)
+                    continue;
                 string tableName = this.GetFormatTableName(tableSegment);
                 if (i > 0)
                 {
@@ -406,72 +411,23 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //各种单值查询，如：SELECT COUNT(*)/MAX(*)..等，都有SELECT操作     
         //如：From(f=>...).InnerJoin/UnionAll(f=>...)
         //生成sql时，include表的字段，一定要紧跟着主表字段后面，方便赋值主表实体的属性中，所以在插入时候就排好序
+        //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
         if (this.ReaderFields == null)
             throw new Exception("缺少Select语句");
 
         var hasGroupBy = !string.IsNullOrEmpty(this.GroupBySql);
         var hasOrderBy = this.OrderByFields != null && this.OrderByFields.Count > 0;
-        if (this.IsManyShardingTables)
-        {
-            if (hasGroupBy)
-            {
-                //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
-                foreach (var groupByField in this.GroupByFields)
-                {
-                    if (this.ReaderFields.Exists(f => f.IsGroupingField && f.FieldType == ReaderFieldType.Entity))
-                        break;
-                    var fieldName = groupByField.Value.ToString();
-                    if (!this.TryFindReaderFieldByValue(this.ReaderFields, fieldName, out var readerField))
-                        continue;
-                    if (groupByField != readerField)
-                    {
-                        readerField.IsGroupingField = true;
-                        groupByField.RefField = readerField;
-                        continue;
-                    }
-                    groupByField.IsIgnore = true;
-                    this.ReaderFields.Add(groupByField);
-                }
-            }
-            if (hasOrderBy)
-            {
-                //当有多分表时，有排序，Select字段中，没有完全的排序字段，则需要补全所有排序字段
-                foreach (var orderByField in this.OrderByFields)
-                {
-                    var readerField = orderByField.Field;
-                    var fieldName = readerField.Value.ToString();
-                    if (!orderByField.IsReaderField && !this.TryFindReaderFieldByValue(this.ReaderFields, fieldName, out readerField))
-                        continue;
-                    if (orderByField.Field != readerField)
-                    {
-                        readerField.IsOrderingField = true;
-                        orderByField.Field.RefField = readerField;
-                        continue;
-                    }
-                    orderByField.Field.IsIgnore = true;
-                    this.ReaderFields.Add(orderByField.Field);
-                }
-            }
-        }
-
-        this.AddSelectFieldsSql(builder, this.ReaderFields);
-
-        string selectSql = null;
-        if (this.IsDistinct)
-            selectSql = "DISTINCT " + builder.ToString();
-        else selectSql = builder.ToString();
-        builder.Clear();
 
         if (this.WhereBuilder.HasSql)
-            builder.Append($" WHERE {this.WhereBuilder.Build()}");
+            builder.Append($"WHERE {this.WhereBuilder.Build()}");
         //有多分表还有Group By操作，每个分表语句中做Group By操作，Union All语句后，还要再做Group By操作
         if (hasGroupBy)
         {
-            if (this.IsManyShardingTables) this.IsNeedChangeUnionShardingTables = true;
-            builder.Append($" GROUP BY {this.GroupBySql}");
+            if (builder.Length > 0) builder.Append(' ');
+            builder.Append($"GROUP BY {this.GroupBySql}");
         }
         //有多分表还有Group By+Having操作，每个分表语句中只做Group By操作，不做Having操作，在Union All语句后，再做Group By+Having操作
-        if (!this.IsManyShardingTables && !string.IsNullOrEmpty(this.HavingSql))
+        if (!string.IsNullOrEmpty(this.HavingSql))
             builder.Append($" HAVING {this.HavingSql}");
 
         //包含Where+GroupBy语句，不包含OrderBy语句
@@ -480,27 +436,28 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         //多分表场景只要没有Limit语句，不添加OrderBy语句，也不添加Offset语句
         //多分表场景有Limit语句，没有Offset语句，正常添加OrderBy语句
-        if (hasOrderBy && (!this.IsManyShardingTables || this.limit.HasValue))
+        if (hasOrderBy && this.limit.HasValue)
         {
             builder.Clear();
             //当有多分表时，有排序，Select字段中，没有完全的排序字段，则需要补全所有排序字段
+            index = 0;
             foreach (var orderByField in this.OrderByFields)
             {
-                var fieldName = orderByField.Field.Value.ToString();
-                if (!this.TryFindReaderFieldByValue(this.ReaderFields, fieldName, out var readerField))
-                    continue;
+                var readerField = orderByField.Field;
+                var fieldName = readerField.Value.ToString();
+                //Select之前的OrderBy，优先使用Select后的ReaderField
+                if (!orderByField.IsReaderField && this.TryFindReaderFieldByValue(this.ReaderFields, fieldName, out var myReaderField))
+                    readerField = myReaderField;
                 //OrderBy字段，优先使用SELECT字段别名
+                if (index > 0) builder.Append(',');
                 if (readerField.IsNeedAlias)
                     builder.Append(readerField.AliasName);
                 else builder.Append(fieldName);
+                if (!string.IsNullOrEmpty(orderByField.Suffix))
+                    builder.Append(orderByField.Suffix);
+                index++;
             }
-            orderBy = $" ORDER BY {builder.ToString()}";
-            //if (!this.IsManyShardingTables || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue))
-            //{
-            //    orderBy = $"ORDER BY {orderBy}";
-            //    if (!this.offset.HasValue && !this.limit.HasValue)
-            //        builder.Append(" " + orderBy);
-            //}
+            orderBy = $"ORDER BY {builder.ToString()}";
         }
         builder.Clear();
         if (!string.IsNullOrEmpty(headSql))
@@ -520,43 +477,43 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     limit = this.offset.Value + this.limit.Value;
 
                 //生成分页COUNT语句，不需要添加OrderBy语句
-                if (this.IsNeedPaging)
+                if (this.IsNeedPaging && !this.IsManyShardingTables)
                 {
-                    var fromSql = $"{tableSql}{others}";
+                    var fromSql = others.Length > 0 ? $"{tableSql} {others}" : tableSql;
                     if (!string.IsNullOrEmpty(this.GroupBySql))
-                        fromSql = $"(SELECT {selectSql} FROM {tableSql}{others}) a";
+                        fromSql = $"(SELECT {selectSql} FROM {fromSql}) a";
                     builder.Append($"SELECT COUNT(*) FROM {fromSql};");
                 }
             }
-
-            //生成查询数据语句时，需要添加OrderBy语句
-            if (!string.IsNullOrEmpty(orderBy))
-                others += orderBy;
-
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
             var pageSql = this.OrmProvider.GetPagingTemplate(offset, limit, orderBy);
             pageSql = pageSql.Replace("/**fields**/", selectSql);
             pageSql = pageSql.Replace("/**tables**/", tableSql);
-            pageSql = pageSql.Replace(" /**others**/", others);
+            pageSql = pageSql.Replace("/**others**/", others);
             builder.Append($"{pageSql}");
         }
         else
         {
-            //生成查询数据语句时，需要添加OrderBy语句
+            builder.Append($"SELECT {selectSql} FROM {tableSql}");
+            if (others.Length > 0)
+            {
+                builder.Append(' ');
+                builder.Append(others);
+            }
             if (!string.IsNullOrEmpty(orderBy))
-                others += orderBy;
-            builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
+            {
+                builder.Append(' ');
+                builder.Append(orderBy);
+            }
         }
-        if (this.IsManyShardingTables && (hasGroupBy || hasOrderBy || this.offset.HasValue || this.limit.HasValue))
-            this.IsNeedChangeUnionShardingTables = true;
 
         //UNION的子查询中有OrderBy/Offset/Limit，就需要包装一下SELECT * FROM，否则数据结果不正确
         //多分表场景下，在处理多分表时再做包装，这里不包装，包装就错了
-        //if (this.IsUnion && (hasOrderBy || this.offset.HasValue || this.limit.HasValue))
-        //{
-        //    builder.Insert(0, "SELECT * FROM (");
-        //    builder.Append($") a");
-        //}
+        if ((this.IsUnion || this.IsSecondUnion) && (hasOrderBy || this.offset.HasValue || this.limit.HasValue))
+        {
+            builder.Insert(0, "SELECT * FROM (");
+            builder.Append($") a");
+        }
         sql = builder.ToString();
         builder.Clear();
         return sql;

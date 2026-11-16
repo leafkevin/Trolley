@@ -31,10 +31,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.TableAliasStart = tableAsStart;
         this.Command = command;
         if (command != null)
-        {
-            this.Connection = command.Connection;
             this.DbParameters = command.Parameters;
-        }
         this.Tables = new()
         {
             new TableSegment
