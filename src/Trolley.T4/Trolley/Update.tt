@@ -63,10 +63,10 @@ public class Update : DialectProvider, IUpdate
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IUpdate WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IUpdate WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables[0], rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables[0], rawSql);
         return this;
     }
     #endregion
@@ -689,10 +689,10 @@ public class Update<TEntity> : Update, IUpdate<TEntity>
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IUpdate<TEntity> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IUpdate<TEntity> WithTableTrailing(string rawSql)
     {
-        base.WithTableAliasTrailing(rawSql);
+        base.WithTableTrailing(rawSql);
         return this;
     }
     #endregion
@@ -1381,10 +1381,10 @@ public class UpdateJoin<<#=tables#>> : Updated, IUpdateJoin<<#=tables#>>
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IUpdateJoin<<#=tables#>> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IUpdateJoin<<#=tables#>> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion

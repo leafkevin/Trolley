@@ -68,9 +68,9 @@ public class TableSegment
     public string Body { get; set; }
     public string TableSchema { get; set; }
     /// <summary>
-    /// 表别名后的原始SQL，比如：在polardbx数据库中，使用列存储索引FORCE INDEX(cc_i_seller),SQL SERVER数据库中，使用WITH (NOLOCK)
+    /// 表别名后的原始SQL，比如：mysql中的FORCE INDEX(idx_time_tenant),SQL SERVER中的WITH (NOLOCK)，WITH (INDEX(idx_time_user),FORCESEEK) 
     /// </summary>
-    public string TableAliasTrailing { get; set; }
+    public string TableTrailing { get; set; }
     /// <summary>
     /// 表类型，实体表(真实表)从Mapper中取字段，子查询表时，从ReaderFields中取字段
     /// </summary>

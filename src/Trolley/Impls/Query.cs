@@ -148,18 +148,16 @@ public class QueryBase : QueryInternal, IQueryBase
     {
         this.Visitor.SelectRaw(typeof(int), "1");
         this.Visitor.Take(1);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor.Command);
         this.Visitor.IsScalar = true;
-        command.CommandText = this.Visitor.BuildSql(out _);
+        (var isNeedClose, var connection, var command, _) = this.UseSlaveCommand(this.Visitor);
         return this.Exists(isNeedClose, connection, command);
     }
     public virtual async Task<bool> ExistsAsync(CancellationToken cancellationToken = default)
     {
         this.Visitor.SelectRaw(typeof(int), "1");
         this.Visitor.Take(1);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor.Command);
         this.Visitor.IsScalar = true;
-        command.CommandText = this.Visitor.BuildSql(out _);
+        (var isNeedClose, var connection, var command, _) = this.UseSlaveCommand(this.Visitor);
         return await this.ExistsAsync(isNeedClose, connection, command, cancellationToken);
     }
     #endregion
@@ -167,8 +165,7 @@ public class QueryBase : QueryInternal, IQueryBase
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        var sql = this.Visitor.BuildSql(out _);
-        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
+        var sql = this.Visitor.BuildSql(out dbParameters, out _);
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;
@@ -179,33 +176,29 @@ public class QueryBase : QueryInternal, IQueryBase
     protected TTarget QueryScalar<TTarget>(string aggSql, string aggFunc)
     {
         this.Visitor.SelectRaw(typeof(TTarget), aggSql, aggFunc);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor.Command);
         this.Visitor.IsScalar = true;
-        command.CommandText = this.Visitor.BuildSql(out _);
+        (var isNeedClose, var connection, var command, _) = this.UseSlaveCommand(this.Visitor);
         return this.QueryScalar<TTarget>(isNeedClose, connection, command);
     }
     protected async Task<TTarget> QueryScalarAsync<TTarget>(string aggSql, string aggFunc, CancellationToken cancellationToken = default)
     {
         this.Visitor.SelectRaw(typeof(TTarget), aggSql, aggFunc);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor.Command);
         this.Visitor.IsScalar = true;
-        command.CommandText = this.Visitor.BuildSql(out _);
+        (var isNeedClose, var connection, var command, _) = this.UseSlaveCommand(this.Visitor);
         return await this.QueryScalarAsync<TTarget>(isNeedClose, connection, command, cancellationToken);
     }
     protected TTarget QueryScalar<TTarget>(string aggSqlFormat, Expression fieldExpr)
     {
         this.Visitor.Select(aggSqlFormat, fieldExpr);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor.Command);
         this.Visitor.IsScalar = true;
-        command.CommandText = this.Visitor.BuildSql(out _);
+        (var isNeedClose, var connection, var command, _) = this.UseSlaveCommand(this.Visitor);
         return this.QueryScalar<TTarget>(isNeedClose, connection, command);
     }
     protected async Task<TTarget> QueryScalarAsync<TTarget>(string aggSqlFormat, Expression fieldExpr, CancellationToken cancellationToken = default)
     {
         this.Visitor.Select(aggSqlFormat, fieldExpr);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor.Command);
         this.Visitor.IsScalar = true;
-        command.CommandText = this.Visitor.BuildSql(out _);
+        (var isNeedClose, var connection, var command, _) = this.UseSlaveCommand(this.Visitor);
         return await this.QueryScalarAsync<TTarget>(isNeedClose, connection, command, cancellationToken);
     }
     #endregion
@@ -213,9 +206,11 @@ public class QueryBase : QueryInternal, IQueryBase
     #region NewCreateVisitor
     public virtual ICreateVisitor NewCreateVisitor(Type entityType)
     {
-        var createVisiter = this.ormProvider.NewCreateVisitor(entityType, this.DbContext, 'a', this.Visitor.Command);
-        createVisiter.SharedQueryObjs = this.Visitor.SharedQueryObjs;
-        createVisiter.FromSql = this.Visitor.BuildCommandSql(entityType, out _);
+        var command = this.ormProvider.CreateCommand();
+        var fromSql = this.Visitor.BuildCommandSql(entityType, out var dbParameters);
+        dbParameters.ForEach(f => command.Parameters.Add(f));
+        var createVisiter = this.ormProvider.NewCreateVisitor(entityType, this.DbContext, 'a', command);
+        createVisiter.FromSql = fromSql;
         return createVisiter;
     }
     #endregion
@@ -260,10 +255,10 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IQuery<T> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IQuery<T> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -730,8 +725,7 @@ public class Query<T> : QueryBase, IQuery<T>
     public override string ToSql(out List<IDbDataParameter> dbParameters)
     {
         this.Select();
-        var sql = this.Visitor.BuildSql(out _);
-        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
+        var sql = this.BuildSql(this.Visitor, out dbParameters, out _);
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;
@@ -847,10 +841,10 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IQuery<T1, T2> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IQuery<T1, T2> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -1163,10 +1157,10 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IQuery<T1, T2, T3> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IQuery<T1, T2, T3> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -1479,10 +1473,10 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IQuery<T1, T2, T3, T4> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IQuery<T1, T2, T3, T4> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -1795,10 +1789,10 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IQuery<T1, T2, T3, T4, T5> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -2111,10 +2105,10 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IQuery<T1, T2, T3, T4, T5, T6> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -2427,10 +2421,10 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -2743,10 +2737,10 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -3059,10 +3053,10 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -3375,10 +3369,10 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -3691,10 +3685,10 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -4007,10 +4001,10 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -4323,10 +4317,10 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -4639,10 +4633,10 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -4955,10 +4949,10 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -5271,10 +5265,10 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion

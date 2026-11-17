@@ -14,10 +14,9 @@ public interface IUpdateVisitor : ICommandVisitor, IDisposable
     IEntityMapProvider EntityMapProvider { get; }
     ReusableList<TableSegment> Tables { get; set; }
     ITableShardingProvider ShardingProvider { get; }
-
-    bool HasWhere { get; }
-    ActionMode ActionMode { get; set; }
     List<TableSegment> ShardingTables { get; set; }
+
+    ActionMode ActionMode { get; set; }
 
 
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection>, Action<IDataParameterCollection,
@@ -29,7 +28,7 @@ public interface IUpdateVisitor : ICommandVisitor, IDisposable
     void UseTableByRange(TableUsageMode usageMode, TableSegment tableSegment, object[] fieldValues);
     void UseTableMap(TableSegment tableSegment, Func<string, string, string, string> tableNameGetter);
     void UseTableSchema(TableSegment tableSegment, string tableSchema);
-    void WithTableAliasTrailing(TableSegment tableSegment, string rawSql);
+    void WithTableTrailing(TableSegment tableSegment, string rawSql);
 
     void Join(string joinType, Type entityType, Expression joinOn);
     void SetExpr(Expression fieldsAssignment);

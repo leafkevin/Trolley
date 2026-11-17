@@ -137,13 +137,13 @@ public interface IQuery<T> : IQueryBase
     IQuery<T> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> WithTableAliasTrailing(string rawSql);
+    IQuery<T> WithTableTrailing(string rawSql);
     #endregion
 
     #region Union/UnionAll
@@ -1031,13 +1031,13 @@ public interface IQuery<T1, T2> : IQueryBase
     IQuery<T1, T2> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2> WithTableAliasTrailing(string rawSql);
+    IQuery<T1, T2> WithTableTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -1634,13 +1634,13 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     IQuery<T1, T2, T3> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3> WithTableAliasTrailing(string rawSql);
+    IQuery<T1, T2, T3> WithTableTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -2238,13 +2238,13 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     IQuery<T1, T2, T3, T4> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4> WithTableAliasTrailing(string rawSql);
+    IQuery<T1, T2, T3, T4> WithTableTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -2843,13 +2843,13 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     IQuery<T1, T2, T3, T4, T5> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5> WithTableAliasTrailing(string rawSql);
+    IQuery<T1, T2, T3, T4, T5> WithTableTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -3449,13 +3449,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     IQuery<T1, T2, T3, T4, T5, T6> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6> WithTableAliasTrailing(string rawSql);
+    IQuery<T1, T2, T3, T4, T5, T6> WithTableTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -4056,13 +4056,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7> WithTableAliasTrailing(string rawSql);
+    IQuery<T1, T2, T3, T4, T5, T6, T7> WithTableTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -4664,13 +4664,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8> WithTableAliasTrailing(string rawSql);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8> WithTableTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -5273,13 +5273,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> WithTableAliasTrailing(string rawSql);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> WithTableTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -5883,13 +5883,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> WithTableAliasTrailing(string rawSql);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> WithTableTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -6494,13 +6494,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> WithTableAliasTrailing(string rawSql);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> WithTableTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -7106,13 +7106,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> WithTableAliasTrailing(string rawSql);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> WithTableTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -7719,13 +7719,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> WithTableAliasTrailing(string rawSql);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> WithTableTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -8333,13 +8333,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> WithTableAliasTrailing(string rawSql);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> WithTableTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -8948,13 +8948,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> WithTableAliasTrailing(string rawSql);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> WithTableTrailing(string rawSql);
     #endregion
 
     #region WithTable
@@ -9564,13 +9564,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> WithTableAliasTrailing(string rawSql);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> WithTableTrailing(string rawSql);
     #endregion
 
     #region Include

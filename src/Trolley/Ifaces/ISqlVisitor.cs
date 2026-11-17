@@ -17,7 +17,7 @@ public interface ISqlVisitor : IDisposable
     void UseTableBy(TableUsageMode usageMode, TableSegment tableSegment, params object[] fieldValues);
     void UseTable(TableSegment tableSegment, Func<object, string> tableNameGetter);
     void UseTableSchema(TableSegment tableSegment, string tableSchema);
-    void WithTableAliasTrailing(TableSegment tableSegment, string rawSql);
+    void WithTableTrailing(TableSegment tableSegment, string rawSql);
 
 
     SqlSegment Visit(SqlSegment sqlSegment);

@@ -14,12 +14,13 @@ public interface ICreateVisitor : ICommandVisitor, IDisposable
     IEntityMapProvider EntityMapProvider { get; }
     ReusableList<TableSegment> Tables { get; set; }
     ITableShardingProvider ShardingProvider { get; }
+    List<TableSegment> ShardingTables { get; set; }
+
 
     ActionMode ActionMode { get; set; }
     bool IsReturnIdentity { get; set; }
 
     ReusableList<IQuery> SharedQueryObjs { get; set; }
-    List<TableSegment> ShardingTables { get; set; }
     Dictionary<string, TableSegment> RefTableAliases { get; set; }
     ICteQuery CteQueryObj { get; set; }
     string FromSql { get; set; }
@@ -31,9 +32,9 @@ public interface ICreateVisitor : ICommandVisitor, IDisposable
 
     void UseTable(TableSegment tableSegment, params string[] tableNames);
     void UseTable(TableSegment tableSegment, Func<object, string> tableNameGetter);
-    void UseTableBy(TableUsageMode usageMode, TableSegment tableSegment, params object[] fieldValues);  
+    void UseTableBy(TableUsageMode usageMode, TableSegment tableSegment, params object[] fieldValues);
     void UseTableSchema(TableSegment tableSegment, string tableSchema);
-    void WithTableAliasTrailing(TableSegment tableSegment, string rawSql);
+    void WithTableTrailing(TableSegment tableSegment, string rawSql);
 
     void WithBy(object insertObj);
     void WithByField(string fieldName, object fieldValue);

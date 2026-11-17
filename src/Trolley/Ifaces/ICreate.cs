@@ -54,13 +54,13 @@ public interface ICreate
     ICreate UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
     /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回插入对象</returns>
-    ICreate WithTableAliasTrailing(string rawSql);
+    ICreate WithTableTrailing(string rawSql);
     #endregion
 
     #region WithBy
@@ -225,13 +225,13 @@ public interface IFromCreate : ICreated
     IFromCreate UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
     /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回插入对象</returns>
-    IFromCreate WithTableAliasTrailing(string rawSql);
+    IFromCreate WithTableTrailing(string rawSql);
     #endregion
 }
 public interface IFromCreate<TEntity> : IFromCreate
@@ -266,13 +266,13 @@ public interface IFromCreate<TEntity> : IFromCreate
     new IFromCreate<TEntity> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
     /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回插入对象</returns>
-    new IFromCreate<TEntity> WithTableAliasTrailing(string rawSql);
+    new IFromCreate<TEntity> WithTableTrailing(string rawSql);
     #endregion
 }
 /// <summary>
@@ -488,13 +488,13 @@ public interface ICreate<TEntity> : ICreate
     new ICreate<TEntity> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
     /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回插入对象</returns>
-    new ICreate<TEntity> WithTableAliasTrailing(string rawSql);
+    new ICreate<TEntity> WithTableTrailing(string rawSql);
     #endregion
 
     #region WithBy

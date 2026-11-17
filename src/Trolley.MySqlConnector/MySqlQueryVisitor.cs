@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -9,8 +10,8 @@ public class MySqlQueryVisitor : QueryVisitor
 {
     public bool IsUseIgnoreInto { get; set; }
 
-    public MySqlQueryVisitor(DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
-        : base(dbContext, tableAsStart, command) { }
+    public MySqlQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
+        : base(dbContext, tableAsStart, dbParameters) { }
 
     //public override string BuildCommandSql(Type entityType, out IDataParameterCollection dbParameters)
     //{

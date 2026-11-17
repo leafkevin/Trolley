@@ -67,61 +67,61 @@ public class Repository : DialectProvider, IRepository
     #region From
     public virtual IQuery<T> From<T>()
     {
-        var visitor = this.CreateQueryVisitor();
+        var visitor = this.ormProvider.NewQueryVisitor(this.DbContext, this.tableAliasStart);
         visitor.AddTable(typeof(T));
         return this.ormProvider.NewQuery<T>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2> From<T1, T2>()
     {
-        var visitor = this.CreateQueryVisitor();
+        var visitor = this.ormProvider.NewQueryVisitor(this.DbContext, this.tableAliasStart);
         visitor.AddTable(typeof(T1), typeof(T2));
         return this.ormProvider.NewQuery<T1, T2>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3> From<T1, T2, T3>()
     {
-        var visitor = this.CreateQueryVisitor();
+        var visitor = this.ormProvider.NewQueryVisitor(this.DbContext, this.tableAliasStart);
         visitor.AddTable(typeof(T1), typeof(T2), typeof(T3));
         return this.ormProvider.NewQuery<T1, T2, T3>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>()
     {
-        var visitor = this.CreateQueryVisitor();
+        var visitor = this.ormProvider.NewQueryVisitor(this.DbContext, this.tableAliasStart);
         visitor.AddTable(typeof(T1), typeof(T2), typeof(T3), typeof(T4));
         return this.ormProvider.NewQuery<T1, T2, T3, T4>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
     {
-        var visitor = this.CreateQueryVisitor();
+        var visitor = this.ormProvider.NewQueryVisitor(this.DbContext, this.tableAliasStart);
         visitor.AddTable(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
         return this.ormProvider.NewQuery<T1, T2, T3, T4, T5>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
     {
-        var visitor = this.CreateQueryVisitor();
+        var visitor = this.ormProvider.NewQueryVisitor(this.DbContext, this.tableAliasStart);
         visitor.AddTable(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
         return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>()
     {
-        var visitor = this.CreateQueryVisitor();
+        var visitor = this.ormProvider.NewQueryVisitor(this.DbContext, this.tableAliasStart);
         visitor.AddTable(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
         return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>()
     {
-        var visitor = this.CreateQueryVisitor();
+        var visitor = this.ormProvider.NewQueryVisitor(this.DbContext, this.tableAliasStart);
         visitor.AddTable(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
         return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>()
     {
-        var visitor = this.CreateQueryVisitor();
+        var visitor = this.ormProvider.NewQueryVisitor(this.DbContext, this.tableAliasStart);
         visitor.AddTable(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
         return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>()
     {
-        var visitor = this.CreateQueryVisitor();
+        var visitor = this.ormProvider.NewQueryVisitor(this.DbContext, this.tableAliasStart);
         visitor.AddTable(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
         return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.DbContext, visitor);
     }
@@ -130,13 +130,13 @@ public class Repository : DialectProvider, IRepository
     #region FromQuery
     public virtual IQuery<T> FromQuery<T>(IQuery<T> subQuery)
     {
-        var visitor = this.CreateQueryVisitor();
+        var visitor = this.ormProvider.NewQueryVisitor(this.DbContext, this.tableAliasStart);
         visitor.UseQuery(typeof(T), subQuery);
         return this.ormProvider.NewQuery<T>(this.DbContext, visitor);
     }
     public virtual IQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
-        var visitor = this.CreateQueryVisitor();
+        var visitor = this.ormProvider.NewQueryVisitor(this.DbContext, this.tableAliasStart);
         visitor.UseNewQuery(typeof(T), subQueryExpr);
         return this.ormProvider.NewQuery<T>(this.DbContext, visitor);
     }
@@ -350,28 +350,29 @@ public class Repository : DialectProvider, IRepository
     /// <returns>返回是否存在</returns>
     public bool Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate)
     {
-        if (wherePredicate == null) throw new ArgumentNullException(nameof(wherePredicate));
-        var entityType = typeof(TEntity);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        if (wherePredicate == null)
+            throw new ArgumentNullException(nameof(wherePredicate));
+
         if (wherePredicate != null)
         {
-            using var queryVisitor = this.CreateQueryVisitor(command);
-            queryVisitor.AddTable(entityType);
+            using var queryVisitor = this.ormProvider.NewQueryVisitor(this.DbContext, this.tableAliasStart);
+            queryVisitor.AddTable(typeof(TEntity));
             queryVisitor.And(wherePredicate);
             queryVisitor.SelectRaw(typeof(int), "1");
             queryVisitor.Take(1);
             queryVisitor.IsScalar = true;
-            command.CommandText = queryVisitor.BuildSql(out _);
+            (var isNeedClose, var connection, var command, _) = this.UseSlaveCommand(queryVisitor);
+            return this.Exists(isNeedClose, connection, command);
         }
         else
         {
-            var entityMapper = this.entityMapProvider.GetEntityMap(entityType);
+            var entityMapper = this.entityMapProvider.GetEntityMap(typeof(TEntity));
             var tableName = this.ormProvider.GetTableName(entityMapper.TableName);
-            command.CommandText = $"SELECT 1 FROM {tableName} LIMIT 1";
+            var rawSql = $"SELECT 1 FROM {tableName} LIMIT 1";
+            (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+            this.Initialize(command, rawSql);
+            return this.Exists(isNeedClose, connection, command);
         }
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
-        return this.Exists(isNeedClose, connection, command);
     }
     /// <summary>
     /// 判断TEntity表是否存在满足wherePredicate条件的记录，存在返回true，否则返回false，不支持分表
@@ -383,27 +384,26 @@ public class Repository : DialectProvider, IRepository
     public async Task<bool> ExistsAsync<TEntity>(Expression<Func<TEntity, bool>> wherePredicate, CancellationToken cancellationToken = default)
     {
         if (wherePredicate == null) throw new ArgumentNullException(nameof(wherePredicate));
-        var entityType = typeof(TEntity);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         if (wherePredicate != null)
         {
-            using var queryVisitor = this.CreateQueryVisitor(command);
-            queryVisitor.AddTable(entityType);
+            using var queryVisitor = this.ormProvider.NewQueryVisitor(this.DbContext, this.tableAliasStart);
+            queryVisitor.AddTable(typeof(TEntity));
             queryVisitor.And(wherePredicate);
             queryVisitor.SelectRaw(typeof(int), "1");
             queryVisitor.Take(1);
             queryVisitor.IsScalar = true;
-            command.CommandText = queryVisitor.BuildSql(out _);
+            (var isNeedClose, var connection, var command, _) = this.UseSlaveCommand(queryVisitor);
+            return await this.ExistsAsync(isNeedClose, connection, command, cancellationToken);
         }
         else
         {
-            var entityMapper = this.entityMapProvider.GetEntityMap(entityType);
+            var entityMapper = this.entityMapProvider.GetEntityMap(typeof(TEntity));
             var tableName = this.ormProvider.GetTableName(entityMapper.TableName);
-            command.CommandText = $"SELECT 1 FROM {tableName} LIMIT 1";
+            var rawSql = $"SELECT 1 FROM {tableName} LIMIT 1";
+            (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+            this.Initialize(command, rawSql);
+            return await this.ExistsAsync(isNeedClose, connection, command, cancellationToken);
         }
-        if (this.interceptor != null)
-            command = this.interceptor.CommandInitialized(command);
-        return await this.ExistsAsync(isNeedClose, connection, command, cancellationToken);
     }
     #endregion
 

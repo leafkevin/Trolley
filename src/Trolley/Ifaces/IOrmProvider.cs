@@ -77,20 +77,6 @@ public interface IOrmProvider
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> NewGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping> NewGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
 
-    //IFromCommand<T> NewFromCommand<T>(DbContext dbContext, IQueryVisitor visitor);
-    //IFromCommand<T1, T2> NewFromCommand<T1, T2>(DbContext dbContext, IQueryVisitor visitor);
-    //IFromCommand<T1, T2, T3> NewFromCommand<T1, T2, T3>(DbContext dbContext, IQueryVisitor visitor);
-    //IFromCommand<T1, T2, T3, T4> NewFromCommand<T1, T2, T3, T4>(DbContext dbContext, IQueryVisitor visitor);
-    //IFromCommand<T1, T2, T3, T4, T5> NewFromCommand<T1, T2, T3, T4, T5>(DbContext dbContext, IQueryVisitor visitor);
-    //IFromCommand<T1, T2, T3, T4, T5, T6> NewFromCommand<T1, T2, T3, T4, T5, T6>(DbContext dbContext, IQueryVisitor visitor);
-
-    //IGroupingCommand<T, TGrouping> NewGroupCommand<T, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
-    //IGroupingCommand<T1, T2, TGrouping> NewGroupCommand<T1, T2, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
-    //IGroupingCommand<T1, T2, T3, TGrouping> NewGroupCommand<T1, T2, T3, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
-    //IGroupingCommand<T1, T2, T3, T4, TGrouping> NewGroupCommand<T1, T2, T3, T4, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
-    //IGroupingCommand<T1, T2, T3, T4, T5, TGrouping> NewGroupCommand<T1, T2, T3, T4, T5, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
-    //IGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> NewGroupCommand<T1, T2, T3, T4, T5, T6, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
-
     IMultiDialectProvider NewMultipleQuery(DbContext dbContext, ITheaCommand command);
 
     IMultiQuery<T> NewMultiQuery<T>(IMultiDialectProvider multiDialectProvider, IQueryVisitor visitor);
@@ -184,7 +170,7 @@ public interface IOrmProvider
     IDeleted NewDeleted(Type entityType, DbContext dbContext);
     IBulkResultCommand<TResult> NewResultDeleted<TResult>(DbContext dbContext, IDeleteVisitor visitor);
 
-    IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null);
+    IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null);
     ICreateVisitor NewCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null);
     IUpdateVisitor NewUpdateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null);
     IDeleteVisitor NewDeleteVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null);

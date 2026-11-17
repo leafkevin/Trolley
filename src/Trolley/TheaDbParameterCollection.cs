@@ -5,7 +5,7 @@ using System.Data;
 
 namespace Trolley;
 
-public class TheaDbParameterCollection : IDataParameterCollection
+public sealed class TheaDbParameterCollection : IDataParameterCollection
 {
     private readonly List<IDbDataParameter> parameters = new();
     private readonly Dictionary<string, int> namedIndices = new();
@@ -67,6 +67,11 @@ public class TheaDbParameterCollection : IDataParameterCollection
         this.parameters.Add(dbParameter);
         return index;
     }
+    public void AddRange(Array values)
+    {
+        foreach (var value in values)
+            this.Add(value);
+    }
     public void Clear()
     {
         this.namedIndices.Clear();
@@ -84,6 +89,11 @@ public class TheaDbParameterCollection : IDataParameterCollection
     }
     public void CopyTo(Array array, int index)
         => ((ICollection)this).CopyTo(array, index);
+    public void CopyTo(IDataParameterCollection dbParameters)
+    {
+        foreach (var dbParameter in this.parameters)
+            dbParameters.Add(dbParameter);
+    }
     public IEnumerator GetEnumerator() => this.parameters.GetEnumerator();
     public int IndexOf(string parameterName)
     {

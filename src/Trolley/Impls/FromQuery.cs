@@ -108,7 +108,7 @@ public class FromQuery : IFromQuery
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
         dbParameters = this.visitor.DbParameters.Cast<IDbDataParameter>().ToList();
-        return this.visitor.BuildSql(true, out _);
+        return this.visitor.BuildSql(true, out dbParameters, out _);
     }
     #endregion
 }

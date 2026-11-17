@@ -201,9 +201,6 @@ public class MySqlUpdated : Updated
                 break;
             default:
                 {
-                    if (!this.Visitor.HasWhere)
-                        throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
-
                     command.CommandText = this.Visitor.BuildSql(out _);
                     connection.Open();
                     result = command.ExecuteNonQuery();
@@ -394,9 +391,6 @@ public class MySqlUpdated : Updated
                 break;
             default:
                 {
-                    if (!this.Visitor.HasWhere)
-                        throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
-
                     command.CommandText = this.Visitor.BuildSql(out _);
                     await connection.OpenAsync(cancellationToken);
                     result = await command.ExecuteNonQueryAsync(cancellationToken);

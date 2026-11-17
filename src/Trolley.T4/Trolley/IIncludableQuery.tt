@@ -67,13 +67,13 @@ public interface IIncludableQuery<T, TMember> : IQuery<T>
     new IIncludableQuery<T, TMember> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    new IIncludableQuery<T, TMember> WithTableAliasTrailing(string rawSql);
+    new IIncludableQuery<T, TMember> WithTableTrailing(string rawSql);
     #endregion
 }
 <#
@@ -152,13 +152,13 @@ public interface IIncludableQuery<<#=tables#>, TMember> : IQuery<<#=tables#>>
     new IIncludableQuery<<#=tables#>, TMember> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    new IIncludableQuery<<#=tables#>, TMember> WithTableAliasTrailing(string rawSql);
+    new IIncludableQuery<<#=tables#>, TMember> WithTableTrailing(string rawSql);
     #endregion
 <#      }#>
 }

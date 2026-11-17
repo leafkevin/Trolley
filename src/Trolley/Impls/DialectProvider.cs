@@ -11,7 +11,7 @@ namespace Trolley;
 
 public class DialectProvider
 {
-    protected char tableAsStart = 'a';
+    protected char tableAliasStart = 'a';
     protected internal string dbKey => this.DbContext.DbKey;
     protected internal TheaDatabase database => this.DbContext.Database;
     protected internal ITheaConnection connection => this.DbContext.Connection;
@@ -115,20 +115,26 @@ public class DialectProvider
         command.Transaction = this.transaction;
         return (this.isNeedClose, connection, command);
     }
-    public (bool, ITheaConnection, ITheaCommand) CreateSlaveConnection(ITheaCommand command)
+    public (bool, ITheaConnection, ITheaCommand, ReusableList<ReaderField>) UseSlaveCommand(IQueryVisitor visitor)
     {
-        ITheaConnection connection;
-        if (this.transaction != null)
-            connection = this.connection;
-        else
-        {
-            var connString = this.database.SelectSlave();
-            connection = this.CreateConnection(connString);
-        }
-        //this.interceptor?.CommandCreating(connection); 
-        command.Connection = connection;
-        command.Transaction = this.transaction;
-        return (this.isNeedClose, connection, command);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        var sql = this.BuildSql(visitor, out var dbParameters, out var readerFields);
+        command.CommandText = sql;
+        if (dbParameters != null && dbParameters.Count > 0)
+            dbParameters.ForEach(f => command.Parameters.Add(f));
+        this.Initialize(command);
+        return (isNeedClose, connection, command, readerFields);
+    }
+    public (bool, ITheaConnection, ITheaCommand, ReusableList<ReaderField>) UseSlaveCommand(IQueryVisitor visitor, Expression defaultExpr)
+    {
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        visitor.SelectDefault(defaultExpr);
+        var sql = this.BuildSql(visitor, out var dbParameters, out var readerFields);
+        command.CommandText = sql;
+        if (dbParameters != null && dbParameters.Count > 0)
+            dbParameters.ForEach(f => command.Parameters.Add(f));
+        this.Initialize(command);
+        return (isNeedClose, connection, command, readerFields);
     }
     public (bool, ITheaConnection, ITheaCommand) UseSlaveCommand(ITheaCommand command)
     {
@@ -171,16 +177,8 @@ public class DialectProvider
     #endregion
 
     #region CreateQueryVisitor
-    public IQueryVisitor CreateQueryVisitor()
-    {
-        var command = this.ormProvider.CreateCommand();
-        return this.ormProvider.NewQueryVisitor(this.DbContext, this.tableAsStart, command);
-    }
     public IQueryVisitor CreateQueryVisitor(ITheaCommand command)
-    {
-        if (command == null) command = this.ormProvider.CreateCommand();
-        return this.ormProvider.NewQueryVisitor(this.DbContext, this.tableAsStart, command);
-    }
+        => this.ormProvider.NewQueryVisitor(this.DbContext, this.tableAliasStart, command.Parameters);
     #endregion
 
     #region CreateQueryCommand
@@ -256,6 +254,26 @@ public class DialectProvider
     }
     #endregion
 
+    #region BuildSql
+    public string BuildSql(IQueryVisitor visitor, out List<IDbDataParameter> dbParameters, out ReusableList<ReaderField> readerFields)
+    {
+        var sql = visitor.BuildSql(out dbParameters, out readerFields);
+        if (!string.IsNullOrEmpty(this.HeadRawSql))
+            sql = this.HeadRawSql + sql;
+        if (!string.IsNullOrEmpty(this.TailRawSql))
+            sql += this.TailRawSql;
+        return sql;
+    }
+    //public string BuildSql(ICommandVisitor visitor, out List<IDbDataParameter> dbParameters, out ReusableList<ReaderField> readerFields)
+    //{
+    //    var command = visitor.Command;
+    //    if (!string.IsNullOrEmpty(this.HeadRawSql))
+    //        command.CommandText = this.HeadRawSql + command.CommandText;
+    //    if (!string.IsNullOrEmpty(this.TailRawSql))
+    //        command.CommandText += this.TailRawSql;
+    //}
+    #endregion
+
     #region QueryScalar
     public TResult QueryScalar<TResult>(bool isNeedClose, ITheaConnection connection, ITheaCommand command)
     {
@@ -276,7 +294,6 @@ public class DialectProvider
     }
     public async Task<TResult> QueryScalarAsync<TResult>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, CancellationToken cancellationToken = default)
     {
-        this.Initialize(command);
         await connection.OpenAsync(cancellationToken);
         TResult result = default;
         var objResult = await command.ExecuteScalarAsync(cancellationToken);
@@ -335,12 +352,8 @@ public class DialectProvider
     public TTarget QuerySingle<TTarget>(IQueryVisitor visitor)
     {
         var entityType = typeof(TTarget);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.Command);
         Expression<Func<TTarget, TTarget>> defaultExpr = f => f;
-        visitor.SelectDefault(defaultExpr);
-        var sql = visitor.BuildSql(out var readerFields);
-        command.CommandText = sql;
-        this.Initialize(command);
+        (var isNeedClose, var connection, var command, var readerFields) = this.UseSlaveCommand(visitor, defaultExpr);
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
@@ -348,13 +361,10 @@ public class DialectProvider
         TTarget result = default;
         var deserializer = reader.GetReaderDeserializer(entityType, this.DbContext, readerFields);
         if (reader.Read()) result = (TTarget)deserializer.Invoke(reader, readerFields);
-        if (visitor.BuildIncludeSql(entityType, result, false, out sql))
+        if (visitor.BuildIncludeSql(entityType, result, false, out var sql))
         {
             reader.Dispose();
-            command.CommandText = sql;
-            command.Parameters.Clear();
-            visitor.NextDbParameters.CopyTo(command.Parameters);
-            this.Initialize(command);
+            this.Initialize(command, visitor, sql);
             reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
             visitor.SetIncludeValues(entityType, result, reader, false);
         }
@@ -372,12 +382,8 @@ public class DialectProvider
     public async Task<TTarget> QuerySingleAsync<TTarget>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
         var entityType = typeof(TTarget);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.Command);
         Expression<Func<TTarget, TTarget>> defaultExpr = f => f;
-        visitor.SelectDefault(defaultExpr);
-        var sql = visitor.BuildSql(out var readerFields);
-        command.CommandText = sql;
-        this.Initialize(command);
+        (var isNeedClose, var connection, var command, var readerFields) = this.UseSlaveCommand(visitor, defaultExpr);
 
         await connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
@@ -386,13 +392,10 @@ public class DialectProvider
         var deserializer = reader.GetReaderDeserializer(entityType, this.DbContext, readerFields);
         if (await reader.ReadAsync(cancellationToken))
             result = (TTarget)deserializer.Invoke(reader, readerFields);
-        if (visitor.BuildIncludeSql(entityType, result, false, out sql))
+        if (visitor.BuildIncludeSql(entityType, result, false, out var sql))
         {
             await reader.DisposeAsync();
-            command.CommandText = sql;
-            command.Parameters.Clear();
-            visitor.NextDbParameters.CopyTo(command.Parameters);
-            this.Initialize(command);
+            this.Initialize(command, visitor, sql);
             reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
             visitor.SetIncludeValues(entityType, result, reader, false);
         }
@@ -448,12 +451,8 @@ public class DialectProvider
     public List<TTarget> Query<TTarget>(IQueryVisitor visitor)
     {
         var entityType = typeof(TTarget);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.Command);
         Expression<Func<TTarget, TTarget>> defaultExpr = f => f;
-        visitor.SelectDefault(defaultExpr);
-        var sql = visitor.BuildSql(out var readerFields);
-        command.CommandText = sql;
-        this.Initialize(command);
+        (var isNeedClose, var connection, var command, var readerFields) = this.UseSlaveCommand(visitor, defaultExpr);
 
         connection.Open();
         var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
@@ -462,13 +461,10 @@ public class DialectProvider
         while (reader.Read())
             result.Add((TTarget)deserializer.Invoke(reader, readerFields));
 
-        if (visitor.BuildIncludeSql(entityType, result, true, out sql))
+        if (visitor.BuildIncludeSql(entityType, result, true, out var sql))
         {
             reader.Dispose();
-            command.CommandText = sql;
-            command.Parameters.Clear();
-            visitor.NextDbParameters.CopyTo(command.Parameters);
-            this.Initialize(command);
+            this.Initialize(command, visitor, sql);
             reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
             visitor.SetIncludeValues(entityType, result, reader, true);
         }
@@ -486,12 +482,8 @@ public class DialectProvider
     public async Task<List<TTarget>> QueryAsync<TTarget>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
         var entityType = typeof(TTarget);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.Command);
         Expression<Func<TTarget, TTarget>> defaultExpr = f => f;
-        visitor.SelectDefault(defaultExpr);
-        var sql = visitor.BuildSql(out var readerFields);
-        command.CommandText = sql;
-        this.Initialize(command);
+        (var isNeedClose, var connection, var command, var readerFields) = this.UseSlaveCommand(visitor, defaultExpr);
 
         await connection.OpenAsync(cancellationToken);
         var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
@@ -500,13 +492,10 @@ public class DialectProvider
         while (await reader.ReadAsync(cancellationToken))
             result.Add((TTarget)deserializer.Invoke(reader, readerFields));
 
-        if (visitor.BuildIncludeSql(entityType, result, true, out sql))
+        if (visitor.BuildIncludeSql(entityType, result, true, out var sql))
         {
             await reader.DisposeAsync();
-            command.CommandText = sql;
-            command.Parameters.Clear();
-            visitor.NextDbParameters.CopyTo(command.Parameters);
-            this.Initialize(command);
+            this.Initialize(command, visitor, sql);
             reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
             visitor.SetIncludeValues(entityType, result, reader, true);
         }
@@ -565,14 +554,10 @@ public class DialectProvider
     #region QueryPage
     public IPagedList<TTarget> QueryPage<TTarget>(IQueryVisitor visitor)
     {
+        var entityType = typeof(TTarget);
         var result = new PagedList<TTarget> { Data = new List<TTarget>() };
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.Command);
         Expression<Func<TTarget, TTarget>> defaultExpr = f => f;
-        visitor.SelectDefault(defaultExpr);
-        visitor.IsNeedPaging = true;
-        var sql = visitor.BuildSql(out var readerFields);
-        command.CommandText = sql;
-        this.Initialize(command);
+        (var isNeedClose, var connection, var command, var readerFields) = this.UseSlaveCommand(visitor, defaultExpr);
 
         connection.Open();
         var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
@@ -581,18 +566,14 @@ public class DialectProvider
         result.PageSize = visitor.PageSize;
 
         reader.NextResult();
-        var entityType = typeof(TTarget);
         var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext, readerFields);
         while (reader.Read())
             result.Data.Add((TTarget)deserializer.Invoke(reader, readerFields));
         result.Count = result.Data.Count;
-        if (visitor.BuildIncludeSql(entityType, result.Data, true, out sql))
+        if (visitor.BuildIncludeSql(entityType, result.Data, true, out var sql))
         {
             reader.Dispose();
-            command.CommandText = sql;
-            command.Parameters.Clear();
-            visitor.NextDbParameters.CopyTo(command.Parameters);
-            this.Initialize(command);
+            this.Initialize(command, visitor, sql);
             reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
             visitor.SetIncludeValues(entityType, result.Data, reader, true);
         }
@@ -607,17 +588,12 @@ public class DialectProvider
         visitor.Dispose();
         return result;
     }
-    public async Task<IPagedList<TResult>> QueryPageAsync<TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
+    public async Task<IPagedList<TTarget>> QueryPageAsync<TTarget>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
-        var result = new PagedList<TResult> { Data = new List<TResult>() };
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.Command);
-
-        Expression<Func<TResult, TResult>> defaultExpr = f => f;
-        visitor.SelectDefault(defaultExpr);
-        visitor.IsNeedPaging = true;
-        var sql = visitor.BuildSql(out var readerFields);
-        command.CommandText = sql;
-        this.Initialize(command);
+        var entityType = typeof(TTarget);
+        var result = new PagedList<TTarget> { Data = new List<TTarget>() };
+        Expression<Func<TTarget, TTarget>> defaultExpr = f => f;
+        (var isNeedClose, var connection, var command, var readerFields) = this.UseSlaveCommand(visitor, defaultExpr);
 
         await connection.OpenAsync(cancellationToken);
         var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
@@ -626,20 +602,16 @@ public class DialectProvider
         result.PageNumber = visitor.PageNumber;
         result.PageSize = visitor.PageSize;
 
-        var entityType = typeof(TResult);
         await reader.NextResultAsync(cancellationToken);
-        var deserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
+        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext, readerFields);
         while (await reader.ReadAsync(cancellationToken))
-            result.Data.Add((TResult)deserializer.Invoke(reader, readerFields));
+            result.Data.Add((TTarget)deserializer.Invoke(reader, readerFields));
 
         result.Count = result.Data.Count;
-        if (visitor.BuildIncludeSql(entityType, result.Data, true, out sql))
+        if (visitor.BuildIncludeSql(entityType, result.Data, true, out var sql))
         {
             await reader.DisposeAsync();
-            command.CommandText = sql;
-            command.Parameters.Clear();
-            visitor.NextDbParameters.CopyTo(command.Parameters);
-            this.Initialize(command);
+            this.Initialize(command, visitor, sql);
             reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
             await visitor.SetIncludeValuesAsync(entityType, result.Data, reader, true, cancellationToken);
         }
@@ -659,7 +631,6 @@ public class DialectProvider
     #region Exists
     public bool Exists(bool isNeedClose, ITheaConnection connection, ITheaCommand command)
     {
-        this.Initialize(command);
         connection.Open();
         var objResult = command.ExecuteScalar();
         var result = objResult != null && objResult is not DBNull;
@@ -673,7 +644,6 @@ public class DialectProvider
     }
     public async Task<bool> ExistsAsync(bool isNeedClose, ITheaConnection connection, ITheaCommand command, CancellationToken cancellationToken = default)
     {
-        this.Initialize(command);
         await connection.OpenAsync(cancellationToken);
         var objResult = await command.ExecuteScalarAsync(cancellationToken);
         var result = objResult != null && objResult is not DBNull;
@@ -1414,6 +1384,25 @@ public class DialectProvider
             command.CommandText = this.HeadRawSql + command.CommandText;
         if (!string.IsNullOrEmpty(this.TailRawSql))
             command.CommandText += this.TailRawSql;
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
+    }
+    protected void Initialize(ITheaCommand command, string rawSql)
+    {
+        if (!string.IsNullOrEmpty(this.HeadRawSql))
+            rawSql = this.HeadRawSql + rawSql;
+        if (!string.IsNullOrEmpty(this.TailRawSql))
+            rawSql += this.TailRawSql;
+        command.CommandText = rawSql;
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
+    }
+    protected void Initialize(ITheaCommand command, IQueryVisitor visitor, string rawSql)
+    {
+        command.CommandText = rawSql;
+        command.Parameters.Clear();
+        if (visitor.NextDbParameters != null && visitor.NextDbParameters.Count > 0)
+            visitor.NextDbParameters.CopyTo(command.Parameters);
         if (this.interceptor != null)
             command = this.interceptor.CommandInitialized(command);
     }

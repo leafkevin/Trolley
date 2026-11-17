@@ -42,10 +42,10 @@ public class Delete : Deleted, IDelete
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IDelete WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IDelete WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables[0], rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables[0], rawSql);
         return this;
     }
     #endregion
@@ -219,9 +219,9 @@ public class Delete<TEntity> : Delete, IDelete<TEntity>
         => base.UseTableSchema(tableSchema) as IDelete<TEntity>;
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IDelete<TEntity> WithTableAliasTrailing(string rawSql)
-        => base.WithTableAliasTrailing(rawSql) as IDelete<TEntity>;
+    #region WithTableTrailing
+    public new IDelete<TEntity> WithTableTrailing(string rawSql)
+        => base.WithTableTrailing(rawSql) as IDelete<TEntity>;
     #endregion
 
     #region Where

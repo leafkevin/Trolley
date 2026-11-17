@@ -260,7 +260,8 @@ class MultiQueryReader : IMultiQueryReader
                 this.interceptor?.CommandInitialized(this.command);
 
                 this.command.Parameters.Clear();
-                visitor.NextDbParameters.CopyTo(this.command.Parameters);
+                if (visitor.NextDbParameters != null && visitor.NextDbParameters.Count > 0)
+                    visitor.NextDbParameters.CopyTo(command.Parameters);
                 using var includeReader = command.ExecuteReader(CommandBehavior.SequentialAccess);
                 foreach (var nextAfter in this.nextAfters)
                 {
@@ -312,7 +313,8 @@ class MultiQueryReader : IMultiQueryReader
                 this.interceptor?.CommandInitialized(this.command);
 
                 this.command.Parameters.Clear();
-                visitor.NextDbParameters.CopyTo(this.command.Parameters);
+                if (visitor.NextDbParameters != null && visitor.NextDbParameters.Count > 0)
+                    visitor.NextDbParameters.CopyTo(command.Parameters);
 
                 using var includeReader = await this.command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
                 foreach (var nextAfter in this.nextAfters)

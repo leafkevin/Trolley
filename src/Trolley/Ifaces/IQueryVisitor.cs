@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public interface IQueryVisitor : ICommandVisitor, IDisposable
+public interface IQueryVisitor : IDisposable
 {
     DbContext DbContext { get; }
     IOrmProvider OrmProvider { get; }
@@ -15,10 +15,11 @@ public interface IQueryVisitor : ICommandVisitor, IDisposable
     ReusableList<TableSegment> Tables { get; set; }
     ITableShardingProvider ShardingProvider { get; }
 
+    IDataParameterCollection DbParameters { get; set; }
     /// <summary>
     /// IncludeMany表，第二次执行时的参数列表，通常是Filter中使用的参数
     /// </summary>
-    IDataParameterCollection NextDbParameters { get; set; }
+    TheaDbParameterCollection NextDbParameters { get; set; }
     ReusableList<ReaderField> ReaderFields { get; set; }
 
     ReusableWhereBuilder WhereBuilder { get; }
@@ -59,9 +60,9 @@ public interface IQueryVisitor : ICommandVisitor, IDisposable
     bool IsScalar { get; set; }
     bool HasChanged { get; }
 
-
-    string BuildSql(bool isBuildCteSql, out ReusableList<ReaderField> readerFields);
-    string BuildCommandSql(Type entityType, out IDataParameterCollection dbParameters);
+    string BuildSql(out List<IDbDataParameter> dbParameters, out ReusableList<ReaderField> readerFields);
+    string BuildSql(bool isBuildCteSql, out List<IDbDataParameter> dbParameters, out ReusableList<ReaderField> readerFields);
+    string BuildCommandSql(Type entityType, out List<IDbDataParameter> dbParameters);
     string BuildShardingTablesSqlByFormat(string formatSql, string jointMark);
     string BuildShardingSql(string formatSql);
     string BuildShardingScalarSql(string formatSql);
@@ -72,7 +73,7 @@ public interface IQueryVisitor : ICommandVisitor, IDisposable
     void UseTableMap(TableSegment tableSegment, Func<string, string, string, string> tableNameGetter);
     void UseTableBy(TableUsageMode usageMode, TableSegment tableSegment, params object[] fieldValues);
     void UseTableSchema(TableSegment tableSegment, string tableSchema);
-    void WithTableAliasTrailing(TableSegment tableSegment, string rawSql);
+    void WithTableTrailing(TableSegment tableSegment, string rawSql);
 
     void AddTable(params Type[] entityTypes);
     void UseQuery(Type targetType, IQuery subQuery);
@@ -125,7 +126,7 @@ public interface IQueryVisitor : ICommandVisitor, IDisposable
 
     void InitTableAlias(LambdaExpression lambdaExpr);
     ReusableList<ReaderField> FlattenTableFields(TableSegment tableSegment, bool isNeedAlias = true);
-    IQueryVisitor Clone(DbContext dbContext, ITheaCommand command, bool isCopyParameters = true);
+    IQueryVisitor Clone(DbContext dbContext, IDataParameterCollection dbParameters, bool isCopyParameters = true);
     void Save();
     void Restore();
 }

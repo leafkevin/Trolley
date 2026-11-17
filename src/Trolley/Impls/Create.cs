@@ -51,10 +51,10 @@ public class Create : DialectProvider, ICreate
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual ICreate WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual ICreate WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables[0], rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables[0], rawSql);
         return this;
     }
     #endregion
@@ -561,10 +561,10 @@ public class Create<TEntity> : Create, ICreate<TEntity>
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new ICreate<TEntity> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new ICreate<TEntity> WithTableTrailing(string rawSql)
     {
-        base.WithTableAliasTrailing(rawSql);
+        base.WithTableTrailing(rawSql);
         return this;
     }
     #endregion
@@ -692,10 +692,10 @@ public class FromCreated : Created, IFromCreate
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IFromCreate WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IFromCreate WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables[0], rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables[0], rawSql);
         return this;
     }
     #endregion
@@ -733,8 +733,8 @@ public class FromCreated<TEntity> : FromCreated, IFromCreate<TEntity>
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IFromCreate<TEntity> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IFromCreate<TEntity> WithTableTrailing(string rawSql)
     {
         base.UseTableSchema(rawSql);
         return this;

@@ -54,16 +54,13 @@ public class MultiQueryBase : QueryInternal, IMultiQueryBase
 
     #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
-    {
-        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
-        return this.Visitor.BuildSql(true, out _);
-    }
+        => this.BuildSql(this.Visitor, out dbParameters, out _);
     #endregion
 
     #region QueryScalar
     protected IMultiDialectProvider QueryScalar<TTarget>()
     {
-        var sql = this.Visitor.BuildSql(true, out _);
+        var sql = this.Visitor.BuildSql(true, out _, out _);
         this.MultiDialectProvider.AddReader(typeof(TTarget), sql, ReaderResultType.Value);
         return this.MultiDialectProvider;
     }
@@ -71,7 +68,7 @@ public class MultiQueryBase : QueryInternal, IMultiQueryBase
     {
         this.Visitor.SelectRaw(typeof(TTarget), aggSql, aggFunc);
         this.Visitor.IsScalar = true;
-        var sql = this.Visitor.BuildSql(out _);
+        var sql = this.Visitor.BuildSql(out _, out _);
         this.MultiDialectProvider.AddReader(typeof(TTarget), sql, ReaderResultType.Value);
         return this.MultiDialectProvider;
     }
@@ -82,7 +79,7 @@ public class MultiQueryBase : QueryInternal, IMultiQueryBase
 
         this.Visitor.Select(aggSqlFormat, fieldExpr);
         this.Visitor.IsScalar = true;
-        var sql = this.Visitor.BuildSql(out _);
+        var sql = this.Visitor.BuildSql(out _, out _);
         this.MultiDialectProvider.AddReader(typeof(TTarget), sql, ReaderResultType.Value);
         return this.MultiDialectProvider;
     }
@@ -126,10 +123,10 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IMultiQuery<T> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IMultiQuery<T> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -507,7 +504,7 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     {
         Expression<Func<T, T>> defaultExpr = f => f;
         this.Visitor.SelectDefault(defaultExpr);
-        var sql = this.Visitor.BuildSql(true, out _);
+        var sql = this.Visitor.BuildSql(true, out _, out _);
         this.MultiDialectProvider.AddReader(typeof(T), sql, resultType, isExists, this.Visitor);
         return this.MultiDialectProvider;
     }
@@ -552,10 +549,10 @@ public class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IMultiQuery<T1, T2> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IMultiQuery<T1, T2> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -839,10 +836,10 @@ public class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IMultiQuery<T1, T2, T3> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IMultiQuery<T1, T2, T3> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -1126,10 +1123,10 @@ public class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IMultiQuery<T1, T2, T3, T4> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -1413,10 +1410,10 @@ public class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IMultiQuery<T1, T2, T3, T4, T5> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -1700,10 +1697,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -1987,10 +1984,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuer
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -2274,10 +2271,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMulti
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -2561,10 +2558,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IM
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -2848,10 +2845,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBas
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -3135,10 +3132,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQue
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -3422,10 +3419,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : Mul
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -3709,10 +3706,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -3996,10 +3993,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -4283,10 +4280,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -4570,10 +4567,10 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion

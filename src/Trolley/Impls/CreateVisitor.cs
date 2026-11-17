@@ -11,6 +11,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
 {
     protected List<CommandSegment> deferredSegments = new();
 
+    public ITheaCommand Command { get; set; }
+
     public StringBuilder FieldsBuilder { get; set; } = new();
     public StringBuilder ValuesBuilder { get; set; }
     public StringBuilder UpdateBuilder { get; set; }
@@ -44,7 +46,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (this.TryGetTableShardingInfo(entityType, out var tableShardingInfo))
             this.Tables[0].TableShardingInfo = tableShardingInfo;
     }
-    public override string BuildSql(out ReusableList<ReaderField> readerFields)
+    public virtual string BuildSql(out ReusableList<ReaderField> readerFields)
     {
         string tailSql = null;
         readerFields = this.ReaderFields;
@@ -774,10 +776,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public override void Dispose()
     {
-        base.Dispose();
         this.deferredSegments = null;
         this.FieldsBuilder = null;
         this.ValuesBuilder = null;
+        this.Command?.Dispose();
+        this.Command = null;
+        base.Dispose();
     }
     public virtual void InitTableAlias(LambdaExpression lambdaExpr)
     {

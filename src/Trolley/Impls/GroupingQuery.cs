@@ -26,9 +26,8 @@ public class GroupingQueryBase<TGrouping> : QueryInternal, IGroupingQuery<TGroup
     {
         this.Visitor.SelectRaw(typeof(int), "1");
         this.Visitor.Take(1);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(this.Visitor.Command);
         this.Visitor.IsScalar = true;
-        command.CommandText = this.Visitor.BuildSql(out _);
+        (var isNeedClose, var connection, var command, _) = this.UseSlaveCommand(this.Visitor);
         return this.Exists(isNeedClose, connection, command);
     }
     #endregion

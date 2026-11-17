@@ -54,10 +54,10 @@ public class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IIncludableQuery<T, TMember> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IIncludableQuery<T, TMember> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
+        this.Visitor.WithTableTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion
@@ -118,10 +118,10 @@ public class IncludableQuery<<#=tables#>, TMember> : Query<<#=tables#>>, IInclud
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IIncludableQuery<<#=tables#>, TMember> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IIncludableQuery<<#=tables#>, TMember> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
+        this.Visitor.WithTableTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion

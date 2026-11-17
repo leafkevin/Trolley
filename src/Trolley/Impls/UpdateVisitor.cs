@@ -14,6 +14,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     protected bool hasOnlyFields = false;
     protected bool hasIgnoreFields = false;
 
+    public ITheaCommand Command { get; set; }
+
     public List<string> OnlyFieldNames { get; set; }
     public List<string> IgnoreFieldNames { get; set; }
     public ActionMode ActionMode { get; set; }
@@ -45,13 +47,12 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (this.TryGetTableShardingInfo(entityType, out var tableShardingInfo))
             this.Tables[0].TableShardingInfo = tableShardingInfo;
     }
-    public override string BuildSql(out ReusableList<ReaderField> readerFields)
+    public virtual string BuildSql(out ReusableList<ReaderField> readerFields)
     {
         string sql = null;
         readerFields = null;
         this.hasOnlyFields = this.OnlyFieldNames != null && this.OnlyFieldNames.Count > 0;
         this.hasIgnoreFields = this.IgnoreFieldNames != null && this.IgnoreFieldNames.Count > 0;
-        //if (this.HasWhere) this.WhereBuilder = new();
 
         var builder = new StringBuilder();
         var tableSegment = this.Tables[0];
@@ -668,11 +669,13 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public override void Dispose()
     {
-        base.Dispose();
+        this.Command?.Dispose();
+        this.Command = null;
         this.deferredSegments = null;
         this.FieldsBuilder = null;
         this.OnlyFieldNames = null;
         this.IgnoreFieldNames = null;
+        base.Dispose();
     }
     public virtual void VisitSetField(object deferredSegmentValue)
     {

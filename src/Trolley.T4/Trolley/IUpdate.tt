@@ -61,13 +61,13 @@ public interface IUpdate
     IUpdate UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
     /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回更新对象</returns>
-    IUpdate WithTableAliasTrailing(string rawSql);
+    IUpdate WithTableTrailing(string rawSql);
     #endregion
 
     #region Set
@@ -539,13 +539,13 @@ public interface IUpdate<TEntity> : IUpdate
     new IUpdate<TEntity> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
     /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回更新对象</returns>
-    new IUpdate<TEntity> WithTableAliasTrailing(string rawSql);
+    new IUpdate<TEntity> WithTableTrailing(string rawSql);
     #endregion
 
     #region Set
@@ -1509,13 +1509,13 @@ public interface IUpdateJoin<<#=tables#>> : IUpdated
     IUpdateJoin<<#=tables#>> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
     /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<<#=tables#>> WithTableAliasTrailing(string rawSql);
+    IUpdateJoin<<#=tables#>> WithTableTrailing(string rawSql);
     #endregion
 
 <#

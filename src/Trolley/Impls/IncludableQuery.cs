@@ -47,10 +47,10 @@ public class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IIncludableQuery<T, TMember> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IIncludableQuery<T, TMember> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
+        this.Visitor.WithTableTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion
@@ -100,10 +100,10 @@ public class IncludableQuery<T1, T2, TMember> : Query<T1, T2>, IIncludableQuery<
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IIncludableQuery<T1, T2, TMember> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IIncludableQuery<T1, T2, TMember> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
+        this.Visitor.WithTableTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion
@@ -153,10 +153,10 @@ public class IncludableQuery<T1, T2, T3, TMember> : Query<T1, T2, T3>, IIncludab
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IIncludableQuery<T1, T2, T3, TMember> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IIncludableQuery<T1, T2, T3, TMember> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
+        this.Visitor.WithTableTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion
@@ -206,10 +206,10 @@ public class IncludableQuery<T1, T2, T3, T4, TMember> : Query<T1, T2, T3, T4>, I
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IIncludableQuery<T1, T2, T3, T4, TMember> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, TMember> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
+        this.Visitor.WithTableTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion
@@ -259,10 +259,10 @@ public class IncludableQuery<T1, T2, T3, T4, T5, TMember> : Query<T1, T2, T3, T4
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IIncludableQuery<T1, T2, T3, T4, T5, TMember> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, TMember> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
+        this.Visitor.WithTableTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion
@@ -312,10 +312,10 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : Query<T1, T2, T3
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
+        this.Visitor.WithTableTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion
@@ -365,10 +365,10 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : Query<T1, T2
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
+        this.Visitor.WithTableTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion
@@ -418,10 +418,10 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : Query<T1
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
+        this.Visitor.WithTableTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion
@@ -471,10 +471,10 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> : Quer
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
+        this.Visitor.WithTableTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion
@@ -524,10 +524,10 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> :
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
+        this.Visitor.WithTableTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion
@@ -577,10 +577,10 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMemb
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
+        this.Visitor.WithTableTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion
@@ -630,10 +630,10 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
+        this.Visitor.WithTableTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion
@@ -683,10 +683,10 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
+        this.Visitor.WithTableTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion
@@ -736,10 +736,10 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
+        this.Visitor.WithTableTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion
@@ -789,10 +789,10 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
+        this.Visitor.WithTableTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion

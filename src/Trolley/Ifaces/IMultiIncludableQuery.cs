@@ -60,13 +60,13 @@ public interface IMultiIncludableQuery<T, TMember> : IMultiQuery<T>
     new IMultiIncludableQuery<T, TMember> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    new IMultiIncludableQuery<T, TMember> WithTableAliasTrailing(string rawSql);
+    new IMultiIncludableQuery<T, TMember> WithTableTrailing(string rawSql);
     #endregion
 }
 /// <summary>
@@ -128,13 +128,13 @@ public interface IMultiIncludableQuery<T1, T2, TMember> : IMultiQuery<T1, T2>
     new IMultiIncludableQuery<T1, T2, TMember> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    new IMultiIncludableQuery<T1, T2, TMember> WithTableAliasTrailing(string rawSql);
+    new IMultiIncludableQuery<T1, T2, TMember> WithTableTrailing(string rawSql);
     #endregion
 }
 /// <summary>
@@ -197,13 +197,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, TMember> : IMultiQuery<T1, T2
     new IMultiIncludableQuery<T1, T2, T3, TMember> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    new IMultiIncludableQuery<T1, T2, T3, TMember> WithTableAliasTrailing(string rawSql);
+    new IMultiIncludableQuery<T1, T2, T3, TMember> WithTableTrailing(string rawSql);
     #endregion
 }
 /// <summary>
@@ -267,13 +267,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, TMember> : IMultiQuery<T1
     new IMultiIncludableQuery<T1, T2, T3, T4, TMember> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    new IMultiIncludableQuery<T1, T2, T3, T4, TMember> WithTableAliasTrailing(string rawSql);
+    new IMultiIncludableQuery<T1, T2, T3, T4, TMember> WithTableTrailing(string rawSql);
     #endregion
 }
 /// <summary>
@@ -338,13 +338,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, TMember> : IMultiQuer
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    new IMultiIncludableQuery<T1, T2, T3, T4, T5, TMember> WithTableAliasTrailing(string rawSql);
+    new IMultiIncludableQuery<T1, T2, T3, T4, T5, TMember> WithTableTrailing(string rawSql);
     #endregion
 }
 /// <summary>
@@ -410,13 +410,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IMulti
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> WithTableAliasTrailing(string rawSql);
+    new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> WithTableTrailing(string rawSql);
     #endregion
 }
 /// <summary>
@@ -483,13 +483,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : IM
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> WithTableAliasTrailing(string rawSql);
+    new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> WithTableTrailing(string rawSql);
     #endregion
 }
 /// <summary>
@@ -557,13 +557,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> 
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> WithTableAliasTrailing(string rawSql);
+    new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> WithTableTrailing(string rawSql);
     #endregion
 }
 /// <summary>
@@ -632,13 +632,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMemb
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> WithTableAliasTrailing(string rawSql);
+    new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> WithTableTrailing(string rawSql);
     #endregion
 }
 /// <summary>
@@ -708,13 +708,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> WithTableAliasTrailing(string rawSql);
+    new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> WithTableTrailing(string rawSql);
     #endregion
 }
 /// <summary>
@@ -785,13 +785,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> WithTableAliasTrailing(string rawSql);
+    new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> WithTableTrailing(string rawSql);
     #endregion
 }
 /// <summary>
@@ -863,13 +863,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> WithTableAliasTrailing(string rawSql);
+    new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> WithTableTrailing(string rawSql);
     #endregion
 }
 /// <summary>
@@ -942,13 +942,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> WithTableAliasTrailing(string rawSql);
+    new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> WithTableTrailing(string rawSql);
     #endregion
 }
 /// <summary>
@@ -1022,13 +1022,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> WithTableAliasTrailing(string rawSql);
+    new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> WithTableTrailing(string rawSql);
     #endregion
 }
 /// <summary>
@@ -1103,13 +1103,13 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
     new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
-    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableAliasTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
+    /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串，如：SQL SERVER数据库，.WithTableTrailing("WITH(NOLOCK)")，生成SQL为：FROM `sys_order` a WITH(NOLOCK)
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回查询对象，带有导航属性</returns>
-    new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> WithTableAliasTrailing(string rawSql);
+    new IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> WithTableTrailing(string rawSql);
     #endregion
 }
 /// <summary>

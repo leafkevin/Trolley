@@ -56,10 +56,10 @@ public class Update : DialectProvider, IUpdate
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IUpdate WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IUpdate WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables[0], rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables[0], rawSql);
         return this;
     }
     #endregion
@@ -231,8 +231,6 @@ public class Updated : DialectProvider, IUpdated
                 builder.Clear();
                 break;
             default:
-                if (!this.Visitor.HasWhere)
-                    throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
                 command.CommandText = this.Visitor.BuildSql(out _);
                 if (this.interceptor != null)
                     command = this.interceptor.CommandInitialized(command);
@@ -333,8 +331,6 @@ public class Updated : DialectProvider, IUpdated
                 builder.Clear();
                 break;
             default:
-                if (!this.Visitor.HasWhere)
-                    throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
                 command.CommandText = this.Visitor.BuildSql(out _);
                 if (this.interceptor != null)
                     command = this.interceptor.CommandInitialized(command);
@@ -679,10 +675,10 @@ public class Update<TEntity> : Update, IUpdate<TEntity>
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IUpdate<TEntity> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IUpdate<TEntity> WithTableTrailing(string rawSql)
     {
-        base.WithTableAliasTrailing(rawSql);
+        base.WithTableTrailing(rawSql);
         return this;
     }
     #endregion
@@ -825,8 +821,6 @@ public class ResultUpdated<TResult> : DialectProvider, IBulkResultCommand<TResul
     #region Execute
     public virtual List<TResult> Execute()
     {
-        if (!this.Visitor.HasWhere)
-            throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
         (var isNeedClose, var connection, var command, var readerFields) = this.CreateExecuteCommand(this.Visitor);
         var result = this.QuerySimple<TResult>(isNeedClose, connection, command, readerFields);
         this.Visitor.Dispose();
@@ -834,9 +828,6 @@ public class ResultUpdated<TResult> : DialectProvider, IBulkResultCommand<TResul
     }
     public virtual async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        if (!this.Visitor.HasWhere)
-            throw new InvalidOperationException("缺少where条件，请使用Where/And/Or方法完成where条件");
-
         (var isNeedClose, var connection, var command, var readerFields) = this.CreateExecuteCommand(this.Visitor);
         var result = await this.QuerySimpleAsync<TResult>(isNeedClose, connection, command, readerFields, cancellationToken);
         this.Visitor.Dispose();
@@ -1360,10 +1351,10 @@ public class UpdateJoin<TEntity, T1> : Updated, IUpdateJoin<TEntity, T1>
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IUpdateJoin<TEntity, T1> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IUpdateJoin<TEntity, T1> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -1570,10 +1561,10 @@ public class UpdateJoin<TEntity, T1, T2> : Updated, IUpdateJoin<TEntity, T1, T2>
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IUpdateJoin<TEntity, T1, T2> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IUpdateJoin<TEntity, T1, T2> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -1780,10 +1771,10 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated, IUpdateJoin<TEntity, T1,
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IUpdateJoin<TEntity, T1, T2, T3> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IUpdateJoin<TEntity, T1, T2, T3> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -1990,10 +1981,10 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated, IUpdateJoin<TEntity,
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -2200,10 +2191,10 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated, IUpdateJoin<TEnt
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion

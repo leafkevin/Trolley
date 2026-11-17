@@ -110,13 +110,13 @@ public class MultiDialectProvider : DialectProvider, IMultiDialectProvider
     #region FromQuery
     public virtual IMultiQuery<T> FromQuery<T>(IQuery<T> subQuery)
     {
-        var visitor = this.CreateQueryVisitor(subQuery.Visitor.Command);
+        var visitor = this.ormProvider.NewQueryVisitor(this.DbContext, this.tableAliasStart);
         visitor.UseQuery(typeof(T), subQuery);
         return this.ormProvider.NewMultiQuery<T>(this, visitor);
     }
     public virtual IMultiQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
-        var visitor = this.CreateQueryVisitor();
+        var visitor = this.CreateQueryVisitor(this.Command);
         visitor.UseNewQuery(typeof(T), subQueryExpr);
         return this.ormProvider.NewMultiQuery<T>(this, visitor);
     }
@@ -261,6 +261,8 @@ public class MultiDialectProvider : DialectProvider, IMultiDialectProvider
     {
         this.sqlBuilder = null;
         this.ReaderAfters = null;
+        this.Command?.Dispose();
+        this.Command = null;
         base.Dispose();
     }
     #endregion

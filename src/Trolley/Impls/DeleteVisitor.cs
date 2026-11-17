@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Data;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -8,6 +9,8 @@ namespace Trolley;
 public class DeleteVisitor : SqlVisitor, IDeleteVisitor
 {
     private Type entityType;
+
+    public ITheaCommand Command { get; set; }
 
     public string OutputSql { get; set; }
 
@@ -32,7 +35,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         if (this.TryGetTableShardingInfo(entityType, out var tableShardingInfo))
             this.Tables[0].TableShardingInfo = tableShardingInfo;
     }
-    public override string BuildSql(out ReusableList<ReaderField> readerFields)
+    public virtual string BuildSql(out ReusableList<ReaderField> readerFields)
     {
         readerFields = null;
 
@@ -253,6 +256,8 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     {
         this.entityType = null;
         this.OutputSql = null;
+        this.Command?.Dispose();
+        this.Command = null;
         base.Dispose();
     }
     public void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper, StringBuilder builder)

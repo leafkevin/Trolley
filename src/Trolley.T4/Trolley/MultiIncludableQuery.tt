@@ -54,11 +54,11 @@ public class MultiIncludableQuery<T, TMember> : MultiQuery<T>, IMultiIncludableQ
     }
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
 
-    public new IMultiIncludableQuery<T, TMember> WithTableAliasTrailing(string rawSql)
+    public new IMultiIncludableQuery<T, TMember> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
+        this.Visitor.WithTableTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion
@@ -119,10 +119,10 @@ public class MultiIncludableQuery<<#=tables#>, TMember> : MultiQuery<<#=tables#>
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public new IMultiIncludableQuery<<#=tables#>, TMember> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public new IMultiIncludableQuery<<#=tables#>, TMember> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.TableSegment, rawSql);
+        this.Visitor.WithTableTrailing(this.TableSegment, rawSql);
         return this;
     }
     #endregion

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -22,9 +23,8 @@ public class SqlVisitor : ISqlVisitor
     public bool IsConstantParameterized => this.DbContext.Options.IsConstantParameterized;
     public string UserParameterPrefix => this.DbContext.Options.UserParameterPrefix;
 
-    public ITheaCommand Command { get; set; }
     public IDataParameterCollection DbParameters { get; set; }
-    public IDataParameterCollection NextDbParameters { get; set; }
+    public TheaDbParameterCollection NextDbParameters { get; set; }
     public char TableAliasStart { get; set; }
 
     /// <summary>
@@ -87,11 +87,6 @@ public class SqlVisitor : ISqlVisitor
     public string HeadRawSql { get; set; }
     public string TailRawSql { get; set; }
 
-    public virtual string BuildSql(out ReusableList<ReaderField> readerFields)
-    {
-        readerFields = null;
-        return null;
-    }
     public string BuildShardingTablesSqlByFormat(string formatSql, string jointMark)
     {
         //查询，多分表时，都使用表名替换生成分表sql
@@ -304,13 +299,13 @@ public class SqlVisitor : ISqlVisitor
         if (tableSchema == this.DefaultTableSchema) return;
         tableSegment.TableSchema = tableSchema;
     }
-    public virtual void WithTableAliasTrailing(TableSegment tableSegment, string rawSql)
+    public virtual void WithTableTrailing(TableSegment tableSegment, string rawSql)
     {
         if (tableSegment == null)
             throw new ArgumentNullException(nameof(tableSegment));
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
-        tableSegment.TableAliasTrailing = rawSql;
+        tableSegment.TableTrailing = rawSql;
     }
     public bool TrySetTableShardingInfo(TableSegment tableSegment, out TableShardingInfo tableShardingInfo)
     {
@@ -502,7 +497,7 @@ public class SqlVisitor : ISqlVisitor
                 var dbParameters = this.DbParameters;
                 if (this.IsIncludeMany)
                 {
-                    this.NextDbParameters ??= new TheaDbParameterCollection();
+                    this.NextDbParameters ??= new();
                     dbParameters = this.NextDbParameters;
                 }
                 var parameterName = sqlSegment.ParameterName ?? this.OrmProvider.ParameterPrefix + this.UserParameterPrefix + dbParameters.Count.ToString();
@@ -543,7 +538,7 @@ public class SqlVisitor : ISqlVisitor
             var dbParameters = this.DbParameters;
             if (this.IsIncludeMany)
             {
-                this.NextDbParameters ??= new TheaDbParameterCollection();
+                this.NextDbParameters ??= new();
                 dbParameters = this.NextDbParameters;
             }
             var parameterName = sqlSegment.ParameterName ?? this.OrmProvider.ParameterPrefix + this.UserParameterPrefix + dbParameters.Count.ToString();
@@ -583,7 +578,7 @@ public class SqlVisitor : ISqlVisitor
         var dbParameters = this.DbParameters;
         if (this.IsIncludeMany)
         {
-            this.NextDbParameters ??= new TheaDbParameterCollection();
+            this.NextDbParameters ??= new();
             dbParameters = this.NextDbParameters;
         }
         var parameterName = this.OrmProvider.ParameterPrefix + this.UserParameterPrefix + dbParameters.Count.ToString();
@@ -1466,7 +1461,7 @@ public class SqlVisitor : ISqlVisitor
 
                 entityType = currentExpr.Type.GenericTypeArguments[0];
                 //在CTE表基础上，又做了WHERE/SELECT...其他操作
-                queryVisitor = subQueryObj.Visitor.Clone(this.DbContext, this.Command);
+                queryVisitor = subQueryObj.Visitor.Clone(this.DbContext, this.DbParameters);
                 this.AddSharedQueryObjs(subQueryObj);
                 if (subQueryObj.IsCteQuery)
                 {
@@ -1489,7 +1484,7 @@ public class SqlVisitor : ISqlVisitor
             var tableIndex = 'a';
             if (this.IsExists)
                 tableIndex = (char)(tableIndex + this.Tables.Count);
-            queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableIndex, this.Command);
+            queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableIndex, this.DbParameters);
         }
         if (this.IsExists)
             queryVisitor.RefTableAliases = this.TableAliases;
@@ -1736,7 +1731,7 @@ public class SqlVisitor : ISqlVisitor
                 case "ExistsByIds":
                     queryVisitor.AndByIds(callExpr.Arguments[0].Evaluate());
                     queryVisitor.SelectRaw(genericArguments[0], "*");
-                    sql = queryVisitor.BuildSql(false, out readerFields);
+                    sql = queryVisitor.BuildSql(false, out _, out readerFields);
                     this.AddSharedQueryObjs(queryVisitor);
                     return (TableType.FromQuery, sql, readerFields);
                 case "Exists":
@@ -1754,7 +1749,7 @@ public class SqlVisitor : ISqlVisitor
                     if (queryVisitor.GroupByFields != null && queryVisitor.GroupByFields.Count > 0)
                         queryVisitor.SelectGrouping();
                     else queryVisitor.SelectRaw(entityType, "*");
-                    sql = queryVisitor.BuildSql(false, out readerFields);
+                    sql = queryVisitor.BuildSql(false, out _, out readerFields);
                     this.AddSharedQueryObjs(queryVisitor);
                     return (TableType.FromQuery, sql, readerFields);
                 case "AsCteTable":
@@ -1771,7 +1766,7 @@ public class SqlVisitor : ISqlVisitor
                 default: throw new NotSupportedException("不支持的表达式解析");
             }
         }
-        sql = queryVisitor.BuildSql(false, out readerFields);
+        sql = queryVisitor.BuildSql(false, out _, out readerFields);
         this.AddSharedQueryObjs(queryVisitor);
         return (TableType.FromQuery, sql, readerFields);
     }
@@ -1795,98 +1790,6 @@ public class SqlVisitor : ISqlVisitor
                 this.SharedQueryObjs.Add(queryObj);
         }
     }
-    //public virtual string GetQuotedValue(object elementValue, SqlSegment arraySegment, SqlSegment elementSegment)
-    //{
-    //    if (elementValue is DBNull || elementValue == null)
-    //        return "NULL";
-    //    if (arraySegment.IsVariable || (this.IsConstantParameterized || arraySegment.IsParameterized) && arraySegment.IsConstant)
-    //    {
-    //        var dbParameters = this.DbParameters;
-    //        if (this.IsIncludeMany)
-    //        {
-    //            this.NextDbParameters ??= new TheaDbParameterCollection();
-    //            dbParameters = this.NextDbParameters;
-    //        }
-    //        var parameterName = this.OrmProvider.ParameterPrefix + this.UserParameterPrefix + dbParameters.Count.ToString();
-
-    //        if (elementValue == null || elementValue == DBNull.Value)
-    //            dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, DBNull.Value));
-    //        else
-    //        {
-    //            var dbFieldValue = elementValue;
-    //            var expectType = elementSegment.ExpectType;
-    //            var segmentType = elementSegment.SegmentType;
-    //            var nativeDbType = elementSegment.NativeDbType;
-    //            var typeHandler = elementSegment.TypeHandler;
-
-    //            if (typeHandler != null)
-    //            {
-    //                dbFieldValue = typeHandler.ToFieldValue(dbFieldValue);
-    //                if (nativeDbType != null)
-    //                    dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, nativeDbType, dbFieldValue));
-    //                else dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, dbFieldValue));
-    //            }
-    //            else
-    //            {
-    //                if (expectType != null && segmentType != expectType)
-    //                {
-    //                    dbFieldValue = Enum.ToObject(expectType, dbFieldValue);
-    //                    segmentType = expectType;
-    //                }
-    //                if (nativeDbType != null)
-    //                {
-    //                    var targetType = elementSegment.MappedTargetType;
-    //                    if (segmentType != targetType)
-    //                    {
-    //                        var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext.Options);
-    //                        dbFieldValue = valueGetter.Invoke(dbFieldValue);
-    //                    }
-    //                    dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, nativeDbType, dbFieldValue));
-    //                }
-    //                else dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, dbFieldValue));
-    //            }
-    //        }
-    //        return parameterName;
-    //    }
-    //    if (arraySegment.IsConstant)
-    //    {
-    //        var dbFieldValue = elementValue;
-    //        var expectType = elementSegment.ExpectType;
-    //        var segmentType = elementSegment.SegmentType;
-    //        var nativeDbType = elementSegment.NativeDbType;
-    //        var typeHandler = elementSegment.TypeHandler;
-
-    //        if (typeHandler != null)
-    //            return typeHandler.GetQuotedValue(dbFieldValue);
-    //        else
-    //        {
-    //            if (expectType != null && segmentType != expectType)
-    //            {
-    //                dbFieldValue = Enum.ToObject(expectType, dbFieldValue);
-    //                segmentType = expectType;
-    //            }
-    //            var targetType = segmentType;
-    //            if (nativeDbType != null)
-    //            {
-    //                targetType = elementSegment.MappedTargetType;
-    //                if (segmentType != targetType)
-    //                {
-    //                    var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext.Options);
-    //                    dbFieldValue = valueGetter.Invoke(dbFieldValue);
-    //                }
-    //            }
-    //            //枚举类型常量，无法确定数据库是什么类型，取默认配置类型，通常是SELECT场景
-    //            else if (targetType.IsEnum)
-    //            {
-    //                targetType = this.DbContext.Options.DefaultEnumMapDbType;
-    //                dbFieldValue = Convert.ChangeType(dbFieldValue, targetType);
-    //            }
-    //            return this.OrmProvider.GetQuotedValue(targetType, dbFieldValue);
-    //        }
-    //    }
-    //    //此场景走不到，通常是常量和变量
-    //    return this.OrmProvider.GetQuotedValue(elementValue);
-    //}
     public virtual string ChangeParameterValue(SqlSegment sqlSegment, Type targetType)
     {
         var parameterName = sqlSegment.Value.ToString();
@@ -2208,22 +2111,6 @@ public class SqlVisitor : ISqlVisitor
         var memberInfo = memberExpr.Member;
         return memberInfo.Name == "Grouping" && memberInfo.DeclaringType.FullName.StartsWith("Trolley.IGroupingObject");
     }
-    //public List<ICteQuery> FlattenRefCteTables(List<IQuery> cteQueries)
-    //{
-    //    var result = new List<ICteQuery>();
-    //    AddRefCteTables(result, cteQueries);
-    //    return result;
-    //}
-    //private void AddRefCteTables(List<ICteQuery> result, List<IQuery> fromCteQueries)
-    //{
-    //    foreach (var subQueryObj in fromCteQueries)
-    //    {
-    //        if (subQueryObj.Visitor.RefQueries.Count > 0 && !fromCteQueries.Equals(subQueryObj.Visitor.RefQueries))
-    //            this.AddRefCteTables(result, subQueryObj.Visitor.RefQueries);
-    //        if (!result.Contains(subQueryObj) && subQueryObj is ICteQuery cteQueryObj)
-    //            result.Add(cteQueryObj);
-    //    }
-    //}
     public DataTable ToDataTable(string tableName, IEnumerable entities, List<MemberMap> memberMappers, List<Func<object, object>> valueGetters)
     {
         var result = new DataTable(tableName);
@@ -2548,8 +2435,7 @@ public class SqlVisitor : ISqlVisitor
             this.SharedQueryObjs.Clear();
         }
         this.SharedQueryObjs = null;
-        this.Command?.Dispose();
-        this.Command = null;
+        this.DbParameters?.Clear();
         this.DbParameters = null;
         this.NextDbParameters = null;
         this.UnionSql = null;

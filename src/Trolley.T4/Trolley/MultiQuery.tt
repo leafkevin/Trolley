@@ -133,10 +133,10 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     }
     #endregion
 
-    #region WithTableAliasTrailing
-    public virtual IMultiQuery<T> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IMultiQuery<T> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion
@@ -568,10 +568,10 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
     }
     #endregion
     
-    #region WithTableAliasTrailing
-    public virtual IMultiQuery<<#=tables#>> WithTableAliasTrailing(string rawSql)
+    #region WithTableTrailing
+    public virtual IMultiQuery<<#=tables#>> WithTableTrailing(string rawSql)
     {
-        this.Visitor.WithTableAliasTrailing(this.Visitor.Tables.Last(), rawSql);
+        this.Visitor.WithTableTrailing(this.Visitor.Tables.Last(), rawSql);
         return this;
     }
     #endregion

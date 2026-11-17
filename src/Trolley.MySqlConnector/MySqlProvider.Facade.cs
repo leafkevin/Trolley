@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 
 namespace Trolley.MySqlConnector;
 
@@ -23,8 +24,8 @@ partial class MySqlProvider
     public override IUpdated NewUpdated(DbContext dbContext, IUpdateVisitor visitor)
         => new MySqlUpdated(dbContext, visitor);
 
-    public override IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
-        => new MySqlQueryVisitor(dbContext, tableAsStart, command);
+    public override IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
+        => new MySqlQueryVisitor(dbContext, tableAsStart, dbParameters);
 
     public override ICreateVisitor NewCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
         => new MySqlCreateVisitor(entityType, dbContext, tableAsStart, command);

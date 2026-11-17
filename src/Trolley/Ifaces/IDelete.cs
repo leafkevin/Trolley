@@ -43,13 +43,13 @@ public interface IDelete : IDeleted
     IDelete UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
     /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回删除对象</returns>
-    IDelete WithTableAliasTrailing(string rawSql);
+    IDelete WithTableTrailing(string rawSql);
     #endregion
 
     #region Where
@@ -268,13 +268,13 @@ public interface IDelete<TEntity> : IDelete
     new IDelete<TEntity> UseTableSchema(string tableSchema);
     #endregion
 
-    #region WithTableAliasTrailing
+    #region WithTableTrailing
     /// <summary>
     /// 在表别名后面追加原始SQL片段，rawSql不能为null或空字符串
     /// </summary>
     /// <param name="rawSql">原始SQL片段</param>
     /// <returns>返回插入对象</returns>
-    new IDelete<TEntity> WithTableAliasTrailing(string rawSql);
+    new IDelete<TEntity> WithTableTrailing(string rawSql);
     #endregion
 
     #region Where
