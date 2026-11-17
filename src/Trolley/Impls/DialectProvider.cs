@@ -133,7 +133,8 @@ public class DialectProvider
         command.CommandText = sql;
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
-        this.Initialize(command);
+        if (this.interceptor != null)
+            command = this.interceptor.CommandInitialized(command);
         return (isNeedClose, connection, command, readerFields);
     }
     public (bool, ITheaConnection, ITheaCommand) UseSlaveCommand(ITheaCommand command)
@@ -557,6 +558,7 @@ public class DialectProvider
         var entityType = typeof(TTarget);
         var result = new PagedList<TTarget> { Data = new List<TTarget>() };
         Expression<Func<TTarget, TTarget>> defaultExpr = f => f;
+        visitor.IsNeedPaging = true;
         (var isNeedClose, var connection, var command, var readerFields) = this.UseSlaveCommand(visitor, defaultExpr);
 
         connection.Open();
@@ -593,6 +595,7 @@ public class DialectProvider
         var entityType = typeof(TTarget);
         var result = new PagedList<TTarget> { Data = new List<TTarget>() };
         Expression<Func<TTarget, TTarget>> defaultExpr = f => f;
+        visitor.IsNeedPaging = true;
         (var isNeedClose, var connection, var command, var readerFields) = this.UseSlaveCommand(visitor, defaultExpr);
 
         await connection.OpenAsync(cancellationToken);

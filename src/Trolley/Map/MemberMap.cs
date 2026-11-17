@@ -61,18 +61,13 @@ public class MemberMap
         this.MemberType = memberInfo.GetMemberType();
         this.UnderlyingType = Nullable.GetUnderlyingType(this.MemberType) ?? this.MemberType;
     }
+
     public MemberMap Clone(EntityMap parent, MemberInfo memberInfo)
     {
-        var result = new MemberMap(parent, memberInfo);
-        result.Parent = parent;
-        result.Member = memberInfo;
-        result.FieldName = this.FieldName;
-        result.MemberName = memberInfo.Name;
-        result.MemberType = memberInfo.GetMemberType();
-        result.NativeDbType = this.NativeDbType;
-        result.MappedTargetType = this.MappedTargetType;
-        result.UnderlyingType = this.UnderlyingType;
-        result.TypeHandler = this.TypeHandler;
-        return result;
+        var target = this.MemberwiseClone() as MemberMap;
+        target.Parent = parent;
+        target.Member = memberInfo;
+        target.MemberType = memberInfo.GetMemberType();
+        return target;
     }
 }

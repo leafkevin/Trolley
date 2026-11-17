@@ -195,7 +195,7 @@ public class EntityMap
         {
             var memberInfo = memberInfos.Find(f => f.Name == memberMapper.MemberName);
             if (memberInfo == null) continue;
-            var newMemberMapper = new MemberMap(mapper, memberInfo);
+            var newMemberMapper = memberMapper.Clone(mapper, memberInfo);
             mapper.AddMemberMap(memberMapper.MemberName, newMemberMapper);
             mapper.AddFieldMap(memberMapper.FieldName, newMemberMapper);
         }

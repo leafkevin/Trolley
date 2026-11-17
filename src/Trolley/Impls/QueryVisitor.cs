@@ -764,8 +764,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         this.IsUnion = true;
         var rawSql = this.BuildSql(false, out _, out _);
-        this.AddSharedQueryObjs(subQuery);
-        var queryVisitor = subQuery.Visitor.Clone(this.DbContext, this.DbParameters);
+        var isCopyParameters = this.AddSharedQueryObjs(subQuery);
+        var queryVisitor = subQuery.Visitor.Clone(this.DbContext, this.DbParameters, isCopyParameters);
         queryVisitor.IsSecondUnion = true;
         var sql = queryVisitor.BuildSql(false, out _, out _);
         this.UnionSql = rawSql + union + Environment.NewLine + sql;
@@ -2289,17 +2289,15 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public IQueryVisitor Clone(DbContext dbContext, IDataParameterCollection dbParameters, bool isCopyParameters = true)
     {
-        var result = this.OrmProvider.NewQueryVisitor(dbContext, 'a', this.DbParameters) as QueryVisitor;
+        var result = this.OrmProvider.NewQueryVisitor(dbContext, 'a', dbParameters) as QueryVisitor;
         result.hasSavePoint = this.hasSavePoint;
         result.dbParametersIndex = this.dbParametersIndex;
         result.savedSql = this.savedSql;
         result.IsCteQuery = this.IsCteQuery;
         result.IsRecursive = this.IsRecursive;
 
-        //result.Command = command;
-        //result.DbParameters = command.Parameters;
         if (isCopyParameters && !ReferenceEquals(this.DbParameters, dbParameters)
-            && this.DbParameters != null && this.DbParameters.Count > 0)
+           && this.DbParameters != null && this.DbParameters.Count > 0)
         {
             foreach (var dbParameter in this.DbParameters)
             {
@@ -2344,7 +2342,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         this.IncludeReaderFields = null;
         this.LastIncludeSegment = null;
-        this.DbParameters?.Clear();
 
         base.Dispose();
     }

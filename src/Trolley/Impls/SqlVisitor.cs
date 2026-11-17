@@ -1461,8 +1461,8 @@ public class SqlVisitor : ISqlVisitor
 
                 entityType = currentExpr.Type.GenericTypeArguments[0];
                 //在CTE表基础上，又做了WHERE/SELECT...其他操作
-                queryVisitor = subQueryObj.Visitor.Clone(this.DbContext, this.DbParameters);
-                this.AddSharedQueryObjs(subQueryObj);
+                var isCopyParameters = this.AddSharedQueryObjs(subQueryObj);
+                queryVisitor = subQueryObj.Visitor.Clone(this.DbContext, this.DbParameters, isCopyParameters);
                 if (subQueryObj.IsCteQuery)
                 {
                     if (callStack.Count == 0)
@@ -2435,7 +2435,6 @@ public class SqlVisitor : ISqlVisitor
             this.SharedQueryObjs.Clear();
         }
         this.SharedQueryObjs = null;
-        this.DbParameters?.Clear();
         this.DbParameters = null;
         this.NextDbParameters = null;
         this.UnionSql = null;
