@@ -680,6 +680,87 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             return fieldNames;
         return null;
     }
+    public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
+    {
+        var memberExpr = sqlSegment.Expression as MemberExpression;
+        var memberInfo = memberExpr.Member;
+        Func<ISqlVisitor, SqlSegment, SqlSegment> formatter = null;
+        if (memberExpr.Expression != null)
+        {
+            //Where(f=>... && !f.OrderId.HasValue && ...)
+            //Where(f=>... f.OrderId.Value==10 && ...)
+            //Select(f=>... ,f.OrderId.HasValue  ...)
+            //Select(f=>... ,f.OrderId.Value==10  ...)
+            if (memberInfo.DeclaringType.IsValueType && Nullable.GetUnderlyingType(memberInfo.DeclaringType) != null)
+            {
+                if (memberInfo.Name == "HasValue")
+                {
+                    sqlSegment.Push(DeferredOperation.IsNull);
+                    sqlSegment.Push(DeferredOperation.Not);
+                    return this.Visit(sqlSegment.Next(memberExpr.Expression));
+                }
+                if (memberInfo.Name == "Value")
+                    return this.Visit(sqlSegment.Next(memberExpr.Expression));
+            }
+
+            //各种OrmProvider提供的类型实例成员访问，如：DateTime,TimeSpan,String.Length
+            //Where(f=>... && f.CreatedAt.Month<5 && ...)
+            //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
+            if (this.OrmProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
+            {
+                //.CreatedAt.Date 会更改MemberName
+                var result = formatter.Invoke(this, sqlSegment.Next(memberExpr.Expression));
+                result.MemberName = memberInfo.Name;
+                return result;
+            }
+
+            if (memberExpr.TryGetParameters(out var parameterExprs))
+            {
+                if (parameterExprs.Count > 1)
+                    throw new NotSupportedException($"不支持多参数访问，{memberExpr.ToString()}");
+
+                var parameterExpr = parameterExprs[0];
+                var parameterName = parameterExpr.Name;
+
+                //最后有效的成员访问，去除集合类导航属性访问，如：f.Order.Seller.Company.Products.Count，最后有效成员访问是Products，而不是Count
+                var fromSegment = this.Tables[0];
+                MemberMap memberMapper = null;
+                //当访问x.Grouping.UserId或是x.Order.Buyer时，会有2个以上的成员访问
+                var memberExprs = this.GetMemberExprs(memberExpr, out _);
+                while (memberExprs.TryPop(out var lastMemberExpr))
+                {
+                    if (!fromSegment.Mapper.TryGetMemberMap(lastMemberExpr.Member.Name, out memberMapper))
+                        throw new NotSupportedException($"类{fromSegment.EntityType.FullName}没有成员{lastMemberExpr.Member.Name}，无法访问");
+                    if (memberMapper.IsIgnore)
+                        throw new NotSupportedException($"类{fromSegment.EntityType.FullName}的成员{lastMemberExpr.Member.Name}是忽略成员无法访问");
+                    if (memberMapper.IsNavigation)
+                        throw new NotSupportedException($"插入语句不支持使用导航属性，表达式：{memberExpr}");
+                }
+                //简单字段访问
+                sqlSegment.SqlType = SqlType.OnlyField;
+                sqlSegment.MemberMapper = memberMapper;
+                sqlSegment.MemberName = memberMapper.MemberName;
+                sqlSegment.Value = this.OrmProvider.GetFieldName(memberMapper.FieldName);
+                return sqlSegment;
+            }
+        }
+
+        //各种静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
+        if (memberExpr.Member.DeclaringType == typeof(DBNull))
+            return SqlSegment.Null;
+
+        if (this.OrmProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
+            return formatter.Invoke(this, sqlSegment);
+
+        //访问局部变量或是成员变量，当作常量处理，直接计算，后面统一做参数化处理
+        //var orderIds=new List<int>{1,2,3}; Where(f=>orderIds.Contains(f.OrderId));
+        //private Order order; Where(f=>f.OrderId==this.Order.Id); this.Order.Id
+        //var orderId=10; Select(f=>new {OrderId=orderId,...}
+        //Select(f=>new {OrderId=this.Order.Id, ...}
+        var value = ValueEvalutor.Evaluate(memberExpr);
+        if (value == null) return SqlSegment.Null;
+        return sqlSegment.Change(value, SqlType.Variable);
+    }
     public List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>> BuildDictBulkCommandInitializer(EntityMap entityMapper, IDictionary<string, object> dict)
     {
         var valueSetters = new List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>>();

@@ -1733,15 +1733,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 if (parameterExprs.Count > 1)
                     throw new NotSupportedException($"不支持多参数访问，{memberExpr.ToString()}");
 
-                //可能是多级导航属性，也可能是实体类字段访问，如：
-                //Select(f => new { f.Disputes.Length, f.Products.Count ...})
-                //var isCollectionMember = false;
-                //string[] collectionMemberNames = ["Length", "Count"];
-                //if (collectionMemberNames.Contains(memberInfo.Name)
-                //    && (memberExpr.Expression.Type.IsArray || memberExpr.Expression.Type.IsGenericType
-                //    && memberExpr.Expression.Type.GetGenericTypeDefinition() == typeof(ICollection<>)))
-                //    isCollectionMember = true;
-
                 string path = null;
                 var parameterExpr = parameterExprs[0];
                 var parameterName = parameterExpr.Name;
@@ -1756,15 +1747,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 ReusableList<ReaderField> readerFields = null;
                 while (memberExprs.TryPop(out var lastMemberExpr))
                 {
-                    ////子查询表通常只有下转1层，只有导航属性才有N层下转
-                    //if (lastReaderField != null && lastReaderField.Fields != null && lastReaderField.Fields.Count > 0)
-                    //{
-                    //    //lastReaderField = lastReaderField.Fields.Find(f => f.TargetMember.Name == lastMemberExpr.Member.Name);
-                    //    if (this.TryFindReaderField(lastReaderField.Fields, lastMemberExpr.Member, out var readerField))
-                    //        lastReaderField = readerField;
-                    //}
-                    ////只有正常实体表和Include表才有Mapper，子查询表没有Mapper
-                    //else 
                     if (fromSegment.Mapper != null)
                     {
                         if (!fromSegment.Mapper.TryGetMemberMap(lastMemberExpr.Member.Name, out memberMapper))

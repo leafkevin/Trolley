@@ -823,20 +823,6 @@ public class SqlVisitor : ISqlVisitor
                 readerFields.Add(readerField);
             }
         }
-        //TODO: 需要注释掉，无用
-        //if (this.IncludeTables != null)
-        //{
-        //    var manyIncludedSegments = this.IncludeTables.FindAll(f => f.FromTable == parent.TableSegment);
-        //    if (manyIncludedSegments.Count > 0)
-        //    {
-        //        //目前，1:N关系只支持1级
-        //        foreach (var includedSegment in manyIncludedSegments)
-        //        {
-        //            //更换path，方便后续Include成员赋值时，能够找到parent对象
-        //            includedSegment.Path = includedSegment.Path.Replace(parent.TableSegment.Path, parent.Path);
-        //        }
-        //    }
-        //}
     }
     public virtual SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {

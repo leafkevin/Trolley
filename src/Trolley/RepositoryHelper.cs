@@ -1519,7 +1519,7 @@ public static class RepositoryHelper
                             {
                                 var fieldType = reader.GetFieldType(index);
                                 var readerValueExpr = GetTypedReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                                    childReaderField.ReaderType, fieldType, readerField.MemberMapper, false, blockParameters, blockBodies);
+                                    childReaderField.ReaderType, fieldType, readerField.MemberMapper, true, blockParameters, blockBodies);
                                 argsExprs.Add(readerValueExpr);
                                 index++;
                             }
@@ -1558,7 +1558,7 @@ public static class RepositoryHelper
                         //单个字段和RawSql单个字段场景
                         var fieldType = reader.GetFieldType(index);
                         var readerValueExpr = GetTypedReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                            readerField.ReaderType, fieldType, readerField.MemberMapper, false, blockParameters, blockBodies);
+                            readerField.ReaderType, fieldType, readerField.MemberMapper, true, blockParameters, blockBodies);
                         if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
                         else if (readerField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
                         index++;
@@ -1569,7 +1569,7 @@ public static class RepositoryHelper
                         //单个字段和RawSql单个字段场景
                         var fieldType = reader.GetFieldType(index);
                         var readerValueExpr = GetTypedReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                            readerField.ReaderType, fieldType, readerField.MemberMapper, false, blockParameters, blockBodies);
+                            readerField.ReaderType, fieldType, readerField.MemberMapper, true, blockParameters, blockBodies);
                         if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
                         else if (readerField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
                         index++;
@@ -1605,7 +1605,7 @@ public static class RepositoryHelper
                         }
                         var fieldType = reader.GetFieldType(index);
                         var readerValueExpr = GetTypedReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                            memberType, fieldType, null, false, blockParameters, blockBodies);
+                            memberType, fieldType, null, true, blockParameters, blockBodies);
                         if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
                         else if (memberInfo.CanWrite) current.Bindings.Add(Expression.Bind(memberInfo, readerValueExpr));
                         index++;
@@ -1660,7 +1660,7 @@ public static class RepositoryHelper
                             var fieldType = reader.GetFieldType(index);
                             var myReaderField = readerField.Fields[i];
                             var readerValueExpr = GetTypedReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                                myReaderField.ReaderType, fieldType, myReaderField.MemberMapper, current.IsNullable, blockParameters, blockBodies);
+                                myReaderField.ReaderType, fieldType, myReaderField.MemberMapper, true, blockParameters, blockBodies);
 
                             if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
                             else if (myReaderField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(myReaderField.TargetMember, readerValueExpr));
