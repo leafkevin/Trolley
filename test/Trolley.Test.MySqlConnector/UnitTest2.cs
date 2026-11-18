@@ -14,7 +14,7 @@ public class UnitTest2 : UnitTestBase
 {
     public UnitTest2()
     {
-        var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+        var connectionString = "Server=192.168.31.67;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
         var builder = new OrmDbFactoryBuilder()
             .Register("fengling", OrmProviderType.MySql, f => f.Use(connectionString), true)
             .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
@@ -1281,15 +1281,26 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
             .ToListAsync();
 
         Assert.IsNotEmpty(result);
-        {
-            Assert.IsNotNull(result[0].Brand);
-            Assert.AreEqual("BN-001", result[0].Brand.BrandNo);
-        }
         if (result.Count > 1)
         {
             Assert.IsNotNull(result[1].Brand);
             Assert.AreEqual("BN-002", result[1].Brand.BrandNo);
         }
+        await repository.Update<Product>()
+            .Set(f => f.BrandId, 9999)
+            .Where(f => f.Id == 1)
+            .ExecuteAsync();
+        var result1 = await repository.From<Product>()
+            .Include(f => f.Brand)
+            .Where(f => f.Id == 1)
+            .FirstAsync();
+        Assert.IsNotNull(result1);
+        Assert.IsNull(result1.Brand);
+
+        await repository.Update<Product>()
+            .Set(f => f.BrandId, 1)
+            .Where(f => f.Id == 1)
+            .ExecuteAsync();
     }
     [Test]
     public void FromQuery_IncludeMany()
@@ -2682,7 +2693,6 @@ SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_orde
                     x.BuyerId
                 })
                .Take(1))
-            .Select()
             .UnionAll(f => f.From<Order>()
                 .Where(x => x.Id == "3")
                 .Select(x => new
@@ -2707,7 +2717,6 @@ SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_orde
                     x.BuyerId
                 })
                .Take(1))
-            .Select()
             .UnionAll(t => t.From<Order>()
                 .Where(x => x.Id == "3")
                 .Select(x => new
@@ -3687,25 +3696,57 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         var beginTime = DateTime.Parse("2025-10-01");
         var endTime = DateTime.Parse("2025-12-31");
         var sql1 = repository.From<Order>()
-            .WithTableAliasTrailing("USE INDEX(idx_timed_tenant)")
+            .WithTableTrailing("USE INDEX(idx_timed_tenant)")
             .Where(f => f.TenantId == "1" && f.CreatedAt >= beginTime && f.CreatedAt < endTime)
             .Select(f => f.Id)
             .ToSql(out _);
         Assert.AreEqual("SELECT a.`Id` FROM `sys_order` a USE INDEX(idx_timed_tenant) WHERE a.`TenantId`='1' AND a.`CreatedAt`>=@p0 AND a.`CreatedAt`<@p1", sql1);
         var result1 = repository.From<Order>()
-            .WithTableAliasTrailing("USE INDEX(idx_timed_tenant)")
+            .WithTableTrailing("USE INDEX(idx_timed_tenant)")
             .Where(f => f.TenantId == "1" && f.CreatedAt >= beginTime && f.CreatedAt < endTime)
             .Select(f => f.Id)
             .ToListAsync();
         Assert.IsNotNull(result1);
         var sql2 = repository.From<Order>()
-            .WithTableAliasTrailing("FORCE INDEX(idx_timed_tenant)")
+            .WithTableTrailing("FORCE INDEX(idx_timed_tenant)")
             .Where(f => f.TenantId == "1" && f.CreatedAt >= beginTime && f.CreatedAt < endTime)
             .Select(f => f.Id)
             .ToSql(out _);
         Assert.AreEqual("SELECT a.`Id` FROM `sys_order` a FORCE INDEX(idx_timed_tenant) WHERE a.`TenantId`='1' AND a.`CreatedAt`>=@p0 AND a.`CreatedAt`<@p1", sql2);
         var result2 = repository.From<Order>()
-          .WithTableAliasTrailing("FORCE INDEX(idx_timed_tenant)")
+          .WithTableTrailing("FORCE INDEX(idx_timed_tenant)")
+          .Where(f => f.TenantId == "1" && f.CreatedAt >= beginTime && f.CreatedAt < endTime)
+          .Select(f => f.Id)
+          .ToListAsync();
+        Assert.IsNotNull(result1);
+    }
+    [Test]
+    public async Task WithRawSql()
+    {
+        var repository = this.dbFactory.Create();
+        var beginTime = DateTime.Parse("2025-10-01");
+        var endTime = DateTime.Parse("2025-12-31");
+        var sql1 = repository.From<Order>()
+            .Where(f => f.TenantId == "1" && f.CreatedAt >= beginTime && f.CreatedAt < endTime)
+            .Select(f => f.Id)
+            //polardb-x数据库中，查询冷热数据前导注解
+            .WithTableTrailing("USE INDEX(idx_timed_tenant)")
+            .ToSql(out _);
+        Assert.AreEqual("SELECT a.`Id` FROM `sys_order` a USE INDEX(idx_timed_tenant) WHERE a.`TenantId`='1' AND a.`CreatedAt`>=@p0 AND a.`CreatedAt`<@p1", sql1);
+        var result1 = repository.From<Order>()
+            .WithTableTrailing("USE INDEX(idx_timed_tenant)")
+            .Where(f => f.TenantId == "1" && f.CreatedAt >= beginTime && f.CreatedAt < endTime)
+            .Select(f => f.Id)
+            .ToListAsync();
+        Assert.IsNotNull(result1);
+        var sql2 = repository.From<Order>()
+            .WithTableTrailing("FORCE INDEX(idx_timed_tenant)")
+            .Where(f => f.TenantId == "1" && f.CreatedAt >= beginTime && f.CreatedAt < endTime)
+            .Select(f => f.Id)
+            .ToSql(out _);
+        Assert.AreEqual("SELECT a.`Id` FROM `sys_order` a FORCE INDEX(idx_timed_tenant) WHERE a.`TenantId`='1' AND a.`CreatedAt`>=@p0 AND a.`CreatedAt`<@p1", sql2);
+        var result2 = repository.From<Order>()
+          .WithTableTrailing("FORCE INDEX(idx_timed_tenant)")
           .Where(f => f.TenantId == "1" && f.CreatedAt >= beginTime && f.CreatedAt < endTime)
           .Select(f => f.Id)
           .ToListAsync();

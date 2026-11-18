@@ -170,6 +170,7 @@ public class ReaderField
     public bool IsIgnore { get; set; }
     public bool IsRefField { get; set; }
     public bool IsTarget { get; set; }
+    public bool IsMaster { get; set; }
 
     public void Save()
     {

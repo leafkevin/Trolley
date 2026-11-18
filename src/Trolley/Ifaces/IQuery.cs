@@ -55,6 +55,7 @@ public interface ICteQuery : IQuery
     /// 是否是递归CTE表
     /// </summary>
     bool IsRecursive { get; set; }
+    bool IsIgnore { get; set; }
     #endregion
 }
 /// <summary>

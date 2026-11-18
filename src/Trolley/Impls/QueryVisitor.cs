@@ -669,12 +669,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         builder.Clear();
         return sql;
     }
-    public virtual TableSegment AddJoinTable(Type entityType, string joinType = null, TableType tableType = TableType.Entity, string body = null, ReusableList<ReaderField> readerFields = null)
+    public virtual TableSegment AddTable(Type entityType, TableType tableType, string body, ReusableList<ReaderField> readerFields)
     {
         int tableIndex = this.TableAliasStart + this.Tables.Count;
         var tableSegment = new TableSegment
         {
-            JoinType = joinType,
             EntityType = entityType,
             AliasName = $"{(char)tableIndex}",
             Path = $"{(char)tableIndex}",
@@ -720,7 +719,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (tableType == TableType.FromQuery)
             tableName = $"({tableName})";
 
-        var tableSegment = this.AddJoinTable(targetType, null, tableType, tableName, readerFields);
+        var tableSegment = this.AddTable(targetType, tableType, tableName, readerFields);
         //从FromQuery对象开始的场景，直接build和生成SQL，就可以，正常逻辑
         this.InitUseQueryReaderFields(tableSegment, readerFields);
 
@@ -757,12 +756,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             tableType = TableType.FromQuery;
         }
         //第一个表是子查询表或是Union场景时，需要清零表，Join场景不需要清表
-        var tableSegment = this.AddJoinTable(targetType, null, tableType, tableName, readerFields);
+        var tableSegment = this.AddTable(targetType, tableType, tableName, readerFields);
         this.InitUseQueryReaderFields(tableSegment, readerFields);
     }
     public virtual void Union(string union, Type targetType, IQuery subQuery)
     {
         this.IsUnion = true;
+        if (this.ReaderFields == null || this.ReaderFields.Count == 0)
+            this.ReaderFields = this.FlattenTableFields(this.Tables[0]);
         var rawSql = this.BuildSql(false, out _, out _);
         var isCopyParameters = this.AddSharedQueryObjs(subQuery);
         var queryVisitor = subQuery.Visitor.Clone(this.DbContext, this.DbParameters, isCopyParameters);
@@ -776,6 +777,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         var lambdaExpr = this.EnsureLambda(subQueryExpr);
         this.IsUnion = true;
+        if (this.ReaderFields == null || this.ReaderFields.Count == 0)
+            this.ReaderFields = this.FlattenTableFields(this.Tables[0]);
         var rawSql = this.BuildSql(false, out _, out _);
         this.IsSecondUnion = true;
         (_, var sql, _) = this.VisitFromQuery(lambdaExpr.Body);
@@ -786,6 +789,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void UnionRecursive(string union, Type targetType, Expression subQueryExpr)
     {
         this.IsUnion = true;
+        if (this.ReaderFields == null || this.ReaderFields.Count == 0)
+            this.ReaderFields = this.FlattenTableFields(this.Tables[0]);
         var rawSql = this.BuildSql(false, out _, out _);
 
         //此时产生的queryObj是一个新的对象，只能用于解析sql，与传进来的queryObj不是同一个对象，舍弃
@@ -817,18 +822,38 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //JoinOn子句中使用的都是真实表、CTE表、子查询表
         this.ClearUnionSql();
         this.TableAliases.Clear();
-        TableSegment tableSegment = null;
-        var masterTables = this.Tables.FindAll(f => f.IsMaster);
+        int index = 0, tableIndex = 0;
+        var joinTables = new TableSegment[2];
         for (int i = 0; i < lambdaExpr.Parameters.Count; i++)
         {
+            if (index >= this.Tables.Count)
+                break;
             var parameterExpr = lambdaExpr.Parameters[i];
             if (!parameterExprs.Contains(parameterExpr))
+            {
+                index++;
                 continue;
-            tableSegment = masterTables[i];
-            this.TableAliases.Add(parameterExpr.Name, tableSegment);
+            }
+            while (this.Tables[index].TableType == TableType.Include)
+                index++;
+            joinTables[tableIndex] = this.Tables[index];
+            this.TableAliases.Add(parameterExpr.Name, joinTables[tableIndex]);
+            index++;
+            tableIndex++;
         }
-        tableSegment.JoinType = joinType;
-        tableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body, out _);
+        joinTables[1].JoinType = joinType;
+        joinTables[1].OnExpr = this.VisitConditionExpr(lambdaExpr.Body, out _);
+        //确定主表
+        if (this.Tables.Count == 2)
+        {
+            switch (joinType)
+            {
+                case "LEFT JOIN": joinTables[1].IsMaster = false; break;
+                case "RIGHT JOIN": joinTables[0].IsMaster = false; break;
+            }
+        }
+        else if (!joinTables[0].IsMaster && joinType == "INNER JOIN" || joinType == "LEFT JOIN")
+            joinTables[1].IsMaster = false;
     }
     public virtual void Join(string joinType, Type newEntityType, Expression joinOnExpr)
     {
@@ -2079,7 +2104,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     tableIndex++;
                     continue;
                 }
-                while (!this.Tables[tableIndex].IsMaster)
+                while (this.Tables[tableIndex].TableType == TableType.Include)
                     tableIndex++;
                 this.TableAliases.Add(parameterExpr.Name, this.Tables[tableIndex]);
                 index++;
@@ -2089,9 +2114,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual void AddSelectFieldsSql(StringBuilder builder, ReusableList<ReaderField> readerFields)
     {
-        //Stack<(int, ReaderField)> includeFields = null;
-        //if (readerFields.Exists(f => f.FieldType == ReaderFieldType.IncludeRef))
-        //    includeFields = new();
         if (readerFields.Count > 1)
         {
             int index = 0;

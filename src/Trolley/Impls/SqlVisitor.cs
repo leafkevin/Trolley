@@ -776,7 +776,8 @@ public class SqlVisitor : ISqlVisitor
             ReaderType = fromSegment.EntityType,
             Fields = this.FlattenTableFields(fromSegment),
             Path = fromSegment.Path,
-            IsTarget = !this.IsSelectMember
+            IsTarget = !this.IsSelectMember,
+            IsMaster = fromSegment.IsMaster
         };
         //include表的ReaderField字段，紧跟在主表ReaderField后面
         ReusableList<ReaderField> readerFields = [readerField];
@@ -1759,10 +1760,10 @@ public class SqlVisitor : ISqlVisitor
                     var tableName = callExpr.Arguments[0].Evaluate<string>();
                     entityType = callExpr.Type.GenericTypeArguments[0];
                     //每次要新建一个CteQuery对象，避免多次使用同一个对象
-                    queryVisitor.AsCteTable(entityType, tableName);
+                    var cteQueryObj = queryVisitor.AsCteTable(entityType, tableName);
                     this.AddSharedQueryObjs(queryVisitor);
+                    cteQueryObj.IsIgnore = true;
                     return (TableType.CteSelfRef, tableName, queryVisitor.ReaderFields);
-
                 default: throw new NotSupportedException("不支持的表达式解析");
             }
         }
@@ -2283,7 +2284,10 @@ public class SqlVisitor : ISqlVisitor
         {
             //子查询中，访问了实体类对象，比如：Grouping分组对象或是匿名对象
             if (readerField.FieldType == ReaderFieldType.Entity)
+            {
                 this.InitUseQueryReaderFields(tableSegment, readerField.Fields);
+                readerField.IsMaster = tableSegment.IsMaster;
+            }
             else
             {
                 //已经变成子查询了，原表字段名已经没意义了，直接变成新的字段名
@@ -2424,11 +2428,12 @@ public class SqlVisitor : ISqlVisitor
         this.DbContext = null;
         //应用子查询表，只删除元素，不能dispose，后续操作可能还会用到子查询
         this.CteQueryObj = null;
-        if (this.SharedQueryObjs != null && this.SharedQueryObjs.Count > 0)
+        if (!this.IsCteQuery && this.SharedQueryObjs != null && this.SharedQueryObjs.Count > 0)
         {
             foreach (var sharedQueryObj in this.SharedQueryObjs)
             {
-                if (this.IsCteQuery && ReferenceEquals(this, sharedQueryObj.Visitor))
+                if (ReferenceEquals(this, sharedQueryObj.Visitor)
+                    || sharedQueryObj is ICteQuery cteQueryObj && cteQueryObj.IsIgnore)
                     continue;
                 sharedQueryObj.Visitor.Restore();
             }

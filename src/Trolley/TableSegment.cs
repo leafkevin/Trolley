@@ -17,11 +17,11 @@ public enum TableType : byte
     /// </summary>
     FromQuery,
     /// <summary>
-    /// Include子表，此时IsMaster=false
+    /// Include子表
     /// </summary>
     Include,
     /// <summary>
-    /// CTE表自身引用，此时IsMaster=false
+    /// CTE表自身引用
     /// </summary>
     CteSelfRef,
     /// <summary>

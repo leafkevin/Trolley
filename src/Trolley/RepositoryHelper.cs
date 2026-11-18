@@ -1643,10 +1643,10 @@ public static class RepositoryHelper
                         }
                         var entityExpr = ReadEntityValues(dbContext, reader, readerField, ref index,
                             readerField.ReaderType, readerExpr, current, blockParameters, blockBodies);
-
                         //有include对象
                         if (readerField.HasNextInclude)
                         {
+                            current.InstanceExpr = entityExpr;
                             deferredBuilders.Push(current);
                             readerBuilders.TryAdd(readerField.Path, current);
                         }
@@ -1658,10 +1658,13 @@ public static class RepositoryHelper
                                 //创建子对象，并赋值给父对象的属性,直到Select语句
                                 if (nextBuilder != null)
                                     current = nextBuilder;
-                                current.InstanceExpr = entityExpr;
                                 if (current.Parent == null) break;
-                                if (!current.Parent.IsDefault) current.Parent.Arguments.Add(entityExpr);
-                                else if (current.FromMember.CanWrite) current.Parent.Bindings.Add(Expression.Bind(current.FromMember, entityExpr));
+                                if (current.Parent == root)
+                                {
+                                    if (!current.Parent.IsDefault) current.Parent.Arguments.Add(entityExpr);
+                                    else if (readerField.TargetMember.CanWrite) current.Parent.Bindings.Add(Expression.Bind(readerField.TargetMember, entityExpr));
+                                }
+                                else blockBodies.Add(SetMemberValue(current));
                             }
                             while (deferredBuilders.TryPop(out nextBuilder));
                             current = current.Parent;
@@ -1683,23 +1686,43 @@ public static class RepositoryHelper
         return Expression.Lambda<Func<ITheaDataReader, ReusableList<ReaderField>, object>>(Expression.Block(blockParameters,
             blockBodies), readerExpr, readerFieldsExpr).Compile();
     }
+    private static Expression SetMemberValue(EntityBuilder current)
+    {
+        Expression setValueExpr = null;
+        var fromMember = current.FromMember;
+        var valueExpr = current.InstanceExpr;
+        var parentExpr = current.Parent.InstanceExpr;
+        if (fromMember is FieldInfo fieldInfo)
+        {
+            if (fieldInfo.IsStatic)
+                setValueExpr = Expression.Assign(Expression.Field(null, fieldInfo), valueExpr);
+            else setValueExpr = Expression.Assign(Expression.Field(parentExpr, fieldInfo), valueExpr);
+        }
+        else if (fromMember is PropertyInfo propertyInfo)
+        {
+            var methodInfo = propertyInfo.GetSetMethod();
+            if (methodInfo.IsStatic)
+                setValueExpr = Expression.Call(methodInfo, valueExpr);
+            else setValueExpr = Expression.Call(parentExpr, methodInfo, valueExpr);
+        }
+        return setValueExpr;
+    }
     private static Expression ReadEntityValues(DbContext dbContext, ITheaDataReader reader, ReaderField readerField, ref int index,
         Type targetType, ParameterExpression readerExpr, EntityBuilder current, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
     {
         int keyIndex = 0;
         var myBlockParameters = blockParameters;
         var myBlockBodies = blockBodies;
-        var isChild = false;
-        if (current.Parent != null)
+        var isNullable = !readerField.IsGroupingField && !readerField.IsMaster;
+        //不是主表，只要有一个主键字段值为null，就说明这条数据不存在
+        if (isNullable && current.Parent != null)
         {
-            //不是主表，只要有一个主键字段值为null，就说明这条数据不存在
             var isRequiredField = readerField.Fields.Find(f => f.MemberMapper.IsKey || f.MemberMapper.IsRequired);
             if (isRequiredField == null)
                 throw new NotSupportedException($"表{readerField.TableSegment.Mapper.TableName}至少包含一个非空字段");
             keyIndex = index + readerField.Fields.IndexOf(isRequiredField);
             myBlockParameters = new List<ParameterExpression>();
             myBlockBodies = new List<Expression>();
-            isChild = true;
         }
         for (int i = 0; i < readerField.Fields.Count; i++)
         {
@@ -1712,27 +1735,30 @@ public static class RepositoryHelper
             else if (myReaderField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(myReaderField.TargetMember, readerValueExpr));
             index++;
         }
+        if (current.Parent == null)
+            return null;
+
         Expression instanceExpr = null;
-        if (isChild)
+        if (current.IsDefault)
+            instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
+        else instanceExpr = Expression.New(current.Constructor, current.Arguments);
+
+        var typedLocalExpr = Expression.Variable(targetType, $"local{blockParameters.Count}");
+        blockParameters.Add(typedLocalExpr);
+        myBlockBodies.Add(Expression.Assign(typedLocalExpr, instanceExpr));
+        instanceExpr = typedLocalExpr;
+
+        if (isNullable)
         {
-            if (current.IsDefault)
-                instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
-            else instanceExpr = Expression.New(current.Constructor, current.Arguments);
-
-            var typedLocalExpr = Expression.Variable(targetType, $"local{blockParameters.Count}");
-            blockParameters.Add(typedLocalExpr);
-            myBlockBodies.Add(Expression.Assign(typedLocalExpr, instanceExpr));
-            var setTypedValueExpr = Expression.Block(myBlockParameters, myBlockBodies);
-
             //只要有一个非空字段值为null，就说明这条数据不存在
             var methodInfo = typeof(IDataRecord).GetMethod(nameof(IDataRecord.IsDBNull));
             var indexExpr = Expression.Constant(keyIndex);
             var isDbNullExpr = Expression.Call(readerExpr, methodInfo, indexExpr);
             var setNullExpr = Expression.Assign(typedLocalExpr, Expression.Constant(null, targetType));
+            var setTypedValueExpr = Expression.Block(myBlockParameters, myBlockBodies);
             blockBodies.Add(Expression.IfThenElse(isDbNullExpr, setNullExpr, setTypedValueExpr));
-            return typedLocalExpr;
         }
-        return null;
+        return instanceExpr;
     }
     public static Expression GetTypedReaderValue(DbContext dbContext, ParameterExpression readerExpr, Expression indexExpr,
         Type targetType, Type fieldType, MemberMap memberMapper, List<ParameterExpression> blockParameters, List<Expression> blockBodies)

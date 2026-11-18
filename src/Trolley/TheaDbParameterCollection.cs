@@ -67,7 +67,7 @@ public sealed class TheaDbParameterCollection : IDataParameterCollection
         this.parameters.Add(dbParameter);
         return index;
     }
-    public void AddRange(Array values)
+    public void AddRange(IEnumerable values)
     {
         foreach (var value in values)
             this.Add(value);
