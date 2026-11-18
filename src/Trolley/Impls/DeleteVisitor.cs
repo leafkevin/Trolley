@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Data;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -8,6 +7,7 @@ namespace Trolley;
 
 public class DeleteVisitor : SqlVisitor, IDeleteVisitor
 {
+    private bool isDisposed = false;
     private Type entityType;
 
     public ITheaCommand Command { get; set; }
@@ -254,11 +254,13 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     }
     public override void Dispose()
     {
+        if (this.isDisposed) return;
         this.entityType = null;
         this.OutputSql = null;
         this.Command?.Dispose();
         this.Command = null;
         base.Dispose();
+        this.isDisposed = true;
     }
     public void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper, StringBuilder builder)
     {

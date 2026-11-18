@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
@@ -20,7 +19,7 @@ public class Create : DialectProvider, ICreate
     public Create(Type entityType, DbContext dbContext)
     {
         this.DbContext = dbContext;
-        var command = this.ormProvider.CreateCommand();
+        var command = this.CreateMasterCommand();
         this.Visitor = this.DbContext.OrmProvider.NewCreateVisitor(entityType, dbContext, 'a', command);
     }
     #endregion
@@ -282,8 +281,7 @@ public class Created : DialectProvider, ICreated
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        var sql = this.Visitor.BuildSql(out _);
-        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
+        var sql = this.BuildSql(this.Visitor, out dbParameters, out _);
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;
@@ -462,8 +460,7 @@ public class ResultCreated<TResult> : DialectProvider, IResultCommand<TResult>
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        var sql = this.Visitor.BuildSql(out _);
-        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
+        var sql = this.BuildSql(this.Visitor, out dbParameters, out _);
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;
@@ -519,8 +516,7 @@ public class BulkResultCreated<TResult> : DialectProvider, IBulkResultCommand<TR
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        var sql = this.Visitor.BuildSql(out _);
-        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
+        var sql = this.BuildSql(this.Visitor, out dbParameters, out _);
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;

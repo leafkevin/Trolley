@@ -165,7 +165,7 @@ public class QueryBase : QueryInternal, IQueryBase
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        var sql = this.Visitor.BuildSql(out dbParameters, out _);
+        var sql = this.BuildSql(this.Visitor, out dbParameters, out _);
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;
@@ -206,9 +206,9 @@ public class QueryBase : QueryInternal, IQueryBase
     #region NewCreateVisitor
     public virtual ICreateVisitor NewCreateVisitor(Type entityType)
     {
-        var command = this.ormProvider.CreateCommand();
+        var command = this.CreateMasterCommand();
         var fromSql = this.Visitor.BuildCommandSql(entityType, out var dbParameters);
-        dbParameters.ForEach(f => command.Parameters.Add(f));
+        if (dbParameters != null) dbParameters.ForEach(f => command.Parameters.Add(f));
         var createVisiter = this.ormProvider.NewCreateVisitor(entityType, this.DbContext, 'a', command);
         createVisiter.FromSql = fromSql;
         return createVisiter;

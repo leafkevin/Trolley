@@ -14,7 +14,7 @@ public class UnitTest2 : UnitTestBase
 {
     public UnitTest2()
     {
-        var connectionString = "Server=192.168.31.67;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+        var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
         var builder = new OrmDbFactoryBuilder()
             .Register("fengling", OrmProviderType.MySql, f => f.Use(connectionString), true)
             .UseMapping<ModelMappingConfiguration>(OrmProviderType.MySql)
@@ -3677,17 +3677,50 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
     public async Task ToCreate()
     {
         var repository = this.dbFactory.Create();
-        var sql1 = repository.From<Order>()
-             .Where(f => f.TotalAmount > 50)
-             .Select(f => new Order
-             {
-                 Id = f.Id,
-                 OrderNo = f.OrderNo,
-                 TotalAmount = f.TotalAmount,
-                 ProductCount = f.ProductCount
-             })
-             .ToCreate<Order>()
-             .ExecuteAsync();
+        int startId = 2000;
+        var sql = repository.From<User>()
+            .Where(f => f.Id < 3)
+            .Select(f => new
+            {
+                Id = f.Id + startId,
+                TenantId = "3",
+                Name = $"{f.Name}_temp_{f.Id}",
+                Age = 18,
+                CompanyId = 2,
+                IsEnabled = 1,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .ToCreate<User>()
+            .ToSql(out var dbParameters);
+        Assert.AreEqual("INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Age`,`CompanyId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`)\r\nSELECT a.`Id`+@p0,'3',CONCAT(a.`Name`,'_temp_',a.`Id`),18,2,1,NOW(),1,NOW(),1 FROM `sys_user` a WHERE a.`Id`<3", sql);
+        Assert.IsNotNull(dbParameters);
+        Assert.AreEqual(1, dbParameters.Count);
+        Assert.AreEqual(startId, (int)dbParameters[0].Value);
+
+        await repository.DeleteAsync<User>(f => f.Id > startId);
+        var count1 = await repository.From<User>()
+            .Where(f => f.Id < 3).CountAsync();
+        var count2 = await repository.From<User>()
+            .Where(f => f.Id < 3)
+            .Select(f => new
+            {
+                Id = f.Id + startId,
+                TenantId = "3",
+                Name = $"{f.Name}_temp",
+                Age = 18,
+                CompanyId = 2,
+                IsEnabled = 1,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .ToCreate<User>()
+            .ExecuteAsync();
+        Assert.AreEqual(count1, count2);
     }
     [Test]
     public async Task UseIndex()

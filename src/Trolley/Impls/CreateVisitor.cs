@@ -9,6 +9,7 @@ namespace Trolley;
 
 public class CreateVisitor : SqlVisitor, ICreateVisitor
 {
+    private bool isDisposed = false;
     protected List<CommandSegment> deferredSegments = new();
 
     public ITheaCommand Command { get; set; }
@@ -776,12 +777,14 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public override void Dispose()
     {
+        if (this.isDisposed) return;
         this.deferredSegments = null;
         this.FieldsBuilder = null;
         this.ValuesBuilder = null;
         this.Command?.Dispose();
         this.Command = null;
         base.Dispose();
+        this.isDisposed = true;
     }
     public virtual void InitTableAlias(LambdaExpression lambdaExpr)
     {

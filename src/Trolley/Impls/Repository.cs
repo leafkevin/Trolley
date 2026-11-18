@@ -420,7 +420,7 @@ public class Repository : DialectProvider, IRepository
         this.Initialize(command);
 
         connection.Open();
-        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+        var reader = command.ExecuteReader();
         //多语句查询，在最后reader读取后，自动关闭
         return new MultiQueryReader(this.DbContext, connection, command, reader, readerAfters, isNeedClose);
     }
@@ -436,7 +436,7 @@ public class Repository : DialectProvider, IRepository
         this.Initialize(command);
 
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
+        var reader = await command.ExecuteReaderAsync(cancellationToken);
         //多语句查询，在最后reader读取后，自动关闭
         return new MultiQueryReader(this.DbContext, connection, command, reader, readerAfters, isNeedClose);
     }

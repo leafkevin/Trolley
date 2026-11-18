@@ -369,7 +369,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         var headSql = builder.ToString();
         builder.Clear();
+        this.IsSelectInto = true;
         this.AddSelectFieldsSql(builder, this.ReaderFields);
+        this.IsSelectInto = false;
+
         string selectSql = null;
         if (this.IsDistinct)
             selectSql = "DISTINCT " + builder.ToString();
@@ -1460,6 +1463,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //延迟方法调用，参数可能有多个，返回的ReaderField只有一个
         //不一定有成员名称，无需设置TargetMember，如：.Select(f => f.Age / 10 * 10)
         var sqlSegment = this.Visit(new SqlSegment { Expression = toTargetExpr.Body });
+        if (sqlSegment.IsDeferredFields)
+            sqlSegment = this.VisitDeferredSqlSegment(new SqlSegment { Expression = toTargetExpr.Body });
         switch (sqlSegment.SqlType)
         {
             //成员访问
@@ -1647,7 +1652,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
         if (sqlSegment.IsDeferredFields)
-            return this.VisitDeferredSqlSegment(sqlSegment);
+            return sqlSegment;
 
         //Select场景，实体成员访问，返回ReaderField实体类型，ReaderFields并且有值，子ReaderFields的Body可无值
         //Select场景和Where场景，单个字段成员访(包括Json实体类型字段)，返回FromMember，TargetMember，字段类型，Body有值为带有别名的FieldName
@@ -1997,6 +2002,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //.SelectTo((a, b...) => new DTO{ ActivityTypeEnum = this.GetEmnuName(f.ActivityType) })
                 //会有延迟成员访问，静态成员访问，还有方法调用等访问，所以需要VisitAndDeferred
                 sqlSegment = this.Visit(new SqlSegment { Expression = elementExpr });
+                if (sqlSegment.IsDeferredFields)
+                    sqlSegment = this.VisitDeferredSqlSegment(new SqlSegment { Expression = elementExpr });
+
                 switch (sqlSegment.SqlType)
                 {
                     //成员访问
@@ -2282,7 +2290,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual bool IsNeedAlias(ReaderField readerField)
     {
-        if (this.IsSecondUnion || this.IsCteQuery) return false;
+        if (this.IsSecondUnion || this.IsCteQuery || this.IsSelectInto) return false;
         //单个字段RawSql场景，需要加别名，多个字段RawSql不需要加别名
         if (readerField.FieldType == ReaderFieldType.RawSql)
             return readerField.FieldsCount == 1;

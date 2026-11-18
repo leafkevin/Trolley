@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -71,6 +70,7 @@ public class SqlVisitor : ISqlVisitor
     /// 第二个Union子句
     /// </summary>
     public bool IsSecondUnion { get; set; }
+    public bool IsSelectInto { get; set; }
 
     public string ShardingTableJointMark { get; set; } = " UNION ALL ";
     public bool IsNeedChangeUnionShardingTables { get; set; }
@@ -714,6 +714,9 @@ public class SqlVisitor : ISqlVisitor
     }
     public virtual SqlSegment VisitMethodCall(SqlSegment sqlSegment)
     {
+        if (sqlSegment.IsDeferredFields)
+            return sqlSegment;
+
         var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
         var declaringType = methodCallExpr.Method.DeclaringType;
         if (declaringType == typeof(Sql)
@@ -735,8 +738,6 @@ public class SqlVisitor : ISqlVisitor
             else if (declaringType == typeof(IStringAgg))
                 return this.VisitStringAggMethodCall(sqlSegment);
         }
-        if (sqlSegment.IsDeferredFields)
-            return this.VisitDeferredSqlSegment(sqlSegment);
 
         if (this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formatter))
             return formatter.Invoke(this, methodCallExpr, sqlSegment.DeferredOperations);
@@ -752,7 +753,7 @@ public class SqlVisitor : ISqlVisitor
             //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
             //this.DeferredInvoke(f.Price, f.Quantity)
             sqlSegment.IsDeferredFields = true;
-            return this.VisitDeferredSqlSegment(sqlSegment);
+            return sqlSegment;
         }
         var testVisitor = new HasParameterVisitor();
         testVisitor.Visit(methodCallExpr);
@@ -1843,51 +1844,6 @@ public class SqlVisitor : ISqlVisitor
         result = default;
         return false;
     }
-    public virtual List<Expression> ConvertFormatToConcatList(Expression[] argsExprs)
-    {
-        var format = argsExprs[0].Evaluate<string>();
-        int index = 1, formatIndex = 0;
-        var parameters = new List<Expression>();
-        for (int i = 1; i < argsExprs.Length; i++)
-        {
-            switch (argsExprs[i].NodeType)
-            {
-                case ExpressionType.ListInit:
-                    var listExpr = argsExprs[i] as ListInitExpression;
-                    foreach (var elementInit in listExpr.Initializers)
-                    {
-                        if (elementInit.Arguments.Count == 0)
-                            continue;
-                        parameters.Add(elementInit.Arguments[0]);
-                    }
-                    break;
-                case ExpressionType.NewArrayBounds:
-                case ExpressionType.NewArrayInit:
-                    var newArrayExpr = argsExprs[i] as NewArrayExpression;
-                    foreach (var elementExpr in newArrayExpr.Expressions)
-                    {
-                        parameters.Add(elementExpr);
-                    }
-                    break;
-                default: parameters.Add(argsExprs[i]); break;
-            }
-        }
-        index = 0;
-        var result = new List<Expression>();
-        while (formatIndex < format.Length)
-        {
-            var nextIndex = format.IndexOf('{', formatIndex);
-            if (nextIndex > formatIndex)
-            {
-                var constValue = format.Substring(formatIndex, nextIndex - formatIndex);
-                result.Add(Expression.Constant(constValue));
-            }
-            result.AddRange(this.SplitConcatList(parameters[index]));
-            index++;
-            formatIndex = format.IndexOf('}', nextIndex + 2) + 1;
-        }
-        return result;
-    }
     public virtual List<Expression> SplitConcatList(Expression[] argsExprs)
     {
         var completedExprs = new List<Expression>();
@@ -2275,7 +2231,6 @@ public class SqlVisitor : ISqlVisitor
         //DateTimeOffset.FromUnixTimeMilliseconds(x.Max(f.UpdatedAt)).UtcDateTime.Add(request.TimeZone.ToTimeZone()).Deferred()
         var visitor = new DeferredExpressionVisitor(this);
         var readerField = visitor.Build(sqlSegment.Expression);
-        sqlSegment.IsDeferredFields = true;
         return sqlSegment.Change(readerField, SqlType.ReaderField);
     }
     public void InitUseQueryReaderFields(TableSegment tableSegment, ReusableList<ReaderField> readerFields)

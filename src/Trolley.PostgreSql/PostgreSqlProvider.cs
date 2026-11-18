@@ -2347,7 +2347,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         using var connection = new NpgsqlConnection(connectionString);
         using var command = new NpgsqlCommand(sql, connection);
         connection.Open();
-        using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+        using var reader = command.ExecuteReader();
 
         DbTableInfo tableInfo = null;
         while (reader.Read())

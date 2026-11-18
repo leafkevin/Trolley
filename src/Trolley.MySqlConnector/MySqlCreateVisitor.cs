@@ -34,10 +34,10 @@ public class MySqlCreateVisitor : CreateVisitor
                 if (shardingType == ShardingTableType.SplitTables)
                 {
                     var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
-                    foreach (var tableName in tabledInsertObjs.Keys)
+                    foreach (var shardingTableName in tabledInsertObjs.Keys)
                     {
-                        firstSqlSetter.Invoke(this.DbParameters, builder, tableName);
-                        var tableParameters = tabledInsertObjs[tableName];
+                        firstSqlSetter.Invoke(this.DbParameters, builder, shardingTableName);
+                        var tableParameters = tabledInsertObjs[shardingTableName];
                         foreach (var insertObj in tableParameters)
                         {
                             loopSqlSetter.Invoke(this.DbParameters, builder, this.DbContext, insertObj, index.ToString());
@@ -103,12 +103,16 @@ public class MySqlCreateVisitor : CreateVisitor
                                 break;
                         }
                     }
-                    var tableName = this.GetTableName(tableSegment);
-                    if (this.IsReturnIdentity && (this.UpdateBuilder != null || this.OutputSql != null))
-                        throw new NotSupportedException("返回Identity，不支持同时Returning操作");
-                    this.FromSql = $"{this.BuildHeadSql()} {tableName} ({this.FieldsBuilder}) VALUES ({this.ValuesBuilder})";
+
+                    this.FromSql = $"({this.FieldsBuilder}) VALUES ({this.ValuesBuilder})";
                     this.ValuesBuilder.Clear();
                 }
+
+                var tableName = this.GetTableName(tableSegment);
+                if (this.IsReturnIdentity && (this.UpdateBuilder != null || this.OutputSql != null))
+                    throw new NotSupportedException("返回Identity，不支持同时Returning操作");
+                this.FromSql = $"{this.BuildHeadSql()} {tableName} {this.FromSql}";
+
                 if (this.UpdateBuilder != null)
                     tailSql = this.UpdateBuilder.ToString();
 

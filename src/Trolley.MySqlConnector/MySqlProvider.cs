@@ -304,7 +304,7 @@ public partial class MySqlProvider : BaseOrmProvider
         var tableInfos = new List<DbTableInfo>();
         using var command = new MySqlCommand(sql, connection);
         connection.Open();
-        using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+        using var reader = command.ExecuteReader();
 
         DbTableInfo tableInfo = null;
         var lengthTypes = new[] { "bit", "binary", "varbinary" };

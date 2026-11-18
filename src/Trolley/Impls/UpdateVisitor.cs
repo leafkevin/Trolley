@@ -10,6 +10,7 @@ namespace Trolley;
 
 public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 {
+    private bool isDisposed = false;
     protected List<CommandSegment> deferredSegments = new();
     protected bool hasOnlyFields = false;
     protected bool hasIgnoreFields = false;
@@ -669,6 +670,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public override void Dispose()
     {
+        if (this.isDisposed) return;
         this.Command?.Dispose();
         this.Command = null;
         this.deferredSegments = null;
@@ -676,6 +678,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.OnlyFieldNames = null;
         this.IgnoreFieldNames = null;
         base.Dispose();
+        this.isDisposed = true;
     }
     public virtual void VisitSetField(object deferredSegmentValue)
     {

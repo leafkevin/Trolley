@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Trolley.MySqlConnector;
 
@@ -66,43 +67,28 @@ partial class MySqlProvider
                     if (parameterInfos.Length >= 1)
                     {
                         formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
-
                         {
                             var builder = new StringBuilder();
                             var constBuilder = new StringBuilder();
                             var concatExprs = visitor.SplitConcatList(methodCallExpr.Arguments.ToArray());
                             SqlSegment resultSegment = default;
 
-                            bool isDeferredFields = false;
-                            var sqlSegments = new List<SqlSegment>();
-                            for (var i = 0; i < concatExprs.Count; i++)
+                            foreach (var elementExpr in concatExprs)
                             {
                                 //可能是一个sqlSegment，也可能是多个List<sqlSegment>
-                                var sqlSegment = visitor.Visit(new SqlSegment { Expression = concatExprs[i] });
+                                var sqlSegment = visitor.Visit(new SqlSegment { Expression = elementExpr });
                                 if (sqlSegment.IsDeferredFields)
-                                {
-                                    isDeferredFields = true;
-                                    resultSegment = sqlSegment;
-                                    break;
-                                }
+                                    return sqlSegment;
 
-                                //获取枚举名称，根据数据库的字段类型来处理
-                                if (sqlSegment.IsEnum && sqlSegment.SqlType == SqlType.OnlyField)
+                                //获取枚举名称，根据数据库的字段类型来处理                             
+                                if (elementExpr.Type.IsEnum && sqlSegment.SqlType == SqlType.OnlyField)
                                     visitor.ToEnumString(sqlSegment);
-                                //先不处理类型，都解析完毕后，最后处理类型，转换成字符串
-                                sqlSegments.Add(sqlSegment);
-                            }
-                            if (isDeferredFields)
-                                return visitor.VisitDeferredSqlSegment(new SqlSegment { Expression = methodCallExpr });
 
-                            resultSegment = sqlSegments[0];
-                            for (var i = 0; i < concatExprs.Count; i++)
-                            {
-                                //可能是一个sqlSegment，也可能是多个List<sqlSegment>
-                                var sqlSegment = sqlSegments[i];
                                 if (sqlSegment.IsConstant)
                                 {
-                                    constBuilder.Append(sqlSegment.Value.ToString());
+                                    if (elementExpr.Type == typeof(string))
+                                        constBuilder.Append(sqlSegment.Value.ToString());
+                                    else constBuilder.Append(visitor.WrapSql(sqlSegment));
                                     continue;
                                 }
                                 if (constBuilder.Length > 0)
@@ -114,16 +100,7 @@ partial class MySqlProvider
                                 }
                                 if (builder.Length > 0)
                                     builder.Append(',');
-
-                                var body = visitor.WrapSql(sqlSegment);
-                                if (concatExprs[i].Type != typeof(string))
-                                {
-                                    if (sqlSegment.HasField)
-                                        body = this.CastTo(typeof(string), sqlSegment.Value);
-                                    //变量场景
-                                    else body = visitor.ChangeParameterValue(sqlSegment, typeof(string));
-                                }
-                                builder.Append(body);
+                                builder.Append(visitor.WrapSql(sqlSegment));
                             }
                             if (builder.Length > 0)
                             {
@@ -152,39 +129,31 @@ partial class MySqlProvider
                         {
                             var builder = new StringBuilder();
                             var constBuilder = new StringBuilder();
-                            //已经被分割成了多个SqlSegment
-                            var concatExprs = visitor.ConvertFormatToConcatList(methodCallExpr.Arguments.ToArray());
-                            SqlSegment resultSegment = default;
-
                             //123_{0}_345_{1}{2}_etr_{3}_fdr, 111,@p1,@p2,e4re
-                            bool isDeferredFields = false;
-                            var sqlSegments = new List<SqlSegment>();
-                            for (var i = 0; i < concatExprs.Count; i++)
+                            SqlSegment resultSegment = default;
+                            var format = methodCallExpr.Arguments[0].Evaluate<string>();
+                            var argsExprs = methodCallExpr.Arguments;
+                            int index = 1, formatIndex = 0;
+                            var regExps = Regex.Matches(format, @"\{[0-9]+\}");
+                            foreach (Match match in regExps)
                             {
-                                //可能是一个sqlSegment，也可能是多个List<sqlSegment>
-                                var sqlSegment = visitor.Visit(new SqlSegment { Expression = concatExprs[i] });
-                                //获取枚举名称，根据数据库的字段类型来处理
-                                if (concatExprs[i].Type.IsEnum && sqlSegment.SqlType == SqlType.OnlyField)
-                                    visitor.ToEnumString(sqlSegment);
-                                sqlSegments.Add(sqlSegment);
-                                if (sqlSegment.IsDeferredFields)
+                                if (match.Index > formatIndex)
                                 {
-                                    isDeferredFields = true;
-                                    resultSegment = sqlSegment;
-                                    break;
+                                    var rawString = format.Substring(formatIndex, match.Index - formatIndex);
+                                    constBuilder.Append(rawString);
                                 }
-                            }
-                            if (isDeferredFields)
-                                return visitor.VisitDeferredSqlSegment(new SqlSegment { Expression = methodCallExpr });
+                                var argsExpr = argsExprs[index];
+                                var sqlSegment = visitor.Visit(new SqlSegment { Expression = argsExpr });
+                                if (sqlSegment.IsDeferredFields)
+                                    return sqlSegment;
 
-                            resultSegment = sqlSegments[0];
-                            for (var i = 0; i < concatExprs.Count; i++)
-                            {
-                                //可能是一个sqlSegment，也可能是多个List<sqlSegment>
-                                var sqlSegment = sqlSegments[i];
+                                if (argsExpr.Type.IsEnum && sqlSegment.SqlType == SqlType.OnlyField)
+                                    visitor.ToEnumString(sqlSegment);
+
+                                var body = visitor.WrapSql(sqlSegment);
                                 if (sqlSegment.IsConstant)
                                 {
-                                    constBuilder.Append(sqlSegment.Value.ToString());
+                                    constBuilder.Append(body);
                                     continue;
                                 }
                                 if (constBuilder.Length > 0)
@@ -196,18 +165,10 @@ partial class MySqlProvider
                                 }
                                 if (builder.Length > 0)
                                     builder.Append(',');
-
-                                string body = visitor.WrapSql(sqlSegment);
-                                if (concatExprs[i].Type != typeof(string))
-                                {
-                                    if (sqlSegment.HasField)
-                                        body = this.CastTo(typeof(string), sqlSegment.Value);
-                                    //变量场景
-                                    else body = visitor.ChangeParameterValue(sqlSegment, typeof(string));
-                                }
                                 builder.Append(body);
+                                formatIndex = match.Index + match.Length;
+                                index++;
                             }
-
                             if (builder.Length > 0)
                             {
                                 if (constBuilder.Length > 0)
@@ -219,6 +180,7 @@ partial class MySqlProvider
                                 builder.Append(')');
                                 return resultSegment.Change(builder.ToString(), SqlType.MethodCall);
                             }
+
                             return resultSegment.Change(constBuilder.ToString(), SqlType.Constant);
                         });
                         result = true;

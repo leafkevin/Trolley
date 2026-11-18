@@ -1099,7 +1099,8 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         var args0Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                         if (targetSegment.IsValue && args0Segment.IsValue)
                             return targetSegment.Change(methodInfo.Invoke(targetSegment.Value, new object[] { args0Segment.Value }));
-                        return visitor.VisitDeferredSqlSegment(targetSegment.Next(methodCallExpr));
+                        targetSegment.IsDeferredFields = true;
+                        return targetSegment;
                     });
                     return true;
                 }
@@ -1112,7 +1113,8 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         var args1Segment = visitor.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
                         if (targetSegment.IsValue)
                             return targetSegment.Change(methodInfo.Invoke(targetSegment.Value, new object[] { args0Segment.Value, args1Segment.Value }));
-                        return visitor.VisitDeferredSqlSegment(targetSegment.Next(methodCallExpr));
+                        targetSegment.IsDeferredFields = true;
+                        return targetSegment;
                     });
                     return true;
                 }

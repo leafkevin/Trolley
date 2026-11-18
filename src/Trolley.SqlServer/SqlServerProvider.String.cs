@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Trolley.SqlServer;
 
@@ -68,76 +70,49 @@ partial class SqlServerProvider
                         {
                             var builder = new StringBuilder();
                             var constBuilder = new StringBuilder();
-                            var concatExprs = visitor.SplitConcatList(args);
+                            var concatExprs = visitor.SplitConcatList(methodCallExpr.Arguments.ToArray());
                             SqlSegment resultSegment = default;
 
-                            bool isDeferredFields = false;
-                            var sqlSegments = new List<SqlSegment>();
-                            for (var i = 0; i < concatExprs.Count; i++)
+                            foreach (var elementExpr in concatExprs)
                             {
                                 //可能是一个sqlSegment，也可能是多个List<sqlSegment>
-                                var sqlSegment = visitor.Visit(new SqlSegment { Expression = concatExprs[i] });
-                                //获取枚举名称，根据数据库的字段类型来处理
-                                if (sqlSegment.SegmentType.IsEnum && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall)
+                                var sqlSegment = visitor.Visit(new SqlSegment { Expression = elementExpr });
+                                if (sqlSegment.IsDeferredFields)
+                                    return sqlSegment;
+
+                                //获取枚举名称，根据数据库的字段类型来处理                             
+                                if (elementExpr.Type.IsEnum && sqlSegment.SqlType == SqlType.OnlyField)
                                     visitor.ToEnumString(sqlSegment);
 
-                                //先不处理类型，都解析完毕后，最后处理类型，转换成字符串
-                                sqlSegments.Add(sqlSegment);
-                                if (sqlSegment.IsDeferredFields)
-                                {
-                                    isDeferredFields = true;
-                                    resultSegment = sqlSegment;
-                                    break;
-                                }
-                            }
-                            if (isDeferredFields)
-                            {
-                                if (!visitor.IsSelect)
-                                    throw new NotSupportedException($"不支持的方法调用：{orgExpr}");
-                                //.NET解析 f.TotalAmount.ToString("C") 语句后，会更改methodCallExpr的内容，此处使用原始表达式
-                                return visitor.BuildDeferredSqlSegment(orgExpr as MethodCallExpression, resultSegment);
-                            }
-
-                            resultSegment = sqlSegments[0];
-                            for (var i = 0; i < concatExprs.Count; i++)
-                            {
-                                //可能是一个sqlSegment，也可能是多个List<sqlSegment>
-                                var sqlSegment = sqlSegments[i];
+                                var body = visitor.WrapSql(sqlSegment);
                                 if (sqlSegment.IsConstant)
                                 {
-                                    constBuilder.Append(sqlSegment.Value.ToString());
+                                    constBuilder.Append(body);
                                     continue;
                                 }
                                 if (constBuilder.Length > 0)
                                 {
                                     if (builder.Length > 0)
-                                        builder.Append('+');
+                                        builder.Append(',');
                                     builder.Append($"'{constBuilder}'");
                                     constBuilder.Clear();
                                 }
                                 if (builder.Length > 0)
-                                    builder.Append('+');
-
-                                string body = visitor.WrapSql(sqlSegment);
-                                if (sqlSegment.SegmentType != typeof(string))
-                                {
-                                    if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
-                                        body = this.CastTo(typeof(string), sqlSegment.Value);
-                                    //变量场景
-                                    else body = visitor.ChangeParameterValue(sqlSegment, typeof(string));
-                                }
+                                    builder.Append(',');
                                 builder.Append(body);
                             }
                             if (builder.Length > 0)
                             {
                                 if (constBuilder.Length > 0)
                                 {
-                                    builder.Append($"+'{constBuilder}'");
+                                    builder.Append($",'{constBuilder}'");
                                     constBuilder.Clear();
                                 }
-                                return resultSegment.Change(builder.ToString());
+                                builder.Insert(0, "CONCAT(");
+                                builder.Append(')');
+                                return resultSegment.Change(builder.ToString(), SqlType.MethodCall);
                             }
-                            return resultSegment.Change(constBuilder.ToString(), true);
+                            return resultSegment.Change(constBuilder.ToString(), SqlType.Constant);
                         });
                         result = true;
                     }
@@ -153,77 +128,59 @@ partial class SqlServerProvider
                         {
                             var builder = new StringBuilder();
                             var constBuilder = new StringBuilder();
-                            //已经被分割成了多个SqlSegment
-                            var concatExprs = visitor.ConvertFormatToConcatList(args);
-                            SqlSegment resultSegment = default;
-
                             //123_{0}_345_{1}{2}_etr_{3}_fdr, 111,@p1,@p2,e4re
-                            bool isDeferredFields = false;
-                            var sqlSegments = new List<SqlSegment>();
-                            for (var i = 0; i < concatExprs.Count; i++)
+                            SqlSegment resultSegment = default;
+                            var format = methodCallExpr.Arguments[0].Evaluate<string>();
+                            var argsExprs = methodCallExpr.Arguments;
+                            int index = 1, formatIndex = 0;
+                            var regExps = Regex.Matches(format, @"\{[0-9]+\}");
+                            foreach (Match match in regExps)
                             {
-                                //可能是一个sqlSegment，也可能是多个List<sqlSegment>
-                                var sqlSegment = visitor.Visit(new SqlSegment { Expression = concatExprs[i] });
-                                //获取枚举名称，根据数据库的字段类型来处理
-                                if (sqlSegment.SegmentType.IsEnum && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall)
-                                    visitor.ToEnumString(sqlSegment);
-                                sqlSegments.Add(sqlSegment);
-                                if (sqlSegment.IsDeferredFields)
+                                if (match.Index > formatIndex)
                                 {
-                                    isDeferredFields = true;
-                                    resultSegment = sqlSegment;
-                                    break;
+                                    var rawString = format.Substring(formatIndex, match.Index - formatIndex);
+                                    constBuilder.Append(rawString);
                                 }
-                            }
-                            if (isDeferredFields)
-                            {
-                                if (!visitor.IsSelect)
-                                    throw new NotSupportedException($"不支持的方法调用：{orgExpr}");
-                                //.NET解析 f.TotalAmount.ToString("C") 语句后，会更改methodCallExpr的内容，此处使用原始表达式
-                                return visitor.BuildDeferredSqlSegment(orgExpr as MethodCallExpression, resultSegment);
-                            }
+                                var argsExpr = argsExprs[index];
+                                var sqlSegment = visitor.Visit(new SqlSegment { Expression = argsExpr });
+                                if (sqlSegment.IsDeferredFields)
+                                    return sqlSegment;
 
-                            resultSegment = sqlSegments[0];
-                            for (var i = 0; i < concatExprs.Count; i++)
-                            {
-                                //可能是一个sqlSegment，也可能是多个List<sqlSegment>
-                                var sqlSegment = sqlSegments[i];
+                                if (argsExpr.Type.IsEnum && sqlSegment.SqlType == SqlType.OnlyField)
+                                    visitor.ToEnumString(sqlSegment);
+
+                                var body = visitor.WrapSql(sqlSegment);
                                 if (sqlSegment.IsConstant)
                                 {
-                                    constBuilder.Append(sqlSegment.Value.ToString());
+                                    constBuilder.Append(body);
                                     continue;
                                 }
                                 if (constBuilder.Length > 0)
                                 {
                                     if (builder.Length > 0)
-                                        builder.Append('+');
+                                        builder.Append(',');
                                     builder.Append($"'{constBuilder}'");
                                     constBuilder.Clear();
                                 }
                                 if (builder.Length > 0)
-                                    builder.Append('+');
-
-                                string body = visitor.WrapSql(sqlSegment);
-                                if (sqlSegment.SegmentType != typeof(string))
-                                {
-                                    if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
-                                        body = this.CastTo(typeof(string), sqlSegment.Value);
-                                    //变量场景
-                                    else body = visitor.ChangeParameterValue(sqlSegment, typeof(string));
-                                }
+                                    builder.Append(',');
                                 builder.Append(body);
+                                formatIndex = match.Index + match.Length;
+                                index++;
                             }
-
                             if (builder.Length > 0)
                             {
                                 if (constBuilder.Length > 0)
                                 {
-                                    builder.Append($"+'{constBuilder}'");
+                                    builder.Append($",'{constBuilder}'");
                                     constBuilder.Clear();
                                 }
-                                return resultSegment.Change(builder.ToString());
+                                builder.Insert(0, "CONCAT(");
+                                builder.Append(')');
+                                return resultSegment.Change(builder.ToString(), SqlType.MethodCall);
                             }
-                            return resultSegment.Change(constBuilder.ToString(), true);
+
+                            return resultSegment.Change(constBuilder.ToString(), SqlType.Constant);
                         });
                         result = true;
                     }
@@ -731,13 +688,13 @@ partial class SqlServerProvider
                             if (targetSegment.IsValue
                                 && indexSegment.IsValue
                                 && lengthSegment.IsValue)
-                                return targetSegment.Change( targetSegment.Value.ToString().Substring(Convert.ToInt32(indexSegment.Value), Convert.ToInt32(lengthSegment.Value)));
+                                return targetSegment.Change(targetSegment.Value.ToString().Substring(Convert.ToInt32(indexSegment.Value), Convert.ToInt32(lengthSegment.Value)));
 
                             var targetArgument = visitor.WrapSql(targetSegment);
                             indexSegment.Value = visitor.GetQuotedValue<int>(indexSegment) + 1;
                             var indexArgument = visitor.WrapSql(indexSegment);
                             var lengthArgument = visitor.WrapSql(lengthSegment);
-                            return targetSegment.Change( $"SUBSTRING({targetArgument},{indexArgument},{lengthArgument})", SqlType.MethodCall);
+                            return targetSegment.Change($"SUBSTRING({targetArgument},{indexArgument},{lengthArgument})", SqlType.MethodCall);
                         });
                         result = true;
                     }
@@ -755,7 +712,7 @@ partial class SqlServerProvider
                             var targetArgument = visitor.WrapSql(targetSegment);
                             indexSegment.Value = visitor.GetQuotedValue<int>(indexSegment) + 1;
                             var indexArgument = visitor.WrapSql(indexSegment);
-                            return targetSegment.Change( $"SUBSTRING({targetArgument},{indexArgument})", SqlType.MethodCall);
+                            return targetSegment.Change($"SUBSTRING({targetArgument},{indexArgument})", SqlType.MethodCall);
                         });
                         result = true;
                     }
@@ -853,12 +810,12 @@ partial class SqlServerProvider
                             if (targetSegment.IsValue
                                 && widthSegment.IsValue
                                 && paddingSegment.IsValue)
-                                return targetSegment.Change( ((string)targetSegment.Value).PadLeft((int)widthSegment.Value, (char)paddingSegment.Value));
+                                return targetSegment.Change(((string)targetSegment.Value).PadLeft((int)widthSegment.Value, (char)paddingSegment.Value));
 
                             var targetArgument = visitor.WrapSql(targetSegment);
                             var widthArgument = visitor.WrapSql(widthSegment);
                             var paddingArgument = visitor.WrapSql(paddingSegment);
-                            return targetSegment.Change( $"LPAD({targetArgument},{widthArgument},{paddingArgument})", SqlType.MethodCall);
+                            return targetSegment.Change($"LPAD({targetArgument},{widthArgument},{paddingArgument})", SqlType.MethodCall);
                         });
                         result = true;
                     }
@@ -890,12 +847,12 @@ partial class SqlServerProvider
                             if (targetSegment.IsValue
                                 && widthSegment.IsValue
                                 && paddingSegment.IsValue)
-                                return targetSegment.Change( ((string)targetSegment.Value).PadRight((int)widthSegment.Value, (char)paddingSegment.Value));
+                                return targetSegment.Change(((string)targetSegment.Value).PadRight((int)widthSegment.Value, (char)paddingSegment.Value));
 
                             var targetArgument = visitor.WrapSql(targetSegment);
                             var widthArgument = visitor.WrapSql(widthSegment);
                             var paddingArgument = visitor.WrapSql(paddingSegment);
-                            return targetSegment.Change( $"RPAD({targetArgument},{widthArgument},{paddingArgument})", SqlType.MethodCall);
+                            return targetSegment.Change($"RPAD({targetArgument},{widthArgument},{paddingArgument})", SqlType.MethodCall);
                         });
                         result = true;
                     }
@@ -916,7 +873,7 @@ partial class SqlServerProvider
                             var targetArgument = visitor.WrapSql(targetSegment);
                             var oldArgument = visitor.WrapSql(oldSegment);
                             var newArgument = visitor.WrapSql(newSegment);
-                            return targetSegment.Change( $"REPLACE({targetArgument},{oldArgument},{newArgument})", SqlType.MethodCall);
+                            return targetSegment.Change($"REPLACE({targetArgument},{oldArgument},{newArgument})", SqlType.MethodCall);
                         });
                         result = true;
                     }
@@ -935,7 +892,7 @@ partial class SqlServerProvider
                             var targetArgument = visitor.WrapSql(targetSegment);
                             var oldArgument = visitor.WrapSql(oldSegment);
                             var newArgument = visitor.WrapSql(newSegment);
-                            return targetSegment.Change( $"REPLACE({targetArgument},{oldArgument},{newArgument})", SqlType.MethodCall);
+                            return targetSegment.Change($"REPLACE({targetArgument},{oldArgument},{newArgument})", SqlType.MethodCall);
                         });
                         result = true;
                     }

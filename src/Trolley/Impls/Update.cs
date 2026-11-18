@@ -349,8 +349,7 @@ public class Updated : DialectProvider, IUpdated
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        var sql = this.Visitor.BuildSql(out _);
-        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
+        var sql = this.BuildSql(this.Visitor, out dbParameters, out _);
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;
@@ -838,8 +837,7 @@ public class ResultUpdated<TResult> : DialectProvider, IBulkResultCommand<TResul
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        var sql = this.Visitor.BuildSql(out _);
-        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
+        var sql = this.BuildSql(this.Visitor, out dbParameters, out _);
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;

@@ -337,7 +337,7 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
         using var connection = new SqlConnection(connectionString);
         using var command = new SqlCommand(sql, connection);
         connection.Open();
-        using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+        using var reader = command.ExecuteReader();
 
         DbTableInfo tableInfo = null;
         while (reader.Read())

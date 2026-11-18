@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
@@ -68,6 +69,19 @@ public class DialectProvider
         command.Transaction = this.transaction;
 
         return (this.isNeedClose, connection, command);
+    }
+    public ITheaCommand CreateMasterCommand()
+    {
+        this.interceptor?.CommandCreating(this.connection);
+        var command = this.ormProvider.CreateCommand();
+        if (this.interceptor != null)
+        {
+            command = this.interceptor.CommandCreated(command);
+            command.Interceptor = this.interceptor;
+        }
+        command.CommandTimeout = this.options.CommandTimeout;
+        command.Transaction = this.transaction;
+        return command;
     }
     public (bool, ITheaConnection, ITheaCommand) UseMasterCommand(ITheaCommand command)
     {
@@ -265,14 +279,19 @@ public class DialectProvider
             sql += this.TailRawSql;
         return sql;
     }
-    //public string BuildSql(ICommandVisitor visitor, out List<IDbDataParameter> dbParameters, out ReusableList<ReaderField> readerFields)
-    //{
-    //    var command = visitor.Command;
-    //    if (!string.IsNullOrEmpty(this.HeadRawSql))
-    //        command.CommandText = this.HeadRawSql + command.CommandText;
-    //    if (!string.IsNullOrEmpty(this.TailRawSql))
-    //        command.CommandText += this.TailRawSql;
-    //}
+    public string BuildSql(ICommandVisitor visitor, out List<IDbDataParameter> dbParameters, out ReusableList<ReaderField> readerFields)
+    {
+        var sql = visitor.BuildSql(out readerFields);
+        if (!string.IsNullOrEmpty(this.HeadRawSql))
+            sql = this.HeadRawSql + sql;
+        if (!string.IsNullOrEmpty(this.TailRawSql))
+            sql += this.TailRawSql;
+        var command = visitor.Command;
+        if (command.Parameters != null && command.Parameters.Count > 0)
+            dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
+        else dbParameters = null;
+        return sql;
+    }
     #endregion
 
     #region QueryScalar
@@ -316,7 +335,7 @@ public class DialectProvider
     {
         this.Initialize(command);
         connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        var behavior = CommandBehavior.Default | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(behavior);
         var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext);
         TTarget result = default;
@@ -335,7 +354,7 @@ public class DialectProvider
     {
         this.Initialize(command);
         await connection.OpenAsync(cancellationToken);
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        var behavior = CommandBehavior.Default | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext);
         TTarget result = default;
@@ -357,7 +376,7 @@ public class DialectProvider
         (var isNeedClose, var connection, var command, var readerFields) = this.UseSlaveCommand(visitor, defaultExpr);
 
         connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        var behavior = CommandBehavior.Default | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         var reader = command.ExecuteReader(behavior);
         TTarget result = default;
         var deserializer = reader.GetReaderDeserializer(entityType, this.DbContext, readerFields);
@@ -366,7 +385,7 @@ public class DialectProvider
         {
             reader.Dispose();
             this.Initialize(command, visitor, sql);
-            reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+            reader = command.ExecuteReader();
             visitor.SetIncludeValues(entityType, result, reader, false);
         }
 
@@ -387,17 +406,18 @@ public class DialectProvider
         (var isNeedClose, var connection, var command, var readerFields) = this.UseSlaveCommand(visitor, defaultExpr);
 
         await connection.OpenAsync(cancellationToken);
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        var behavior = CommandBehavior.Default | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         var reader = command.ExecuteReader(behavior);
         TTarget result = default;
         var deserializer = reader.GetReaderDeserializer(entityType, this.DbContext, readerFields);
         if (await reader.ReadAsync(cancellationToken))
             result = (TTarget)deserializer.Invoke(reader, readerFields);
+
         if (visitor.BuildIncludeSql(entityType, result, false, out var sql))
         {
             await reader.DisposeAsync();
             this.Initialize(command, visitor, sql);
-            reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
+            reader = await command.ExecuteReaderAsync(cancellationToken);
             visitor.SetIncludeValues(entityType, result, reader, false);
         }
         await reader.DisposeAsync();
@@ -417,7 +437,7 @@ public class DialectProvider
     {
         this.Initialize(command);
         connection.Open();
-        using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+        using var reader = command.ExecuteReader();
         var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext);
         var result = new List<TTarget>();
         while (reader.Read())
@@ -435,7 +455,7 @@ public class DialectProvider
     {
         this.Initialize(command);
         await connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
         var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext);
         var result = new List<TTarget>();
         while (await reader.ReadAsync(cancellationToken))
@@ -456,7 +476,7 @@ public class DialectProvider
         (var isNeedClose, var connection, var command, var readerFields) = this.UseSlaveCommand(visitor, defaultExpr);
 
         connection.Open();
-        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+        var reader = command.ExecuteReader();
         var deserializer = reader.GetReaderDeserializer(entityType, this.DbContext, readerFields);
         var result = new List<TTarget>();
         while (reader.Read())
@@ -466,7 +486,7 @@ public class DialectProvider
         {
             reader.Dispose();
             this.Initialize(command, visitor, sql);
-            reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+            reader = command.ExecuteReader();
             visitor.SetIncludeValues(entityType, result, reader, true);
         }
 
@@ -487,7 +507,7 @@ public class DialectProvider
         (var isNeedClose, var connection, var command, var readerFields) = this.UseSlaveCommand(visitor, defaultExpr);
 
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
+        var reader = await command.ExecuteReaderAsync(cancellationToken);
         var deserializer = reader.GetReaderDeserializer(entityType, this.DbContext, readerFields);
         var result = new List<TTarget>();
         while (await reader.ReadAsync(cancellationToken))
@@ -497,7 +517,7 @@ public class DialectProvider
         {
             await reader.DisposeAsync();
             this.Initialize(command, visitor, sql);
-            reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
+            reader = await command.ExecuteReaderAsync(cancellationToken);
             visitor.SetIncludeValues(entityType, result, reader, true);
         }
 
@@ -517,7 +537,7 @@ public class DialectProvider
         var entityType = typeof(TTarget);
         this.Initialize(command);
         connection.Open();
-        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+        var reader = command.ExecuteReader();
         var deserializer = reader.GetReaderDeserializer(entityType, this.DbContext, readerFields);
         var result = new List<TTarget>();
         while (reader.Read())
@@ -536,7 +556,7 @@ public class DialectProvider
         var entityType = typeof(TTarget);
         this.Initialize(command);
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
+        var reader = await command.ExecuteReaderAsync(cancellationToken);
         var deserializer = reader.GetReaderDeserializer(entityType, this.DbContext, readerFields);
         var result = new List<TTarget>();
         while (await reader.ReadAsync(cancellationToken))
@@ -562,7 +582,7 @@ public class DialectProvider
         (var isNeedClose, var connection, var command, var readerFields) = this.UseSlaveCommand(visitor, defaultExpr);
 
         connection.Open();
-        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+        var reader = command.ExecuteReader();
         if (reader.Read()) result.TotalCount = reader.GetFieldValue<int>(0);
         result.PageNumber = visitor.PageNumber;
         result.PageSize = visitor.PageSize;
@@ -576,7 +596,7 @@ public class DialectProvider
         {
             reader.Dispose();
             this.Initialize(command, visitor, sql);
-            reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+            reader = command.ExecuteReader();
             visitor.SetIncludeValues(entityType, result.Data, reader, true);
         }
 
@@ -599,7 +619,7 @@ public class DialectProvider
         (var isNeedClose, var connection, var command, var readerFields) = this.UseSlaveCommand(visitor, defaultExpr);
 
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
+        var reader = await command.ExecuteReaderAsync(cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
             result.TotalCount = await reader.GetFieldValueAsync<int>(0, cancellationToken);
         result.PageNumber = visitor.PageNumber;
@@ -615,7 +635,7 @@ public class DialectProvider
         {
             await reader.DisposeAsync();
             this.Initialize(command, visitor, sql);
-            reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
+            reader = await command.ExecuteReaderAsync(cancellationToken);
             await visitor.SetIncludeValuesAsync(entityType, result.Data, reader, true, cancellationToken);
         }
 

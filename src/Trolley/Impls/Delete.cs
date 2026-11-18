@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -153,7 +152,7 @@ public class Deleted : DialectProvider, IDeleted
     public Deleted(Type entityType, DbContext dbContext)
     {
         this.DbContext = dbContext;
-        var command = this.ormProvider.CreateCommand();
+        var command = this.CreateMasterCommand();
         this.Visitor = this.DbContext.OrmProvider.NewDeleteVisitor(entityType, dbContext, 'a', command);
     }
     #endregion
@@ -191,8 +190,7 @@ public class Deleted : DialectProvider, IDeleted
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        var sql = this.Visitor.BuildSql(out _);
-        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
+        var sql = this.BuildSql(this.Visitor, out dbParameters, out _);
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;
@@ -350,7 +348,7 @@ public class ResultDeleted<TResult> : DialectProvider, IBulkResultCommand<TResul
         this.Initialize(command);
 
         connection.Open();
-        using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+        using var reader = command.ExecuteReader();
         var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
 
         while (reader.Read())
@@ -378,7 +376,7 @@ public class ResultDeleted<TResult> : DialectProvider, IBulkResultCommand<TResul
         this.Initialize(command);
 
         await connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
         var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
 
         while (await reader.ReadAsync(cancellationToken))
@@ -404,8 +402,7 @@ public class ResultDeleted<TResult> : DialectProvider, IBulkResultCommand<TResul
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        var sql = this.Visitor.BuildSql(out _);
-        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
+        var sql = this.BuildSql(this.Visitor, out dbParameters, out _);
         this.Visitor.Dispose();
         this.Visitor = null;
         return sql;

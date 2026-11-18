@@ -39,7 +39,6 @@ public interface ISqlVisitor : IDisposable
     string ChangeParameterValue(SqlSegment sqlSegment, Type targetType);
     SqlSegment VisitSqlMethodCall(SqlSegment sqlSegment);
     string VisitConditionExpr(Expression conditionExpr, out OperationType operationType);
-    List<Expression> ConvertFormatToConcatList(Expression[] argsExprs);
     List<Expression> SplitConcatList(Expression[] argsExprs);
     SqlSegment VisitDeferredSqlSegment(SqlSegment sqlSegment);
     SqlSegment ToEnumString(SqlSegment sqlSegment);

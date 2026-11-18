@@ -262,7 +262,7 @@ class MultiQueryReader : IMultiQueryReader
                 this.command.Parameters.Clear();
                 if (visitor.NextDbParameters != null && visitor.NextDbParameters.Count > 0)
                     visitor.NextDbParameters.CopyTo(command.Parameters);
-                using var includeReader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+                using var includeReader = command.ExecuteReader();
                 foreach (var nextAfter in this.nextAfters)
                 {
                     nextAfter.Visitor.SetIncludeValues(nextAfter.TargetType, nextAfter.Target, includeReader, nextAfter.ResultType == ReaderResultType.List);
@@ -316,7 +316,7 @@ class MultiQueryReader : IMultiQueryReader
                 if (visitor.NextDbParameters != null && visitor.NextDbParameters.Count > 0)
                     visitor.NextDbParameters.CopyTo(command.Parameters);
 
-                using var includeReader = await this.command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
+                using var includeReader = await this.command.ExecuteReaderAsync(cancellationToken);
                 foreach (var nextAfter in this.nextAfters)
                 {
                     nextAfter.Visitor.SetIncludeValues(nextAfter.TargetType, nextAfter.Target, includeReader, nextAfter.ResultType == ReaderResultType.List);

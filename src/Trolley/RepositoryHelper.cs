@@ -1352,7 +1352,7 @@ public static class RepositoryHelper
             var fieldType = reader.GetFieldType(index);
             var memberInfo = targetType.GetMember($"Item{index + 1}")[0];
             var readerValueExpr = GetTypedReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                memberInfo.GetMemberType(), fieldType, null, blockParameters, blockBodies);
+                memberInfo.GetMemberType(), fieldType, null, false, blockParameters, blockBodies);
             target.Arguments.Add(readerValueExpr);
             index++;
         }
@@ -1383,7 +1383,7 @@ public static class RepositoryHelper
 
             var fieldType = reader.GetFieldType(index);
             var readerValueExpr = GetTypedReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                memberMapper.MemberType, fieldType, memberMapper, blockParameters, blockBodies);
+                memberMapper.MemberType, fieldType, memberMapper, false, blockParameters, blockBodies);
 
             if (!target.IsDefault) target.Arguments.Add(readerValueExpr);
             else if (memberMapper.Member.CanWrite)
@@ -1416,7 +1416,7 @@ public static class RepositoryHelper
             var fieldType = reader.GetFieldType(0);
             var childReaderField = readerField.Fields[0];
             var readerValueExpr = GetTypedReaderValue(dbContext, readerExpr, Expression.Constant(0),
-                childReaderField.ReaderType, fieldType, childReaderField.MemberMapper, blockParameters, blockBodies);
+                childReaderField.ReaderType, fieldType, childReaderField.MemberMapper, false, blockParameters, blockBodies);
             argsExprs.Add(readerValueExpr);
 
             if (readerField.ValuesParameters.Count > 0)
@@ -1519,7 +1519,7 @@ public static class RepositoryHelper
                             {
                                 var fieldType = reader.GetFieldType(index);
                                 var readerValueExpr = GetTypedReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                                    childReaderField.ReaderType, fieldType, readerField.MemberMapper, blockParameters, blockBodies);
+                                    childReaderField.ReaderType, fieldType, readerField.MemberMapper, false, blockParameters, blockBodies);
                                 argsExprs.Add(readerValueExpr);
                                 index++;
                             }
@@ -1558,7 +1558,7 @@ public static class RepositoryHelper
                         //单个字段和RawSql单个字段场景
                         var fieldType = reader.GetFieldType(index);
                         var readerValueExpr = GetTypedReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                            readerField.ReaderType, fieldType, readerField.MemberMapper, blockParameters, blockBodies);
+                            readerField.ReaderType, fieldType, readerField.MemberMapper, false, blockParameters, blockBodies);
                         if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
                         else if (readerField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
                         index++;
@@ -1569,7 +1569,7 @@ public static class RepositoryHelper
                         //单个字段和RawSql单个字段场景
                         var fieldType = reader.GetFieldType(index);
                         var readerValueExpr = GetTypedReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                            readerField.ReaderType, fieldType, readerField.MemberMapper, blockParameters, blockBodies);
+                            readerField.ReaderType, fieldType, readerField.MemberMapper, false, blockParameters, blockBodies);
                         if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
                         else if (readerField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
                         index++;
@@ -1605,7 +1605,7 @@ public static class RepositoryHelper
                         }
                         var fieldType = reader.GetFieldType(index);
                         var readerValueExpr = GetTypedReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                            memberType, fieldType, null, blockParameters, blockBodies);
+                            memberType, fieldType, null, false, blockParameters, blockBodies);
                         if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
                         else if (memberInfo.CanWrite) current.Bindings.Add(Expression.Bind(memberInfo, readerValueExpr));
                         index++;
@@ -1641,12 +1641,35 @@ public static class RepositoryHelper
                             else parent = root;
                             current = NewBuildInfo(readerField.ReaderType, readerField.TargetMember, parent);
                         }
-                        var entityExpr = ReadEntityValues(dbContext, reader, readerField, ref index,
-                            readerField.ReaderType, readerExpr, current, blockParameters, blockBodies);
+
+                        //不是主表，只要有一个主键字段值为null，就说明这条数据不存在
+                        if (!readerField.IsGroupingField && !readerField.IsMaster)
+                        {
+                            var requiredField = readerField.Fields.Find(f => f.MemberMapper.IsKey || f.MemberMapper.IsRequired);
+                            if (requiredField == null)
+                                throw new NotSupportedException($"表{readerField.TableSegment.Mapper.TableName}至少包含一个非空字段");
+                            current.RequiredIndex = index + readerField.Fields.IndexOf(requiredField);
+                            var typedLocalExpr = Expression.Variable(readerField.ReaderType, $"local{blockParameters.Count}");
+                            blockParameters.Add(typedLocalExpr);
+                            current.InstanceExpr = typedLocalExpr;
+                            current.IsNullable = true;
+                        }
+
+                        for (int i = 0; i < readerField.Fields.Count; i++)
+                        {
+                            var fieldType = reader.GetFieldType(index);
+                            var myReaderField = readerField.Fields[i];
+                            var readerValueExpr = GetTypedReaderValue(dbContext, readerExpr, Expression.Constant(index),
+                                myReaderField.ReaderType, fieldType, myReaderField.MemberMapper, current.IsNullable, blockParameters, blockBodies);
+
+                            if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
+                            else if (myReaderField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(myReaderField.TargetMember, readerValueExpr));
+                            index++;
+                        }
+
                         //有include对象
                         if (readerField.HasNextInclude)
                         {
-                            current.InstanceExpr = entityExpr;
                             deferredBuilders.Push(current);
                             readerBuilders.TryAdd(readerField.Path, current);
                         }
@@ -1659,12 +1682,29 @@ public static class RepositoryHelper
                                 if (nextBuilder != null)
                                     current = nextBuilder;
                                 if (current.Parent == null) break;
-                                if (current.Parent == root)
+
+                                Expression instanceExpr = null;
+                                if (current.IsDefault)
+                                    instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
+                                else instanceExpr = Expression.New(current.Constructor, current.Arguments);
+
+                                if (current.IsNullable)
                                 {
-                                    if (!current.Parent.IsDefault) current.Parent.Arguments.Add(entityExpr);
-                                    else if (readerField.TargetMember.CanWrite) current.Parent.Bindings.Add(Expression.Bind(readerField.TargetMember, entityExpr));
+                                    //只要有一个非空字段值为null，就说明这条数据不存在
+                                    var typedLocalExpr = current.InstanceExpr;
+                                    var methodInfo = typeof(IDataRecord).GetMethod(nameof(IDataRecord.IsDBNull));
+                                    var indexExpr = Expression.Constant(current.RequiredIndex);
+                                    var isDbNullExpr = Expression.Call(readerExpr, methodInfo, indexExpr);
+                                    var setNullExpr = Expression.Assign(typedLocalExpr, Expression.Constant(null, current.TargetType));
+                                    var setValueExpr = Expression.Assign(typedLocalExpr, instanceExpr);
+                                    blockBodies.Add(Expression.IfThenElse(isDbNullExpr, setNullExpr, setValueExpr));
+                                    instanceExpr = typedLocalExpr;
                                 }
-                                else blockBodies.Add(SetMemberValue(current));
+                                else current.InstanceExpr = instanceExpr;
+
+                                if (current.Parent == null) break;
+                                if (!current.Parent.IsDefault) current.Parent.Arguments.Add(instanceExpr);
+                                else if (current.FromMember.CanWrite) current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
                             }
                             while (deferredBuilders.TryPop(out nextBuilder));
                             current = current.Parent;
@@ -1690,8 +1730,8 @@ public static class RepositoryHelper
     {
         Expression setValueExpr = null;
         var fromMember = current.FromMember;
-        var valueExpr = current.InstanceExpr;
         var parentExpr = current.Parent.InstanceExpr;
+        var valueExpr = current.InstanceExpr;
         if (fromMember is FieldInfo fieldInfo)
         {
             if (fieldInfo.IsStatic)
@@ -1715,7 +1755,7 @@ public static class RepositoryHelper
         var myBlockBodies = blockBodies;
         var isNullable = !readerField.IsGroupingField && !readerField.IsMaster;
         //不是主表，只要有一个主键字段值为null，就说明这条数据不存在
-        if (isNullable && current.Parent != null)
+        if (isNullable)
         {
             var isRequiredField = readerField.Fields.Find(f => f.MemberMapper.IsKey || f.MemberMapper.IsRequired);
             if (isRequiredField == null)
@@ -1729,27 +1769,31 @@ public static class RepositoryHelper
             var fieldType = reader.GetFieldType(index);
             var myReaderField = readerField.Fields[i];
             var readerValueExpr = GetTypedReaderValue(dbContext, readerExpr, Expression.Constant(index),
-                myReaderField.ReaderType, fieldType, myReaderField.MemberMapper, myBlockParameters, myBlockBodies);
+                myReaderField.ReaderType, fieldType, myReaderField.MemberMapper, false, myBlockParameters, myBlockBodies);
 
             if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
             else if (myReaderField.TargetMember.CanWrite) current.Bindings.Add(Expression.Bind(myReaderField.TargetMember, readerValueExpr));
             index++;
         }
-        if (current.Parent == null)
-            return null;
-
         Expression instanceExpr = null;
-        if (current.IsDefault)
-            instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
-        else instanceExpr = Expression.New(current.Constructor, current.Arguments);
-
-        var typedLocalExpr = Expression.Variable(targetType, $"local{blockParameters.Count}");
-        blockParameters.Add(typedLocalExpr);
-        myBlockBodies.Add(Expression.Assign(typedLocalExpr, instanceExpr));
-        instanceExpr = typedLocalExpr;
+        if (!readerField.IsTarget || readerField.HasNextInclude)
+        {
+            if (current.IsDefault)
+                instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
+            else instanceExpr = Expression.New(current.Constructor, current.Arguments);
+            current.InstanceExpr = instanceExpr;
+        }
+        if (readerField.IsTarget)
+            return instanceExpr;
 
         if (isNullable)
         {
+            var typedLocalExpr = Expression.Variable(targetType, $"local{blockParameters.Count}");
+            blockParameters.Add(typedLocalExpr);
+            blockBodies.Add(Expression.Assign(typedLocalExpr, instanceExpr));
+            instanceExpr = typedLocalExpr;
+            current.InstanceExpr = typedLocalExpr;
+
             //只要有一个非空字段值为null，就说明这条数据不存在
             var methodInfo = typeof(IDataRecord).GetMethod(nameof(IDataRecord.IsDBNull));
             var indexExpr = Expression.Constant(keyIndex);
@@ -1761,7 +1805,7 @@ public static class RepositoryHelper
         return instanceExpr;
     }
     public static Expression GetTypedReaderValue(DbContext dbContext, ParameterExpression readerExpr, Expression indexExpr,
-        Type targetType, Type fieldType, MemberMap memberMapper, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
+        Type targetType, Type fieldType, MemberMap memberMapper, bool isNullable, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
     {
         var methodInfo = typeof(IDataRecord).GetMethod(nameof(IDataRecord.GetValue), [typeof(int)]);
         var typedLocalExpr = Expression.Variable(targetType, $"local{blockParameters.Count}");
@@ -1778,7 +1822,7 @@ public static class RepositoryHelper
                 targetValueExpr = Expression.Call(typeHandlerExpr, methodInfo, targetTypeExpr, readerValueExpr);
                 targetValueExpr = Expression.Convert(targetValueExpr, targetType);
             }
-            else targetValueExpr = GetReaderValue(targetType, fieldType, dbContext, readerValueExpr, !memberMapper.IsRequired, true);
+            else targetValueExpr = GetReaderValue(targetType, fieldType, dbContext, readerValueExpr, isNullable || !memberMapper.IsRequired, true);
         }
         else targetValueExpr = GetReaderValue(targetType, fieldType, dbContext, readerValueExpr, true, true);
         blockBodies.Add(Expression.Assign(typedLocalExpr, targetValueExpr));
@@ -1857,6 +1901,7 @@ public static class RepositoryHelper
         }
         return new EntityBuilder
         {
+            TargetType = targetType,
             IsDefault = isDefaultCtor,
             Constructor = ctor,
             Bindings = bindings,
@@ -1875,6 +1920,7 @@ public static class RepositoryHelper
     }
     class EntityBuilder
     {
+        public Type TargetType { get; set; }
         public bool IsDefault { get; set; }
         public ConstructorInfo Constructor { get; set; }
         public List<MemberBinding> Bindings { get; set; }
@@ -1882,5 +1928,7 @@ public static class RepositoryHelper
         public MemberInfo FromMember { get; set; }
         public EntityBuilder Parent { get; set; }
         public Expression InstanceExpr { get; set; }
+        public bool IsNullable { get; set; }
+        public int RequiredIndex { get; set; }
     }
 }
