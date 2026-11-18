@@ -1832,119 +1832,57 @@ public class SqlVisitor : ISqlVisitor
     }
     public virtual List<Expression> SplitConcatList(Expression[] argsExprs)
     {
+        if (argsExprs == null)
+            throw new ArgumentNullException(nameof(argsExprs));
+
         var completedExprs = new List<Expression>();
         var deferredExprs = new Stack<Expression>();
-        Func<Expression, bool> isConcatBinary = f =>
-        {
-            if (f is BinaryExpression binaryExpr && binaryExpr.NodeType == ExpressionType.Add && binaryExpr.Type == typeof(string)
-                && (binaryExpr.Left.Type == typeof(string) || binaryExpr.Right.Type == typeof(string)))
-                return true;
-            if (f is MethodCallExpression callExpr && callExpr.Method.Name == "Concat")
-                return true;
-            return false;
-        };
-        Expression nextExpr = null;
-        for (int i = argsExprs.Length - 1; i > 0; i--)
-        {
+        for (int i = argsExprs.Length - 1; i >= 0; i--)
             deferredExprs.Push(argsExprs[i]);
-        }
-        nextExpr = argsExprs[0];
-        while (true)
+
+        while (deferredExprs.Count > 0)
         {
-            if (isConcatBinary(nextExpr))
+            var nextExpr = deferredExprs.Pop();
+            if (nextExpr is BinaryExpression binaryExpr
+                && binaryExpr.NodeType == ExpressionType.Add && binaryExpr.Type == typeof(string)
+                && binaryExpr.Method?.DeclaringType == typeof(string)
+                && binaryExpr.Method.Name == nameof(string.Concat))
             {
-                //字符串连接+
-                if (nextExpr is BinaryExpression binaryExpr)
+                //先入右侧，保证按从左到右的顺序拆解。
+                deferredExprs.Push(binaryExpr.Right);
+                deferredExprs.Push(binaryExpr.Left);
+                continue;
+            }
+            if (nextExpr is MethodCallExpression callExpr
+                && callExpr.Method.DeclaringType == typeof(string)
+                && callExpr.Method.Name == nameof(string.Concat))
+            {
+                var arguments = callExpr.Arguments;
+                var parameters = callExpr.Method.GetParameters();
+                if (parameters.Length == 1 && parameters[0].ParameterType != typeof(object))
                 {
-                    if (isConcatBinary(binaryExpr.Left))
+                    //只展开集合重载的数组初始化，不能把Concat(object)中的数组当作字符串列表。
+                    if (arguments[0] is NewArrayExpression arrayExpr
+                        && arrayExpr.NodeType == ExpressionType.NewArrayInit)
                     {
-                        deferredExprs.Push(binaryExpr.Right);
-                        nextExpr = binaryExpr.Left;
+                        for (int i = arrayExpr.Expressions.Count - 1; i >= 0; i--)
+                            deferredExprs.Push(arrayExpr.Expressions[i]);
                         continue;
                     }
-                    completedExprs.Add(binaryExpr.Left);
-                    if (isConcatBinary(binaryExpr.Right))
-                    {
-                        nextExpr = binaryExpr.Right;
-                        continue;
-                    }
-                    completedExprs.Add(binaryExpr.Right);
-                    if (!deferredExprs.TryPop(out nextExpr))
-                        break;
-                    continue;
+                    //变量集合和数组长度表达式不能静态展开，保留完整调用语义。
                 }
                 else
                 {
-                    var callExpr = nextExpr as MethodCallExpression;
-                    for (int i = callExpr.Arguments.Count - 1; i > 0; i--)
-                    {
-                        deferredExprs.Push(callExpr.Arguments[i]);
-                    }
-                    nextExpr = callExpr.Arguments[0];
+                    for (int i = arguments.Count - 1; i >= 0; i--)
+                        deferredExprs.Push(arguments[i]);
                     continue;
                 }
             }
+            if (nextExpr is UnaryExpression unaryExpr && unaryExpr.NodeType == ExpressionType.Convert)
+                nextExpr = unaryExpr.Operand;
             completedExprs.Add(nextExpr);
-            if (!deferredExprs.TryPop(out nextExpr))
-                break;
         }
         return completedExprs;
-    }
-    public virtual Expression[] SplitConcatList(Expression concatExpr)
-    {
-        var completedExprs = new List<Expression>();
-        var deferredExprs = new Stack<Expression>();
-        Func<Expression, bool> isConcatBinary = f =>
-        {
-            if (f is BinaryExpression binaryExpr && binaryExpr.NodeType == ExpressionType.Add && binaryExpr.Type == typeof(string)
-                && (binaryExpr.Left.Type == typeof(string) || binaryExpr.Right.Type == typeof(string)))
-                return true;
-            if (f is MethodCallExpression callExpr && callExpr.Method.Name == "Concat")
-                return true;
-            return false;
-        };
-        var nextExpr = concatExpr;
-        while (true)
-        {
-            if (isConcatBinary(nextExpr))
-            {
-                //字符串连接+
-                if (nextExpr is BinaryExpression binaryExpr)
-                {
-                    if (isConcatBinary(binaryExpr.Left))
-                    {
-                        deferredExprs.Push(binaryExpr.Right);
-                        nextExpr = binaryExpr.Left;
-                        continue;
-                    }
-                    completedExprs.Add(binaryExpr.Left);
-                    if (isConcatBinary(binaryExpr.Right))
-                    {
-                        nextExpr = binaryExpr.Right;
-                        continue;
-                    }
-                    completedExprs.Add(binaryExpr.Right);
-                    if (!deferredExprs.TryPop(out nextExpr))
-                        break;
-                    continue;
-                }
-                else
-                {
-                    //Concat方法
-                    var callExpr = nextExpr as MethodCallExpression;
-                    for (int i = callExpr.Arguments.Count - 1; i > 0; i--)
-                    {
-                        deferredExprs.Push(callExpr.Arguments[i]);
-                    }
-                    nextExpr = callExpr.Arguments[0];
-                    continue;
-                }
-            }
-            completedExprs.Add(nextExpr);
-            if (!deferredExprs.TryPop(out nextExpr))
-                break;
-        }
-        return completedExprs.ToArray();
     }
     public bool IsDateTimeOperator(SqlSegment sqlSegment, BinaryExpression binaryExpr, out SqlSegment result)
     {

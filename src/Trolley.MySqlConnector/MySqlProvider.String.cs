@@ -84,6 +84,9 @@ partial class MySqlProvider
                                 if (elementExpr.Type.IsEnum && sqlSegment.SqlType == SqlType.OnlyField)
                                     visitor.ToEnumString(sqlSegment);
 
+                                //string.Concat(f.Name + "_1_" + isMale, f.Age + 5, isMale) + "_2_" + f.Age + "_3_" + isMale + "_4_" + count
+                                //SELECT CONCAT(a.`Name`,'_1_',CAST(@p0 AS CHAR),CAST(a.`Age`+5 AS CHAR),@p1,'_2_',CAST(a.`Age` AS CHAR),'_3_',@p2,'_4_',@p3) FROM
+                                //leafkevin_1_False30False_2_25_3_False_4_10
                                 if (sqlSegment.IsConstant)
                                 {
                                     if (elementExpr.Type == typeof(string))
@@ -100,7 +103,11 @@ partial class MySqlProvider
                                 }
                                 if (builder.Length > 0)
                                     builder.Append(',');
-                                builder.Append(visitor.WrapSql(sqlSegment));
+
+                                var body = visitor.WrapSql(sqlSegment);
+                                if (elementExpr.Type != typeof(string))
+                                    body = this.CastTo(typeof(string), body);
+                                builder.Append(body);
                             }
                             if (builder.Length > 0)
                             {
