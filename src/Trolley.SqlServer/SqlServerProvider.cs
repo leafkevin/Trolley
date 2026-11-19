@@ -217,7 +217,9 @@ public partial class SqlServerProvider : BaseOrmProvider
             case Type factType when factType == typeof(bool):
                 return Convert.ToBoolean(value) ? "1" : "0";
             case Type factType when factType == typeof(string):
-                return $"N'{Convert.ToString(value).Replace("'", @"\'")}'";
+                if (value.GetType() == factType)
+                    return $"N'{Convert.ToString(value).Replace("'", @"\'")}'";
+                else return Convert.ToString(value);
             case Type factType when factType == typeof(Guid):
                 return $"'{value}'";
             case Type factType when factType == typeof(DateTime):

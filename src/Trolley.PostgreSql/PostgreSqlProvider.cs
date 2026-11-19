@@ -353,7 +353,9 @@ public partial class PostgreSqlProvider : BaseOrmProvider
             case Type factType when factType == typeof(bool):
                 return Convert.ToBoolean(value) ? "TRUE" : "FALSE";
             case Type factType when factType == typeof(string):
-                return $"'{Convert.ToString(value).Replace("'", @"\'")}'";
+                if (value.GetType() == factType)
+                    return $"'{Convert.ToString(value).Replace("'", @"\'")}'";
+                else return Convert.ToString(value);
             case Type factType when factType == typeof(Guid):
                 return $"'{value}'::UUID";
             case Type factType when factType == typeof(DateTime):

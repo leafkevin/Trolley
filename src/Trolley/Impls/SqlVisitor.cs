@@ -585,6 +585,8 @@ public class SqlVisitor : ISqlVisitor
         dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, value));
         return parameterName;
     }
+    public virtual string GetQuotedValue(object value, Type expectType = null)
+        => this.OrmProvider.GetQuotedValue(expectType ?? value.GetType(), value);
     public virtual SqlSegment VisitUnary(SqlSegment sqlSegment)
     {
         SqlSegment resultSegment = default;

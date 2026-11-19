@@ -91,7 +91,7 @@ partial class MySqlProvider
                                 {
                                     if (elementExpr.Type == typeof(string))
                                         constBuilder.Append(sqlSegment.Value.ToString());
-                                    else constBuilder.Append(visitor.WrapSql(sqlSegment));
+                                    else constBuilder.Append(visitor.GetQuotedValue(sqlSegment.Value));
                                     continue;
                                 }
                                 if (constBuilder.Length > 0)

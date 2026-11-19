@@ -58,7 +58,9 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             case Type factType when factType == typeof(bool):
                 return Convert.ToBoolean(value) ? "1" : "0";
             case Type factType when factType == typeof(string):
-                return $"'{Convert.ToString(value).Replace("'", @"\'")}'";
+                if (value.GetType() == factType)
+                    return $"'{Convert.ToString(value).Replace("'", @"\'")}'";
+                else return Convert.ToString(value);
             case Type factType when factType == typeof(Guid):
                 return $"'{value}'";
             case Type factType when factType == typeof(DateTime):
@@ -79,13 +81,6 @@ public abstract partial class BaseOrmProvider : IOrmProvider
 #if NET6_0_OR_GREATER
             case Type factType when factType == typeof(TimeOnly): return $"'{(TimeOnly)value:hh\\:mm\\:ss\\.ffffff}'";
 #endif
-            //case Type factType when factType == typeof(SqlSegment):
-            //    {
-            //        var sqlSegment = value as SqlSegment;
-            //        if (sqlSegment.IsValue)
-            //            return this.GetQuotedValue(sqlSegment.Value);
-            //        return sqlSegment.Value;
-            //    }
             default: return value.ToString();
         }
     }
