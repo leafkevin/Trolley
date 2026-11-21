@@ -444,7 +444,7 @@ public partial class MySqlProvider : BaseOrmProvider
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, key => (visitor, methodCallExpr, deferredOperations) =>
                     {
                         var dialectVisitor = visitor as MySqlCreateVisitor;
-                        if (methodCallExpr.Arguments[1] is not MemberExpression memberExpr)
+                        if (methodCallExpr.Arguments[0] is not MemberExpression memberExpr)
                             throw new NotSupportedException($"不支持的表达式访问，类型{methodInfo.DeclaringType.FullName}.Values方法，只支持MemberAccess访问，如：.Set(f =&gt; new {{TotalAmount = x.Values(f.TotalAmount)}})");
                         if (!dialectVisitor.Tables[0].Mapper.TryGetMemberMap(memberExpr.Member.Name, out var memberMapper))
                             throw new MissingMemberException($"类{dialectVisitor.Tables[0].EntityType.FullName}未找到成员{memberExpr.Member.Name}");
@@ -460,8 +460,6 @@ public partial class MySqlProvider : BaseOrmProvider
                             MemberMapper = memberMapper,
                             TargetMember = memberMapper.Member,
                             MemberName = memberMapper.FieldName,
-                            //MappedTargetType = memberMapper.MappedTargetType,
-                            //TypeHandler = memberMapper.TypeHandler,
                             Value = fieldName
                         };
                     });

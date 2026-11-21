@@ -8,16 +8,17 @@ namespace Trolley.PostgreSql;
 public static class PostgreSqlExtensions
 {
     #region Excluded
-    /// <summary>
-    /// 获取插入字段原值
-    /// </summary>
-    /// <typeparam name="TInsertObj">插入对象</typeparam>
-    /// <typeparam name="TField">插入字段类型</typeparam>
-    /// <param name="insertObj">插入对象</param>
-    /// <param name="field">插入字段值</param>
-    /// <returns>插入对象原值</returns>
-    /// <exception cref="NotImplementedException"></exception>
-    public static TField Excluded<TInsertObj, TField>(this TInsertObj insertObj, TField field) => throw new NotImplementedException();
+    extension(Sql)
+    {
+        /// <summary>
+        /// 获取插入字段原值
+        /// </summary>
+        /// <typeparam name="TField">插入字段类型</typeparam>
+        /// <param name="field">插入字段值</param>
+        /// <returns>插入对象原值</returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public static TField Excluded<TField>(TField field) => throw new NotImplementedException();
+    }
     #endregion
 
     #region DistictOn

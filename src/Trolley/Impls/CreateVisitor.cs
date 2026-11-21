@@ -22,6 +22,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     public bool IsReturnIdentity { get; set; }
     public string FromSql { get; set; }
     public string OutputSql { get; set; }
+    public bool IsUpdate { get; set; }
 
     public bool IsNeedShardingValues { get; set; }
     public Dictionary<string, object> ShardingValues { get; set; }
@@ -49,42 +50,42 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual string BuildSql(out ReusableList<ReaderField> readerFields)
     {
-        string tailSql = null;
         readerFields = this.ReaderFields;
-
         switch (this.ActionMode)
         {
             case ActionMode.Bulk:
                 (var shardingType, var shardingTables, var insertObjs, _, var firstSqlSetter,
-                  var loopSqlSetter, tailSql, readerFields) = this.BuildWithBulk(this.Command);
+                    var loopSqlSetter, var tailSql, readerFields) = this.BuildWithBulk(this.Command);
 
                 int index = 0;
-                var builder = new StringBuilder();
+                this.FieldsBuilder.Clear();
                 if (shardingType == ShardingTableType.SplitTables)
                 {
                     var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
-                    foreach (var tableName in tabledInsertObjs.Keys)
+                    foreach (var shardingTableName in tabledInsertObjs.Keys)
                     {
-                        firstSqlSetter.Invoke(this.DbParameters, builder, tableName);
-                        var tableParameters = tabledInsertObjs[tableName];
+                        firstSqlSetter.Invoke(this.DbParameters, this.FieldsBuilder, shardingTableName);
+                        var tableParameters = tabledInsertObjs[shardingTableName];
                         foreach (var insertObj in tableParameters)
                         {
-                            loopSqlSetter.Invoke(this.DbParameters, builder, this.DbContext, insertObj, index.ToString());
+                            loopSqlSetter.Invoke(this.DbParameters, this.FieldsBuilder, this.DbContext, insertObj, index.ToString());
                             index++;
                         }
                     }
                 }
                 else
                 {
-                    firstSqlSetter.Invoke(this.DbParameters, builder, shardingTables as string);
+                    firstSqlSetter.Invoke(this.DbParameters, this.FieldsBuilder, shardingTables as string);
                     foreach (var insertObj in insertObjs)
                     {
-                        loopSqlSetter.Invoke(this.DbParameters, builder, this.DbContext, insertObj, index.ToString());
+                        loopSqlSetter.Invoke(this.DbParameters, this.FieldsBuilder, this.DbContext, insertObj, index.ToString());
                         index++;
                     }
                 }
-                builder.Remove(builder.Length - 1, 1);
-                this.FromSql = builder.ToString();
+                this.FieldsBuilder.Remove(this.FieldsBuilder.Length - 1, 1);
+                if (!string.IsNullOrEmpty(tailSql))
+                    this.FieldsBuilder.Append(tailSql);
+                this.FromSql = this.FieldsBuilder.ToString();
                 break;
             case ActionMode.Single:
                 var tableSegment = this.Tables[0];
@@ -117,6 +118,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                             case "SetObject":
                                 this.VisitSetObject(deferredSegment.Value);
                                 break;
+                            case "SetObjectExpr":
+                                this.VisitSetObjectExpr(deferredSegment.Value);
+                                break;
                             case "SetField":
                                 this.VisitSetField(deferredSegment.Value);
                                 break;
@@ -128,18 +132,22 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                                 break;
                         }
                     }
-                    var tableName = this.GetTableName(tableSegment);
-                    if (this.IsReturnIdentity && (this.UpdateBuilder != null || this.OutputSql != null))
-                        throw new NotSupportedException("返回Identity，不支持同时Returning操作");
-                    this.FromSql = $"INSERT INTO {tableName} ({this.FieldsBuilder}) VALUES ({this.ValuesBuilder})";
-                    this.ValuesBuilder.Clear();
+                    this.FromSql = $"({this.FieldsBuilder}) VALUES ({this.ValuesBuilder})";
                 }
+                var tableName = this.GetTableName(tableSegment);
+                if (this.IsReturnIdentity && (this.UpdateBuilder != null || this.OutputSql != null))
+                    throw new NotSupportedException("返回Identity，不支持同时Returning操作");
+                this.FromSql = $"{this.BuildHeadSql()} {tableName} {this.FromSql}";
+                this.FieldsBuilder.Clear();
+                this.ValuesBuilder.Clear();
+                this.FieldsBuilder.Append(this.FromSql);
+
                 if (this.UpdateBuilder != null)
-                    tailSql = this.UpdateBuilder.ToString();
+                    this.FieldsBuilder.Append(this.UpdateBuilder.ToString());
 
                 if (this.OutputSql != null)
                 {
-                    tailSql += this.OutputSql;
+                    this.FieldsBuilder.Append(this.OutputSql);
                     readerFields = this.ReaderFields;
                 }
                 if (this.IsReturnIdentity)
@@ -148,13 +156,14 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     if (!entityMapper.IsAutoIncrementKey)
                         throw new NotSupportedException($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
                     var keyFieldName = this.OrmProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName);
-                    tailSql = this.OrmProvider.GetIdentitySql(keyFieldName);
+                    this.FieldsBuilder.Append(this.OrmProvider.GetIdentitySql(keyFieldName));
                 }
+                this.FromSql = this.FieldsBuilder.ToString();
                 break;
         }
-        this.FieldsBuilder.Clear();
-        return $"{this.FromSql}{tailSql}";
+        return this.FromSql;
     }
+    public virtual string BuildHeadSql() => "INSERT INTO";
     public virtual void WithBy(object insertObj)
     {
         this.deferredSegments.Add(new CommandSegment
@@ -163,7 +172,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             Value = insertObj
         });
     }
-
     public virtual void WithByField(string fieldName, object fieldValue)
     {
         this.deferredSegments.Add(new CommandSegment
@@ -245,7 +253,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var entityType = tableSegment.EntityType;
         this.FieldsBuilder.Append('(');
 
-        var headSql = $"INSERT INTO ";
+        var headSql = $"{this.BuildHeadSql()} ";
         if (!string.IsNullOrEmpty(tableSegment.TableSchema))
             headSql += this.OrmProvider.GetTableName(tableSegment.TableSchema) + ".";
         List<IDbDataParameter> fixedDbParameters = null;
@@ -297,13 +305,18 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     default: throw new NotSupportedException("批量插入后，只支持WithBy/OnDuplicateKeyUpdate/Returning操作");
                 }
             }
-            this.FieldsBuilder.Append(',');
-            this.ValuesBuilder.Append(',');
-            fixedValuesSql = this.ValuesBuilder.ToString();
+            if (this.FieldsBuilder.Length > 1)
+            {
+                this.FieldsBuilder.Append(',');
+                this.ValuesBuilder.Append(',');
+                fixedValuesSql = this.ValuesBuilder.ToString();
+            }
             this.ValuesBuilder.Clear();
             if (this.DbParameters.Count > 0)
-                fixedDbParameters = command.Parameters.ToList();
-            this.DbParameters.Clear();
+            {
+                fixedDbParameters = this.DbParameters.ToList();
+                this.DbParameters.Clear();
+            }
         }
 
         Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
@@ -324,14 +337,10 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         }
         else
         {
-            (var fieldsSql, var sqlSetter) = ((string, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>))
+            (var fieldsSql, var sqlSetter) = ((string, Action<IDataParameterCollection, StringBuilder, DbContext, string, string, object, string>))
                 RepositoryHelper.BuildTypedBulkCommandInitializer(this.DbContext, entityType, insertObjType, 1, null, null);
             this.FieldsBuilder.Append(fieldsSql);
-            loopSqlSetter = (dbParameters, builder, dbContext, insertObj, suffix) =>
-            {
-                sqlSetter.Invoke(dbParameters, builder, dbContext, fixedValuesSql, insertObj, suffix);
-                builder.Append("),");
-            };
+            loopSqlSetter = (dbParameters, builder, dbContext, insertObj, suffix) => sqlSetter.Invoke(dbParameters, builder, dbContext, fixedValuesSql, "),", insertObj, suffix);
         }
         this.FieldsBuilder.Append(") VALUES ");
         fixedFieldsSql = this.FieldsBuilder.ToString();
@@ -340,8 +349,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         {
             firstSqlSetter = (dbParameters, builder, tableName) =>
             {
-                builder.Append(headSql);
-                builder.Append(this.OrmProvider.GetTableName(tableName));
+                builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)}");
                 builder.Append(fixedFieldsSql);
                 builder.Append(fixedValuesSql);
                 fixedDbParameters.ForEach(f => dbParameters.Add(f));
@@ -351,8 +359,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         {
             firstSqlSetter = (dbParameters, builder, tableName) =>
             {
-                builder.Append(headSql);
-                builder.Append(this.OrmProvider.GetTableName(tableName));
+                builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} ");
                 builder.Append(fixedFieldsSql);
                 builder.Append(fixedValuesSql);
             };
@@ -526,26 +533,23 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     || memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion)
                     continue;
 
-                var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}";
+                var parameterName = $"{this.OrmProvider.ParameterPrefix}p{memberMapper.MemberName}";
                 //此前参数可能有添加，也可能没有添加过，此处需要判断是否需要添加过
-                if (!this.DbParameters.Contains(parameterName))
+                if (fieldValue == null)
+                    fieldValue = memberMapper.DefaultValue;
+                else if (memberMapper.TypeHandler != null)
+                    fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
+                else
                 {
-                    if (fieldValue == null)
-                        fieldValue = memberMapper.DefaultValue;
-                    else if (memberMapper.TypeHandler != null)
-                        fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
-                    else
+                    var targetType = memberMapper.MappedTargetType;
+                    var fieldValueType = fieldValue.GetType();
+                    if (fieldValueType != targetType)
                     {
-                        var targetType = memberMapper.MappedTargetType;
-                        var fieldValueType = fieldValue.GetType();
-                        if (fieldValueType != targetType)
-                        {
-                            var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext.Options);
-                            fieldValue = myValueGetter.Invoke(fieldValue);
-                        }
+                        var myValueGetter = this.OrmProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, this.DbContext.Options);
+                        fieldValue = myValueGetter.Invoke(fieldValue);
                     }
-                    this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                 }
+                this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
                 if (this.UpdateBuilder.Length > 0) this.FieldsBuilder.Append(',');
                 this.UpdateBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
             }
@@ -560,11 +564,10 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual void VisitSetObjectExpr(object deferredSegmentValue)
     {
-        var assignmentExpr = deferredSegmentValue as LambdaExpression;
-        this.InitTableAlias(assignmentExpr);
+        var fieldsAssignment = deferredSegmentValue as LambdaExpression;
+        this.InitTableAlias(fieldsAssignment);
         if (this.UpdateIndex > 0) this.UpdateBuilder.Append(',');
-        this.Visit(new SqlSegment { Expression = assignmentExpr });
-        this.UpdateIndex++;
+        this.Visit(new SqlSegment { Expression = fieldsAssignment });
     }
     public virtual void VisitSetField(object deferredSegmentValue)
     {
@@ -577,23 +580,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             throw new NotSupportedException($"当前字段{memberMapper.FieldName}被忽略插入，IsIgnore：{memberMapper.IsIgnore}，IsIgnoreInsert：{memberMapper.IsIgnoreInsert}");
         if (memberMapper.IsRowVersion)
             throw new NotSupportedException($"当前字段{memberMapper.FieldName}为RowVersion类型，不允许插入");
-
-        var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
-        if (!this.DbParameters.Contains(parameterName))
-        {
-            if (memberMapper.TypeHandler != null)
-                fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
-            else
-            {
-                var targetType = memberMapper.MappedTargetType;
-                var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext.Options);
-                fieldValue = valueGetter.Invoke(fieldValue);
-            }
-            this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
-        }
-        if (this.UpdateIndex > 0) this.UpdateBuilder.Append(',');
-        this.UpdateBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
-        this.UpdateIndex++;
+        this.AddSetParameter(memberMapper, fieldValue);
     }
     public virtual void VisitSetFieldExpr(object deferredSegmentValue)
     {
@@ -607,23 +594,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             throw new NotSupportedException($"当前字段{memberMapper.FieldName}被忽略插入，IsIgnore：{memberMapper.IsIgnore}，IsIgnoreInsert：{memberMapper.IsIgnoreInsert}");
         if (memberMapper.IsRowVersion)
             throw new NotSupportedException($"当前字段{memberMapper.FieldName}为RowVersion类型，不允许插入");
-
-        var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
-        if (!this.DbParameters.Contains(parameterName))
-        {
-            if (memberMapper.TypeHandler != null)
-                fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
-            else
-            {
-                var targetType = memberMapper.MappedTargetType;
-                var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext.Options);
-                fieldValue = valueGetter.Invoke(fieldValue);
-            }
-            this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
-        }
-        if (this.UpdateIndex > 0) this.UpdateBuilder.Append(',');
-        this.UpdateBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
-        this.UpdateIndex++;
+        this.AddSetParameter(memberMapper, fieldValue);
     }
     public virtual void VisitSetFieldExprs(object deferredSegmentValue)
     {
@@ -632,9 +603,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var fieldSegment = this.Visit(new SqlSegment { Expression = fieldSelector });
         this.InitTableAlias(valueGetter as LambdaExpression);
         var valueSegment = this.Visit(new SqlSegment { Expression = valueGetter });
-        if (this.UpdateIndex > 0) this.UpdateBuilder.Append(',');
-        this.UpdateBuilder.Append($"{fieldSegment.Value}={this.WrapSql(valueSegment)}");
-        this.UpdateIndex++;
+        this.AddSetParameter(fieldSegment.MemberMapper, valueSegment);
     }
     public virtual List<string> VisitFields(Expression fieldsSelector, bool isIgnoreCase = true)
     {
@@ -761,6 +730,89 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (value == null) return SqlSegment.Null;
         return sqlSegment.Change(value, SqlType.Variable);
     }
+    public override SqlSegment VisitNew(SqlSegment sqlSegment)
+    {
+        //更新场景
+        //.Set(f => new { TotalAmount = f.TotalAmount + f.Values(f.TotalAmount) })
+        //.Set(f => new { TotalAmount = f.TotalAmount + f.Excluded(f.TotalAmount) })
+        //INSERT INTO ... SELECT ... FROM ... 由Query部分单独处理，表达式走QueryVisitor的解析
+        if (this.IsUpdate)
+        {
+            var newExpr = sqlSegment.Expression as NewExpression;
+            if (newExpr.Type.Name.StartsWith("<>"))
+            {
+                var entityMapper = this.Tables[0].Mapper;
+                for (int i = 0; i < newExpr.Arguments.Count; i++)
+                {
+                    var memberInfo = newExpr.Members[i];
+                    if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
+                        continue;
+                    this.AddMemberElement(newExpr.Arguments[i], memberMapper);
+                    this.UpdateIndex++;
+                }
+                return sqlSegment;
+            }
+        }
+        return sqlSegment.Change(sqlSegment.Expression.Evaluate(), SqlType.Constant);
+    }
+    public override SqlSegment VisitMemberInit(SqlSegment sqlSegment)
+    {
+        //更新场景
+        //.Set(f => new xxx { TotalAmount = f.TotalAmount + f.Values(f.TotalAmount) })
+        //.Set(f => new xxx { TotalAmount = f.TotalAmount + f.Excluded(f.TotalAmount) })
+        //INSERT INTO ... SELECT ... FROM ... 由Query部分单独处理，表达式走QueryVisitor的解析   
+        if (this.IsUpdate)
+        {
+            var memberInitExpr = sqlSegment.Expression as MemberInitExpression;
+            var entityMapper = this.Tables[0].Mapper;
+            for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
+            {
+                if (memberInitExpr.Bindings[i].BindingType != MemberBindingType.Assignment)
+                    throw new NotImplementedException($"不支持除MemberBindingType.Assignment类型外的成员绑定表达式, {memberInitExpr.Bindings[i]}");
+                var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
+                if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out var memberMapper))
+                    continue;
+                this.AddMemberElement(memberAssignment.Expression, memberMapper);
+                this.UpdateIndex++;
+            }
+        }
+        return sqlSegment.Change(sqlSegment.Expression.Evaluate(), SqlType.Constant);
+    }
+    public virtual void AddMemberElement(Expression fieldExpr, MemberMap memberMapper)
+    {
+        //更新使用
+        var sqlSegment = this.Visit(new SqlSegment { Expression = fieldExpr });
+        if (this.UpdateIndex > 0) this.UpdateBuilder.Append(',');
+        var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
+
+        if (sqlSegment.IsNull)
+            this.UpdateBuilder.Append($"{fieldName}=NULL");
+        else if (sqlSegment.IsValue)
+        {
+            var parameterName = this.OrmProvider.ParameterPrefix + this.UserParameterPrefix + this.DbParameters.Count.ToString();
+            var dbFieldValue = sqlSegment.Value;
+            if (memberMapper.TypeHandler != null)
+                dbFieldValue = memberMapper.TypeHandler.ToFieldValue(dbFieldValue);
+            else
+            {
+                var targetType = memberMapper.MappedTargetType;
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(dbFieldValue.GetType(), targetType, false, this.DbContext.Options);
+                dbFieldValue = valueGetter.Invoke(dbFieldValue);
+            }
+
+            this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
+            this.UpdateBuilder.Append($"{fieldName}={parameterName}");
+        }
+        else
+        {
+            //TODO: 
+            //带有参数或字段的表达式或函数调用、或是只有参数或字段
+            //ON DUPLICATE KEY UPDATE `Name`=VALUES(`Name`)
+            //ON CONFLICT ("Id") DO UPDATE SET "Name"=EXCLUDED."Name"
+            //var fieldValue = this.GetSetFieldName(sqlSegment.Value.ToString());
+            this.UpdateBuilder.Append($"{fieldName}={sqlSegment.Value}");
+        }
+    }
     public List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>> BuildDictBulkCommandInitializer(EntityMap entityMapper, IDictionary<string, object> dict)
     {
         var valueSetters = new List<Action<IDataParameterCollection, StringBuilder, IDictionary<string, object>, string>>();
@@ -869,14 +921,39 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual void InitTableAlias(LambdaExpression lambdaExpr)
     {
-        if (!lambdaExpr.Body.TryGetParameters(out var parameters))
-            return;
         this.TableAliases.Clear();
-        foreach (var parameterExpr in parameters)
+        this.TableAliases[lambdaExpr.Parameters[0].Name] = this.Tables[0];
+    }
+    public virtual void AddSetParameter(MemberMap memberMapper, object fieldValue)
+    {
+        string parameterValue = null;
+        if (fieldValue == null || fieldValue is DBNull)
+            parameterValue = "NULL";
+        else
         {
-            if (this.TableAliases.ContainsKey(parameterExpr.Name))
-                continue;
-            this.TableAliases.Add(parameterExpr.Name, this.Tables[0]);
+            parameterValue = this.OrmProvider.ParameterPrefix + "p" + memberMapper.MemberName;
+            if (memberMapper.TypeHandler != null)
+                fieldValue = memberMapper.TypeHandler.ToFieldValue(fieldValue);
+            else
+            {
+                var targetType = memberMapper.MappedTargetType;
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext.Options);
+                fieldValue = valueGetter.Invoke(fieldValue);
+            }
         }
+        this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterValue, memberMapper.NativeDbType, fieldValue));
+        if (this.UpdateIndex > 0) this.UpdateBuilder.Append(',');
+        this.UpdateBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterValue}");
+        this.UpdateIndex++;
+    }
+    public virtual void AddSetParameter(MemberMap memberMapper, SqlSegment valueSegment)
+    {
+        if (valueSegment.HasField)
+        {
+            if (this.UpdateIndex > 0) this.UpdateBuilder.Append(',');
+            this.UpdateBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={valueSegment.Value}");
+            this.UpdateIndex++;
+        }
+        else this.AddSetParameter(memberMapper, valueSegment.Value);
     }
 }

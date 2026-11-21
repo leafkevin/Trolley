@@ -7,7 +7,7 @@ namespace Trolley.MySqlConnector;
 
 public static class MySqlExtensions
 {
-    extension<TInsertObj>(TInsertObj instance)
+    extension(Sql)
     {
         /// <summary>
         /// 获取插入字段原值
@@ -16,7 +16,7 @@ public static class MySqlExtensions
         /// <param name="field">插入字段值</param>
         /// <returns>插入对象原值</returns>
         /// <exception cref="NotImplementedException"></exception>
-        public TField Values<TField>(TField field) => throw new NotImplementedException();
+        public static TField Values<TField>(TField field) => throw new NotImplementedException();
     }
     extension(ICreate instance)
     {

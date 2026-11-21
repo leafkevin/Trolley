@@ -25,6 +25,7 @@ public interface ICreateVisitor : ICommandVisitor, IDisposable
     ICteQuery CteQueryObj { get; set; }
     string FromSql { get; set; }
     bool IsRecursive { get; set; }
+    bool IsUpdate { get; set; }
 
 
     (ShardingTableType, object, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,

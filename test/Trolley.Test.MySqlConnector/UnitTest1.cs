@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using MySqlConnector;
+﻿using MySqlConnector;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -966,8 +965,8 @@ public class UnitTest1 : UnitTestBase
             .OnDuplicateKeyUpdate()
             .Set(f => new
             {
-                TotalAmount = f.TotalAmount + f.Values(f.TotalAmount),
-                ProductCouint = f.ProductCount + f.Values(f.ProductCount)
+                TotalAmount = f.TotalAmount + Sql.Values(f.TotalAmount),
+                ProductCouint = f.ProductCount + Sql.Values(f.ProductCount)
             })
             .Returning<OrderInfo>("`BuyerId`,`TotalAmount`")
             .ToSql(out var parameters);
@@ -997,8 +996,8 @@ public class UnitTest1 : UnitTestBase
             .OnDuplicateKeyUpdate()
             .Set(f => new
             {
-                TotalAmount = f.TotalAmount + f.Values(f.TotalAmount),
-                ProductCouint = f.ProductCount + f.Values(f.ProductCount)
+                TotalAmount = f.TotalAmount + Sql.Values(f.TotalAmount),
+                ProductCouint = f.ProductCount + Sql.Values(f.ProductCount)
             })
             .Returning<OrderInfo>("`BuyerId`,`TotalAmount`")
             .ExecuteAsync();
@@ -1025,8 +1024,8 @@ public class UnitTest1 : UnitTestBase
             .OnDuplicateKeyUpdate()
             .Set(f => new
             {
-                TotalAmount = f.TotalAmount + f.Values(f.TotalAmount),
-                ProductCouint = f.ProductCount + f.Values(f.ProductCount)
+                TotalAmount = f.TotalAmount + Sql.Values(f.TotalAmount),
+                ProductCouint = f.ProductCount + Sql.Values(f.ProductCount)
             })
             .Returning<OrderInfo>("`BuyerId`,`TotalAmount`")
             .ExecuteAsync();
@@ -1543,7 +1542,7 @@ public class UnitTest1 : UnitTestBase
             .Set(f => f.TotalAmount, f => f.TotalAmount + 2)
             .Set(buyerSource.HasValue, f => f.BuyerSource, buyerSource)
             .ToSql(out _);
-        Assert.AreEqual("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`TotalAmount`,`BuyerId`,`SellerId`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@OrderNo,@TotalAmount,@BuyerId,@SellerId,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON DUPLICATE KEY UPDATE `TotalAmount`=@pTotalAmount,`Products`=@pProducts,`TotalAmount`=`TotalAmount`+2,`BuyerSource`=@BuyerSource", sql1);
+        Assert.AreEqual("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`TotalAmount`,`BuyerId`,`SellerId`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@OrderNo,@TotalAmount,@BuyerId,@SellerId,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON DUPLICATE KEY UPDATE `TotalAmount`=@pTotalAmount,`Products`=@pProducts,`TotalAmount`=`TotalAmount`+2,`BuyerSource`=@pBuyerSource", sql1);
 
         var sql2 = repository.Create<Order>()
             .WithBy(new
@@ -1571,8 +1570,8 @@ public class UnitTest1 : UnitTestBase
                 UpdatedBy = 1
             })
             .OnDuplicateKeyUpdate()
-            .Set(f => new { TotalAmount = f.TotalAmount + f.Values(f.TotalAmount) })
-            .Set(f => f.Products, f => f.Values(f.Products))
+            .Set(f => new { TotalAmount = f.TotalAmount + Sql.Values(f.TotalAmount) })
+            .Set(f => f.Products, f => Sql.Values(f.Products))
             .ToSql(out _);
         Assert.AreEqual("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`TotalAmount`,`BuyerId`,`BuyerSource`,`SellerId`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@OrderNo,@TotalAmount,@BuyerId,@BuyerSource,@SellerId,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON DUPLICATE KEY UPDATE `TotalAmount`=`TotalAmount`+VALUES(`TotalAmount`),`Products`=VALUES(`Products`)", sql2);
 
@@ -1602,12 +1601,11 @@ public class UnitTest1 : UnitTestBase
                 UpdatedBy = 1
             })
             .OnDuplicateKeyUpdate()
-            .UseAlias()
+            .UseAlias("row")
             .Set(f => new { f.TotalAmount })
             .Set(f => f.Products, f => f.Products)
             .ToSql(out _);
-        Assert.AreEqual("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`TotalAmount`,`BuyerId`,`BuyerSource`,`SellerId`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@OrderNo,@TotalAmount,@BuyerId,@BuyerSource,@SellerId,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) AS newRow ON DUPLICATE KEY UPDATE `TotalAmount`=newRow.`TotalAmount`,`Products`=newRow.`Products`", sql3);
-
+        Assert.AreEqual("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`TotalAmount`,`BuyerId`,`BuyerSource`,`SellerId`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@OrderNo,@TotalAmount,@BuyerId,@BuyerSource,@SellerId,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) AS row ON DUPLICATE KEY UPDATE `TotalAmount`=row.`TotalAmount`,`Products`=row.`Products`", sql3);
 
         await repository.BeginTransactionAsync();
         await repository.DeleteByIdAsync<Order>("9");
@@ -1637,8 +1635,8 @@ public class UnitTest1 : UnitTestBase
                 UpdatedBy = 1
             })
             .OnDuplicateKeyUpdate()
-            .Set(f => new { TotalAmount = f.Values(f.TotalAmount) })
-            .Set(true, f => f.Products, f => f.Values(f.Products))
+            .Set(f => new { TotalAmount = Sql.Values(f.TotalAmount) })
+            .Set(true, f => f.Products, f => Sql.Values(f.Products))
             .ExecuteAsync();
         var order = await repository.QueryByIdAsync<Order>("9");
         var count1 = await repository.Create<Order>()
@@ -1667,8 +1665,8 @@ public class UnitTest1 : UnitTestBase
                 UpdatedBy = 1
             })
             .OnDuplicateKeyUpdate()
-            .Set(f => new { TotalAmount = f.Values(f.TotalAmount) })
-            .Set(true, f => f.Products, f => f.Values(f.Products))
+            .Set(f => new { TotalAmount = Sql.Values(f.TotalAmount) })
+            .Set(true, f => f.Products, f => Sql.Values(f.Products))
             .ExecuteAsync();
         var order1 = await repository.QueryByIdAsync<Order>("9");
         await repository.CommitAsync();
@@ -1706,8 +1704,8 @@ public class UnitTest1 : UnitTestBase
                 UpdatedBy = 1
             })
             .OnDuplicateKeyUpdate()
-            .Set(f => new { TotalAmount = f.TotalAmount + f.Values(f.TotalAmount) })
-            .Set(true, f => f.Products, f => f.Values(f.Products))
+            .Set(f => new { TotalAmount = f.TotalAmount + Sql.Values(f.TotalAmount) })
+            .Set(true, f => f.Products, f => Sql.Values(f.Products))
             .ExecuteAsync();
         order = await repository.QueryByIdAsync<Order>("9");
         await repository.CommitAsync();
@@ -1763,7 +1761,7 @@ public class UnitTest1 : UnitTestBase
                 }
             }, 50)
             .OnDuplicateKeyUpdate()
-            .Set(f => new { Name = f.Values(f.Name) })
+            .Set(f => new { Name = Sql.Values(f.Name) })
             .ToSql(out _);
         Assert.AreEqual("INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2) ON DUPLICATE KEY UPDATE `Name`=VALUES(`Name`)", sql);
 
@@ -1813,7 +1811,7 @@ public class UnitTest1 : UnitTestBase
                 }
             })
             .OnDuplicateKeyUpdate()
-            .Set(f => new { Name = f.Values(f.Name) })
+            .Set(f => new { Name = Sql.Values(f.Name) })
             .Execute();
         var count1 = repository.Create<Product>()
             .WithBulk(new[]
@@ -1859,7 +1857,7 @@ public class UnitTest1 : UnitTestBase
                 }
             })
             .OnDuplicateKeyUpdate()
-            .Set(f => f.Name, f => f.Values(f.Name))
+            .Set(f => f.Name, f => Sql.Values(f.Name))
             .Execute();
         repository.Commit();
         Assert.AreEqual(3, count);

@@ -8,6 +8,7 @@ public class MySqlCreateDuplicateKeyUpdate : MySqlIdentitiedCreated, IMySqlCreat
     public MySqlCreateDuplicateKeyUpdate(DbContext dbContext, ICreateVisitor visitor)
         : base(dbContext, visitor)
     {
+        this.Visitor.IsUpdate = true;
         this.dialectVisitor.UpdateBuilder = new(" ON DUPLICATE KEY UPDATE ");
     }
     public IMySqlCreateDuplicateKeyUpdate UseAlias(string aliasName = "newRow")
@@ -48,12 +49,15 @@ public class MySqlBulkCreateDuplicateKeyUpdate : MySqlCreated, IMySqlBulkCreateD
     public MySqlBulkCreateDuplicateKeyUpdate(DbContext dbContext, ICreateVisitor visitor)
         : base(dbContext, visitor)
     {
+        this.Visitor.IsUpdate = true;
         this.dialectVisitor.UpdateBuilder = new(" ON DUPLICATE KEY UPDATE ");
     }
     public TField Values<TField>(TField fieldSelector) => throw new NotImplementedException();
     public IMySqlBulkCreateDuplicateKeyUpdate UseAlias(string aliasName = "newRow")
     {
         this.dialectVisitor.RowAlias = aliasName;
+        this.dialectVisitor.IsUseSetAlias = true;
+        //this.dialectVisitor.UpdateBuilder.Insert(0, $" AS {aliasName}");
         return this;
     }
     public IMySqlBulkCreateDuplicateKeyUpdate Set(object updateObj)

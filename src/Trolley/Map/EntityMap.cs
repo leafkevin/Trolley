@@ -75,6 +75,8 @@ public class EntityMap
         fieldName = fieldName.ToLower();
         if (this.fieldMaps.TryGetValue(fieldName, out mapper))
             return true;
+        if (this.memberMaps.TryGetValue(fieldName, out mapper))
+            return true;
         mapper = null;
         return false;
     }
