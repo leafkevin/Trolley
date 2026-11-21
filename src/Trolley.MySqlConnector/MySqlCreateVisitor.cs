@@ -15,6 +15,120 @@ public class MySqlCreateVisitor : CreateVisitor
     public MySqlCreateVisitor(Type entityType, DbContext dbContext, char tableAsStart = 'a', ITheaCommand command = null)
         : base(entityType, dbContext, tableAsStart, command) { }
 
+    public override string BuildSql(out ReusableList<ReaderField> readerFields)
+    {
+        readerFields = this.ReaderFields;
+        switch (this.ActionMode)
+        {
+            case ActionMode.Bulk:
+                (var shardingType, var shardingTables, var insertObjs, _, var firstSqlSetter,
+                    var loopSqlSetter, var tailSql, readerFields) = this.BuildWithBulk(this.Command);
+
+                int index = 0;
+                this.FieldsBuilder.Clear();
+                if (shardingType == ShardingTableType.SplitTables)
+                {
+                    var tabledInsertObjs = shardingTables as Dictionary<string, List<object>>;
+                    foreach (var shardingTableName in tabledInsertObjs.Keys)
+                    {
+                        firstSqlSetter.Invoke(this.DbParameters, this.FieldsBuilder, shardingTableName);
+                        var tableParameters = tabledInsertObjs[shardingTableName];
+                        foreach (var insertObj in tableParameters)
+                        {
+                            loopSqlSetter.Invoke(this.DbParameters, this.FieldsBuilder, this.DbContext, insertObj, index.ToString());
+                            index++;
+                        }
+                    }
+                }
+                else
+                {
+                    firstSqlSetter.Invoke(this.DbParameters, this.FieldsBuilder, shardingTables as string);
+                    foreach (var insertObj in insertObjs)
+                    {
+                        loopSqlSetter.Invoke(this.DbParameters, this.FieldsBuilder, this.DbContext, insertObj, index.ToString());
+                        index++;
+                    }
+                }
+                this.FieldsBuilder.Remove(this.FieldsBuilder.Length - 1, 1);
+                if (!string.IsNullOrEmpty(tailSql))
+                    this.FieldsBuilder.Append(tailSql);
+                this.FromSql = this.FieldsBuilder.ToString();
+                break;
+            case ActionMode.Single:
+                var tableSegment = this.Tables[0];
+                if (string.IsNullOrEmpty(this.FromSql))
+                {
+                    this.ValuesBuilder = new();
+                    if (tableSegment.TableShardingInfo != null && !tableSegment.IsSharding && tableSegment.ShardingTableGetter == null)
+                    {
+                        if (tableSegment.TableShardingInfo.DependOnMembers == null || tableSegment.TableShardingInfo.DependOnMembers.Count == 0)
+                            throw new Exception($"实体表{tableSegment.EntityType.FullName}已设置分表，未指定分表，也未设置依赖字段无法确定分表，请使用UseTable/UseTableBy方法手动指定分表");
+                        if (this.deferredSegments.Count > 1)
+                        {
+                            this.IsNeedShardingValues = true;
+                            this.ShardingValues = new();
+                        }
+                    }
+                    foreach (var deferredSegment in this.deferredSegments)
+                    {
+                        switch (deferredSegment.Type)
+                        {
+                            case "WithBy":
+                                this.VisitWithBy(deferredSegment.Value);
+                                break;
+                            case "WithByField":
+                                this.VisitWithByField(deferredSegment.Value);
+                                break;
+                            case "WithByFieldExpr":
+                                this.VisitWithByFieldExpr(deferredSegment.Value);
+                                break;
+                            case "SetObject":
+                                this.VisitSetObject(deferredSegment.Value);
+                                break;
+                            case "SetObjectExpr":
+                                this.VisitSetObjectExpr(deferredSegment.Value);
+                                break;
+                            case "SetField":
+                                this.VisitSetField(deferredSegment.Value);
+                                break;
+                            case "SetFieldExpr":
+                                this.VisitSetFieldExpr(deferredSegment.Value);
+                                break;
+                            case "SetFieldExprs":
+                                this.VisitSetFieldExprs(deferredSegment.Value);
+                                break;
+                        }
+                    }
+                    this.FromSql = $"({this.FieldsBuilder}) VALUES ({this.ValuesBuilder})";
+                }
+                var tableName = this.GetTableName(tableSegment);
+                if (this.IsReturnIdentity && (this.UpdateBuilder != null || this.OutputSql != null))
+                    throw new NotSupportedException("返回Identity，不支持同时Returning操作");
+                this.FromSql = $"{this.BuildHeadSql()} {tableName} {this.FromSql}";
+                this.FieldsBuilder.Clear();
+                this.ValuesBuilder.Clear();
+                this.FieldsBuilder.Append(this.FromSql);
+
+                if (this.UpdateBuilder != null)
+                    this.FieldsBuilder.Append(this.UpdateBuilder.ToString());
+
+                if (this.OutputSql != null)
+                {
+                    this.FieldsBuilder.Append(this.OutputSql);
+                    readerFields = this.ReaderFields;
+                }
+                if (this.IsReturnIdentity)
+                {
+                    var entityMapper = tableSegment.Mapper;
+                    if (!entityMapper.IsAutoIncrementKey)
+                        throw new NotSupportedException($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
+                    this.FieldsBuilder.Append(this.OrmProvider.GetIdentitySql(null));
+                }
+                this.FromSql = this.FieldsBuilder.ToString();
+                break;
+        }
+        return this.FromSql;
+    }
     public virtual void WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds)
     {
         this.ActionMode = ActionMode.BulkCopy;
@@ -110,7 +224,7 @@ public class MySqlCreateVisitor : CreateVisitor
                         TargetMember = memberInfo,
                         ReaderType = memberInfo.GetMemberType(),
                         MemberMapper = sqlSegment.MemberMapper,
-                        MemberName = sqlSegment.MemberMapper.FieldName,
+                        MemberName = sqlSegment.MemberMapper?.FieldName,
                         Value = fieldName,
                         IsNeedAlias = isNeedAlias
                     });
@@ -142,8 +256,6 @@ public class MySqlCreateVisitor : CreateVisitor
                         ReaderType = memberAssignment.Member.GetMemberType(),
                         MemberMapper = sqlSegment.MemberMapper,
                         MemberName = sqlSegment.MemberMapper?.FieldName,
-                        //MappedTargetType = sqlSegment.MappedTargetType,
-                        //TypeHandler = sqlSegment.TypeHandler,
                         Value = fieldName,
                         IsNeedAlias = isNeedAlias
                     });
@@ -162,8 +274,6 @@ public class MySqlCreateVisitor : CreateVisitor
                         ReaderType = memberMapper.MemberType,
                         MemberMapper = memberMapper,
                         MemberName = memberMapper.FieldName,
-                        //MappedTargetType = memberMapper.MappedTargetType,
-                        //TypeHandler = memberMapper.TypeHandler,
                         Value = memberMapper.FieldName
                     });
                 }

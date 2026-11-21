@@ -430,6 +430,44 @@ public class DialectProvider
         visitor.Dispose();
         return result;
     }
+    public TTarget QuerySingle<TTarget>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, ReusableList<ReaderField> readerFields)
+    {
+        this.Initialize(command);
+        connection.Open();
+        var behavior = CommandBehavior.Default | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        using var reader = command.ExecuteReader(behavior);
+        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext, readerFields);
+        TTarget result = default;
+        if (reader.Read())
+            result = (TTarget)deserializer.Invoke(reader, readerFields);
+        reader.Dispose();
+        command.Dispose();
+        if (isNeedClose)
+        {
+            connection.Close();
+            this.Dispose();
+        }
+        return result;
+    }
+    public async Task<TTarget> QuerySingleAsync<TTarget>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, ReusableList<ReaderField> readerFields, CancellationToken cancellationToken = default)
+    {
+        this.Initialize(command);
+        await connection.OpenAsync(cancellationToken);
+        var behavior = CommandBehavior.Default | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        var deserializer = reader.GetReaderDeserializer(typeof(TTarget), this.DbContext, readerFields);
+        TTarget result = default;
+        if (await reader.ReadAsync(cancellationToken))
+            result = (TTarget)deserializer.Invoke(reader, readerFields);
+        await reader.DisposeAsync();
+        await command.DisposeAsync();
+        if (isNeedClose)
+        {
+            await connection.CloseAsync();
+            this.Dispose();
+        }
+        return result;
+    }
     #endregion
 
     #region Query
@@ -531,8 +569,7 @@ public class DialectProvider
         visitor.Dispose();
         return result;
     }
-
-    public List<TTarget> QuerySimple<TTarget>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, ReusableList<ReaderField> readerFields)
+    public List<TTarget> Query<TTarget>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, ReusableList<ReaderField> readerFields)
     {
         var entityType = typeof(TTarget);
         this.Initialize(command);
@@ -551,7 +588,7 @@ public class DialectProvider
         }
         return result;
     }
-    public async Task<List<TTarget>> QuerySimpleAsync<TTarget>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, ReusableList<ReaderField> readerFields, CancellationToken cancellationToken = default)
+    public async Task<List<TTarget>> QueryAsync<TTarget>(bool isNeedClose, ITheaConnection connection, ITheaCommand command, ReusableList<ReaderField> readerFields, CancellationToken cancellationToken = default)
     {
         var entityType = typeof(TTarget);
         this.Initialize(command);

@@ -105,7 +105,8 @@ partial class MySqlProvider
                                     builder.Append(',');
 
                                 var body = visitor.WrapSql(sqlSegment);
-                                if (elementExpr.Type != typeof(string))
+                                var factTrype = sqlSegment.MemberMapper?.MappedTargetType ?? elementExpr.Type;
+                                if (factTrype != typeof(string))
                                     body = this.CastTo(typeof(string), body);
                                 builder.Append(body);
                             }
@@ -149,12 +150,14 @@ partial class MySqlProvider
                                     var rawString = format.Substring(formatIndex, match.Index - formatIndex);
                                     constBuilder.Append(rawString);
                                 }
-                                var argsExpr = argsExprs[index];
-                                var sqlSegment = visitor.Visit(new SqlSegment { Expression = argsExpr });
+                                var elementExpr = argsExprs[index];
+                                if (elementExpr is UnaryExpression unaryExpr && unaryExpr.NodeType == ExpressionType.Convert)
+                                    elementExpr = unaryExpr.Operand;
+                                var sqlSegment = visitor.Visit(new SqlSegment { Expression = elementExpr });
                                 if (sqlSegment.IsDeferredFields)
                                     return sqlSegment;
 
-                                if (argsExpr.Type.IsEnum && sqlSegment.SqlType == SqlType.OnlyField)
+                                if (elementExpr.Type.IsEnum && sqlSegment.SqlType == SqlType.OnlyField)
                                     visitor.ToEnumString(sqlSegment);
 
                                 var body = visitor.WrapSql(sqlSegment);
@@ -172,6 +175,9 @@ partial class MySqlProvider
                                 }
                                 if (builder.Length > 0)
                                     builder.Append(',');
+                                var factTrype = sqlSegment.MemberMapper?.MappedTargetType ?? elementExpr.Type;
+                                if (factTrype != typeof(string))
+                                    body = this.CastTo(typeof(string), body);
                                 builder.Append(body);
                                 formatIndex = match.Index + match.Length;
                                 index++;

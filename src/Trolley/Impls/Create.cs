@@ -441,16 +441,16 @@ public class ResultCreated<TResult> : DialectProvider, IResultCommand<TResult>
     #region Execute
     public TResult Execute()
     {
-        (var isNeedClose, var connection, var command, _) = this.CreateExecuteCommand(this.Visitor);
-        var result = this.QuerySingle<TResult>(isNeedClose, connection, command);
+        (var isNeedClose, var connection, var command, var readerFields) = this.CreateExecuteCommand(this.Visitor);
+        var result = this.QuerySingle<TResult>(isNeedClose, connection, command, readerFields);
         this.Visitor.Dispose();
         this.Visitor = null;
         return result;
     }
     public async Task<TResult> ExecuteAsync(CancellationToken cancellationToken)
     {
-        (var isNeedClose, var connection, var command, _) = this.CreateExecuteCommand(this.Visitor);
-        var result = await this.QuerySingleAsync<TResult>(isNeedClose, connection, command, cancellationToken);
+        (var isNeedClose, var connection, var command, var readerFields) = this.CreateExecuteCommand(this.Visitor);
+        var result = await this.QuerySingleAsync<TResult>(isNeedClose, connection, command, readerFields, cancellationToken);
         this.Visitor.Dispose();
         this.Visitor = null;
         return result;
@@ -498,7 +498,7 @@ public class BulkResultCreated<TResult> : DialectProvider, IBulkResultCommand<TR
     public List<TResult> Execute()
     {
         (var isNeedClose, var connection, var command, var readerFields) = this.CreateExecuteCommand(this.Visitor);
-        var result = this.QuerySimple<TResult>(isNeedClose, connection, command, readerFields);
+        var result = this.Query<TResult>(isNeedClose, connection, command, readerFields);
         this.Visitor.Dispose();
         this.Visitor = null;
         return result;
@@ -506,7 +506,7 @@ public class BulkResultCreated<TResult> : DialectProvider, IBulkResultCommand<TR
     public async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken)
     {
         (var isNeedClose, var connection, var command, var readerFields) = this.CreateExecuteCommand(this.Visitor);
-        var result = await this.QuerySimpleAsync<TResult>(isNeedClose, connection, command, readerFields, cancellationToken);
+        var result = await this.QueryAsync<TResult>(isNeedClose, connection, command, readerFields, cancellationToken);
         this.Visitor.Dispose();
         this.Visitor = null;
         return result;

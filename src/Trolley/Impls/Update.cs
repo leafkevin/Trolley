@@ -821,14 +821,14 @@ public class ResultUpdated<TResult> : DialectProvider, IBulkResultCommand<TResul
     public virtual List<TResult> Execute()
     {
         (var isNeedClose, var connection, var command, var readerFields) = this.CreateExecuteCommand(this.Visitor);
-        var result = this.QuerySimple<TResult>(isNeedClose, connection, command, readerFields);
+        var result = this.Query<TResult>(isNeedClose, connection, command, readerFields);
         this.Visitor.Dispose();
         return result;
     }
     public virtual async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command, var readerFields) = this.CreateExecuteCommand(this.Visitor);
-        var result = await this.QuerySimpleAsync<TResult>(isNeedClose, connection, command, readerFields, cancellationToken);
+        var result = await this.QueryAsync<TResult>(isNeedClose, connection, command, readerFields, cancellationToken);
         this.Visitor.Dispose();
         return result;
     }
